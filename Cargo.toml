@@ -1,0 +1,17 @@
+[package]
+name = "Typelude"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91.0"
+
+[dependencies]
+typenum = { version = "1.18.0", features = ["const-generics"] }
+
+[lib]
+name = "Typelude"
+path = "src/lib.rs"
+
+[features]
+
+[dev-dependencies]
+static_assertions = "1.1.0"
