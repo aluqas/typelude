@@ -64,6 +64,13 @@ impl_execute_via_runstep!(OpSub);
 impl_execute_via_runstep!(OpDup);
 impl_execute_via_runstep!(OpSwap);
 impl_execute_via_runstep!(OpDrop);
+impl_execute_via_runstep!(OpEq);
+impl_execute_via_runstep!(OpNeq);
+impl_execute_via_runstep!(OpLt);
+impl_execute_via_runstep!(OpGt);
+impl_execute_via_runstep!(OpNot);
+impl_execute_via_runstep!(OpAnd);
+impl_execute_via_runstep!(OpOr);
 
 // =============================================================================
 // Instruction Implementations
@@ -124,6 +131,78 @@ where
     type OutputStack = Rest;
 }
 
+// --- OpEq ---
+impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpEq
+where
+    TyArray<B, TyArray<A, Rest>>: Cons,
+    Rest: Cons,
+    crate::types::int::EEq<A, B>: Evaluable,
+{
+    type OutputStack = TyArray<Evaluator<crate::types::int::EEq<A, B>>, Rest>;
+}
+
+// --- OpNeq ---
+impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpNeq
+where
+    TyArray<B, TyArray<A, Rest>>: Cons,
+    Rest: Cons,
+    crate::types::int::ENeq<A, B>: Evaluable,
+{
+    type OutputStack = TyArray<Evaluator<crate::types::int::ENeq<A, B>>, Rest>;
+}
+
+// --- OpLt ---
+// Stack: [B, A, ...] -> Push A < B
+impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpLt
+where
+    TyArray<B, TyArray<A, Rest>>: Cons,
+    Rest: Cons,
+    crate::types::int::ELt<A, B>: Evaluable,
+{
+    type OutputStack = TyArray<Evaluator<crate::types::int::ELt<A, B>>, Rest>;
+}
+
+// --- OpGt ---
+// Stack: [B, A, ...] -> Push A > B
+impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpGt
+where
+    TyArray<B, TyArray<A, Rest>>: Cons,
+    Rest: Cons,
+    crate::types::int::EGt<A, B>: Evaluable,
+{
+    type OutputStack = TyArray<Evaluator<crate::types::int::EGt<A, B>>, Rest>;
+}
+
+// --- OpNot ---
+impl<A, Rest> RunStep<TyArray<A, Rest>> for OpNot
+where
+    TyArray<A, Rest>: Cons,
+    Rest: Cons,
+    crate::func::ENot<A>: Evaluable,
+{
+    type OutputStack = TyArray<Evaluator<crate::func::ENot<A>>, Rest>;
+}
+
+// --- OpAnd ---
+impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpAnd
+where
+    TyArray<B, TyArray<A, Rest>>: Cons,
+    Rest: Cons,
+    crate::func::EAnd<A, B>: Evaluable,
+{
+    type OutputStack = TyArray<Evaluator<crate::func::EAnd<A, B>>, Rest>;
+}
+
+// --- OpOr ---
+impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpOr
+where
+    TyArray<B, TyArray<A, Rest>>: Cons,
+    Rest: Cons,
+    crate::func::EOr<A, B>: Evaluable,
+{
+    type OutputStack = TyArray<Evaluator<crate::func::EOr<A, B>>, Rest>;
+}
+
 // --- OpLoad ---
 // Stack: [Addr, ...] -> Memory, ... -> Stack: [Value, ...]
 impl<Addr, RestStack, Memory, CallStack, RestProg> Execute<TyArray<Addr, RestStack>, Memory, CallStack, RestProg> for OpLoad
@@ -177,6 +256,28 @@ where
     RestProg: Cons, // Note: RestProg (current prog) is discarded or expected to be empty/just Return
 {
     type OutputState = MachineState<Stack, Memory, RestCallStack, Continuation>;
+}
+
+// --- OpWhile<CondProg, BodyProg> ---
+// Expansion: CondProg + [OpIf<BodyProg + [OpWhile<CondProg, BodyProg>], []>] + RestProg
+impl<CondProg, BodyProg, Stack, Memory, CallStack, RestProg> Execute<Stack, Memory, CallStack, RestProg> for OpWhile<CondProg, BodyProg>
+where
+    Stack: Cons,
+    CondProg: Cons,
+    BodyProg: Cons,
+    RestProg: Cons,
+    EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Evaluable,
+    // Alias for the recursive body: Body + [While]
+    EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Evaluable,
+    // Note: Use 'Evaluator<...>' for the recursive part to ensure it is treated as a type, not an expression that confuses the parser
+    EConcat<CondProg, TyArray<OpIf<Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>, RestProg>>: Evaluable,
+{
+    type OutputState = MachineState<
+        Stack,
+        Memory,
+        CallStack,
+        Evaluator<EConcat<CondProg, TyArray<OpIf<Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>, RestProg>>>
+    >;
 }
 
 // --- OpIf<Then, Else> ---
@@ -350,6 +451,101 @@ mod tests {
 
         // Expected Memory: [30] (10 + 20)
         type ExpectedMemory = tyarray![typenum::U30];
+        type ExpectedState = MachineState<TyNil, ExpectedMemory, TyNil, TyNil>;
+
+        assert_type_eq_all!(FinalState, ExpectedState);
+    }
+
+    #[test]
+    fn test_while_loop_countdown() {
+        use typenum::{U0, U1, U3, U10};
+
+        // Loop: While StackTop > 0, Decrement
+        // Stack: [N]
+        // Cond: Dup, Push 0, Gt (Top > 0)
+        // Body: Push 1, Sub
+
+        type CondProg = tyarray![
+            OpDup,
+            OpPush<U0>,
+            OpGt
+        ];
+
+        type BodyProg = tyarray![
+            OpPush<U1>,
+            OpSub
+        ];
+
+        type Prog = tyarray![
+            OpPush<U3>, // Start at 3
+            OpWhile<CondProg, BodyProg>
+        ];
+
+        type InitialState = MachineState<TyNil, TyNil, TyNil, Prog>;
+        type FinalState = Evaluator<ERun<InitialState>>;
+
+        // Result should be 0
+        type ExpectedStack = tyarray![U0];
+        type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil>;
+
+        assert_type_eq_all!(FinalState, ExpectedState);
+    }
+
+    #[test]
+    fn test_simple_sort() {
+        use typenum::{U0, U1, U2, U3};
+        // Sort memory [3, 1] -> [1, 3] at indices 0, 1
+
+        type InitialMemory = tyarray![U3, U1];
+
+        // Algorithm:
+        // Load 0 (ValA), Load 1 (ValB).
+        // If ValA > ValB:
+        //   Store ValA at 1, Store ValB at 0.
+        // Else:
+        //   Keep.
+
+        // Stack: []
+        // Push 0, Load -> [3]
+        // Push 1, Load -> [1, 3]
+        // Dup, Push 3 (index 0, we can't random access easily without re-loading or keeping indices)
+        // Let's keep it simple: Load A, Load B.
+        // If A > B: Swap in memory.
+
+        // Condition: Push 0, Load, Push 1, Load, Gt
+        // Body: Push 0, Load, Push 1, Load, Swap, Push 0, Swap, Store, Push 1, Swap, Store
+        // Wait, "Swap in memory" logic:
+        // Stack: [B, A]. We want Mem[0]=B, Mem[1]=A.
+        // Push 1 (Addr), Swap (-> [1, B, A]). Store (Mem[1]=A). Stack: [B].
+        // Push 0 (Addr), Swap (-> [0, B]). Store (Mem[0]=B). Stack: [].
+
+        type SortProg = tyarray![
+            // Check if Mem[0] > Mem[1]
+            OpPush<U0>, OpLoad,
+            OpPush<U1>, OpLoad,
+            OpGt,
+            // If True: Swap them
+            OpIf<
+                tyarray![
+                    OpPush<U0>, OpLoad, // A
+                    OpPush<U1>, OpLoad, // B
+                    // Stack: [B, A] (e.g., [1, 3])
+                    OpSwap, // [A, B] ([3, 1])
+                    OpPush<U1>, // [1, A, B]
+                    OpSwap,     // [A, 1, B] (Val=A, Addr=1)
+                    OpStore,    // Mem[1]=A. Stack: [B]
+                    OpPush<U0>, // [0, B]
+                    OpSwap,     // [B, 0] (Val=B, Addr=0)
+                    OpStore     // Mem[0]=B. Stack: []
+                ],
+                tyarray![] // Else: Do nothing
+            >
+        ];
+
+        type InitialState = MachineState<TyNil, InitialMemory, TyNil, SortProg>;
+        type FinalState = Evaluator<ERun<InitialState>>;
+
+        type ExpectedMemory = tyarray![U1, U3];
         type ExpectedState = MachineState<TyNil, ExpectedMemory, TyNil, TyNil>;
 
         assert_type_eq_all!(FinalState, ExpectedState);
