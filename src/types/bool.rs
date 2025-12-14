@@ -2,9 +2,12 @@
 //!
 //! 型レベルブール値 (`TyTrue`, `TyFalse`) と論理演算を提供します。
 
-use crate::eval::{EApply, EApply2, Evaluable, Evaluator, Sealed};
-use crate::func::{FAnd, FNand, FNor, FNot, FOr, FXnor, FXor};
 use typenum::{B0, B1};
+
+use crate::{
+    eval::{EApply, EApply2, Evaluable, Evaluator, Sealed},
+    func::{FAnd, FNand, FNor, FNot, FOr, FXnor, FXor},
+};
 
 // =============================================================================
 // Type-Level Boolean Types
@@ -185,10 +188,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::eval::ELit;
-    use crate::func::{EAnd, ENand, ENor, ENot, EOr, EXnor, EXor};
     use static_assertions::assert_type_eq_all;
+
+    use super::*;
+    use crate::{
+        eval::ELit,
+        func::{EAnd, ENand, ENor, ENot, EOr, EXnor, EXor},
+    };
 
     #[test]
     fn test_not() {

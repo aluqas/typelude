@@ -2,16 +2,21 @@
 //!
 //! 型レベルの配列（コンスリスト）とその操作を提供します。
 
-use std::marker::PhantomData;
-use std::ops::{Add, Sub};
+use std::{
+    marker::PhantomData,
+    ops::{Add, Sub},
+};
+
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
-use crate::eval::{EApply, EApply2, Evaluable, Evaluator, Sealed};
-use crate::func::{
-    FAppend, FConcat, FContains, FGet, FHead, FIsEmpty, FLen, FPrepend, FSet, FTail,
+use crate::{
+    eval::{EApply, EApply2, Evaluable, Evaluator, Sealed},
+    func::{FAppend, FConcat, FContains, FGet, FHead, FIsEmpty, FLen, FPrepend, FSet, FTail},
+    types::{
+        bool::{TyFalse, TyTrue},
+        eq::{_TypeEqConst, AssertBool},
+    },
 };
-use crate::types::bool::{TyFalse, TyTrue};
-use crate::types::eq::{_TypeEqConst, AssertBool};
 
 // =============================================================================
 // Type-Level Array Types
@@ -299,26 +304,17 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::eval::ELit;
-    use crate::func::{EAppend, EConcat, EContains, EGet, EHead, EIsEmpty, ELen, EPrepend, ETail};
     use static_assertions::assert_type_eq_all;
     use typenum::{U0, U1, U2, U10, U12};
 
-    type MyList = tyarray![
-        i32,
-        String,
-        bool,
-        f64,
-        char,
-        (),
-        (),
-        (),
-        (),
-        (),
-        (usize, usize),
-        [TyTrue; 100]
-    ];
+    use super::*;
+    use crate::{
+        eval::ELit,
+        func::{EAppend, EConcat, EContains, EGet, EHead, EIsEmpty, ELen, EPrepend, ETail},
+    };
+
+    type MyList =
+        tyarray![i32, String, bool, f64, char, (), (), (), (), (), (usize, usize), [TyTrue; 100]];
     type MyListExpr = ELit<MyList>;
 
     #[test]

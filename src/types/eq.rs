@@ -2,9 +2,11 @@
 //!
 //! 型レベルでの等価性判定を提供します。
 
-use crate::eval::{EApply2, Evaluable, Evaluator};
-use crate::func::{FEq, FNotEq};
-use crate::types::bool::{TyFalse, TyTrue};
+use crate::{
+    eval::{EApply2, Evaluable, Evaluator},
+    func::{FEq, FNotEq},
+    types::bool::{TyFalse, TyTrue},
+};
 
 // =============================================================================
 // Type Equality Helper (using generic_const_exprs)

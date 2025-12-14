@@ -4,9 +4,11 @@
 
 use typenum::{IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
-use crate::eval::{EApply2, Evaluable, Evaluator};
-use crate::func::{FGe, FGt, FLe, FLt};
-use crate::types::bool::ToTyBoolOut;
+use crate::{
+    eval::{EApply2, Evaluable, Evaluator},
+    func::{FGe, FGt, FLe, FLt},
+    types::bool::ToTyBoolOut,
+};
 
 // =============================================================================
 // Comparison Operations
@@ -62,11 +64,15 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::eval::ELit;
-    use crate::func::{EGe, EGt, ELe, ELt};
     use static_assertions::assert_type_eq_all;
     use typenum::{N1, P1, P2, U1, U2, U3};
+
+    use super::*;
+    use crate::{
+        eval::ELit,
+        func::{EGe, EGt, ELe, ELt},
+        types::bool::{TyFalse, TyTrue},
+    };
 
     #[test]
     fn test_compare_unsigned() {

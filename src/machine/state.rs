@@ -2,8 +2,9 @@
 //!
 //! マシンの状態定義（Stack, Memory, CallStack, Program）
 
-use crate::eval::{Evaluable, Sealed};
 use std::marker::PhantomData;
+
+use crate::eval::{Evaluable, Sealed};
 
 /// マシンの状態
 /// - `Stack`: 計算スタック (TyArray)

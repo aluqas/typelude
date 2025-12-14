@@ -38,11 +38,16 @@ pub type Evaluator<T> = <T as Evaluable>::Output;
 
 #[cfg(test)]
 mod tests {
-    use crate::eval::{EIf, ELit, EWhile, Evaluator};
-    use crate::func::{EEq, EFunction, ENotEq};
-    use crate::types::array::{Cons, TyArray, TyNil};
-    use crate::types::bool::{ToTyBool, ToTyBoolOut, TyFalse, TyTrue};
     use static_assertions::{assert_type_eq_all, assert_type_ne_all};
+
+    use crate::{
+        eval::{EIf, ELit, EWhile, Evaluator},
+        func::{EEq, EFunction, ENotEq},
+        types::{
+            array::{Cons, TyArray, TyNil},
+            bool::{ToTyBool, ToTyBoolOut, TyFalse, TyTrue},
+        },
+    };
 
     #[test]
     fn test_eeq() {

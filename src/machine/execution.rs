@@ -2,15 +2,18 @@
 //!
 //! マシンの命令実行ロジックとメインループを実装します。
 
-use crate::eval::{EApply, EIf, EWhile, Evaluable, Evaluator};
-use crate::func::{EConcat, EFunction, FIsEmpty, FNot};
+use typenum::Unsigned;
+
 // Important: Ensure types::int is imported so Evaluable impls for Arithmetic are visible
 use crate::machine::instruction::*;
-use crate::machine::state::MachineState;
-use crate::types::array::{Cons, Get, Set, TyArray, TyNil};
 #[allow(unused_imports)]
 use crate::types::int;
-use typenum::Unsigned;
+use crate::{
+    eval::{EApply, EIf, EWhile, Evaluable, Evaluator},
+    func::{EConcat, EFunction, FIsEmpty, FNot},
+    machine::state::MachineState,
+    types::array::{Cons, Get, Set, TyArray, TyNil},
+};
 
 // =============================================================================
 // Execute Trait
@@ -385,10 +388,11 @@ pub type ERun<S> = EWhile<FIsFinished, FStep, S>;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::tyarray;
     use static_assertions::assert_type_eq_all;
     use typenum::{U1, U2, U3, U5};
+
+    use super::*;
+    use crate::tyarray;
 
     #[test]
     fn test_stack_ops_logic() {

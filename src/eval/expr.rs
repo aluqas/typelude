@@ -9,8 +9,10 @@
 use std::marker::PhantomData;
 
 use super::{Evaluable, Evaluator};
-use crate::func::EFunction;
-use crate::types::bool::{TyFalse, TyTrue};
+use crate::{
+    func::EFunction,
+    types::bool::{TyFalse, TyTrue},
+};
 
 // =============================================================================
 // ELit: Literal Expression

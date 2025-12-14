@@ -4,10 +4,14 @@
 //! `typenum` の数値を直接 `Evaluable` として扱えるようにし、
 //! `typelude` の評価システム内で算術演算や比較を行えるようにします。
 
-use crate::eval::{EApply2, Evaluable, Evaluator, Sealed};
-use crate::types::bool::{TyFalse, TyTrue};
 use std::ops::{Add, Div, Mul, Rem, Sub};
+
 use typenum::{B0, B1, Cmp, Equal, Greater, Less, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
+
+use crate::{
+    eval::{EApply2, Evaluable, Evaluator, Sealed},
+    types::bool::{TyFalse, TyTrue},
+};
 
 // =============================================================================
 // Evaluable Implementation for typenum Types
@@ -296,10 +300,11 @@ pub type EGe<A, B> = EApply2<FGe, A, B>;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::types::bool::{TyFalse, TyTrue};
     use static_assertions::assert_type_eq_all;
     use typenum::{N1, N2, P1, P4, P5, U1, U2, U3, U5, U8, U9, U10, U20};
+
+    use super::*;
+    use crate::types::bool::{TyFalse, TyTrue};
 
     #[test]
     fn test_eval_typenum() {
