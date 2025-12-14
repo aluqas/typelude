@@ -76,6 +76,34 @@ pub struct FEq;
 pub struct FNotEq;
 
 // =============================================================================
+// Function Markers: Arithmetic Operations
+// =============================================================================
+
+/// 加算: A + B
+pub struct FAdd;
+/// 減算: A - B
+pub struct FSub;
+/// 乗算: A * B
+pub struct FMul;
+/// 除算: A / B
+pub struct FDiv;
+/// 剰余: A % B
+pub struct FRem;
+
+// =============================================================================
+// Function Markers: Comparison Operations
+// =============================================================================
+
+/// 小なり: A < B
+pub struct FLt;
+/// 以下: A <= B
+pub struct FLe;
+/// 大なり: A > B
+pub struct FGt;
+/// 以上: A >= B
+pub struct FGe;
+
+// =============================================================================
 // Legacy Aliases
 // 後方互換性のため、EApply<F*, ...> への type alias を提供
 // =============================================================================
@@ -107,3 +135,16 @@ pub type EContains<A, X> = EApply2<FContains, A, X>;
 // Equality (2 args)
 pub type EEq<A, B> = EApply2<FEq, A, B>;
 pub type ENotEq<A, B> = EApply2<FNotEq, A, B>;
+
+// Arithmetic (2 args)
+pub type EAdd<A, B> = EApply2<FAdd, A, B>;
+pub type ESub<A, B> = EApply2<FSub, A, B>;
+pub type EMul<A, B> = EApply2<FMul, A, B>;
+pub type EDiv<A, B> = EApply2<FDiv, A, B>;
+pub type ERem<A, B> = EApply2<FRem, A, B>;
+
+// Comparison (2 args)
+pub type ELt<A, B> = EApply2<FLt, A, B>;
+pub type ELe<A, B> = EApply2<FLe, A, B>;
+pub type EGt<A, B> = EApply2<FGt, A, B>;
+pub type EGe<A, B> = EApply2<FGe, A, B>;

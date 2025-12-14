@@ -22,5 +22,6 @@
 
 pub mod eval;
 pub mod func;
+pub mod machine;
 pub mod prelude;
 pub mod types;
