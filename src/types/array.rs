@@ -40,10 +40,10 @@ impl<Ty, Tail: Cons> Cons for TyArray<Ty, Tail> {}
 macro_rules! tyarray {
     // 空のリスト
     () => { $crate::types::array::TyNil };
-    // 長さ1のリスト
-    ($n:ty) => { $crate::types::array::TyArray<$n, $crate::types::array::TyNil> };
-    // 長さ2以上のリスト
-    ($n:ty, $($tail:ty), +) => { $crate::types::array::TyArray<$n, $crate::tyarray![$($tail), +]> };
+    // 長さ1のリスト (with optional trailing comma)
+    ($n:ty $(,)?) => { $crate::types::array::TyArray<$n, $crate::types::array::TyNil> };
+    // 長さ2以上のリスト (with optional trailing comma)
+    ($n:ty, $($tail:ty),+ $(,)?) => { $crate::types::array::TyArray<$n, $crate::tyarray![$($tail),+]> };
 }
 
 // =============================================================================
