@@ -7,9 +7,7 @@
 use crate::eval::{EApply2, Evaluable, Evaluator, Sealed};
 use crate::types::bool::{TyFalse, TyTrue};
 use std::ops::{Add, Div, Mul, Rem, Sub};
-use typenum::{
-    B0, B1, Cmp, Equal, Greater, Less, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0,
-};
+use typenum::{B0, B1, Cmp, Equal, Greater, Less, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
 
 // =============================================================================
 // Evaluable Implementation for typenum Types
@@ -292,7 +290,6 @@ pub type ELe<A, B> = EApply2<FLe, A, B>;
 pub type EGt<A, B> = EApply2<FGt, A, B>;
 pub type EGe<A, B> = EApply2<FGe, A, B>;
 
-
 // =============================================================================
 // Tests
 // =============================================================================
@@ -302,7 +299,7 @@ mod tests {
     use super::*;
     use crate::types::bool::{TyFalse, TyTrue};
     use static_assertions::assert_type_eq_all;
-    use typenum::{N1, N2, P1, P4, P5, U1, U10, U2, U3, U5, U8, U9, U20};
+    use typenum::{N1, N2, P1, P4, P5, U1, U2, U3, U5, U8, U9, U10, U20};
 
     #[test]
     fn test_eval_typenum() {
@@ -337,10 +334,7 @@ mod tests {
 
         // Composition
         // (1 + 2) * 3 = 9
-        assert_type_eq_all!(
-            Evaluator<EMul<EAdd<U1, U2>, U3>>,
-            U9
-        );
+        assert_type_eq_all!(Evaluator<EMul<EAdd<U1, U2>, U3>>, U9);
     }
 
     #[test]

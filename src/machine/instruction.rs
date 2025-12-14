@@ -2,8 +2,8 @@
 //!
 //! スタックマシンの命令セットを定義します。
 
-use std::marker::PhantomData;
 use crate::eval::Sealed;
+use std::marker::PhantomData;
 
 /// 命令マーカー
 pub trait Instruction: Sealed {}

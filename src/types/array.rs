@@ -7,7 +7,9 @@ use std::ops::{Add, Sub};
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
 use crate::eval::{EApply, EApply2, Evaluable, Evaluator, Sealed};
-use crate::func::{FAppend, FConcat, FContains, FGet, FHead, FIsEmpty, FLen, FPrepend, FSet, FTail};
+use crate::func::{
+    FAppend, FConcat, FContains, FGet, FHead, FIsEmpty, FLen, FPrepend, FSet, FTail,
+};
 use crate::types::bool::{TyFalse, TyTrue};
 use crate::types::eq::{_TypeEqConst, AssertBool};
 

@@ -5,11 +5,11 @@
 use crate::eval::{EApply, EIf, EWhile, Evaluable, Evaluator};
 use crate::func::{EConcat, EFunction, FIsEmpty, FNot};
 // Important: Ensure types::int is imported so Evaluable impls for Arithmetic are visible
-#[allow(unused_imports)]
-use crate::types::int;
 use crate::machine::instruction::*;
 use crate::machine::state::MachineState;
 use crate::types::array::{Cons, Get, Set, TyArray, TyNil};
+#[allow(unused_imports)]
+use crate::types::int;
 use typenum::Unsigned;
 
 // =============================================================================
@@ -52,12 +52,14 @@ macro_rules! impl_execute_via_runstep {
     };
 }
 
-impl<N, Stack, Memory, CallStack, RestProg> Execute<Stack, Memory, CallStack, RestProg> for OpPush<N>
+impl<N, Stack, Memory, CallStack, RestProg> Execute<Stack, Memory, CallStack, RestProg>
+    for OpPush<N>
 where
     Self: RunStep<Stack>,
     RestProg: Cons,
 {
-    type OutputState = MachineState<<Self as RunStep<Stack>>::OutputStack, Memory, CallStack, RestProg>;
+    type OutputState =
+        MachineState<<Self as RunStep<Stack>>::OutputStack, Memory, CallStack, RestProg>;
 }
 impl_execute_via_runstep!(OpAdd);
 impl_execute_via_runstep!(OpSub);
@@ -205,7 +207,8 @@ where
 
 // --- OpLoad ---
 // Stack: [Addr, ...] -> Memory, ... -> Stack: [Value, ...]
-impl<Addr, RestStack, Memory, CallStack, RestProg> Execute<TyArray<Addr, RestStack>, Memory, CallStack, RestProg> for OpLoad
+impl<Addr, RestStack, Memory, CallStack, RestProg>
+    Execute<TyArray<Addr, RestStack>, Memory, CallStack, RestProg> for OpLoad
 where
     Addr: Unsigned,
     TyArray<Addr, RestStack>: Cons,
@@ -213,12 +216,18 @@ where
     RestProg: Cons,
     Memory: Get<Addr>,
 {
-    type OutputState = MachineState<TyArray<<Memory as Get<Addr>>::Output, RestStack>, Memory, CallStack, RestProg>;
+    type OutputState = MachineState<
+        TyArray<<Memory as Get<Addr>>::Output, RestStack>,
+        Memory,
+        CallStack,
+        RestProg,
+    >;
 }
 
 // --- OpStore ---
 // Stack: [Value, Addr, ...] -> Memory, ... -> Memory[Addr] = Value, Stack: [...]
-impl<Value, Addr, RestStack, Memory, CallStack, RestProg> Execute<TyArray<Value, TyArray<Addr, RestStack>>, Memory, CallStack, RestProg> for OpStore
+impl<Value, Addr, RestStack, Memory, CallStack, RestProg>
+    Execute<TyArray<Value, TyArray<Addr, RestStack>>, Memory, CallStack, RestProg> for OpStore
 where
     Addr: Unsigned,
     TyArray<Value, TyArray<Addr, RestStack>>: Cons,
@@ -226,13 +235,15 @@ where
     RestProg: Cons,
     Memory: Set<Addr, Value>,
 {
-    type OutputState = MachineState<RestStack, <Memory as Set<Addr, Value>>::Output, CallStack, RestProg>;
+    type OutputState =
+        MachineState<RestStack, <Memory as Set<Addr, Value>>::Output, CallStack, RestProg>;
 }
 
 // --- OpCall<TargetProg> ---
 // CallStack: [...] -> [RestProg, ...]
 // Program: TargetProg
-impl<TargetProg, Stack, Memory, CallStack, RestProg> Execute<Stack, Memory, CallStack, RestProg> for OpCall<TargetProg>
+impl<TargetProg, Stack, Memory, CallStack, RestProg> Execute<Stack, Memory, CallStack, RestProg>
+    for OpCall<TargetProg>
 where
     Stack: Cons,
     Memory: Cons,
@@ -246,7 +257,8 @@ where
 // --- OpReturn ---
 // CallStack: [Continuation, RestCallStack...] -> RestCallStack
 // Program: Continuation
-impl<Stack, Memory, Continuation, RestCallStack, RestProg> Execute<Stack, Memory, TyArray<Continuation, RestCallStack>, RestProg> for OpReturn
+impl<Stack, Memory, Continuation, RestCallStack, RestProg>
+    Execute<Stack, Memory, TyArray<Continuation, RestCallStack>, RestProg> for OpReturn
 where
     Stack: Cons,
     Memory: Cons,
@@ -260,7 +272,8 @@ where
 
 // --- OpWhile<CondProg, BodyProg> ---
 // Expansion: CondProg + [OpIf<BodyProg + [OpWhile<CondProg, BodyProg>], []>] + RestProg
-impl<CondProg, BodyProg, Stack, Memory, CallStack, RestProg> Execute<Stack, Memory, CallStack, RestProg> for OpWhile<CondProg, BodyProg>
+impl<CondProg, BodyProg, Stack, Memory, CallStack, RestProg>
+    Execute<Stack, Memory, CallStack, RestProg> for OpWhile<CondProg, BodyProg>
 where
     Stack: Cons,
     CondProg: Cons,
@@ -270,19 +283,36 @@ where
     // Alias for the recursive body: Body + [While]
     EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Evaluable,
     // Note: Use 'Evaluator<...>' for the recursive part to ensure it is treated as a type, not an expression that confuses the parser
-    EConcat<CondProg, TyArray<OpIf<Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>, RestProg>>: Evaluable,
+    EConcat<
+        CondProg,
+        TyArray<
+            OpIf<Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>,
+            RestProg,
+        >,
+    >: Evaluable,
 {
     type OutputState = MachineState<
         Stack,
         Memory,
         CallStack,
-        Evaluator<EConcat<CondProg, TyArray<OpIf<Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>, RestProg>>>
+        Evaluator<
+            EConcat<
+                CondProg,
+                TyArray<
+                    OpIf<
+                        Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>,
+                        TyNil,
+                    >,
+                    RestProg,
+                >,
+            >,
+        >,
     >;
 }
 
 // --- OpIf<Then, Else> ---
-impl<Cond, RestStack, Memory, CallStack, Then, Else, RestProg> Execute<TyArray<Cond, RestStack>, Memory, CallStack, RestProg>
-    for OpIf<Then, Else>
+impl<Cond, RestStack, Memory, CallStack, Then, Else, RestProg>
+    Execute<TyArray<Cond, RestStack>, Memory, CallStack, RestProg> for OpIf<Then, Else>
 where
     TyArray<Cond, RestStack>: Cons,
     RestStack: Cons,
@@ -314,7 +344,8 @@ where
 /// MachineState<Stack, Memory, CallStack, Cons<Inst, RestProg>> -> NewState
 pub struct FStep;
 
-impl<Stack, Memory, CallStack, Inst, RestProg> EFunction<MachineState<Stack, Memory, CallStack, TyArray<Inst, RestProg>>> for FStep
+impl<Stack, Memory, CallStack, Inst, RestProg>
+    EFunction<MachineState<Stack, Memory, CallStack, TyArray<Inst, RestProg>>> for FStep
 where
     Inst: Execute<Stack, Memory, CallStack, RestProg>,
     TyArray<Inst, RestProg>: Cons,
@@ -372,13 +403,7 @@ mod tests {
         // Program: Push 2, Push 3, Add, Push 5, Sub
         // [2] -> [3, 2] -> [5] -> [5, 5] -> [0]
 
-        type Prog = tyarray![
-            OpPush<U2>,
-            OpPush<U3>,
-            OpAdd,
-            OpPush<U5>,
-            OpSub
-        ];
+        type Prog = tyarray![OpPush<U2>, OpPush<U3>, OpAdd, OpPush<U5>, OpSub];
 
         // Empty Memory, Empty CallStack
         type InitialState = MachineState<TyNil, TyNil, TyNil, Prog>;
@@ -393,18 +418,11 @@ mod tests {
     #[test]
     fn test_call_return() {
         // Subroutine: Push 5, Return
-        type SubRoutine = tyarray![
-            OpPush<U5>,
-            OpReturn
-        ];
+        type SubRoutine = tyarray![OpPush<U5>, OpReturn];
 
         // Main: Push 3, Call SubRoutine, Add
         // [3] -> Call -> [5, 3] -> [8]
-        type MainProg = tyarray![
-            OpPush<U3>,
-            OpCall<SubRoutine>,
-            OpAdd
-        ];
+        type MainProg = tyarray![OpPush<U3>, OpCall<SubRoutine>, OpAdd];
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, MainProg>;
         type FinalState = Evaluator<ERun<InitialState>>;
@@ -442,9 +460,7 @@ mod tests {
         ];
 
         // Main: Call Func
-        type Main = tyarray![
-            OpCall<Func>
-        ];
+        type Main = tyarray![OpCall<Func>];
 
         type InitialState = MachineState<TyNil, InitialMemory, TyNil, Main>;
         type FinalState = Evaluator<ERun<InitialState>>;
@@ -465,16 +481,9 @@ mod tests {
         // Cond: Dup, Push 0, Gt (Top > 0)
         // Body: Push 1, Sub
 
-        type CondProg = tyarray![
-            OpDup,
-            OpPush<U0>,
-            OpGt
-        ];
+        type CondProg = tyarray![OpDup, OpPush<U0>, OpGt];
 
-        type BodyProg = tyarray![
-            OpPush<U1>,
-            OpSub
-        ];
+        type BodyProg = tyarray![OpPush<U1>, OpSub];
 
         type Prog = tyarray![
             OpPush<U3>, // Start at 3
