@@ -13,7 +13,7 @@
 use std::marker::PhantomData;
 
 use crate::eval::{EApply, EIf, EWhile, Evaluable, Evaluator, Sealed};
-use crate::func::{EFunction, FIsEmpty, FNot};
+use crate::func::{EConcat, EFunction, FIsEmpty, FNot};
 use crate::types::array::{Cons, Head, Tail, TyArray, TyNil};
 
 // =============================================================================
@@ -57,13 +57,57 @@ pub struct OpSub;
 impl Sealed for OpSub {}
 impl Instruction for OpSub {}
 
+/// Dup: スタックの先頭要素を複製する
+#[derive(Debug, Clone, Copy)]
+pub struct OpDup;
+impl Sealed for OpDup {}
+impl Instruction for OpDup {}
+
+/// Swap: スタックの先頭2つの要素を入れ替える
+#[derive(Debug, Clone, Copy)]
+pub struct OpSwap;
+impl Sealed for OpSwap {}
+impl Instruction for OpSwap {}
+
+/// Drop: スタックの先頭要素を破棄する
+#[derive(Debug, Clone, Copy)]
+pub struct OpDrop;
+impl Sealed for OpDrop {}
+impl Instruction for OpDrop {}
+
+/// If: スタックの先頭がTrueならThen、FalseならElseを実行する
+/// - ThenProg: Trueの場合に実行する命令列
+/// - ElseProg: Falseの場合に実行する命令列
+#[derive(Debug, Clone, Copy)]
+pub struct OpIf<ThenProg, ElseProg>(PhantomData<(ThenProg, ElseProg)>);
+impl<T, E> Sealed for OpIf<T, E> {}
+impl<T, E> Instruction for OpIf<T, E> {}
+
 // =============================================================================
-// Instruction Logic (RunStep)
+// Instruction Logic (Execute)
 // =============================================================================
 
-/// 命令を実行して新しいスタックを返すトレイト
+/// 命令を実行して新しい状態を返すトレイト
+///
+/// `RestProg` は、現在の命令を取り除いた残りの命令列。
+/// 通常の命令は `Execute::OutputState = State<NewStack, RestProg>` となる。
+/// 分岐命令は `Execute::OutputState = State<NewStack, NewProg>` となる。
+pub trait Execute<Stack, RestProg> {
+    type OutputState;
+}
+
+/// Helper trait for Stack-only instructions (Adapter Pattern)
 pub trait RunStep<Stack> {
     type OutputStack: Cons;
+}
+
+// Adapt RunStep to Execute
+impl<Inst, Stack, RestProg> Execute<Stack, RestProg> for Inst
+where
+    Inst: RunStep<Stack>,
+    RestProg: Cons,
+{
+    type OutputState = State<<Inst as RunStep<Stack>>::OutputStack, RestProg>;
 }
 
 // --- OpPush<N> ---
@@ -97,6 +141,63 @@ where
     type OutputStack = TyArray<Evaluator<crate::func::ESub<A, B>>, Rest>;
 }
 
+// --- OpDup ---
+// Stack: [A, ...] -> [A, A, ...]
+impl<A, Rest> RunStep<TyArray<A, Rest>> for OpDup
+where
+    TyArray<A, Rest>: Cons,
+    Rest: Cons,
+{
+    type OutputStack = TyArray<A, TyArray<A, Rest>>;
+}
+
+// --- OpSwap ---
+// Stack: [A, B, ...] -> [B, A, ...]
+impl<A, B, Rest> RunStep<TyArray<A, TyArray<B, Rest>>> for OpSwap
+where
+    TyArray<A, TyArray<B, Rest>>: Cons,
+    Rest: Cons,
+{
+    type OutputStack = TyArray<B, TyArray<A, Rest>>;
+}
+
+// --- OpDrop ---
+// Stack: [A, ...] -> [...]
+impl<A, Rest> RunStep<TyArray<A, Rest>> for OpDrop
+where
+    TyArray<A, Rest>: Cons,
+    Rest: Cons,
+{
+    type OutputStack = Rest;
+}
+
+// --- OpIf<Then, Else> ---
+// Execute for OpIf
+// Stack: [Cond, RestStack...]
+// if Cond == True  -> State<RestStack, Then + RestProg>
+// if Cond == False -> State<RestStack, Else + RestProg>
+
+impl<Cond, RestStack, Then, Else, RestProg> Execute<TyArray<Cond, RestStack>, RestProg>
+    for OpIf<Then, Else>
+where
+    TyArray<Cond, RestStack>: Cons,
+    RestStack: Cons,
+    RestProg: Cons,
+    Then: Cons,
+    Else: Cons,
+    EConcat<Then, RestProg>: Evaluable,
+    EConcat<Else, RestProg>: Evaluable,
+    EIf<Cond, State<RestStack, Evaluator<EConcat<Then, RestProg>>>, State<RestStack, Evaluator<EConcat<Else, RestProg>>>>: Evaluable,
+{
+    type OutputState = Evaluator<
+        EIf<
+            Cond,
+            State<RestStack, Evaluator<EConcat<Then, RestProg>>>,
+            State<RestStack, Evaluator<EConcat<Else, RestProg>>>,
+        >,
+    >;
+}
+
 // =============================================================================
 // Machine Execution (Step / Run)
 // =============================================================================
@@ -107,11 +208,11 @@ pub struct FStep;
 
 impl<Stack, Inst, RestProg> EFunction<State<Stack, TyArray<Inst, RestProg>>> for FStep
 where
-    Inst: RunStep<Stack>,
+    Inst: Execute<Stack, RestProg>,
     TyArray<Inst, RestProg>: Cons,
     RestProg: Cons,
 {
-    type Output = State<<Inst as RunStep<Stack>>::OutputStack, RestProg>;
+    type Output = <Inst as Execute<Stack, RestProg>>::OutputState;
 }
 
 // Evaluable wrapper for FStep
@@ -192,5 +293,23 @@ mod tests {
         type ExpectedState = State<ExpectedStack, TyNil>;
 
         assert_type_eq_all!(FinalState, ExpectedState);
+    }
+
+    #[test]
+    fn test_op_if() {
+        use crate::types::bool::{TyFalse, TyTrue};
+
+        // If True then Push 1 else Push 2
+        type IfProg = OpIf<tyarray![OpPush<U1>], tyarray![OpPush<U2>]>;
+
+        // Case 1: True
+        type Prog1 = tyarray![OpPush<TyTrue>, IfProg];
+        type FinalState1 = Evaluator<ERun<State<TyNil, Prog1>>>;
+        assert_type_eq_all!(FinalState1, State<tyarray![U1], TyNil>);
+
+        // Case 2: False
+        type Prog2 = tyarray![OpPush<TyFalse>, IfProg];
+        type FinalState2 = Evaluator<ERun<State<TyNil, Prog2>>>;
+        assert_type_eq_all!(FinalState2, State<tyarray![U2], TyNil>);
     }
 }
