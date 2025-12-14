@@ -4,4 +4,6 @@
 
 pub mod array;
 pub mod bool;
+pub mod cmp;
 pub mod eq;
+pub mod int;
