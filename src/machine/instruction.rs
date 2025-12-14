@@ -132,3 +132,26 @@ impl Instruction for OpOr {}
 pub struct OpWhile<CondProg, BodyProg>(PhantomData<(CondProg, BodyProg)>);
 impl<C, B> Sealed for OpWhile<C, B> {}
 impl<C, B> Instruction for OpWhile<C, B> {}
+
+/// GetLocal<Index>: ローカル変数を取得
+/// Stack: [...] -> [Locals[Index], ...]
+#[derive(Debug, Clone, Copy)]
+pub struct OpGetLocal<Index>(PhantomData<Index>);
+impl<Index> Sealed for OpGetLocal<Index> {}
+impl<Index> Instruction for OpGetLocal<Index> {}
+
+/// SetLocal<Index>: ローカル変数を設定
+/// Stack: [Value, ...] -> [...]
+/// Locals[Index] = Value
+#[derive(Debug, Clone, Copy)]
+pub struct OpSetLocal<Index>(PhantomData<Index>);
+impl<Index> Sealed for OpSetLocal<Index> {}
+impl<Index> Instruction for OpSetLocal<Index> {}
+
+/// Let: ローカル変数を宣言（スタックから値をポップし、ローカル変数の先頭に追加）
+/// Stack: [Val, ...] -> [...]
+/// Locals: [Old...] -> [Val, Old...]
+#[derive(Debug, Clone, Copy)]
+pub struct OpLet;
+impl Sealed for OpLet {}
+impl Instruction for OpLet {}

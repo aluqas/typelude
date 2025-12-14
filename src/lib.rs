@@ -37,8 +37,12 @@
 #![feature(generic_const_exprs)]
 #![allow(incomplete_features)]
 
+// Export typenum for macros
+pub use typenum;
+
 pub mod eval;
 pub mod func;
 pub mod machine;
+pub mod macros;
 pub mod prelude;
 pub mod types;
