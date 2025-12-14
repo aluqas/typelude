@@ -48,6 +48,7 @@ Typeludeは、Rustの型システムのための高度な論理演算/ユーテ�
 3. predicateトレイトパターン
 
 -
+
 ##
 
 - Expression→追加のドメイン固有トレイトが必要
