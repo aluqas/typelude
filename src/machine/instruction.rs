@@ -78,3 +78,56 @@ impl<TargetProg> Instruction for OpCall<TargetProg> {}
 pub struct OpReturn;
 impl Sealed for OpReturn {}
 impl Instruction for OpReturn {}
+
+/// Eq: スタックの上位2つが等しいか判定 (A == B)
+#[derive(Debug, Clone, Copy)]
+pub struct OpEq;
+impl Sealed for OpEq {}
+impl Instruction for OpEq {}
+
+/// Neq: スタックの上位2つが等しくないか判定 (A != B)
+#[derive(Debug, Clone, Copy)]
+pub struct OpNeq;
+impl Sealed for OpNeq {}
+impl Instruction for OpNeq {}
+
+/// Lt: スタックの上位2つを比較 (A < B)
+/// Stack: [B, A, ...] -> Push (A < B)
+#[derive(Debug, Clone, Copy)]
+pub struct OpLt;
+impl Sealed for OpLt {}
+impl Instruction for OpLt {}
+
+/// Gt: スタックの上位2つを比較 (A > B)
+/// Stack: [B, A, ...] -> Push (A > B)
+#[derive(Debug, Clone, Copy)]
+pub struct OpGt;
+impl Sealed for OpGt {}
+impl Instruction for OpGt {}
+
+/// Not: 論理否定 (!A)
+#[derive(Debug, Clone, Copy)]
+pub struct OpNot;
+impl Sealed for OpNot {}
+impl Instruction for OpNot {}
+
+/// And: 論理積 (A && B)
+#[derive(Debug, Clone, Copy)]
+pub struct OpAnd;
+impl Sealed for OpAnd {}
+impl Instruction for OpAnd {}
+
+/// Or: 論理和 (A || B)
+#[derive(Debug, Clone, Copy)]
+pub struct OpOr;
+impl Sealed for OpOr {}
+impl Instruction for OpOr {}
+
+/// While: ループ構造
+/// 1. CondProgを実行
+/// 2. スタックトップがTrueならBodyProgを実行し、1に戻る
+/// 3. Falseなら終了（ループを抜ける）
+#[derive(Debug, Clone, Copy)]
+pub struct OpWhile<CondProg, BodyProg>(PhantomData<(CondProg, BodyProg)>);
+impl<C, B> Sealed for OpWhile<C, B> {}
+impl<C, B> Instruction for OpWhile<C, B> {}
