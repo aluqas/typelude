@@ -5,3 +5,4 @@
 pub mod array;
 pub mod bool;
 pub mod eq;
+pub mod int;
