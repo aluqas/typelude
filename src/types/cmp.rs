@@ -6,7 +6,7 @@ use typenum::{IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
 use crate::eval::{EApply2, Evaluable, Evaluator};
 use crate::func::{FGe, FGt, FLe, FLt};
-use crate::types::bool::{ToTyBoolOut, TyFalse, TyTrue};
+use crate::types::bool::ToTyBoolOut;
 
 // =============================================================================
 // Comparison Operations
