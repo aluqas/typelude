@@ -7,7 +7,7 @@ use std::ops::{Add, Sub};
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
 use crate::eval::{EApply, EApply2, Evaluable, Evaluator, Sealed};
-use crate::func::{FAppend, FConcat, FContains, FGet, FHead, FIsEmpty, FLen, FPrepend, FTail};
+use crate::func::{FAppend, FConcat, FContains, FGet, FHead, FIsEmpty, FLen, FPrepend, FSet, FTail};
 use crate::types::bool::{TyFalse, TyTrue};
 use crate::types::eq::{_TypeEqConst, AssertBool};
 
@@ -121,6 +121,25 @@ where
     type Output = <T as Get<Sub1<UInt<N, B>>>>::Output;
 }
 
+/// インデックス更新 (Set)
+#[doc(hidden)]
+pub trait Set<IDX: Unsigned, VAL> {
+    type Output: Cons;
+}
+
+impl<H, T: Cons, VAL> Set<U0, VAL> for TyArray<H, T> {
+    type Output = TyArray<VAL, T>;
+}
+
+impl<H, T: Cons, N: Unsigned, B: typenum::Bit, VAL> Set<UInt<N, B>, VAL> for TyArray<H, T>
+where
+    UInt<N, B>: Sub<B1>,
+    Sub1<UInt<N, B>>: Unsigned,
+    T: Set<Sub1<UInt<N, B>>, VAL>,
+{
+    type Output = TyArray<H, <T as Set<Sub1<UInt<N, B>>, VAL>>::Output>;
+}
+
 /// 配列の結合
 #[doc(hidden)]
 pub trait Concat<Other: Cons> {
@@ -216,6 +235,18 @@ where
     Evaluator<Array>: Get<Evaluator<Index>>,
 {
     type Output = <Evaluator<Array> as Get<Evaluator<Index>>>::Output;
+}
+
+// --- FSet: インデックス更新 ---
+impl<Array, Index, Value> Evaluable for crate::eval::EApply3<FSet, Array, Index, Value>
+where
+    Array: Evaluable,
+    Index: Evaluable,
+    Value: Evaluable,
+    Evaluator<Index>: Unsigned,
+    Evaluator<Array>: Set<Evaluator<Index>, Evaluator<Value>>,
+{
+    type Output = <Evaluator<Array> as Set<Evaluator<Index>, Evaluator<Value>>>::Output;
 }
 
 // --- FConcat: 配列の結合 ---

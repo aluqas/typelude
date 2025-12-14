@@ -3,7 +3,7 @@
 //! 型レベル関数のマーカー型と関連トレイトを定義します。
 //! 関数の実装（`Evaluable`）は各 `types/*` モジュールで行われます。
 
-use crate::eval::{EApply, EApply2, ELit};
+use crate::eval::{EApply, EApply2, EApply3, ELit};
 
 // =============================================================================
 // EFunction Trait
@@ -57,6 +57,8 @@ pub struct FTail;
 pub struct FIsEmpty;
 /// 配列のインデックスアクセス
 pub struct FGet;
+/// 配列のインデックス更新
+pub struct FSet;
 /// 配列の結合
 pub struct FConcat;
 /// 配列の末尾に追加
@@ -131,6 +133,9 @@ pub type EConcat<A, B> = EApply2<FConcat, A, B>;
 pub type EAppend<A, E> = EApply2<FAppend, A, E>;
 pub type EPrepend<E, A> = EApply2<FPrepend, E, A>;
 pub type EContains<A, X> = EApply2<FContains, A, X>;
+
+// Array (3 args)
+pub type ESet<A, I, V> = EApply3<FSet, A, I, V>;
 
 // Equality (2 args)
 pub type EEq<A, B> = EApply2<FEq, A, B>;

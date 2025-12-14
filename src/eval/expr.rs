@@ -49,6 +49,14 @@ pub struct EApply<F, A>(PhantomData<(F, A)>);
 /// ```
 pub struct EApply2<F, A, B>(PhantomData<(F, A, B)>);
 
+/// 3引数関数適用
+///
+/// # Example
+/// ```ignore
+/// type SetExpr = EApply3<FSet, ELit<Array>, ELit<Index>, ELit<Value>>;
+/// ```
+pub struct EApply3<F, A, B, C>(PhantomData<(F, A, B, C)>);
+
 // =============================================================================
 // EIf: Conditional Expression
 // =============================================================================
