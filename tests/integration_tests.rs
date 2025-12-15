@@ -1,11 +1,12 @@
 #![recursion_limit = "1024"]
-use typelude::program;
-use typelude::machine::state::MachineState;
-use typelude::machine::execution::ERun;
-use typelude::eval::Evaluator;
-use typelude::std::array::{TyArray, TyNil};
-use typelude::define_vars;
 use static_assertions::assert_type_eq_all;
+use typelude::{
+    define_vars,
+    eval::Evaluator,
+    machine::{execution::ERun, state::MachineState},
+    program,
+    std::array::{TyArray, TyNil},
+};
 use typenum::{U21, U55};
 
 // Helper to extract stack

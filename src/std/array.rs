@@ -228,7 +228,6 @@ impl Sealed for FAppend {}
 impl Sealed for FPrepend {}
 impl Sealed for FContains {}
 
-
 // =============================================================================
 // Evaluable Implementations for Array Functions
 // =============================================================================
@@ -331,7 +330,9 @@ where
     Evaluator<Array>: Contains<Evaluator<X>>,
     (): crate::std::bool::Bool2TyBool<{ <Evaluator<Array> as Contains<Evaluator<X>>>::VALUE }>,
 {
-    type Output = Evaluator<crate::std::bool::Assert<{ <Evaluator<Array> as Contains<Evaluator<X>>>::VALUE }>>;
+    type Output = Evaluator<
+        crate::std::bool::Assert<{ <Evaluator<Array> as Contains<Evaluator<X>>>::VALUE }>,
+    >;
 }
 
 // --- FMap: 配列の各要素に関数を適用 ---
@@ -353,7 +354,8 @@ where
     T: Cons + MapHelper<F>,
     <T as MapHelper<F>>::Output: Cons,
 {
-    type Output = TyArray<<F as crate::std::ops::EFunction<H>>::Output, <T as MapHelper<F>>::Output>;
+    type Output =
+        TyArray<<F as crate::std::ops::EFunction<H>>::Output, <T as MapHelper<F>>::Output>;
 }
 
 // Evaluable impl
@@ -388,22 +390,22 @@ where
     crate::eval::EIf<
         <P as crate::std::ops::EFunction<H>>::Output,
         crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
-        crate::eval::ELit<<T as FilterHelper<P>>::Output>
+        crate::eval::ELit<<T as FilterHelper<P>>::Output>,
     >: Evaluable,
     Evaluator<
         crate::eval::EIf<
             <P as crate::std::ops::EFunction<H>>::Output,
             crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
-            crate::eval::ELit<<T as FilterHelper<P>>::Output>
-        >
+            crate::eval::ELit<<T as FilterHelper<P>>::Output>,
+        >,
     >: Cons,
 {
     type Output = Evaluator<
         crate::eval::EIf<
             <P as crate::std::ops::EFunction<H>>::Output,
             crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
-            crate::eval::ELit<<T as FilterHelper<P>>::Output>
-        >
+            crate::eval::ELit<<T as FilterHelper<P>>::Output>,
+        >,
     >;
 }
 
@@ -432,7 +434,8 @@ where
     F: crate::std::ops::EFunction<(Acc, H)>,
     T: Cons + FoldHelper<F, <F as crate::std::ops::EFunction<(Acc, H)>>::Output>,
 {
-    type Output = <T as FoldHelper<F, <F as crate::std::ops::EFunction<(Acc, H)>>::Output>>::Output;
+    type Output =
+        <T as FoldHelper<F, <F as crate::std::ops::EFunction<(Acc, H)>>::Output>>::Output;
 }
 
 impl<F, Init, List> Evaluable for EApply3<FFold, F, Init, List>
@@ -556,8 +559,9 @@ mod tests {
 
     #[test]
     fn test_emap() {
-        use crate::std::ops::EFunction;
         use typenum::{Add1, U1, U2, U3, U4};
+
+        use crate::std::ops::EFunction;
 
         struct AddOne;
         impl<T> EFunction<T> for AddOne
@@ -575,9 +579,12 @@ mod tests {
 
     #[test]
     fn test_efilter() {
-        use crate::std::ops::EFunction;
-        use typenum::{IsLess, U3, U1, U2, U4, U5};
-        use crate::std::bool::{ToTyBoolOut, ToTyBool};
+        use typenum::{IsLess, U1, U2, U3, U4, U5};
+
+        use crate::std::{
+            bool::{ToTyBool, ToTyBoolOut},
+            ops::EFunction,
+        };
 
         struct LessThan3;
         impl<T> EFunction<T> for LessThan3
@@ -597,8 +604,9 @@ mod tests {
 
     #[test]
     fn test_efold() {
-        use crate::std::ops::EFunction;
         use typenum::{U0, U1, U2, U3, U6};
+
+        use crate::std::ops::EFunction;
 
         // Sum: (Acc, Elem) -> Acc + Elem
         struct Sum;

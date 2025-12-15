@@ -6,9 +6,7 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use typenum::{B0, B1, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
 
-use crate::{
-    eval::{EApply2, Evaluable, Evaluator, Sealed},
-};
+use crate::eval::{EApply2, Evaluable, Evaluator, Sealed};
 
 // =============================================================================
 // Evaluable Implementation for typenum Types

@@ -35,4 +35,3 @@ pub trait Evaluable {
 /// // Result = i32
 /// ```
 pub type Evaluator<T> = <T as Evaluable>::Output;
-

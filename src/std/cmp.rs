@@ -2,11 +2,11 @@
 //!
 //! `typenum` を利用した大小比較演算の実装。
 
-use typenum::{Equal, Greater, Less, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
+use typenum::{Equal, Greater, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual, Less};
 
 use crate::{
     eval::{EApply2, Evaluable, Evaluator, Sealed},
-    std::bool::{ToTyBool, ToTyBoolOut, Assert, TyTrue, TyFalse},
+    std::bool::{Assert, ToTyBool, ToTyBoolOut, TyFalse, TyTrue},
 };
 
 // =============================================================================
@@ -93,7 +93,6 @@ impl<T> CmpToTyBool<Greater> for T {
     type IsGe = TyTrue;
 }
 
-
 // --- Implementations ---
 
 // FEq: A == B (Generic via IsEq)
@@ -117,7 +116,6 @@ where
 {
     type Output = Evaluator<Assert<{ !<Evaluator<A> as IsEq<Evaluator<B>>>::EQ }>>;
 }
-
 
 // --- FLt: A < B ---
 impl<A, B> Evaluable for EApply2<FLt, A, B>
