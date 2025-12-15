@@ -10,8 +10,8 @@ use std::marker::PhantomData;
 
 use super::{Evaluable, Evaluator};
 use crate::{
-    func::EFunction,
-    types::bool::{TyFalse, TyTrue},
+    std::bool::{TyFalse, TyTrue},
+    std::ops::EFunction,
 };
 
 // =============================================================================
