@@ -12,8 +12,8 @@ pub use crate::{
     eval::{EApply, EApply2, EIf, ELit, EWhile, Evaluable, Evaluator},
     // Standard Library
     std::{
-        // Ops markers (General)
-        ops::EFunction,
+        // Traits (Core)
+        traits::EFunction,
         // Int (Arithmetic)
         int::{EAdd, ESub, EMul, EDiv, ERem, EPow, FAdd, FSub, FMul, FDiv, FRem, FPow},
         // Bool (Logical)

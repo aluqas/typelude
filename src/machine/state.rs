@@ -3,7 +3,6 @@
 //! マシンの状態定義（Stack, Memory, CallStack, Program）
 
 use std::marker::PhantomData;
-
 use crate::eval::{Evaluable, Sealed};
 
 /// マシンの状態
@@ -14,7 +13,7 @@ use crate::eval::{Evaluable, Sealed};
 /// - `Program`: 現在実行中の命令列 (TyArray of Instructions)
 #[derive(Debug)]
 pub struct MachineState<Stack, Locals, Memory, CallStack, Program>(
-    PhantomData<(Stack, Locals, Memory, CallStack, Program)>,
+    PhantomData<(Stack, Locals, Memory, CallStack, Program)>
 );
 
 impl<S, L, M, C, P> Sealed for MachineState<S, L, M, C, P> {}

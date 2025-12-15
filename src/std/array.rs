@@ -349,11 +349,11 @@ impl<F> MapHelper<F> for TyNil {
 
 impl<F, H, T> MapHelper<F> for TyArray<H, T>
 where
-    F: crate::std::ops::EFunction<H>,
+    F: crate::std::traits::EFunction<H>,
     T: Cons + MapHelper<F>,
     <T as MapHelper<F>>::Output: Cons,
 {
-    type Output = TyArray<<F as crate::std::ops::EFunction<H>>::Output, <T as MapHelper<F>>::Output>;
+    type Output = TyArray<<F as crate::std::traits::EFunction<H>>::Output, <T as MapHelper<F>>::Output>;
 }
 
 // Evaluable impl
@@ -379,20 +379,20 @@ impl<P> FilterHelper<P> for TyNil {
 
 impl<P, H, T> FilterHelper<P> for TyArray<H, T>
 where
-    P: crate::std::ops::EFunction<H>,
+    P: crate::std::traits::EFunction<H>,
     T: Cons + FilterHelper<P>,
     <T as FilterHelper<P>>::Output: Cons,
     // Check Predicate
-    <P as crate::std::ops::EFunction<H>>::Output: Evaluable,
+    <P as crate::std::traits::EFunction<H>>::Output: Evaluable,
     // EIf<Pred(H), Cons<H, Filter(T)>, Filter(T)>
     crate::eval::EIf<
-        <P as crate::std::ops::EFunction<H>>::Output,
+        <P as crate::std::traits::EFunction<H>>::Output,
         crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
         crate::eval::ELit<<T as FilterHelper<P>>::Output>
     >: Evaluable,
     Evaluator<
         crate::eval::EIf<
-            <P as crate::std::ops::EFunction<H>>::Output,
+            <P as crate::std::traits::EFunction<H>>::Output,
             crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
             crate::eval::ELit<<T as FilterHelper<P>>::Output>
         >
@@ -400,7 +400,7 @@ where
 {
     type Output = Evaluator<
         crate::eval::EIf<
-            <P as crate::std::ops::EFunction<H>>::Output,
+            <P as crate::std::traits::EFunction<H>>::Output,
             crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
             crate::eval::ELit<<T as FilterHelper<P>>::Output>
         >
@@ -429,10 +429,10 @@ impl<F, Acc> FoldHelper<F, Acc> for TyNil {
 
 impl<F, Acc, H, T> FoldHelper<F, Acc> for TyArray<H, T>
 where
-    F: crate::std::ops::EFunction<(Acc, H)>,
-    T: Cons + FoldHelper<F, <F as crate::std::ops::EFunction<(Acc, H)>>::Output>,
+    F: crate::std::traits::EFunction<(Acc, H)>,
+    T: Cons + FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, H)>>::Output>,
 {
-    type Output = <T as FoldHelper<F, <F as crate::std::ops::EFunction<(Acc, H)>>::Output>>::Output;
+    type Output = <T as FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, H)>>::Output>>::Output;
 }
 
 impl<F, Init, List> Evaluable for EApply3<FFold, F, Init, List>
@@ -551,7 +551,7 @@ mod tests {
 
     #[test]
     fn test_emap() {
-        use crate::std::ops::EFunction;
+        use crate::std::traits::EFunction;
         use typenum::{Add1, U1, U2, U3, U4};
 
         struct AddOne;
@@ -570,7 +570,7 @@ mod tests {
 
     #[test]
     fn test_efilter() {
-        use crate::std::ops::EFunction;
+        use crate::std::traits::EFunction;
         use typenum::{IsLess, U3, U1, U2, U4, U5};
         use crate::std::bool::{ToTyBoolOut, ToTyBool};
 
@@ -592,7 +592,7 @@ mod tests {
 
     #[test]
     fn test_efold() {
-        use crate::std::ops::EFunction;
+        use crate::std::traits::EFunction;
         use typenum::{U0, U1, U2, U3, U6};
 
         // Sum: (Acc, Elem) -> Acc + Elem

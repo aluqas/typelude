@@ -46,7 +46,7 @@ mod tests {
             array::{Cons, TyArray, TyNil},
             bool::{ToTyBool, ToTyBoolOut, TyFalse, TyTrue},
             cmp::{EEq, ENotEq},
-            ops::EFunction,
+            traits::EFunction,
         },
     };
 

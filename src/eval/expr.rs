@@ -11,7 +11,7 @@ use std::marker::PhantomData;
 use super::{Evaluable, Evaluator};
 use crate::{
     std::bool::{TyFalse, TyTrue},
-    std::ops::EFunction,
+    std::traits::EFunction,
 };
 
 // =============================================================================

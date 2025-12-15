@@ -1,7 +1,6 @@
-//! **General Operators**
+//! **Core Traits**
 //!
-//! 汎用的な操作マーカー（`FEq`など）を定義します。
-//! 特定の型に依存しない、または複数の型で共有される概念です。
+//! typelude の基本的なトレイト定義。
 
 use crate::eval::ELit;
 
