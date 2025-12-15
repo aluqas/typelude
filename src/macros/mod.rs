@@ -511,7 +511,7 @@ mod tests {
     trait GetStack {
         type Output;
     }
-    impl<S, L, M, C, P, H> GetStack for MachineState<S, L, M, C, P, H> {
+    impl<S, L, M, C, P> GetStack for MachineState<S, L, M, C, P> {
         type Output = S;
     }
 

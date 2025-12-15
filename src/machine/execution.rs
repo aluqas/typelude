@@ -20,8 +20,7 @@ use typenum::Unsigned;
 /// 命令を実行して新しい状態を返すトレイト
 ///
 /// `RestProg` は、現在の命令を取り除いた残りの命令列。
-/// `History` は、実行された命令のリスト（ログ）。
-pub trait Execute<Stack, Locals, Memory, CallStack, RestProg, History> {
+pub trait Execute<Stack, Locals, Memory, CallStack, RestProg> {
     type OutputState;
 }
 
@@ -35,58 +34,31 @@ pub trait RunStep<Stack> {
 
 macro_rules! impl_execute_via_runstep {
     ($Inst:ty) => {
-        impl<Stack, Locals, Memory, CallStack, RestProg, History> Execute<Stack, Locals, Memory, CallStack, RestProg, History> for $Inst
+        impl<Stack, Locals, Memory, CallStack, RestProg> Execute<Stack, Locals, Memory, CallStack, RestProg> for $Inst
         where
             Self: RunStep<Stack>,
             RestProg: Cons,
-            History: Cons, // Or just type
         {
-            // Log the instruction by appending it to History.
-            // TyArray<Inst, History> - prepend is easier.
-            // History stores [LastInst, PrevInst, ...]
-            type OutputState = MachineState<
-                <Self as RunStep<Stack>>::OutputStack,
-                Locals,
-                Memory,
-                CallStack,
-                RestProg,
-                TyArray<$Inst, History>
-            >;
+            type OutputState = MachineState<<Self as RunStep<Stack>>::OutputStack, Locals, Memory, CallStack, RestProg>;
         }
     };
     ($Inst:ident < $($T:ident),+ >) => {
-        impl<$($T),+, Stack, Locals, Memory, CallStack, RestProg, History> Execute<Stack, Locals, Memory, CallStack, RestProg, History> for $Inst<$($T),+>
+        impl<$($T),+, Stack, Locals, Memory, CallStack, RestProg> Execute<Stack, Locals, Memory, CallStack, RestProg> for $Inst<$($T),+>
         where
             Self: RunStep<Stack>,
             RestProg: Cons,
-            History: Cons,
         {
-            type OutputState = MachineState<
-                <Self as RunStep<Stack>>::OutputStack,
-                Locals,
-                Memory,
-                CallStack,
-                RestProg,
-                TyArray<$Inst<$($T),+>, History>
-            >;
+            type OutputState = MachineState<<Self as RunStep<Stack>>::OutputStack, Locals, Memory, CallStack, RestProg>;
         }
     };
 }
 
-impl<N, Stack, Locals, Memory, CallStack, RestProg, History> Execute<Stack, Locals, Memory, CallStack, RestProg, History> for OpPush<N>
+impl<N, Stack, Locals, Memory, CallStack, RestProg> Execute<Stack, Locals, Memory, CallStack, RestProg> for OpPush<N>
 where
     Self: RunStep<Stack>,
     RestProg: Cons,
-    History: Cons,
 {
-    type OutputState = MachineState<
-        <Self as RunStep<Stack>>::OutputStack,
-        Locals,
-        Memory,
-        CallStack,
-        RestProg,
-        TyArray<OpPush<N>, History>
-    >;
+    type OutputState = MachineState<<Self as RunStep<Stack>>::OutputStack, Locals, Memory, CallStack, RestProg>;
 }
 impl_execute_via_runstep!(OpAdd);
 impl_execute_via_runstep!(OpSub);
@@ -236,123 +208,75 @@ where
 
 // --- OpLoad ---
 // Stack: [Addr, ...] -> Memory, ... -> Stack: [Value, ...]
-impl<Addr, RestStack, Locals, Memory, CallStack, RestProg, History> Execute<TyArray<Addr, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpLoad
+impl<Addr, RestStack, Locals, Memory, CallStack, RestProg> Execute<TyArray<Addr, RestStack>, Locals, Memory, CallStack, RestProg> for OpLoad
 where
     Addr: Unsigned,
     TyArray<Addr, RestStack>: Cons,
     RestStack: Cons,
     RestProg: Cons,
     Memory: Get<Addr>,
-    History: Cons,
 {
-    type OutputState = MachineState<
-        TyArray<<Memory as Get<Addr>>::Output, RestStack>,
-        Locals,
-        Memory,
-        CallStack,
-        RestProg,
-        TyArray<OpLoad, History>
-    >;
+    type OutputState = MachineState<TyArray<<Memory as Get<Addr>>::Output, RestStack>, Locals, Memory, CallStack, RestProg>;
 }
 
 // --- OpStore ---
 // Stack: [Value, Addr, ...] -> Memory, ... -> Memory[Addr] = Value, Stack: [...]
-impl<Value, Addr, RestStack, Locals, Memory, CallStack, RestProg, History> Execute<TyArray<Value, TyArray<Addr, RestStack>>, Locals, Memory, CallStack, RestProg, History> for OpStore
+impl<Value, Addr, RestStack, Locals, Memory, CallStack, RestProg> Execute<TyArray<Value, TyArray<Addr, RestStack>>, Locals, Memory, CallStack, RestProg> for OpStore
 where
     Addr: Unsigned,
     TyArray<Value, TyArray<Addr, RestStack>>: Cons,
     RestStack: Cons,
     RestProg: Cons,
     Memory: Set<Addr, Value>,
-    History: Cons,
 {
-    type OutputState = MachineState<
-        RestStack,
-        Locals,
-        <Memory as Set<Addr, Value>>::Output,
-        CallStack,
-        RestProg,
-        TyArray<OpStore, History>
-    >;
+    type OutputState = MachineState<RestStack, Locals, <Memory as Set<Addr, Value>>::Output, CallStack, RestProg>;
 }
 
 // --- OpGetLocal<Index> ---
-impl<Index, Stack, Locals, Memory, CallStack, RestProg, History> Execute<Stack, Locals, Memory, CallStack, RestProg, History> for OpGetLocal<Index>
+impl<Index, Stack, Locals, Memory, CallStack, RestProg> Execute<Stack, Locals, Memory, CallStack, RestProg> for OpGetLocal<Index>
 where
     Index: Unsigned,
     Stack: Cons,
     Locals: Get<Index>,
     RestProg: Cons,
-    History: Cons,
 {
-    type OutputState = MachineState<
-        TyArray<<Locals as Get<Index>>::Output, Stack>,
-        Locals,
-        Memory,
-        CallStack,
-        RestProg,
-        TyArray<OpGetLocal<Index>, History>
-    >;
+    type OutputState = MachineState<TyArray<<Locals as Get<Index>>::Output, Stack>, Locals, Memory, CallStack, RestProg>;
 }
 
 // --- OpSetLocal<Index> ---
-impl<Index, Value, RestStack, Locals, Memory, CallStack, RestProg, History> Execute<TyArray<Value, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpSetLocal<Index>
+impl<Index, Value, RestStack, Locals, Memory, CallStack, RestProg> Execute<TyArray<Value, RestStack>, Locals, Memory, CallStack, RestProg> for OpSetLocal<Index>
 where
     Index: Unsigned,
     TyArray<Value, RestStack>: Cons,
     RestStack: Cons, // Requirement for TyArray<Value, RestStack>
     Locals: Set<Index, Value>,
     RestProg: Cons,
-    History: Cons,
 {
-    type OutputState = MachineState<
-        RestStack,
-        <Locals as Set<Index, Value>>::Output,
-        Memory,
-        CallStack,
-        RestProg,
-        TyArray<OpSetLocal<Index>, History>
-    >;
+    type OutputState = MachineState<RestStack, <Locals as Set<Index, Value>>::Output, Memory, CallStack, RestProg>;
 }
 
 // --- OpLet ---
-impl<Value, RestStack, Locals, Memory, CallStack, RestProg, History> Execute<TyArray<Value, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpLet
+impl<Value, RestStack, Locals, Memory, CallStack, RestProg> Execute<TyArray<Value, RestStack>, Locals, Memory, CallStack, RestProg> for OpLet
 where
     TyArray<Value, RestStack>: Cons,
     RestStack: Cons,
     Locals: Cons,
     RestProg: Cons,
-    History: Cons,
 {
     // Locals -> TyArray<Value, Locals> (Prepend)
-    type OutputState = MachineState<
-        RestStack,
-        TyArray<Value, Locals>,
-        Memory,
-        CallStack,
-        RestProg,
-        TyArray<OpLet, History>
-    >;
+    type OutputState = MachineState<RestStack, TyArray<Value, Locals>, Memory, CallStack, RestProg>;
 }
 
 // --- OpDropLocal ---
-impl<Stack, Head, Tail, Memory, CallStack, RestProg, History> Execute<Stack, TyArray<Head, Tail>, Memory, CallStack, RestProg, History> for OpDropLocal
+impl<Stack, Head, Tail, Memory, CallStack, RestProg> Execute<Stack, TyArray<Head, Tail>, Memory, CallStack, RestProg> for OpDropLocal
 where
     Stack: Cons,
     TyArray<Head, Tail>: Cons,
     Tail: Cons,
     RestProg: Cons,
-    History: Cons,
 {
     // Locals -> Tail (Remove Head)
-    type OutputState = MachineState<
-        Stack,
-        Tail,
-        Memory,
-        CallStack,
-        RestProg,
-        TyArray<OpDropLocal, History>
-    >;
+    type OutputState = MachineState<Stack, Tail, Memory, CallStack, RestProg>;
 }
 
 // --- OpCall<TargetProg> ---
@@ -360,7 +284,7 @@ where
 // Program: TargetProg
 // Locals: Reset to empty (or we could keep them, but isolation is safer).
 // For now, let's reset to TyNil.
-impl<TargetProg, Stack, Locals, Memory, CallStack, RestProg, History> Execute<Stack, Locals, Memory, CallStack, RestProg, History> for OpCall<TargetProg>
+impl<TargetProg, Stack, Locals, Memory, CallStack, RestProg> Execute<Stack, Locals, Memory, CallStack, RestProg> for OpCall<TargetProg>
 where
     Stack: Cons,
     Locals: Cons, // Locals must be Cons (TyNil is Cons) to be put in TyArray
@@ -368,30 +292,20 @@ where
     CallStack: Cons,
     TargetProg: Cons,
     RestProg: Cons,
-    History: Cons,
 {
     // CallStack: TyArray<TyArray<RestProg, Locals>, RestCallStack>
     // Frame = TyArray<RestProg, Locals>
     // Note: Locals is a list (Cons). RestProg is a list (Cons).
     // TyArray<RestProg, Locals> means Head=RestProg, Tail=Locals.
     // This assumes Locals is a VALID Tail, which implies Locals: Cons.
-    //
-    // History is updated with OpCall. Note that the history of the subroutine will follow.
-    type OutputState = MachineState<
-        Stack,
-        TyNil,
-        Memory,
-        TyArray<TyArray<RestProg, Locals>, CallStack>,
-        TargetProg,
-        TyArray<OpCall<TargetProg>, History>
-    >;
+    type OutputState = MachineState<Stack, TyNil, Memory, TyArray<TyArray<RestProg, Locals>, CallStack>, TargetProg>;
 }
 
 // --- OpReturn ---
 // CallStack: [[Continuation, CallerLocals], RestCallStack...] -> RestCallStack
 // Program: Continuation
 // Locals: CallerLocals
-impl<Stack, Locals, Memory, Continuation, CallerLocals, RestCallStack, RestProg, History> Execute<Stack, Locals, Memory, TyArray<TyArray<Continuation, CallerLocals>, RestCallStack>, RestProg, History> for OpReturn
+impl<Stack, Locals, Memory, Continuation, CallerLocals, RestCallStack, RestProg> Execute<Stack, Locals, Memory, TyArray<TyArray<Continuation, CallerLocals>, RestCallStack>, RestProg> for OpReturn
 where
     Stack: Cons,
     Memory: Cons,
@@ -401,28 +315,19 @@ where
     CallerLocals: Cons, // CallerLocals must be Cons to be used as Locals
     RestCallStack: Cons,
     RestProg: Cons,
-    History: Cons,
 {
-    type OutputState = MachineState<
-        Stack,
-        CallerLocals,
-        Memory,
-        RestCallStack,
-        Continuation,
-        TyArray<OpReturn, History>
-    >;
+    type OutputState = MachineState<Stack, CallerLocals, Memory, RestCallStack, Continuation>;
 }
 
 // --- OpWhile<CondProg, BodyProg> ---
 // Expansion: CondProg + [OpIf<BodyProg + [OpWhile<CondProg, BodyProg>], []>] + RestProg
-impl<CondProg, BodyProg, Stack, Locals, Memory, CallStack, RestProg, History> Execute<Stack, Locals, Memory, CallStack, RestProg, History> for OpWhile<CondProg, BodyProg>
+impl<CondProg, BodyProg, Stack, Locals, Memory, CallStack, RestProg> Execute<Stack, Locals, Memory, CallStack, RestProg> for OpWhile<CondProg, BodyProg>
 where
     Stack: Cons,
     Locals: Cons,
     CondProg: Cons,
     BodyProg: Cons,
     RestProg: Cons,
-    History: Cons,
     EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Evaluable,
     // Alias for the recursive body: Body + [While]
     EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Evaluable,
@@ -434,39 +339,32 @@ where
         Locals,
         Memory,
         CallStack,
-        Evaluator<EConcat<CondProg, TyArray<OpIf<Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>, RestProg>>>,
-        TyArray<OpWhile<CondProg, BodyProg>, History>
+        Evaluator<EConcat<CondProg, TyArray<OpIf<Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>, RestProg>>>
     >;
 }
 
 // --- OpIf<Then, Else> ---
-impl<Cond, RestStack, Locals, Memory, CallStack, Then, Else, RestProg, History> Execute<TyArray<Cond, RestStack>, Locals, Memory, CallStack, RestProg, History>
+impl<Cond, RestStack, Locals, Memory, CallStack, Then, Else, RestProg> Execute<TyArray<Cond, RestStack>, Locals, Memory, CallStack, RestProg>
     for OpIf<Then, Else>
 where
     TyArray<Cond, RestStack>: Cons,
     RestStack: Cons,
     RestProg: Cons,
-    History: Cons,
     Then: Cons,
     Else: Cons,
     EConcat<Then, RestProg>: Evaluable,
     EConcat<Else, RestProg>: Evaluable,
-    // We pass the History to both branches.
-    // Important: The History generic in MachineState includes the OpIf instruction itself.
-    // So both branches start with History = [OpIf, Prev...]
-    //
-    // Note: EIf selects one of the two MachineStates.
     EIf<
         Cond,
-        MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Then, RestProg>>, TyArray<OpIf<Then, Else>, History>>,
-        MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Else, RestProg>>, TyArray<OpIf<Then, Else>, History>>,
+        MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Then, RestProg>>>,
+        MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Else, RestProg>>>,
     >: Evaluable,
 {
     type OutputState = Evaluator<
         EIf<
             Cond,
-            MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Then, RestProg>>, TyArray<OpIf<Then, Else>, History>>,
-            MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Else, RestProg>>, TyArray<OpIf<Then, Else>, History>>,
+            MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Then, RestProg>>>,
+            MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Else, RestProg>>>,
         >,
     >;
 }
@@ -479,28 +377,27 @@ where
 /// MachineState<Stack, Locals, Memory, CallStack, Cons<Inst, RestProg>> -> NewState
 pub struct FStep;
 
-impl<Stack, Locals, Memory, CallStack, Inst, RestProg, History> EFunction<MachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>> for FStep
+impl<Stack, Locals, Memory, CallStack, Inst, RestProg> EFunction<MachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>>> for FStep
 where
-    Inst: Execute<Stack, Locals, Memory, CallStack, RestProg, History>,
+    Inst: Execute<Stack, Locals, Memory, CallStack, RestProg>,
     TyArray<Inst, RestProg>: Cons,
     RestProg: Cons,
-    History: Cons,
 {
-    type Output = <Inst as Execute<Stack, Locals, Memory, CallStack, RestProg, History>>::OutputState;
+    type Output = <Inst as Execute<Stack, Locals, Memory, CallStack, RestProg>>::OutputState;
 }
 
 // Evaluable wrapper for FStep
-impl<S, L, M, C, P, H> Evaluable for EApply<FStep, MachineState<S, L, M, C, P, H>>
+impl<S, L, M, C, P> Evaluable for EApply<FStep, MachineState<S, L, M, C, P>>
 where
-    FStep: EFunction<MachineState<S, L, M, C, P, H>>,
+    FStep: EFunction<MachineState<S, L, M, C, P>>,
 {
-    type Output = <FStep as EFunction<MachineState<S, L, M, C, P, H>>>::Output;
+    type Output = <FStep as EFunction<MachineState<S, L, M, C, P>>>::Output;
 }
 
 // --- IsFinished: プログラムが空か判定 ---
 pub struct FIsFinished;
 
-impl<S, L, M, C, P, H> EFunction<MachineState<S, L, M, C, P, H>> for FIsFinished
+impl<S, L, M, C, P> EFunction<MachineState<S, L, M, C, P>> for FIsFinished
 where
     EApply<FIsEmpty, P>: Evaluable,
     Evaluator<EApply<FIsEmpty, P>>: crate::std::bool::_NotHelper,
@@ -524,14 +421,6 @@ mod tests {
     use crate::tyarray;
     use static_assertions::assert_type_eq_all;
     use typenum::{U1, U2, U3, U5};
-
-    // Helper trait to extract stack from MachineState
-    trait GetStack {
-        type Output;
-    }
-    impl<S, L, M, C, P, H> GetStack for MachineState<S, L, M, C, P, H> {
-        type Output = S;
-    }
 
     #[test]
     fn test_stack_ops_logic() {
@@ -557,11 +446,11 @@ mod tests {
         // Empty Memory, Empty CallStack, Empty Locals
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
         type FinalState = Evaluator<ERun<InitialState>>;
-        type FinalStack = <FinalState as GetStack>::Output;
 
         type ExpectedStack = tyarray![typenum::U0];
+        type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
 
-        assert_type_eq_all!(FinalStack, ExpectedStack);
+        assert_type_eq_all!(FinalState, ExpectedState);
     }
 
     #[test]
@@ -582,11 +471,11 @@ mod tests {
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, MainProg>;
         type FinalState = Evaluator<ERun<InitialState>>;
-        type FinalStack = <FinalState as GetStack>::Output;
 
         type ExpectedStack = tyarray![typenum::U8];
+        type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
 
-        assert_type_eq_all!(FinalStack, ExpectedStack);
+        assert_type_eq_all!(FinalState, ExpectedState);
     }
 
     #[test]
@@ -625,14 +514,9 @@ mod tests {
 
         // Expected Memory: [30] (10 + 20)
         type ExpectedMemory = tyarray![typenum::U30];
+        type ExpectedState = MachineState<TyNil, TyNil, ExpectedMemory, TyNil, TyNil>;
 
-        // Need helper for GetMemory
-        trait GetMemory { type Output; }
-        impl<S, L, M, C, P, H> GetMemory for MachineState<S, L, M, C, P, H> { type Output = M; }
-
-        type FinalMemory = <FinalState as GetMemory>::Output;
-
-        assert_type_eq_all!(FinalMemory, ExpectedMemory);
+        assert_type_eq_all!(FinalState, ExpectedState);
     }
 
     #[test]
@@ -662,12 +546,12 @@ mod tests {
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
         type FinalState = Evaluator<ERun<InitialState>>;
-        type FinalStack = <FinalState as GetStack>::Output;
 
         // Result should be 0
         type ExpectedStack = tyarray![U0];
+        type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
 
-        assert_type_eq_all!(FinalStack, ExpectedStack);
+        assert_type_eq_all!(FinalState, ExpectedState);
     }
 
     #[test]
@@ -725,11 +609,9 @@ mod tests {
         type FinalState = Evaluator<ERun<InitialState>>;
 
         type ExpectedMemory = tyarray![U1, U3];
-        trait GetMemory { type Output; }
-        impl<S, L, M, C, P, H> GetMemory for MachineState<S, L, M, C, P, H> { type Output = M; }
-        type FinalMemory = <FinalState as GetMemory>::Output;
+        type ExpectedState = MachineState<TyNil, TyNil, ExpectedMemory, TyNil, TyNil>;
 
-        assert_type_eq_all!(FinalMemory, ExpectedMemory);
+        assert_type_eq_all!(FinalState, ExpectedState);
     }
 
     #[test]
@@ -763,11 +645,11 @@ mod tests {
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Main>;
         type FinalState = Evaluator<ERun<InitialState>>;
-        type FinalStack = <FinalState as GetStack>::Output;
 
         // FinalStack should contain [10] (result of GetLocal)
         type ExpectedStack = tyarray![U10];
+        type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
 
-        assert_type_eq_all!(FinalStack, ExpectedStack);
+        assert_type_eq_all!(FinalState, ExpectedState);
     }
 }
