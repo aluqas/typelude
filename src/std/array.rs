@@ -571,7 +571,7 @@ mod tests {
     #[test]
     fn test_efilter() {
         use crate::std::traits::EFunction;
-        use typenum::{IsLess, U3, U1, U2, U4, U5};
+        use typenum::{IsLess, U1, U2, U3, U4, U5};
         use crate::std::bool::{ToTyBoolOut, ToTyBool};
 
         struct LessThan3;
