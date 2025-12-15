@@ -1,6 +1,6 @@
 //! **Prelude**
 //!
-//! 便利な一括インポート用モジュール。
+//! A module for convenient bulk imports.
 //!
 //! # Usage
 //! ```ignore
@@ -20,8 +20,8 @@ pub use crate::{
         },
         // Bool (Logical)
         bool::{
-            AsBool, Assert, EAnd, ENand, ENor, ENot, EOr, EXnor, EXor, FAnd, FNand, FNor, FNot,
-            FOr, FXnor, FXor, IsFalse, IsTrue, ToTyBool, ToTyBoolOut, TyFalse, TyTrue,
+            Assert, EAnd, ENand, ENor, ENot, EOr, EXnor, EXor, FAnd, FNand, FNor, FNot, FOr,
+            FXnor, FXor, KindBool, ToTyBool, ToTyBoolOut, TyFalse, TyTrue,
         },
         // Compare
         cmp::{EEq, EGe, EGt, ELe, ELt, ENotEq, FEq, FGe, FGt, FLe, FLt, FNeq},
