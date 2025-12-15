@@ -789,7 +789,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variables() {
+    fn test_global_memory() {
         // Define vars
         define_vars! { x, y }
         // x=0, y=1

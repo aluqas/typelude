@@ -193,33 +193,39 @@ mod tests {
     };
 
     #[test]
-    fn test_compare_unsigned() {
-        // 1 < 2 -> True
-        assert_type_eq_all!(Evaluator<ELt<ELit<U1>, ELit<U2>>>, TyTrue);
-        // 2 < 1 -> False
-        assert_type_eq_all!(Evaluator<ELt<ELit<U2>, ELit<U1>>>, TyFalse);
+    fn test_eq_neq() {
+        assert_type_eq_all!(Evaluator<EEq<ELit<U1>, ELit<U1>>>, TyTrue);
+        assert_type_eq_all!(Evaluator<EEq<ELit<U1>, ELit<U2>>>, TyFalse);
 
-        // 1 <= 1 -> True
-        assert_type_eq_all!(Evaluator<ELe<ELit<U1>, ELit<U1>>>, TyTrue);
-        // 2 <= 1 -> False
-        assert_type_eq_all!(Evaluator<ELe<ELit<U2>, ELit<U1>>>, TyFalse);
-
-        // 2 > 1 -> True
-        assert_type_eq_all!(Evaluator<EGt<ELit<U2>, ELit<U1>>>, TyTrue);
-        // 1 > 2 -> False
-        assert_type_eq_all!(Evaluator<EGt<ELit<U1>, ELit<U2>>>, TyFalse);
-
-        // 2 >= 2 -> True
-        assert_type_eq_all!(Evaluator<EGe<ELit<U2>, ELit<U2>>>, TyTrue);
-        // 1 >= 2 -> False
-        assert_type_eq_all!(Evaluator<EGe<ELit<U1>, ELit<U2>>>, TyFalse);
+        assert_type_eq_all!(Evaluator<ENotEq<ELit<U1>, ELit<U1>>>, TyFalse);
+        assert_type_eq_all!(Evaluator<ENotEq<ELit<U1>, ELit<U2>>>, TyTrue);
     }
 
     #[test]
-    fn test_compare_signed() {
-        // -1 < 1 -> True
+    fn test_lt() {
+        assert_type_eq_all!(Evaluator<ELt<ELit<U1>, ELit<U2>>>, TyTrue);
+        assert_type_eq_all!(Evaluator<ELt<ELit<U2>, ELit<U1>>>, TyFalse);
         assert_type_eq_all!(Evaluator<ELt<ELit<N1>, ELit<P1>>>, TyTrue);
-        // 2 > -1 -> True
+    }
+
+    #[test]
+    fn test_le() {
+        assert_type_eq_all!(Evaluator<ELe<ELit<U1>, ELit<U1>>>, TyTrue);
+        assert_type_eq_all!(Evaluator<ELe<ELit<U1>, ELit<U2>>>, TyTrue);
+        assert_type_eq_all!(Evaluator<ELe<ELit<U2>, ELit<U1>>>, TyFalse);
+    }
+
+    #[test]
+    fn test_gt() {
+        assert_type_eq_all!(Evaluator<EGt<ELit<U2>, ELit<U1>>>, TyTrue);
+        assert_type_eq_all!(Evaluator<EGt<ELit<U1>, ELit<U2>>>, TyFalse);
         assert_type_eq_all!(Evaluator<EGt<ELit<P2>, ELit<N1>>>, TyTrue);
+    }
+
+    #[test]
+    fn test_ge() {
+        assert_type_eq_all!(Evaluator<EGe<ELit<U2>, ELit<U2>>>, TyTrue);
+        assert_type_eq_all!(Evaluator<EGe<ELit<U2>, ELit<U1>>>, TyTrue);
+        assert_type_eq_all!(Evaluator<EGe<ELit<U1>, ELit<U2>>>, TyFalse);
     }
 }

@@ -495,16 +495,22 @@ mod tests {
         // Push 1
         type S1 = <OpPush<U1> as RunStep<S0>>::OutputStack;
         assert_type_eq_all!(S1, tyarray![U1]);
+
+        // Push 1, Dup -> [1, 1]
+        type S2 = <OpDup as RunStep<S1>>::OutputStack;
+        assert_type_eq_all!(S2, tyarray![U1, U1]);
+
+        // [1, 1], Drop -> [1]
+        type S3 = <OpDrop as RunStep<S2>>::OutputStack;
+        assert_type_eq_all!(S3, tyarray![U1]);
     }
 
     #[test]
-    fn test_machine_run() {
+    fn test_simple_arithmetic_execution() {
         // Program: Push 2, Push 3, Add, Push 5, Sub
         // [2] -> [3, 2] -> [5] -> [5, 5] -> [0]
-
         type Prog = tyarray![OpPush<U2>, OpPush<U3>, OpAdd, OpPush<U5>, OpSub];
 
-        // Empty Memory, Empty CallStack, Empty Locals
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
         type FinalState = Evaluator<ERun<InitialState>>;
 
