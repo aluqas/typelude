@@ -90,7 +90,9 @@ macro_rules! unary_to_uint {
     };
 }
 
-// --- Local Variable Lookup Helper ---
+//
+// Local Variable Lookup Helper
+//
 
 /// Finds the index of a variable in the local variable list.
 /// Format: `find_var_index!(TargetVar, [HeadVar TailVars...], IndexAccumulator)`
@@ -153,7 +155,8 @@ macro_rules! check_unary_eq {
     ( [$($a:tt)*], [$($b:tt)*], [$($then:tt)*], [$($else:tt)*] ) => { $($else)* };
 }
 
-// **Type-Level Program Macros**
+//
+// Type-Level Program Macros
 //
 // Macros for writing type-level stack machine programs in an S-expression style.
 
@@ -166,7 +169,9 @@ macro_rules! uint {
     };
 }
 
-// --- Main Program Macro ---
+//
+// Main Program Macro
+//
 
 /// The main macro for writing programs.
 ///
@@ -197,7 +202,9 @@ macro_rules! parse_body {
         $crate::tyarray![ $($prog)* $($cleanup)* ]
     };
 
-    // --- Instructions ---
+    //
+    // Instructions
+    //
 
     // (push ...)
     ( [$($prog:tt)*] [$($cleanup:tt)*] [$($vars:ident)*] (push $($args:tt)+) $($rest:tt)* ) => {
@@ -274,7 +281,9 @@ macro_rules! parse_body {
         $crate::parse_body!( [$($prog)* $crate::machine::instruction::OpReturn,] [$($cleanup)*] [$($vars)*] $($rest)* )
     };
 
-    // --- Local Variables ---
+    //
+    // Local Variables
+    //
 
     // (let var)
     // Adds variable to Vars (Prepend), adds OpLet to Prog, adds OpDropLocal to Cleanup
@@ -307,7 +316,9 @@ macro_rules! parse_body {
         )
     };
 
-    // --- Global Variables (Legacy/Global Memory) ---
+    //
+    // Global Variables (Legacy/Global Memory)
+    //
 
     // (load var)
     ( [$($prog:tt)*] [$($cleanup:tt)*] [$($vars:ident)*] (load $v:ident) $($rest:tt)* ) => {
@@ -336,7 +347,9 @@ macro_rules! parse_body {
         )
     };
 
-    // --- Control Flow (Blocks) ---
+    //
+    // Control Flow (Blocks)
+    //
 
     // (if (Then...) (Else...))
     ( [$($prog:tt)*] [$($cleanup:tt)*] [$($vars:ident)*] (if ($($then:tt)*) ($($else:tt)*)) $($rest:tt)* ) => {

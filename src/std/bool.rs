@@ -6,9 +6,9 @@ use typenum::{B0, B1};
 
 use crate::eval::{EApply, EApply2, Evaluable, Evaluator, Sealed};
 
-// -----------------------------------------------------------------------------
+//
 // Type-Level Boolean Types
-// -----------------------------------------------------------------------------
+//
 
 /// Marker Trait: TyTrue, TyFalse
 pub trait KindBool: Sealed + Evaluable {
@@ -43,9 +43,9 @@ impl Evaluable for TyFalse {
     type Output = TyFalse;
 }
 
-// -----------------------------------------------------------------------------
+//
 // Bool Conversion Utilities
-// -----------------------------------------------------------------------------
+//
 
 /// Trait to convert boolean values to TyBool type
 #[doc(hidden)]
@@ -82,9 +82,9 @@ impl ToTyBool for B0 {
 
 pub type ToTyBoolOut<T> = <T as ToTyBool>::Output;
 
-// -----------------------------------------------------------------------------
+//
 // Helper Traits for Logical Operations
-// -----------------------------------------------------------------------------
+//
 
 /// Helper for NOT
 #[doc(hidden)]
@@ -119,9 +119,9 @@ where
     type Output = <Evaluator<Rhs> as _NotHelper>::Output;
 }
 
-// -----------------------------------------------------------------------------
+//
 // Function Markers: Boolean Operations
-// -----------------------------------------------------------------------------
+//
 
 /// NOT: !A
 pub struct FNot;
@@ -146,11 +146,11 @@ impl Sealed for FNor {}
 impl Sealed for FXor {}
 impl Sealed for FXnor {}
 
-// -----------------------------------------------------------------------------
+//
 // Evaluable Implementations for Boolean Functions
-// -----------------------------------------------------------------------------
+//
 
-// --- FNot: NOT A ---
+// FNot: NOT A
 impl<A> Evaluable for EApply<FNot, A>
 where
     A: Evaluable,
@@ -159,7 +159,7 @@ where
     type Output = <Evaluator<A> as _NotHelper>::Output;
 }
 
-// --- FNand: A NAND B (with short-circuit) ---
+// FNand: A NAND B (with short-circuit)
 impl<A, B> Evaluable for EApply2<FNand, A, B>
 where
     A: Evaluable,
@@ -168,7 +168,7 @@ where
     type Output = <Evaluator<A> as _NandHelper<B>>::Output;
 }
 
-// --- FAnd: A AND B = NOT (A NAND B) ---
+// FAnd: A AND B = NOT (A NAND B)
 impl<A, B> Evaluable for EApply2<FAnd, A, B>
 where
     EApply<FNot, EApply2<FNand, A, B>>: Evaluable,
@@ -176,7 +176,7 @@ where
     type Output = Evaluator<EApply<FNot, EApply2<FNand, A, B>>>;
 }
 
-// --- FOr: A OR B = (NOT A) NAND (NOT B) ---
+// FOr: A OR B = (NOT A) NAND (NOT B)
 impl<A, B> Evaluable for EApply2<FOr, A, B>
 where
     EApply2<FNand, EApply<FNot, A>, EApply<FNot, B>>: Evaluable,
@@ -184,7 +184,7 @@ where
     type Output = Evaluator<EApply2<FNand, EApply<FNot, A>, EApply<FNot, B>>>;
 }
 
-// --- FNor: A NOR B = NOT (A OR B) ---
+// FNor: A NOR B = NOT (A OR B)
 impl<A, B> Evaluable for EApply2<FNor, A, B>
 where
     EApply<FNot, EApply2<FOr, A, B>>: Evaluable,
@@ -192,7 +192,7 @@ where
     type Output = Evaluator<EApply<FNot, EApply2<FOr, A, B>>>;
 }
 
-// --- FXor: A XOR B = (A OR B) AND (A NAND B) ---
+// FXor: A XOR B = (A OR B) AND (A NAND B)
 impl<A, B> Evaluable for EApply2<FXor, A, B>
 where
     EApply2<FAnd, EApply2<FOr, A, B>, EApply2<FNand, A, B>>: Evaluable,
@@ -200,7 +200,7 @@ where
     type Output = Evaluator<EApply2<FAnd, EApply2<FOr, A, B>, EApply2<FNand, A, B>>>;
 }
 
-// --- FXnor: A XNOR B = NOT (A XOR B) ---
+// FXnor: A XNOR B = NOT (A XOR B)
 impl<A, B> Evaluable for EApply2<FXnor, A, B>
 where
     EApply<FNot, EApply2<FXor, A, B>>: Evaluable,
@@ -208,9 +208,9 @@ where
     type Output = Evaluator<EApply<FNot, EApply2<FXor, A, B>>>;
 }
 
-// -----------------------------------------------------------------------------
+//
 // Aliases
-// -----------------------------------------------------------------------------
+//
 
 // Boolean (1 arg)
 pub type ENot<A> = EApply<FNot, A>;
@@ -223,9 +223,9 @@ pub type ENor<A, B> = EApply2<FNor, A, B>;
 pub type EXor<A, B> = EApply2<FXor, A, B>;
 pub type EXnor<A, B> = EApply2<FXnor, A, B>;
 
-// -----------------------------------------------------------------------------
+//
 // Tests
-// -----------------------------------------------------------------------------
+//
 
 #[cfg(test)]
 mod tests {

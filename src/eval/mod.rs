@@ -1,33 +1,33 @@
 //! **Evaluation Infrastructure**
 //!
-//! 型レベル計算のコアインフラを提供します。
+//! Provides core infrastructure for type-level computation.
 
 mod expr;
 
 pub use expr::*;
 
-// =============================================================================
+// -----------------------------------------------------------------------------
 // Sealed Trait (for internal use)
-// =============================================================================
+// -----------------------------------------------------------------------------
 
-/// Sealed trait pattern - 外部クレートからの実装を防ぐ
+/// Sealed trait pattern - Prevents external crate implementations
 ///
-/// このトレイトは内部実装用トレイトであり、直接使用しないでください。
+/// This trait is for internal implementation/use only, do not use directly.
 #[doc(hidden)]
 pub trait Sealed {}
 
-// =============================================================================
+// -----------------------------------------------------------------------------
 // Core Evaluable Trait
-// =============================================================================
+// -----------------------------------------------------------------------------
 
-/// 型レベル式を評価するトレイト
+/// Trait to evaluate type-level expressions
 ///
-/// `Evaluable` を実装した型は `Evaluator<T>` で評価結果を取得できます。
+/// Types implementing `Evaluable` can get evaluation results via `Evaluator<T>`.
 pub trait Evaluable {
     type Output;
 }
 
-/// 式の評価結果を取得する型エイリアス
+/// Type alias to obtain evaluation results of expressions
 ///
 /// # Example
 /// ```ignore

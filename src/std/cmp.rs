@@ -1,6 +1,6 @@
 //! **Comparison Operations**
 //!
-//! `typenum` を利用した大小比較演算の実装。
+//! Implementation of comparison operations using `typenum`.
 
 use typenum::{Equal, Greater, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual, Less};
 
@@ -9,9 +9,9 @@ use crate::{
     std::bool::{Assert, ToTyBool, ToTyBoolOut, TyFalse, TyTrue},
 };
 
-// =============================================================================
+//
 // IsEq Trait (Generic Equality)
-// =============================================================================
+//
 
 /// Helper for Type Equality: Returns const bool
 pub trait IsEq<Other> {
@@ -26,21 +26,19 @@ impl<T> IsEq<T> for T {
     const EQ: bool = true;
 }
 
-// =============================================================================
 // Function Markers: Comparison Operations
-// =============================================================================
 
-/// 等価比較: A == B -> TyBool
+/// Equality: A == B -> TyBool
 pub struct FEq;
-/// 不等価比較: A != B -> TyBool
+/// Inequality: A != B -> TyBool
 pub struct FNeq;
-/// 小なり: A < B
+/// Less than: A < B
 pub struct FLt;
-/// 以下: A <= B
+/// Less than or equal: A <= B
 pub struct FLe;
-/// 大なり: A > B
+/// Greater than: A > B
 pub struct FGt;
-/// 以上: A >= B
+/// Greater than or equal: A >= B
 pub struct FGe;
 
 impl Sealed for FEq {}
@@ -50,9 +48,7 @@ impl Sealed for FLe {}
 impl Sealed for FGt {}
 impl Sealed for FGe {}
 
-// =============================================================================
 // Comparison Operations
-// =============================================================================
 
 // --- Helper Trait for Cmp to TyBool ---
 
@@ -161,9 +157,9 @@ where
     type Output = ToTyBoolOut<<Evaluator<A> as IsGreaterOrEqual<Evaluator<B>>>::Output>;
 }
 
-// =============================================================================
+//
 // Aliases
-// =============================================================================
+//
 
 // Equality (2 args)
 pub type EEq<A, B> = EApply2<FEq, A, B>;
@@ -175,9 +171,9 @@ pub type ELe<A, B> = EApply2<FLe, A, B>;
 pub type EGt<A, B> = EApply2<FGt, A, B>;
 pub type EGe<A, B> = EApply2<FGe, A, B>;
 
-// =============================================================================
+//
 // Tests
-// =============================================================================
+//
 
 #[cfg(test)]
 mod tests {

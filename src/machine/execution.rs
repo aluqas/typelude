@@ -1,6 +1,6 @@
 //! **Type-Level Stack Machine Execution Logic**
 //!
-//! マシンの命令実行ロジックとメインループを実装します。
+//! Implements machine instruction execution logic and main loop.
 
 use typenum::Unsigned;
 
@@ -17,13 +17,13 @@ use crate::{
     },
 };
 
-// =============================================================================
+//
 // Execute Trait
-// =============================================================================
+//
 
-/// 命令を実行して新しい状態を返すトレイト
+/// Trait to execute an instruction and return a new state
 ///
-/// `RestProg` は、現在の命令を取り除いた残りの命令列。
+/// `RestProg` is the remaining instruction sequence with the current instruction removed.
 pub trait Execute<Stack, Locals, Memory, CallStack, RestProg> {
     type OutputState;
 }
@@ -81,9 +81,9 @@ impl_execute_via_runstep!(OpOr);
 
 // Note: OpLet is not implemented via RunStep because it modifies Locals.
 
-// =============================================================================
+//
 // Instruction Implementations
-// =============================================================================
+//
 
 // --- OpPush<N> ---
 impl<N, Stack> RunStep<Stack> for OpPush<N>
@@ -434,11 +434,11 @@ where
     >;
 }
 
-// =============================================================================
+//
 // Machine Execution (Step / Run)
-// =============================================================================
+//
 
-/// 1ステップ実行
+/// Execute one step
 /// MachineState<Stack, Locals, Memory, CallStack, Cons<Inst, RestProg>> -> NewState
 pub struct FStep;
 
@@ -460,7 +460,7 @@ where
     type Output = <FStep as EFunction<MachineState<S, L, M, C, P>>>::Output;
 }
 
-// --- IsFinished: プログラムが空か判定 ---
+// --- IsFinished: Check if program is empty ---
 pub struct FIsFinished;
 
 impl<S, L, M, C, P> EFunction<MachineState<S, L, M, C, P>> for FIsFinished
@@ -477,9 +477,9 @@ where
 
 pub type ERun<S> = EWhile<FIsFinished, FStep, S>;
 
-// =============================================================================
+//
 // Tests
-// =============================================================================
+//
 
 #[cfg(test)]
 mod tests {

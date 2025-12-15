@@ -8,9 +8,9 @@ use typenum::{B0, B1, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
 
 use crate::eval::{EApply2, Evaluable, Evaluator, Sealed};
 
-// -----------------------------------------------------------------------------
+//
 // Evaluable Implementation for typenum Types
-// -----------------------------------------------------------------------------
+//
 
 // --- Unsigned Integers ---
 
@@ -46,9 +46,9 @@ impl Evaluable for B1 {
     type Output = Self;
 }
 
-// -----------------------------------------------------------------------------
+//
 // Arithmetic Functions
-// -----------------------------------------------------------------------------
+//
 
 /// Addition: A + B
 pub struct FAdd;
@@ -136,9 +136,9 @@ where
     type Output = <Evaluator<A> as Pow<Evaluator<B>>>::Output;
 }
 
-// -----------------------------------------------------------------------------
+//
 // Aliases
-// -----------------------------------------------------------------------------
+//
 
 pub type EAdd<A, B> = EApply2<FAdd, A, B>;
 pub type ESub<A, B> = EApply2<FSub, A, B>;
@@ -147,9 +147,9 @@ pub type EDiv<A, B> = EApply2<FDiv, A, B>;
 pub type ERem<A, B> = EApply2<FRem, A, B>;
 pub type EPow<A, B> = EApply2<FPow, A, B>;
 
-// =============================================================================
+//
 // Tests
-// =============================================================================
+//
 
 #[cfg(test)]
 mod tests {

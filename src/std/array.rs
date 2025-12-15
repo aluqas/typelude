@@ -1,6 +1,6 @@
 //! **Type-Level Array**
 //!
-//! 型レベルの配列（コンスリスト）とその操作を提供します。
+//! Type-level array (cons list) and its operations.
 
 use std::{
     marker::PhantomData,
@@ -14,46 +14,46 @@ use crate::{
     std::bool::{TyFalse, TyTrue},
 };
 
-// =============================================================================
+//
 // Type-Level Array Types
-// =============================================================================
+//
 
 /// **Marker Trait**
 ///
-/// TyArrayのTailを示す。
+/// Represents the Tail of TyArray.
 pub trait Cons: Sealed {}
 
-/// TyArrayの終端。
+/// Termination of TyArray.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub struct TyNil;
 impl Sealed for TyNil {}
 impl Cons for TyNil {}
 
-/// 型レベルの配列（コンスセル）
+/// Type-level array (Cons Cell)
 ///
-/// - `TyHead`: 任意の型 (`u32`, `String`, `TyArray<T, TyNil>` など)
-/// - `Tail`: 残りの部分 (`TyArray` で再帰、`TyNil` が終端)
+/// - `TyHead`: Any type (`u32`, `String`, `TyArray<T, TyNil>`, etc.)
+/// - `Tail`: Rest part (recursive `TyArray`, `TyNil` is termination)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub struct TyArray<TyHead, Tail: Cons>(pub PhantomData<(TyHead, Tail)>);
 impl<Ty, Tail: Cons> Sealed for TyArray<Ty, Tail> {}
 impl<Ty, Tail: Cons> Cons for TyArray<Ty, Tail> {}
 
-/// 型リストを簡単に生成するためのマクロ
+/// Macro for easily creating type lists
 #[macro_export]
 macro_rules! tyarray {
-    // 空のリスト
+    // Empty list
     () => { $crate::std::array::TyNil };
-    // 長さ1のリスト (with optional trailing comma)
+    // List with length 1 (with optional trailing comma)
     ($n:ty $(,)?) => { $crate::std::array::TyArray<$n, $crate::std::array::TyNil> };
-    // 長さ2以上のリスト (with optional trailing comma)
+    // List with length 2 or more (with optional trailing comma)
     ($n:ty, $($tail:ty),+ $(,)?) => { $crate::std::array::TyArray<$n, $crate::tyarray![$($tail),+]> };
 }
 
-// =============================================================================
+//
 // Helper Traits (Internal)
-// =============================================================================
+//
 
-/// 配列の長さ
+/// Array length
 #[doc(hidden)]
 pub trait Len {
     type Output: Unsigned;
@@ -71,7 +71,7 @@ where
     type Output = <<T as Len>::Output as Add<B1>>::Output;
 }
 
-/// 配列の先頭要素
+/// Head element of array
 #[doc(hidden)]
 pub trait Head {
     type Output;
@@ -81,7 +81,7 @@ impl<H, T: Cons> Head for TyArray<H, T> {
     type Output = H;
 }
 
-/// 配列の先頭以外
+/// Tail of array (everything except head)
 #[doc(hidden)]
 pub trait Tail {
     type Output: Cons;
@@ -91,7 +91,7 @@ impl<H, T: Cons> Tail for TyArray<H, T> {
     type Output = T;
 }
 
-/// 配列が空かどうか
+/// Check if array is empty
 #[doc(hidden)]
 pub trait IsEmpty {
     type Output;
@@ -105,7 +105,7 @@ impl<H, T: Cons> IsEmpty for TyArray<H, T> {
     type Output = TyFalse;
 }
 
-/// インデックスアクセス
+/// Index access
 #[doc(hidden)]
 pub trait Get<IDX: Unsigned> {
     type Output;
@@ -124,7 +124,7 @@ where
     type Output = <T as Get<Sub1<UInt<N, B>>>>::Output;
 }
 
-/// インデックス更新 (Set)
+/// Index update (Set)
 #[doc(hidden)]
 pub trait Set<IDX: Unsigned, VAL> {
     type Output: Cons;
@@ -143,7 +143,7 @@ where
     type Output = TyArray<H, <T as Set<Sub1<UInt<N, B>>, VAL>>::Output>;
 }
 
-/// 配列の結合
+/// Array concatenation
 #[doc(hidden)]
 pub trait Concat<Other: Cons> {
     type Output: Cons;
@@ -163,7 +163,7 @@ where
 // NOTE: Contains depends on Equality check.
 use crate::std::cmp::IsEq;
 
-/// 配列に要素が含まれるか (const版)
+/// Check if array contains element (const version)
 #[doc(hidden)]
 pub trait Contains<X> {
     const VALUE: bool;
@@ -180,9 +180,9 @@ where
     const VALUE: bool = <H as IsEq<X>>::EQ || <T as Contains<X>>::VALUE;
 }
 
-// =============================================================================
+//
 // Evaluable: Self-evaluating for concrete types
-// =============================================================================
+//
 
 impl Evaluable for TyNil {
     type Output = TyNil;
@@ -192,29 +192,29 @@ impl<H, T: Cons> Evaluable for TyArray<H, T> {
     type Output = TyArray<H, T>;
 }
 
-// =============================================================================
+//
 // Function Markers: Array Operations
-// =============================================================================
+//
 
-/// 配列の長さ
+/// Array length
 pub struct FLen;
-/// 配列の先頭要素
+/// Head element
 pub struct FHead;
-/// 配列の先頭以外
+/// Tail
 pub struct FTail;
-/// 配列が空かどうか
+/// Is empty
 pub struct FIsEmpty;
-/// 配列のインデックスアクセス
+/// Index get
 pub struct FGet;
-/// 配列のインデックス更新
+/// Index set
 pub struct FSet;
-/// 配列の結合
+/// Concatenation
 pub struct FConcat;
-/// 配列の末尾に追加
+/// Append to end
 pub struct FAppend;
-/// 配列の先頭に追加
+/// Prepend to start
 pub struct FPrepend;
-/// 配列に要素が含まれるか
+/// Contains element
 pub struct FContains;
 
 impl Sealed for FLen {}
@@ -228,11 +228,11 @@ impl Sealed for FAppend {}
 impl Sealed for FPrepend {}
 impl Sealed for FContains {}
 
-// =============================================================================
+//
 // Evaluable Implementations for Array Functions
-// =============================================================================
+//
 
-// --- FLen: 配列の長さ ---
+// --- FLen: Array length ---
 impl<Array> Evaluable for EApply<FLen, Array>
 where
     Array: Evaluable,
@@ -241,7 +241,7 @@ where
     type Output = <Evaluator<Array> as Len>::Output;
 }
 
-// --- FHead: 先頭要素 ---
+// --- FHead: Head element ---
 impl<Array> Evaluable for EApply<FHead, Array>
 where
     Array: Evaluable,
@@ -250,7 +250,7 @@ where
     type Output = <Evaluator<Array> as Head>::Output;
 }
 
-// --- FTail: 先頭以外 ---
+// --- FTail: Tail ---
 impl<Array> Evaluable for EApply<FTail, Array>
 where
     Array: Evaluable,
@@ -259,7 +259,7 @@ where
     type Output = <Evaluator<Array> as Tail>::Output;
 }
 
-// --- FIsEmpty: 空かどうか ---
+// --- FIsEmpty: Is empty ---
 impl<Array> Evaluable for EApply<FIsEmpty, Array>
 where
     Array: Evaluable,
@@ -268,7 +268,7 @@ where
     type Output = <Evaluator<Array> as IsEmpty>::Output;
 }
 
-// --- FGet: インデックスアクセス ---
+// --- FGet: Index get ---
 impl<Array, Index> Evaluable for EApply2<FGet, Array, Index>
 where
     Array: Evaluable,
@@ -279,7 +279,7 @@ where
     type Output = <Evaluator<Array> as Get<Evaluator<Index>>>::Output;
 }
 
-// --- FSet: インデックス更新 ---
+// --- FSet: Index set ---
 impl<Array, Index, Value> Evaluable for EApply3<FSet, Array, Index, Value>
 where
     Array: Evaluable,
@@ -291,7 +291,7 @@ where
     type Output = <Evaluator<Array> as Set<Evaluator<Index>, Evaluator<Value>>>::Output;
 }
 
-// --- FConcat: 配列の結合 ---
+// --- FConcat: Concatenation ---
 impl<A, B> Evaluable for EApply2<FConcat, A, B>
 where
     A: Evaluable,
@@ -302,7 +302,7 @@ where
     type Output = <Evaluator<A> as Concat<Evaluator<B>>>::Output;
 }
 
-// --- FAppend: 末尾に追加 ---
+// --- FAppend: Append to end ---
 impl<Array, Elem> Evaluable for EApply2<FAppend, Array, Elem>
 where
     Array: Evaluable,
@@ -312,7 +312,7 @@ where
     type Output = <Evaluator<Array> as Concat<TyArray<Evaluator<Elem>, TyNil>>>::Output;
 }
 
-// --- FPrepend: 先頭に追加 ---
+// --- FPrepend: Prepend to start ---
 impl<Elem, Array> Evaluable for EApply2<FPrepend, Elem, Array>
 where
     Elem: Evaluable,
@@ -322,7 +322,7 @@ where
     type Output = TyArray<Evaluator<Elem>, Evaluator<Array>>;
 }
 
-// --- FContains: 配列に要素が含まれるか ---
+// --- FContains: Contains element ---
 impl<Array, X> Evaluable for EApply2<FContains, Array, X>
 where
     Array: Evaluable,
@@ -335,7 +335,7 @@ where
     >;
 }
 
-// --- FMap: 配列の各要素に関数を適用 ---
+// --- FMap: Apply function to each element of array (Map) ---
 pub struct FMap;
 impl Sealed for FMap {}
 
@@ -367,7 +367,7 @@ where
     type Output = <Evaluator<List> as MapHelper<F>>::Output;
 }
 
-// --- FFilter: 条件に一致する要素のみを残す ---
+// --- FFilter: Keep only elements matching condition (Filter) ---
 pub struct FFilter;
 impl Sealed for FFilter {}
 
@@ -417,7 +417,7 @@ where
     type Output = <Evaluator<List> as FilterHelper<Pred>>::Output;
 }
 
-// --- FFold: リストの畳み込み (Left Fold) ---
+// --- FFold: Fold list (Left Fold) ---
 pub struct FFold;
 impl Sealed for FFold {}
 
@@ -447,9 +447,9 @@ where
     type Output = <Evaluator<List> as FoldHelper<F, Evaluator<Init>>>::Output;
 }
 
-// =============================================================================
+//
 // Aliases
-// =============================================================================
+//
 
 // Array (1 arg)
 pub type ELen<A> = EApply<FLen, A>;
@@ -470,9 +470,9 @@ pub type EFilter<P, A> = EApply2<FFilter, P, A>;
 pub type ESet<A, I, V> = EApply3<FSet, A, I, V>;
 pub type EFold<F, Init, List> = EApply3<FFold, F, Init, List>;
 
-// =============================================================================
+//
 // Tests
-// =============================================================================
+//
 
 #[cfg(test)]
 mod tests {

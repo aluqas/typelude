@@ -1,7 +1,7 @@
 //! # Standard Library
 //!
-//! typelude の標準ライブラリ。
-//! データ型の定義と、それに対する操作（関数）を提供します。
+//! Standard library for `typelude`.
+//! Provides data type definitions and operations (functions) for them.
 
 pub mod array;
 pub mod bool;
