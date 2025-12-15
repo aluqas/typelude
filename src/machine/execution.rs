@@ -3,15 +3,16 @@
 //! マシンの命令実行ロジックとメインループを実装します。
 
 use crate::eval::{EApply, EIf, EWhile, Evaluable, Evaluator};
-use crate::func::{EConcat, EFunction, FIsEmpty, FNot};
+use crate::std::array::{Cons, Get, Set, TyArray, TyNil};
+use crate::std::ops::EFunction;
+use crate::std::bool::FNot;
+use crate::std::array::{EConcat, FIsEmpty};
 // Important: Ensure types::int is imported so Evaluable impls for Arithmetic are visible
 #[allow(unused_imports)]
-use crate::types::int;
+use crate::std::int;
 use crate::machine::instruction::*;
 use crate::machine::state::MachineState;
-use crate::types::array::{Cons, Get, Set, TyArray, TyNil};
 use typenum::Unsigned;
-use crate::func::FPrepend;
 
 // =============================================================================
 // Execute Trait
@@ -92,9 +93,9 @@ impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpAdd
 where
     TyArray<B, TyArray<A, Rest>>: Cons,
     Rest: Cons,
-    crate::types::int::EAdd<A, B>: Evaluable,
+    crate::std::int::EAdd<A, B>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::types::int::EAdd<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::int::EAdd<A, B>>, Rest>;
 }
 
 // --- OpSub ---
@@ -102,9 +103,9 @@ impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpSub
 where
     TyArray<B, TyArray<A, Rest>>: Cons,
     Rest: Cons,
-    crate::types::int::ESub<A, B>: Evaluable,
+    crate::std::int::ESub<A, B>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::types::int::ESub<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::int::ESub<A, B>>, Rest>;
 }
 
 // --- OpDup ---
@@ -139,9 +140,9 @@ impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpEq
 where
     TyArray<B, TyArray<A, Rest>>: Cons,
     Rest: Cons,
-    crate::types::int::EEq<A, B>: Evaluable,
+    crate::std::cmp::EEq<A, B>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::types::int::EEq<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::cmp::EEq<A, B>>, Rest>;
 }
 
 // --- OpNeq ---
@@ -149,9 +150,9 @@ impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpNeq
 where
     TyArray<B, TyArray<A, Rest>>: Cons,
     Rest: Cons,
-    crate::types::int::ENeq<A, B>: Evaluable,
+    crate::std::cmp::ENotEq<A, B>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::types::int::ENeq<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::cmp::ENotEq<A, B>>, Rest>;
 }
 
 // --- OpLt ---
@@ -160,9 +161,9 @@ impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpLt
 where
     TyArray<B, TyArray<A, Rest>>: Cons,
     Rest: Cons,
-    crate::types::int::ELt<A, B>: Evaluable,
+    crate::std::cmp::ELt<A, B>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::types::int::ELt<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::cmp::ELt<A, B>>, Rest>;
 }
 
 // --- OpGt ---
@@ -171,9 +172,9 @@ impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpGt
 where
     TyArray<B, TyArray<A, Rest>>: Cons,
     Rest: Cons,
-    crate::types::int::EGt<A, B>: Evaluable,
+    crate::std::cmp::EGt<A, B>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::types::int::EGt<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::cmp::EGt<A, B>>, Rest>;
 }
 
 // --- OpNot ---
@@ -181,9 +182,9 @@ impl<A, Rest> RunStep<TyArray<A, Rest>> for OpNot
 where
     TyArray<A, Rest>: Cons,
     Rest: Cons,
-    crate::func::ENot<A>: Evaluable,
+    crate::std::bool::ENot<A>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::func::ENot<A>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::bool::ENot<A>>, Rest>;
 }
 
 // --- OpAnd ---
@@ -191,9 +192,9 @@ impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpAnd
 where
     TyArray<B, TyArray<A, Rest>>: Cons,
     Rest: Cons,
-    crate::func::EAnd<A, B>: Evaluable,
+    crate::std::bool::EAnd<A, B>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::func::EAnd<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::bool::EAnd<A, B>>, Rest>;
 }
 
 // --- OpOr ---
@@ -201,9 +202,9 @@ impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpOr
 where
     TyArray<B, TyArray<A, Rest>>: Cons,
     Rest: Cons,
-    crate::func::EOr<A, B>: Evaluable,
+    crate::std::bool::EOr<A, B>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::func::EOr<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::bool::EOr<A, B>>, Rest>;
 }
 
 // --- OpLoad ---
@@ -400,7 +401,7 @@ pub struct FIsFinished;
 impl<S, L, M, C, P> EFunction<MachineState<S, L, M, C, P>> for FIsFinished
 where
     EApply<FIsEmpty, P>: Evaluable,
-    Evaluator<EApply<FIsEmpty, P>>: crate::types::bool::_NotHelper,
+    Evaluator<EApply<FIsEmpty, P>>: crate::std::bool::_NotHelper,
 {
     type Output = Evaluator<EApply<FNot, EApply<FIsEmpty, P>>>;
 }
@@ -556,7 +557,7 @@ mod tests {
 
     #[test]
     fn test_simple_sort() {
-        use typenum::{U0, U1, U2, U3};
+        use typenum::{U0, U1, U3};
         // Sort memory [3, 1] -> [1, 3] at indices 0, 1
 
         type InitialMemory = tyarray![U3, U1];

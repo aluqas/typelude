@@ -4,26 +4,24 @@
 
 use typenum::{B0, B1};
 
-use crate::{
-    eval::{EApply, EApply2, Evaluable, Evaluator, Sealed},
-    func::{FAnd, FNand, FNor, FNot, FOr, FXnor, FXor},
-};
+use crate::eval::{EApply, EApply2, Evaluable, Evaluator, Sealed};
 
 // =============================================================================
 // Type-Level Boolean Types
 // =============================================================================
 
 /// Marker Trait: TyTrue, TyFalse
-pub trait AsBool: Sealed {
+pub trait AsBool: Sealed + Evaluable {
     const BOOL: bool;
+    type Or<Rhs: AsBool>: AsBool;
 }
 
 /// TyTrue: True を表す型
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default, PartialOrd, Ord)]
 pub struct TyTrue;
 
 /// TyFalse: False を表す型
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default, PartialOrd, Ord)]
 pub struct TyFalse;
 
 impl Sealed for TyTrue {}
@@ -31,9 +29,11 @@ impl Sealed for TyFalse {}
 
 impl AsBool for TyTrue {
     const BOOL: bool = true;
+    type Or<Rhs: AsBool> = TyTrue;
 }
 impl AsBool for TyFalse {
     const BOOL: bool = false;
+    type Or<Rhs: AsBool> = Rhs;
 }
 
 impl Evaluable for TyTrue {
@@ -67,7 +67,14 @@ impl Bool2TyBool<false> for () {
     type Output = TyFalse;
 }
 
-pub type Assert<const COND: bool> = <() as Bool2TyBool<COND>>::Output;
+pub struct Assert<const COND: bool>;
+
+impl<const COND: bool> Evaluable for Assert<COND>
+where
+    (): Bool2TyBool<COND>,
+{
+    type Output = <() as Bool2TyBool<COND>>::Output;
+}
 
 /// typenum::B0/B1 → TyFalse/TyTrue 変換
 pub trait ToTyBool {
@@ -119,6 +126,33 @@ where
 {
     type Output = <Evaluator<Rhs> as _NotHelper>::Output;
 }
+
+// =============================================================================
+// Function Markers: Boolean Operations
+// =============================================================================
+
+/// NOT: !A
+pub struct FNot;
+/// AND: A && B
+pub struct FAnd;
+/// OR: A || B
+pub struct FOr;
+/// NAND: !(A && B)
+pub struct FNand;
+/// NOR: !(A || B)
+pub struct FNor;
+/// XOR: A ^ B
+pub struct FXor;
+/// XNOR: !(A ^ B)
+pub struct FXnor;
+
+impl Sealed for FNot {}
+impl Sealed for FAnd {}
+impl Sealed for FOr {}
+impl Sealed for FNand {}
+impl Sealed for FNor {}
+impl Sealed for FXor {}
+impl Sealed for FXnor {}
 
 // =============================================================================
 // Evaluable Implementations for Boolean Functions
@@ -183,6 +217,21 @@ where
 }
 
 // =============================================================================
+// Aliases
+// =============================================================================
+
+// Boolean (1 arg)
+pub type ENot<A> = EApply<FNot, A>;
+
+// Boolean (2 args)
+pub type EAnd<A, B> = EApply2<FAnd, A, B>;
+pub type EOr<A, B> = EApply2<FOr, A, B>;
+pub type ENand<A, B> = EApply2<FNand, A, B>;
+pub type ENor<A, B> = EApply2<FNor, A, B>;
+pub type EXor<A, B> = EApply2<FXor, A, B>;
+pub type EXnor<A, B> = EApply2<FXnor, A, B>;
+
+// =============================================================================
 // Tests
 // =============================================================================
 
@@ -191,10 +240,7 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::{
-        eval::ELit,
-        func::{EAnd, ENand, ENor, ENot, EOr, EXnor, EXor},
-    };
+    use crate::eval::ELit;
 
     #[test]
     fn test_not() {

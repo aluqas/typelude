@@ -14,7 +14,7 @@ pub use expr::*;
 ///
 /// このトレイトは内部実装用トレイトであり、直接使用しないでください。
 #[doc(hidden)]
-pub(crate) trait Sealed {}
+pub trait Sealed {}
 
 // =============================================================================
 // Core Evaluable Trait
@@ -42,10 +42,11 @@ mod tests {
 
     use crate::{
         eval::{EIf, ELit, EWhile, Evaluator},
-        func::{EEq, EFunction, ENotEq},
-        types::{
+        std::{
             array::{Cons, TyArray, TyNil},
             bool::{ToTyBool, ToTyBoolOut, TyFalse, TyTrue},
+            cmp::{EEq, ENotEq},
+            ops::EFunction,
         },
     };
 

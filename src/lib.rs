@@ -27,8 +27,8 @@
 //!
 //! ```text
 //! eval/       - 評価インフラ (Evaluable, ELit, EIf, EWhile, EApply)
-//! func/       - 関数マーカー (FNot, FAnd, FLen, etc.)
-//! types/      - データ型 (TyTrue/TyFalse, TyArray/TyNil)
+//! std/        - 標準ライブラリ (int, bool, array, cmp, ops)
+//! machine/    - スタックマシン実装
 //! prelude     - 便利な一括 import
 //! ```
 
@@ -41,8 +41,7 @@
 pub use typenum;
 
 pub mod eval;
-pub mod func;
 pub mod machine;
 pub mod macros;
 pub mod prelude;
-pub mod types;
+pub mod std;

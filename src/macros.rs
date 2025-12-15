@@ -503,7 +503,7 @@ mod tests {
     use crate::eval::{Evaluator};
     use crate::machine::execution::ERun;
     use crate::machine::state::MachineState;
-    use crate::types::array::{TyNil, TyArray};
+    use crate::std::array::{TyNil, TyArray};
     use typenum::{U0, U4, U10};
     use static_assertions::assert_type_eq_all;
 
