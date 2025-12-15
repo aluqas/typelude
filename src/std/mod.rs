@@ -8,3 +8,4 @@ pub mod bool;
 pub mod cmp;
 pub mod int;
 pub mod traits;
+pub mod trace;
