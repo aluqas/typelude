@@ -4,14 +4,17 @@
 
 use typenum::Unsigned;
 
-// Important: Ensure types::int is imported so Evaluable impls for Arithmetic are visible
+// Important: Ensure std::int is imported so Evaluable impls for Arithmetic are visible
 #[allow(unused_imports)]
-use crate::types::int;
+use crate::std::int;
 use crate::{
     eval::{EApply, EIf, EWhile, Evaluable, Evaluator},
-    func::{EConcat, EFunction, FIsEmpty, FNot, FPrepend},
     machine::{instruction::*, state::MachineState},
-    types::array::{Cons, Get, Set, TyArray, TyNil},
+    std::{
+        array::{Cons, EConcat, FIsEmpty, FPrepend, Get, Set, TyArray, TyNil},
+        bool::FNot,
+        ops::EFunction,
+    },
 };
 
 // =============================================================================
