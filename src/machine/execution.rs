@@ -267,6 +267,18 @@ where
     type OutputState = MachineState<RestStack, TyArray<Value, Locals>, Memory, CallStack, RestProg>;
 }
 
+// --- OpDropLocal ---
+impl<Stack, Head, Tail, Memory, CallStack, RestProg> Execute<Stack, TyArray<Head, Tail>, Memory, CallStack, RestProg> for OpDropLocal
+where
+    Stack: Cons,
+    TyArray<Head, Tail>: Cons,
+    Tail: Cons,
+    RestProg: Cons,
+{
+    // Locals -> Tail (Remove Head)
+    type OutputState = MachineState<Stack, Tail, Memory, CallStack, RestProg>;
+}
+
 // --- OpCall<TargetProg> ---
 // CallStack: [...] -> [(RestProg, CallerLocals), ...]
 // Program: TargetProg
