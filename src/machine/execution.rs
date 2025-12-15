@@ -7,7 +7,7 @@ use crate::std::array::{Cons, Get, Set, TyArray, TyNil};
 use crate::std::traits::EFunction;
 use crate::std::bool::FNot;
 use crate::std::array::{EConcat, FIsEmpty};
-// Important: Ensure types::int is imported so Evaluable impls for Arithmetic are visible
+// Important: Ensure std::int is imported so Evaluable impls for Arithmetic are visible
 #[allow(unused_imports)]
 use crate::std::int;
 use crate::machine::instruction::*;
