@@ -9,9 +9,9 @@
 use std::marker::PhantomData;
 
 use super::{Evaluable, Evaluator};
-use crate::{
-    std::bool::{TyFalse, TyTrue},
-    std::traits::EFunction,
+use crate::std::{
+    bool::{TyFalse, TyTrue},
+    traits::EFunction,
 };
 
 // =============================================================================

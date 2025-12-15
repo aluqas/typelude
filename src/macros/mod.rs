@@ -6,109 +6,313 @@
 /// Supports 0-100.
 #[macro_export]
 macro_rules! uint {
-    (0) => { $crate::typenum::U0 };
-    (1) => { $crate::typenum::U1 };
-    (2) => { $crate::typenum::U2 };
-    (3) => { $crate::typenum::U3 };
-    (4) => { $crate::typenum::U4 };
-    (5) => { $crate::typenum::U5 };
-    (6) => { $crate::typenum::U6 };
-    (7) => { $crate::typenum::U7 };
-    (8) => { $crate::typenum::U8 };
-    (9) => { $crate::typenum::U9 };
-    (10) => { $crate::typenum::U10 };
-    (11) => { $crate::typenum::U11 };
-    (12) => { $crate::typenum::U12 };
-    (13) => { $crate::typenum::U13 };
-    (14) => { $crate::typenum::U14 };
-    (15) => { $crate::typenum::U15 };
-    (16) => { $crate::typenum::U16 };
-    (17) => { $crate::typenum::U17 };
-    (18) => { $crate::typenum::U18 };
-    (19) => { $crate::typenum::U19 };
-    (20) => { $crate::typenum::U20 };
-    (21) => { $crate::typenum::U21 };
-    (22) => { $crate::typenum::U22 };
-    (23) => { $crate::typenum::U23 };
-    (24) => { $crate::typenum::U24 };
-    (25) => { $crate::typenum::U25 };
-    (26) => { $crate::typenum::U26 };
-    (27) => { $crate::typenum::U27 };
-    (28) => { $crate::typenum::U28 };
-    (29) => { $crate::typenum::U29 };
-    (30) => { $crate::typenum::U30 };
-    (31) => { $crate::typenum::U31 };
-    (32) => { $crate::typenum::U32 };
-    (33) => { $crate::typenum::U33 };
-    (34) => { $crate::typenum::U34 };
-    (35) => { $crate::typenum::U35 };
-    (36) => { $crate::typenum::U36 };
-    (37) => { $crate::typenum::U37 };
-    (38) => { $crate::typenum::U38 };
-    (39) => { $crate::typenum::U39 };
-    (40) => { $crate::typenum::U40 };
-    (41) => { $crate::typenum::U41 };
-    (42) => { $crate::typenum::U42 };
-    (43) => { $crate::typenum::U43 };
-    (44) => { $crate::typenum::U44 };
-    (45) => { $crate::typenum::U45 };
-    (46) => { $crate::typenum::U46 };
-    (47) => { $crate::typenum::U47 };
-    (48) => { $crate::typenum::U48 };
-    (49) => { $crate::typenum::U49 };
-    (50) => { $crate::typenum::U50 };
-    (51) => { $crate::typenum::U51 };
-    (52) => { $crate::typenum::U52 };
-    (53) => { $crate::typenum::U53 };
-    (54) => { $crate::typenum::U54 };
-    (55) => { $crate::typenum::U55 };
-    (56) => { $crate::typenum::U56 };
-    (57) => { $crate::typenum::U57 };
-    (58) => { $crate::typenum::U58 };
-    (59) => { $crate::typenum::U59 };
-    (60) => { $crate::typenum::U60 };
-    (61) => { $crate::typenum::U61 };
-    (62) => { $crate::typenum::U62 };
-    (63) => { $crate::typenum::U63 };
-    (64) => { $crate::typenum::U64 };
-    (65) => { $crate::typenum::U65 };
-    (66) => { $crate::typenum::U66 };
-    (67) => { $crate::typenum::U67 };
-    (68) => { $crate::typenum::U68 };
-    (69) => { $crate::typenum::U69 };
-    (70) => { $crate::typenum::U70 };
-    (71) => { $crate::typenum::U71 };
-    (72) => { $crate::typenum::U72 };
-    (73) => { $crate::typenum::U73 };
-    (74) => { $crate::typenum::U74 };
-    (75) => { $crate::typenum::U75 };
-    (76) => { $crate::typenum::U76 };
-    (77) => { $crate::typenum::U77 };
-    (78) => { $crate::typenum::U78 };
-    (79) => { $crate::typenum::U79 };
-    (80) => { $crate::typenum::U80 };
-    (81) => { $crate::typenum::U81 };
-    (82) => { $crate::typenum::U82 };
-    (83) => { $crate::typenum::U83 };
-    (84) => { $crate::typenum::U84 };
-    (85) => { $crate::typenum::U85 };
-    (86) => { $crate::typenum::U86 };
-    (87) => { $crate::typenum::U87 };
-    (88) => { $crate::typenum::U88 };
-    (89) => { $crate::typenum::U89 };
-    (90) => { $crate::typenum::U90 };
-    (91) => { $crate::typenum::U91 };
-    (92) => { $crate::typenum::U92 };
-    (93) => { $crate::typenum::U93 };
-    (94) => { $crate::typenum::U94 };
-    (95) => { $crate::typenum::U95 };
-    (96) => { $crate::typenum::U96 };
-    (97) => { $crate::typenum::U97 };
-    (98) => { $crate::typenum::U98 };
-    (99) => { $crate::typenum::U99 };
-    (100) => { $crate::typenum::U100 };
+    (0) => {
+        $crate::typenum::U0
+    };
+    (1) => {
+        $crate::typenum::U1
+    };
+    (2) => {
+        $crate::typenum::U2
+    };
+    (3) => {
+        $crate::typenum::U3
+    };
+    (4) => {
+        $crate::typenum::U4
+    };
+    (5) => {
+        $crate::typenum::U5
+    };
+    (6) => {
+        $crate::typenum::U6
+    };
+    (7) => {
+        $crate::typenum::U7
+    };
+    (8) => {
+        $crate::typenum::U8
+    };
+    (9) => {
+        $crate::typenum::U9
+    };
+    (10) => {
+        $crate::typenum::U10
+    };
+    (11) => {
+        $crate::typenum::U11
+    };
+    (12) => {
+        $crate::typenum::U12
+    };
+    (13) => {
+        $crate::typenum::U13
+    };
+    (14) => {
+        $crate::typenum::U14
+    };
+    (15) => {
+        $crate::typenum::U15
+    };
+    (16) => {
+        $crate::typenum::U16
+    };
+    (17) => {
+        $crate::typenum::U17
+    };
+    (18) => {
+        $crate::typenum::U18
+    };
+    (19) => {
+        $crate::typenum::U19
+    };
+    (20) => {
+        $crate::typenum::U20
+    };
+    (21) => {
+        $crate::typenum::U21
+    };
+    (22) => {
+        $crate::typenum::U22
+    };
+    (23) => {
+        $crate::typenum::U23
+    };
+    (24) => {
+        $crate::typenum::U24
+    };
+    (25) => {
+        $crate::typenum::U25
+    };
+    (26) => {
+        $crate::typenum::U26
+    };
+    (27) => {
+        $crate::typenum::U27
+    };
+    (28) => {
+        $crate::typenum::U28
+    };
+    (29) => {
+        $crate::typenum::U29
+    };
+    (30) => {
+        $crate::typenum::U30
+    };
+    (31) => {
+        $crate::typenum::U31
+    };
+    (32) => {
+        $crate::typenum::U32
+    };
+    (33) => {
+        $crate::typenum::U33
+    };
+    (34) => {
+        $crate::typenum::U34
+    };
+    (35) => {
+        $crate::typenum::U35
+    };
+    (36) => {
+        $crate::typenum::U36
+    };
+    (37) => {
+        $crate::typenum::U37
+    };
+    (38) => {
+        $crate::typenum::U38
+    };
+    (39) => {
+        $crate::typenum::U39
+    };
+    (40) => {
+        $crate::typenum::U40
+    };
+    (41) => {
+        $crate::typenum::U41
+    };
+    (42) => {
+        $crate::typenum::U42
+    };
+    (43) => {
+        $crate::typenum::U43
+    };
+    (44) => {
+        $crate::typenum::U44
+    };
+    (45) => {
+        $crate::typenum::U45
+    };
+    (46) => {
+        $crate::typenum::U46
+    };
+    (47) => {
+        $crate::typenum::U47
+    };
+    (48) => {
+        $crate::typenum::U48
+    };
+    (49) => {
+        $crate::typenum::U49
+    };
+    (50) => {
+        $crate::typenum::U50
+    };
+    (51) => {
+        $crate::typenum::U51
+    };
+    (52) => {
+        $crate::typenum::U52
+    };
+    (53) => {
+        $crate::typenum::U53
+    };
+    (54) => {
+        $crate::typenum::U54
+    };
+    (55) => {
+        $crate::typenum::U55
+    };
+    (56) => {
+        $crate::typenum::U56
+    };
+    (57) => {
+        $crate::typenum::U57
+    };
+    (58) => {
+        $crate::typenum::U58
+    };
+    (59) => {
+        $crate::typenum::U59
+    };
+    (60) => {
+        $crate::typenum::U60
+    };
+    (61) => {
+        $crate::typenum::U61
+    };
+    (62) => {
+        $crate::typenum::U62
+    };
+    (63) => {
+        $crate::typenum::U63
+    };
+    (64) => {
+        $crate::typenum::U64
+    };
+    (65) => {
+        $crate::typenum::U65
+    };
+    (66) => {
+        $crate::typenum::U66
+    };
+    (67) => {
+        $crate::typenum::U67
+    };
+    (68) => {
+        $crate::typenum::U68
+    };
+    (69) => {
+        $crate::typenum::U69
+    };
+    (70) => {
+        $crate::typenum::U70
+    };
+    (71) => {
+        $crate::typenum::U71
+    };
+    (72) => {
+        $crate::typenum::U72
+    };
+    (73) => {
+        $crate::typenum::U73
+    };
+    (74) => {
+        $crate::typenum::U74
+    };
+    (75) => {
+        $crate::typenum::U75
+    };
+    (76) => {
+        $crate::typenum::U76
+    };
+    (77) => {
+        $crate::typenum::U77
+    };
+    (78) => {
+        $crate::typenum::U78
+    };
+    (79) => {
+        $crate::typenum::U79
+    };
+    (80) => {
+        $crate::typenum::U80
+    };
+    (81) => {
+        $crate::typenum::U81
+    };
+    (82) => {
+        $crate::typenum::U82
+    };
+    (83) => {
+        $crate::typenum::U83
+    };
+    (84) => {
+        $crate::typenum::U84
+    };
+    (85) => {
+        $crate::typenum::U85
+    };
+    (86) => {
+        $crate::typenum::U86
+    };
+    (87) => {
+        $crate::typenum::U87
+    };
+    (88) => {
+        $crate::typenum::U88
+    };
+    (89) => {
+        $crate::typenum::U89
+    };
+    (90) => {
+        $crate::typenum::U90
+    };
+    (91) => {
+        $crate::typenum::U91
+    };
+    (92) => {
+        $crate::typenum::U92
+    };
+    (93) => {
+        $crate::typenum::U93
+    };
+    (94) => {
+        $crate::typenum::U94
+    };
+    (95) => {
+        $crate::typenum::U95
+    };
+    (96) => {
+        $crate::typenum::U96
+    };
+    (97) => {
+        $crate::typenum::U97
+    };
+    (98) => {
+        $crate::typenum::U98
+    };
+    (99) => {
+        $crate::typenum::U99
+    };
+    (100) => {
+        $crate::typenum::U100
+    };
     // Fallback for non-matching tokens (e.g. types)
-    ($other:tt) => { $other };
+    ($other:tt) => {
+        $other
+    };
 }
 
 /// Defines variable aliases for memory addresses.
@@ -162,23 +366,45 @@ macro_rules! define_vars_mapper_accum {
                 };
             ],
             $d
-        )
+        );
     };
 }
 
 #[macro_export]
 macro_rules! unary_to_uint {
-    () => { $crate::typenum::U0 };
-    (I) => { $crate::typenum::U1 };
-    (I I) => { $crate::typenum::U2 };
-    (I I I) => { $crate::typenum::U3 };
-    (I I I I) => { $crate::typenum::U4 };
-    (I I I I I) => { $crate::typenum::U5 };
-    (I I I I I I) => { $crate::typenum::U6 };
-    (I I I I I I I) => { $crate::typenum::U7 };
-    (I I I I I I I I) => { $crate::typenum::U8 };
-    (I I I I I I I I I) => { $crate::typenum::U9 };
-    (I I I I I I I I I I) => { $crate::typenum::U10 };
+    () => {
+        $crate::typenum::U0
+    };
+    (I) => {
+        $crate::typenum::U1
+    };
+    (I I) => {
+        $crate::typenum::U2
+    };
+    (I I I) => {
+        $crate::typenum::U3
+    };
+    (I I I I) => {
+        $crate::typenum::U4
+    };
+    (I I I I I) => {
+        $crate::typenum::U5
+    };
+    (I I I I I I) => {
+        $crate::typenum::U6
+    };
+    (I I I I I I I) => {
+        $crate::typenum::U7
+    };
+    (I I I I I I I I) => {
+        $crate::typenum::U8
+    };
+    (I I I I I I I I I) => {
+        $crate::typenum::U9
+    };
+    (I I I I I I I I I I) => {
+        $crate::typenum::U10
+    };
 }
 
 // --- Local Variable Lookup Helper ---
@@ -243,7 +469,6 @@ macro_rules! check_unary_eq {
     // Mismatch
     ( [$($a:tt)*], [$($b:tt)*], [$($then:tt)*], [$($else:tt)*] ) => { $($else)* };
 }
-
 
 // --- Main Program Macro ---
 
@@ -500,12 +725,14 @@ macro_rules! parse_body_push_helper {
 
 #[cfg(test)]
 mod tests {
-    use crate::eval::{Evaluator};
-    use crate::machine::execution::ERun;
-    use crate::machine::state::MachineState;
-    use crate::std::array::{TyNil, TyArray};
-    use typenum::{U0, U4, U10};
     use static_assertions::assert_type_eq_all;
+    use typenum::{U0, U4, U10};
+
+    use crate::{
+        eval::Evaluator,
+        machine::{execution::ERun, state::MachineState},
+        std::array::{TyArray, TyNil},
+    };
 
     // Helper trait to extract stack from MachineState
     trait GetStack {
@@ -615,7 +842,8 @@ mod tests {
         // Result stack should be [15]
         assert_type_eq_all!(FinalStack, TyArray<crate::typenum::U15, TyNil>);
 
-        type ExpectedState = MachineState<TyArray<crate::typenum::U15, TyNil>, TyNil, TyNil, TyNil, TyNil>;
+        type ExpectedState =
+            MachineState<TyArray<crate::typenum::U15, TyNil>, TyNil, TyNil, TyNil, TyNil>;
         assert_type_eq_all!(FinalState, ExpectedState);
     }
 
@@ -644,7 +872,8 @@ mod tests {
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
         type FinalState = Evaluator<ERun<InitialState>>;
 
-        type ExpectedState = MachineState<TyArray<crate::typenum::U40, TyNil>, TyNil, TyNil, TyNil, TyNil>;
+        type ExpectedState =
+            MachineState<TyArray<crate::typenum::U40, TyNil>, TyNil, TyNil, TyNil, TyNil>;
         assert_type_eq_all!(FinalState, ExpectedState);
     }
 
@@ -669,7 +898,8 @@ mod tests {
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
         type FinalState = Evaluator<ERun<InitialState>>;
-        type ExpectedState = MachineState<TyArray<crate::typenum::U20, TyNil>, TyNil, TyNil, TyNil, TyNil>;
+        type ExpectedState =
+            MachineState<TyArray<crate::typenum::U20, TyNil>, TyNil, TyNil, TyNil, TyNil>;
         assert_type_eq_all!(FinalState, ExpectedState);
     }
 }
