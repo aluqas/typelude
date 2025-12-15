@@ -324,7 +324,7 @@ macro_rules! define_vars {
 
         // Generate identifier mapping macro for local variable equality check
         // Pass '$' token to avoid nesting issues
-        $crate::define_vars_mapper_accum!( __typelude_var_mapper, [ $($vars)* ], [], [], $ );
+        $crate::define_vars_mapper_accum! { __typelude_var_mapper, [ $($vars)* ], [], [], $ }
     };
 }
 
@@ -348,6 +348,7 @@ macro_rules! define_vars_mapper_accum {
          macro_rules! $name {
              $($rules)*
              // Fallback: If variable unknown, we can't do anything.
+             ($d($d other:tt)*) => {}
          }
     };
 
@@ -355,7 +356,7 @@ macro_rules! define_vars_mapper_accum {
     // The rule format is CPS: ($head, [$cb_path...] ! ( $args... )) => { $cb_path!( $args... [ID] ) }
     // We expect the callback path to be wrapped in brackets [ ... ] to avoid 'path' fragment ambiguity.
     ( $name:ident, [$head:ident $($tail:ident)*], [$($cnt:tt)*], [$($rules:tt)*], $d:tt ) => {
-        $crate::define_vars_mapper_accum!(
+        $crate::define_vars_mapper_accum! {
             $name,
             [$($tail)*],
             [$($cnt)* I], // Increment counter
@@ -366,7 +367,7 @@ macro_rules! define_vars_mapper_accum {
                 };
             ],
             $d
-        )
+        }
     };
 }
 
@@ -731,7 +732,7 @@ mod tests {
     use crate::{
         eval::Evaluator,
         machine::{execution::ERun, state::MachineState},
-        types::array::{TyArray, TyNil},
+        std::array::{TyArray, TyNil},
     };
 
     // Helper trait to extract stack from MachineState
@@ -788,7 +789,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variables() {
+    fn test_global_memory() {
         // Define vars
         define_vars! { x, y }
         // x=0, y=1

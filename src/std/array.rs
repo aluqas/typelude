@@ -487,21 +487,26 @@ mod tests {
     type MyListExpr = ELit<MyList>;
 
     #[test]
-    fn test_simple_evals() {
-        // ELen
+    fn test_len() {
         assert_type_eq_all!(Evaluator<ELen<ELit<TyNil>>>, U0);
         assert_type_eq_all!(Evaluator<ELen<MyListExpr>>, U12);
+    }
 
-        // EHead/ETail
+    #[test]
+    fn test_head_tail() {
         type List3Expr = ELit<tyarray![i32, f64, bool]>;
         assert_type_eq_all!(Evaluator<EHead<List3Expr>>, i32);
         assert_type_eq_all!(Evaluator<ETail<List3Expr>>, tyarray![f64, bool]);
+    }
 
-        // EIsEmpty
+    #[test]
+    fn test_is_empty() {
         assert_type_eq_all!(Evaluator<EIsEmpty<ELit<TyNil>>>, TyTrue);
         assert_type_eq_all!(Evaluator<EIsEmpty<ELit<tyarray![i32]>>>, TyFalse);
+    }
 
-        // EGet
+    #[test]
+    fn test_get() {
         assert_type_eq_all!(Evaluator<EGet<MyListExpr, ELit<U0>>>, i32);
         assert_type_eq_all!(Evaluator<EGet<MyListExpr, ELit<U1>>>, String);
         assert_type_eq_all!(Evaluator<EGet<MyListExpr, ELit<U10>>>, (usize, usize));

@@ -162,36 +162,48 @@ mod tests {
 
     #[test]
     fn test_eval_typenum() {
-        // typenum がそのまま評価されるか
         assert_type_eq_all!(Evaluator<U1>, U1);
         assert_type_eq_all!(Evaluator<P5>, P5);
         assert_type_eq_all!(Evaluator<N2>, N2);
+        assert_type_eq_all!(Evaluator<B0>, B0);
+        assert_type_eq_all!(Evaluator<B1>, B1);
     }
 
     #[test]
-    fn test_arithmetic() {
-        // Add
+    fn test_add() {
         assert_type_eq_all!(Evaluator<EAdd<U1, U2>>, U3);
         assert_type_eq_all!(Evaluator<EAdd<P1, N2>>, N1);
+    }
 
-        // Sub
+    #[test]
+    fn test_sub() {
         assert_type_eq_all!(Evaluator<ESub<U10, U2>>, U8);
         assert_type_eq_all!(Evaluator<ESub<N1, P1>>, N2);
+    }
 
-        // Mul
+    #[test]
+    fn test_mul() {
         assert_type_eq_all!(Evaluator<EMul<U2, U10>>, U20);
         assert_type_eq_all!(Evaluator<EMul<N2, N2>>, P4);
+    }
 
-        // Div
+    #[test]
+    fn test_div() {
         assert_type_eq_all!(Evaluator<EDiv<U10, U2>>, U5);
+    }
 
-        // Rem
-        assert_type_eq_all!(Evaluator<ERem<U10, U3>>, U1); // 10 % 3 = 1
+    #[test]
+    fn test_rem() {
+        assert_type_eq_all!(Evaluator<ERem<U10, U3>>, U1);
+    }
 
-        // Pow
+    #[test]
+    fn test_pow() {
         assert_type_eq_all!(Evaluator<EPow<U2, U3>>, U8);
+    }
 
-        // Composition
+    #[test]
+    fn test_composition() {
         // (1 + 2) * 3 = 9
         assert_type_eq_all!(Evaluator<EMul<EAdd<U1, U2>, U3>>, U9);
     }
