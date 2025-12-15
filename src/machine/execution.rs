@@ -3,10 +3,9 @@
 //! マシンの命令実行ロジックとメインループを実装します。
 
 use crate::eval::{EApply, EIf, EWhile, Evaluable, Evaluator};
-use crate::std::array::{Cons, Get, Set, TyArray, TyNil};
+use crate::std::array::{Cons, Get, Set, TyArray, TyNil, EConcat, FIsEmpty};
 use crate::std::traits::EFunction;
 use crate::std::bool::FNot;
-use crate::std::array::{EConcat, FIsEmpty};
 // Important: Ensure std::int is imported so Evaluable impls for Arithmetic are visible
 #[allow(unused_imports)]
 use crate::std::int;
