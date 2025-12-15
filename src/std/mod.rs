@@ -7,4 +7,4 @@ pub mod array;
 pub mod bool;
 pub mod cmp;
 pub mod int;
-pub mod ops;
+pub mod traits;

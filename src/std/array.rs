@@ -228,6 +228,7 @@ impl Sealed for FAppend {}
 impl Sealed for FPrepend {}
 impl Sealed for FContains {}
 
+
 // =============================================================================
 // Evaluable Implementations for Array Functions
 // =============================================================================
@@ -330,9 +331,7 @@ where
     Evaluator<Array>: Contains<Evaluator<X>>,
     (): crate::std::bool::Bool2TyBool<{ <Evaluator<Array> as Contains<Evaluator<X>>>::VALUE }>,
 {
-    type Output = Evaluator<
-        crate::std::bool::Assert<{ <Evaluator<Array> as Contains<Evaluator<X>>>::VALUE }>,
-    >;
+    type Output = Evaluator<crate::std::bool::Assert<{ <Evaluator<Array> as Contains<Evaluator<X>>>::VALUE }>>;
 }
 
 // --- FMap: 配列の各要素に関数を適用 ---
@@ -350,12 +349,11 @@ impl<F> MapHelper<F> for TyNil {
 
 impl<F, H, T> MapHelper<F> for TyArray<H, T>
 where
-    F: crate::std::ops::EFunction<H>,
+    F: crate::std::traits::EFunction<H>,
     T: Cons + MapHelper<F>,
     <T as MapHelper<F>>::Output: Cons,
 {
-    type Output =
-        TyArray<<F as crate::std::ops::EFunction<H>>::Output, <T as MapHelper<F>>::Output>;
+    type Output = TyArray<<F as crate::std::traits::EFunction<H>>::Output, <T as MapHelper<F>>::Output>;
 }
 
 // Evaluable impl
@@ -381,31 +379,31 @@ impl<P> FilterHelper<P> for TyNil {
 
 impl<P, H, T> FilterHelper<P> for TyArray<H, T>
 where
-    P: crate::std::ops::EFunction<H>,
+    P: crate::std::traits::EFunction<H>,
     T: Cons + FilterHelper<P>,
     <T as FilterHelper<P>>::Output: Cons,
     // Check Predicate
-    <P as crate::std::ops::EFunction<H>>::Output: Evaluable,
+    <P as crate::std::traits::EFunction<H>>::Output: Evaluable,
     // EIf<Pred(H), Cons<H, Filter(T)>, Filter(T)>
     crate::eval::EIf<
-        <P as crate::std::ops::EFunction<H>>::Output,
+        <P as crate::std::traits::EFunction<H>>::Output,
         crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
-        crate::eval::ELit<<T as FilterHelper<P>>::Output>,
+        crate::eval::ELit<<T as FilterHelper<P>>::Output>
     >: Evaluable,
     Evaluator<
         crate::eval::EIf<
-            <P as crate::std::ops::EFunction<H>>::Output,
+            <P as crate::std::traits::EFunction<H>>::Output,
             crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
-            crate::eval::ELit<<T as FilterHelper<P>>::Output>,
-        >,
+            crate::eval::ELit<<T as FilterHelper<P>>::Output>
+        >
     >: Cons,
 {
     type Output = Evaluator<
         crate::eval::EIf<
-            <P as crate::std::ops::EFunction<H>>::Output,
+            <P as crate::std::traits::EFunction<H>>::Output,
             crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
-            crate::eval::ELit<<T as FilterHelper<P>>::Output>,
-        >,
+            crate::eval::ELit<<T as FilterHelper<P>>::Output>
+        >
     >;
 }
 
@@ -431,11 +429,10 @@ impl<F, Acc> FoldHelper<F, Acc> for TyNil {
 
 impl<F, Acc, H, T> FoldHelper<F, Acc> for TyArray<H, T>
 where
-    F: crate::std::ops::EFunction<(Acc, H)>,
-    T: Cons + FoldHelper<F, <F as crate::std::ops::EFunction<(Acc, H)>>::Output>,
+    F: crate::std::traits::EFunction<(Acc, H)>,
+    T: Cons + FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, H)>>::Output>,
 {
-    type Output =
-        <T as FoldHelper<F, <F as crate::std::ops::EFunction<(Acc, H)>>::Output>>::Output;
+    type Output = <T as FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, H)>>::Output>>::Output;
 }
 
 impl<F, Init, List> Evaluable for EApply3<FFold, F, Init, List>
@@ -490,26 +487,21 @@ mod tests {
     type MyListExpr = ELit<MyList>;
 
     #[test]
-    fn test_len() {
+    fn test_simple_evals() {
+        // ELen
         assert_type_eq_all!(Evaluator<ELen<ELit<TyNil>>>, U0);
         assert_type_eq_all!(Evaluator<ELen<MyListExpr>>, U12);
-    }
 
-    #[test]
-    fn test_head_tail() {
+        // EHead/ETail
         type List3Expr = ELit<tyarray![i32, f64, bool]>;
         assert_type_eq_all!(Evaluator<EHead<List3Expr>>, i32);
         assert_type_eq_all!(Evaluator<ETail<List3Expr>>, tyarray![f64, bool]);
-    }
 
-    #[test]
-    fn test_is_empty() {
+        // EIsEmpty
         assert_type_eq_all!(Evaluator<EIsEmpty<ELit<TyNil>>>, TyTrue);
         assert_type_eq_all!(Evaluator<EIsEmpty<ELit<tyarray![i32]>>>, TyFalse);
-    }
 
-    #[test]
-    fn test_get() {
+        // EGet
         assert_type_eq_all!(Evaluator<EGet<MyListExpr, ELit<U0>>>, i32);
         assert_type_eq_all!(Evaluator<EGet<MyListExpr, ELit<U1>>>, String);
         assert_type_eq_all!(Evaluator<EGet<MyListExpr, ELit<U10>>>, (usize, usize));
@@ -559,9 +551,8 @@ mod tests {
 
     #[test]
     fn test_emap() {
+        use crate::std::traits::EFunction;
         use typenum::{Add1, U1, U2, U3, U4};
-
-        use crate::std::ops::EFunction;
 
         struct AddOne;
         impl<T> EFunction<T> for AddOne
@@ -579,12 +570,9 @@ mod tests {
 
     #[test]
     fn test_efilter() {
+        use crate::std::traits::EFunction;
         use typenum::{IsLess, U1, U2, U3, U4, U5};
-
-        use crate::std::{
-            bool::{ToTyBool, ToTyBoolOut},
-            ops::EFunction,
-        };
+        use crate::std::bool::{ToTyBoolOut, ToTyBool};
 
         struct LessThan3;
         impl<T> EFunction<T> for LessThan3
@@ -604,9 +592,8 @@ mod tests {
 
     #[test]
     fn test_efold() {
+        use crate::std::traits::EFunction;
         use typenum::{U0, U1, U2, U3, U6};
-
-        use crate::std::ops::EFunction;
 
         // Sum: (Acc, Elem) -> Acc + Elem
         struct Sum;

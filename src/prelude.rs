@@ -12,23 +12,27 @@ pub use crate::{
     eval::{EApply, EApply2, EIf, ELit, EWhile, Evaluable, Evaluator},
     // Standard Library
     std::{
-        // Array (Collection)
-        array::{
-            Cons, EAppend, EConcat, EContains, EGet, EHead, EIsEmpty, ELen, EPrepend, ESet, ETail,
-            FAppend, FConcat, FContains, FGet, FHead, FIsEmpty, FLen, FPrepend, FSet, FTail,
-            TyArray, TyNil,
-        },
+        // Traits (Core)
+        traits::EFunction,
+        // Int (Arithmetic)
+        int::{EAdd, ESub, EMul, EDiv, ERem, EPow, FAdd, FSub, FMul, FDiv, FRem, FPow},
         // Bool (Logical)
         bool::{
-            AsBool, Assert, EAnd, ENand, ENor, ENot, EOr, EXnor, EXor, FAnd, FNand, FNor, FNot,
-            FOr, FXnor, FXor, IsFalse, IsTrue, ToTyBool, ToTyBoolOut, TyFalse, TyTrue,
+            TyTrue, TyFalse, AsBool, IsTrue, IsFalse, ToTyBool, ToTyBoolOut, Assert,
+            ENot, EAnd, EOr, ENand, ENor, EXor, EXnor,
+            FNot, FAnd, FOr, FNand, FNor, FXor, FXnor
+        },
+        // Array (Collection)
+        array::{
+            TyNil, TyArray, Cons,
+            ELen, EHead, ETail, EIsEmpty, EGet, ESet, EConcat, EAppend, EPrepend, EContains,
+            FLen, FHead, FTail, FIsEmpty, FGet, FSet, FConcat, FAppend, FPrepend, FContains
         },
         // Compare
-        cmp::{EEq, EGe, EGt, ELe, ELt, ENotEq, FEq, FGe, FGt, FLe, FLt, FNeq},
-        // Int (Arithmetic)
-        int::{EAdd, EDiv, EMul, EPow, ERem, ESub, FAdd, FDiv, FMul, FPow, FRem, FSub},
-        // Ops markers (General)
-        ops::EFunction,
+        cmp::{
+            EEq, ENotEq, ELt, ELe, EGt, EGe,
+            FEq, FNeq, FLt, FLe, FGt, FGe
+        }
     },
     // Macros
     tyarray,
