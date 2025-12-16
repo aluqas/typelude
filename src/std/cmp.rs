@@ -8,7 +8,7 @@ use crate::{
     eval::{EApply2, Evaluable, Evaluator, Sealed},
     std::{
         bool::{Assert, ToTyBoolOut},
-        conv::TyFrom,
+        into::TyFrom,
         reify::ReflectBool,
     },
 };

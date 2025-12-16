@@ -111,7 +111,7 @@ mod tests {
     fn while_loop_plus_one() {
         use typenum::{Add1, IsLess, U1, U10, Unsigned};
 
-        use crate::std::conv::TyFrom;
+        use crate::std::into::TyFrom;
 
         struct IsLessThan10;
         impl<T> EFunction<T> for IsLessThan10

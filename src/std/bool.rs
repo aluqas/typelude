@@ -67,7 +67,7 @@ where
 // Ideally here if B0/B1 are external, but `reify` is central.
 // Let's implement Translate<bool> for B0/B1 here.
 
-use crate::std::conv::TyFrom;
+use crate::std::into::TyFrom;
 
 impl TyFrom<B1> for bool {
     type Output = TyTrue;
