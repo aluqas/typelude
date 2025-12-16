@@ -1,24 +1,24 @@
 //! **Expression Types**
 //!
-//! 型レベル式の構文を定義します。
-//! - `ELit`: リテラル
-//! - `EApply`, `EApply2`: 関数適用
-//! - `EIf`: 条件分岐
-//! - `EWhile`: ループ
+//! Defines the syntax for type-level expressions.
+//! - `ELit`: Literal
+//! - `EApply`, `EApply2`: Function Application
+//! - `EIf`: Conditional Branch
+//! - `EWhile`: Loop
 
 use std::marker::PhantomData;
 
 use super::{Evaluable, Evaluator};
-use crate::{
-    std::bool::{TyFalse, TyTrue},
-    std::traits::EFunction,
+use crate::std::{
+    bool::{TyFalse, TyTrue},
+    traits::EFunction,
 };
 
-// =============================================================================
+//
 // ELit: Literal Expression
-// =============================================================================
+//
 
-/// リテラル式 - 通常の型を式として埋め込む
+/// Literal Expression - Embeds a concrete type as an expression
 ///
 /// # Example
 /// ```ignore
@@ -31,11 +31,11 @@ impl<T> Evaluable for ELit<T> {
     type Output = T;
 }
 
-// =============================================================================
+//
 // EApply: Function Application
-// =============================================================================
+//
 
-/// 1引数関数適用
+/// 1-argument function application
 ///
 /// # Example
 /// ```ignore
@@ -43,7 +43,7 @@ impl<T> Evaluable for ELit<T> {
 /// ```
 pub struct EApply<F, A>(PhantomData<(F, A)>);
 
-/// 2引数関数適用
+/// 2-argument function application
 ///
 /// # Example
 /// ```ignore
@@ -51,7 +51,7 @@ pub struct EApply<F, A>(PhantomData<(F, A)>);
 /// ```
 pub struct EApply2<F, A, B>(PhantomData<(F, A, B)>);
 
-/// 3引数関数適用
+/// 3-argument function application
 ///
 /// # Example
 /// ```ignore
@@ -59,11 +59,11 @@ pub struct EApply2<F, A, B>(PhantomData<(F, A, B)>);
 /// ```
 pub struct EApply3<F, A, B, C>(PhantomData<(F, A, B, C)>);
 
-// =============================================================================
+//
 // EIf: Conditional Expression
-// =============================================================================
+//
 
-/// 条件分岐式
+/// Conditional Expression
 ///
 /// # Example
 /// ```ignore
@@ -72,7 +72,7 @@ pub struct EApply3<F, A, B, C>(PhantomData<(F, A, B, C)>);
 /// ```
 pub struct EIf<Cond, Then, Else>(PhantomData<(Cond, Then, Else)>);
 
-/// Condの結果（True/False）に対して実装するヘルパー
+/// Helper implemented based on Cond result (True/False)
 #[doc(hidden)]
 pub trait _EIfHelper<Then, Else> {
     type Output;
@@ -100,17 +100,17 @@ where
     type Output = <Evaluator<Cond> as _EIfHelper<Then, Else>>::Output;
 }
 
-// =============================================================================
+//
 // EWhile: Loop Expression
-// =============================================================================
+//
 
 type AppliedOutput<F, A> = <F as EFunction<A>>::Output;
 
-/// Whileループを表す式
+/// Expression representing a While loop
 ///
-/// - `Pred`: 継続条件 (State → TyTrue/TyFalse)
-/// - `Step`: 更新関数 (State → NextState)
-/// - `State`: 現在の状態
+/// - `Pred`: Condition (State → TyTrue/TyFalse)
+/// - `Step`: Update function (State → NextState)
+/// - `State`: Current state
 ///
 /// # Example
 /// ```ignore
@@ -125,7 +125,7 @@ pub trait _EWhileHelper<Pred, Step, State> {
     type Output;
 }
 
-// Condition == True: 再帰
+// Condition == True: Recurse
 impl<Pred, Step, State> _EWhileHelper<Pred, Step, State> for TyTrue
 where
     Step: EFunction<State>,
@@ -135,7 +135,7 @@ where
     type Output = <EWhile<Pred, Step, AppliedOutput<Step, State>> as Evaluable>::Output;
 }
 
-// Condition == False: 終了
+// Condition == False: Terminate
 impl<Pred, Step, State> _EWhileHelper<Pred, Step, State> for TyFalse
 where
     State: Evaluable,

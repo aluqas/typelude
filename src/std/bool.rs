@@ -1,39 +1,39 @@
 //! **Type-Level Boolean**
 //!
-//! 型レベルブール値 (`TyTrue`, `TyFalse`) と論理演算を提供します。
+//! Type-level booleans (`TyTrue`, `TyFalse`) and logical operations.
 
 use typenum::{B0, B1};
 
 use crate::eval::{EApply, EApply2, Evaluable, Evaluator, Sealed};
 
-// =============================================================================
+//
 // Type-Level Boolean Types
-// =============================================================================
+//
 
 /// Marker Trait: TyTrue, TyFalse
-pub trait AsBool: Sealed + Evaluable {
+pub trait KindBool: Sealed + Evaluable {
     const BOOL: bool;
-    type Or<Rhs: AsBool>: AsBool;
+    type Or<Rhs: KindBool>: KindBool;
 }
 
-/// TyTrue: True を表す型
+/// TyTrue: Type representing True
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default, PartialOrd, Ord)]
 pub struct TyTrue;
 
-/// TyFalse: False を表す型
+/// TyFalse: Type representing False
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default, PartialOrd, Ord)]
 pub struct TyFalse;
 
 impl Sealed for TyTrue {}
 impl Sealed for TyFalse {}
 
-impl AsBool for TyTrue {
+impl KindBool for TyTrue {
     const BOOL: bool = true;
-    type Or<Rhs: AsBool> = TyTrue;
+    type Or<Rhs: KindBool> = TyTrue;
 }
-impl AsBool for TyFalse {
+impl KindBool for TyFalse {
     const BOOL: bool = false;
-    type Or<Rhs: AsBool> = Rhs;
+    type Or<Rhs: KindBool> = Rhs;
 }
 
 impl Evaluable for TyTrue {
@@ -43,22 +43,14 @@ impl Evaluable for TyFalse {
     type Output = TyFalse;
 }
 
-/// Marker Trait: TyTrue
-pub trait IsTrue: AsBool {}
-impl IsTrue for TyTrue {}
-
-/// Marker Trait: TyFalse
-pub trait IsFalse: AsBool {}
-impl IsFalse for TyFalse {}
-
-// =============================================================================
+//
 // Bool Conversion Utilities
-// =============================================================================
+//
 
-/// 真偽値をTyBool型に変換するトレイト
+/// Trait to convert boolean values to TyBool type
 #[doc(hidden)]
 pub trait Bool2TyBool<const COND: bool> {
-    type Output: AsBool;
+    type Output: KindBool;
 }
 impl Bool2TyBool<true> for () {
     type Output = TyTrue;
@@ -76,7 +68,7 @@ where
     type Output = <() as Bool2TyBool<COND>>::Output;
 }
 
-/// typenum::B0/B1 → TyFalse/TyTrue 変換
+/// Conversion from typenum::B0/B1 to TyFalse/TyTrue
 pub trait ToTyBool {
     type Output;
 }
@@ -90,11 +82,11 @@ impl ToTyBool for B0 {
 
 pub type ToTyBoolOut<T> = <T as ToTyBool>::Output;
 
-// =============================================================================
+//
 // Helper Traits for Logical Operations
-// =============================================================================
+//
 
-/// NOT のヘルパー
+/// Helper for NOT
 #[doc(hidden)]
 pub trait _NotHelper {
     type Output;
@@ -107,13 +99,13 @@ impl _NotHelper for TyFalse {
     type Output = TyTrue;
 }
 
-/// Lazy NAND Helper (短絡評価)
+/// Lazy NAND Helper (Short-circuit evaluation)
 #[doc(hidden)]
 pub trait _NandHelper<Rhs> {
     type Output;
 }
 
-// False NAND X = True (右辺を評価しない)
+// False NAND X = True (Right side not evaluated)
 impl<Rhs> _NandHelper<Rhs> for TyFalse {
     type Output = TyTrue;
 }
@@ -127,9 +119,9 @@ where
     type Output = <Evaluator<Rhs> as _NotHelper>::Output;
 }
 
-// =============================================================================
+//
 // Function Markers: Boolean Operations
-// =============================================================================
+//
 
 /// NOT: !A
 pub struct FNot;
@@ -154,11 +146,11 @@ impl Sealed for FNor {}
 impl Sealed for FXor {}
 impl Sealed for FXnor {}
 
-// =============================================================================
+//
 // Evaluable Implementations for Boolean Functions
-// =============================================================================
+//
 
-// --- FNot: NOT A ---
+// FNot: NOT A
 impl<A> Evaluable for EApply<FNot, A>
 where
     A: Evaluable,
@@ -167,7 +159,7 @@ where
     type Output = <Evaluator<A> as _NotHelper>::Output;
 }
 
-// --- FNand: A NAND B (with short-circuit) ---
+// FNand: A NAND B (with short-circuit)
 impl<A, B> Evaluable for EApply2<FNand, A, B>
 where
     A: Evaluable,
@@ -176,7 +168,7 @@ where
     type Output = <Evaluator<A> as _NandHelper<B>>::Output;
 }
 
-// --- FAnd: A AND B = NOT (A NAND B) ---
+// FAnd: A AND B = NOT (A NAND B)
 impl<A, B> Evaluable for EApply2<FAnd, A, B>
 where
     EApply<FNot, EApply2<FNand, A, B>>: Evaluable,
@@ -184,7 +176,7 @@ where
     type Output = Evaluator<EApply<FNot, EApply2<FNand, A, B>>>;
 }
 
-// --- FOr: A OR B = (NOT A) NAND (NOT B) ---
+// FOr: A OR B = (NOT A) NAND (NOT B)
 impl<A, B> Evaluable for EApply2<FOr, A, B>
 where
     EApply2<FNand, EApply<FNot, A>, EApply<FNot, B>>: Evaluable,
@@ -192,7 +184,7 @@ where
     type Output = Evaluator<EApply2<FNand, EApply<FNot, A>, EApply<FNot, B>>>;
 }
 
-// --- FNor: A NOR B = NOT (A OR B) ---
+// FNor: A NOR B = NOT (A OR B)
 impl<A, B> Evaluable for EApply2<FNor, A, B>
 where
     EApply<FNot, EApply2<FOr, A, B>>: Evaluable,
@@ -200,7 +192,7 @@ where
     type Output = Evaluator<EApply<FNot, EApply2<FOr, A, B>>>;
 }
 
-// --- FXor: A XOR B = (A OR B) AND (A NAND B) ---
+// FXor: A XOR B = (A OR B) AND (A NAND B)
 impl<A, B> Evaluable for EApply2<FXor, A, B>
 where
     EApply2<FAnd, EApply2<FOr, A, B>, EApply2<FNand, A, B>>: Evaluable,
@@ -208,7 +200,7 @@ where
     type Output = Evaluator<EApply2<FAnd, EApply2<FOr, A, B>, EApply2<FNand, A, B>>>;
 }
 
-// --- FXnor: A XNOR B = NOT (A XOR B) ---
+// FXnor: A XNOR B = NOT (A XOR B)
 impl<A, B> Evaluable for EApply2<FXnor, A, B>
 where
     EApply<FNot, EApply2<FXor, A, B>>: Evaluable,
@@ -216,9 +208,9 @@ where
     type Output = Evaluator<EApply<FNot, EApply2<FXor, A, B>>>;
 }
 
-// =============================================================================
+//
 // Aliases
-// =============================================================================
+//
 
 // Boolean (1 arg)
 pub type ENot<A> = EApply<FNot, A>;
@@ -231,9 +223,9 @@ pub type ENor<A, B> = EApply2<FNor, A, B>;
 pub type EXor<A, B> = EApply2<FXor, A, B>;
 pub type EXnor<A, B> = EApply2<FXnor, A, B>;
 
-// =============================================================================
+//
 // Tests
-// =============================================================================
+//
 
 #[cfg(test)]
 mod tests {

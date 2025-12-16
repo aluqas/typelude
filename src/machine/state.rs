@@ -1,19 +1,20 @@
 //! **Machine State**
 //!
-//! マシンの状態定義（Stack, Memory, CallStack, Program）
+//! Machine state definition (Stack, Memory, CallStack, Program)
 
 use std::marker::PhantomData;
+
 use crate::eval::{Evaluable, Sealed};
 
-/// マシンの状態
-/// - `Stack`: 計算スタック (TyArray)
-/// - `Locals`: ローカル変数 (TyArray)
-/// - `Memory`: リニアメモリ (TyArray)
-/// - `CallStack`: コールスタック (TyArray of Frames)
-/// - `Program`: 現在実行中の命令列 (TyArray of Instructions)
+/// Machine State
+/// - `Stack`: Calculation Stack (TyArray)
+/// - `Locals`: Local Variables (TyArray)
+/// - `Memory`: Linear Memory (TyArray)
+/// - `CallStack`: Call Stack (TyArray of Frames)
+/// - `Program`: Currently executing instruction sequence (TyArray of Instructions)
 #[derive(Debug)]
 pub struct MachineState<Stack, Locals, Memory, CallStack, Program>(
-    PhantomData<(Stack, Locals, Memory, CallStack, Program)>
+    PhantomData<(Stack, Locals, Memory, CallStack, Program)>,
 );
 
 impl<S, L, M, C, P> Sealed for MachineState<S, L, M, C, P> {}

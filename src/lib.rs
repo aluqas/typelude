@@ -1,24 +1,24 @@
 //! # Typelude
 //!
-//! 型レベルプログラミングのためのライブラリ。
+//! A library for type-level programming in Rust.
 //!
 //! ## Features
 //!
-//! - `Evaluable` トレイトによる統一的な評価インターフェース
-//! - `EApply<F, A>` パターンによる関数と式の分離
-//! - 型レベルブール値と論理演算
-//! - 型レベル配列と配列操作
+//! - Unified evaluation interface via `Evaluable` trait
+//! - Function and expression separation using `EApply<F, A>` pattern
+//! - Type-level booleans and logical operations
+//! - Type-level arrays and array operations
 //!
 //! ## Quick Start
 //!
 //! ```ignore
 //! use typelude::prelude::*;
 //!
-//! // 条件分岐
+//! // Conditional Branching
 //! type Result = Evaluator<EIf<ELit<TyTrue>, ELit<i32>, ELit<f64>>>;
 //! // Result = i32
 //!
-//! // 配列操作
+//! // Array Operations
 //! type Len = Evaluator<ELen<ELit<tyarray![i32, f64, bool]>>>;
 //! // Len = U3
 //! ```
@@ -26,10 +26,10 @@
 //! ## Architecture
 //!
 //! ```text
-//! eval/       - 評価インフラ (Evaluable, ELit, EIf, EWhile, EApply)
-//! std/        - 標準ライブラリ (int, bool, array, cmp, ops)
-//! machine/    - スタックマシン実装
-//! prelude     - 便利な一括 import
+//! eval/       - Evaluation Infrastructure (Evaluable, ELit, EIf, EWhile, EApply)
+//! std/        - Standard Library (int, bool, array, cmp, ops)
+//! machine/    - Stack Machine Implementation
+//! prelude     - Convenient bulk imports
 //! ```
 
 // Unstable features required for type-level programming

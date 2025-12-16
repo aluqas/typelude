@@ -1,21 +1,17 @@
 //! **Core Traits**
 //!
-//! typelude の基本的なトレイト定義。
+//! Core trait definitions for `typelude`.
 
 use crate::eval::ELit;
 
-// =============================================================================
-// EFunction Trait
-// =============================================================================
-
-/// 関数を表すトレイト
+/// Trait representing a function
 ///
-/// `EWhile` などで使用される、型から型への変換を表します。
+/// Represents a transformation from type to type, used in `EWhile` etc.
 pub trait EFunction<A> {
     type Output;
 }
 
-// ELit を自動的にアンラップ
+// Automatically unwrap ELit
 impl<F, T> EFunction<ELit<T>> for F
 where
     F: EFunction<T>,

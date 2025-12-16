@@ -1,6 +1,6 @@
 //! **Type-Level Integer**
 //!
-//! `typenum` クレートとの統合、および整数演算を提供します。
+//! Integration with the `typenum` crate and integer arithmetic.
 
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
@@ -8,9 +8,9 @@ use typenum::{B0, B1, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
 
 use crate::eval::{EApply2, Evaluable, Evaluator, Sealed};
 
-// =============================================================================
+//
 // Evaluable Implementation for typenum Types
-// =============================================================================
+//
 
 // --- Unsigned Integers ---
 
@@ -46,31 +46,31 @@ impl Evaluable for B1 {
     type Output = Self;
 }
 
-// =============================================================================
+//
 // Arithmetic Functions
-// =============================================================================
+//
 
-/// 加算: A + B
+/// Addition: A + B
 pub struct FAdd;
 impl Sealed for FAdd {}
 
-/// 減算: A - B
+/// Subtraction: A - B
 pub struct FSub;
 impl Sealed for FSub {}
 
-/// 乗算: A * B
+/// Multiplication: A * B
 pub struct FMul;
 impl Sealed for FMul {}
 
-/// 除算: A / B
+/// Division: A / B
 pub struct FDiv;
 impl Sealed for FDiv {}
 
-/// 剰余: A % B
+/// Remainder: A % B
 pub struct FRem;
 impl Sealed for FRem {}
 
-/// べき乗: A ^ B
+/// Exponentiation: A ^ B
 pub struct FPow;
 impl Sealed for FPow {}
 
@@ -136,9 +136,9 @@ where
     type Output = <Evaluator<A> as Pow<Evaluator<B>>>::Output;
 }
 
-// =============================================================================
+//
 // Aliases
-// =============================================================================
+//
 
 pub type EAdd<A, B> = EApply2<FAdd, A, B>;
 pub type ESub<A, B> = EApply2<FSub, A, B>;
@@ -147,9 +147,9 @@ pub type EDiv<A, B> = EApply2<FDiv, A, B>;
 pub type ERem<A, B> = EApply2<FRem, A, B>;
 pub type EPow<A, B> = EApply2<FPow, A, B>;
 
-// =============================================================================
+//
 // Tests
-// =============================================================================
+//
 
 #[cfg(test)]
 mod tests {

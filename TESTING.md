@@ -55,4 +55,4 @@
 //!     type Result = Evaluator<EAdd<U1, U2>>;
 //!     assert_type_eq_all!(Result, U3);
 //! }
-//! ```
+//!```

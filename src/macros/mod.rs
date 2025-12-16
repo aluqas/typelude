@@ -1,116 +1,3 @@
-//! **Type-Level Program Macros**
-//!
-//! Macros for writing type-level stack machine programs in an S-expression style.
-
-/// Maps integer literals to typenum types.
-/// Supports 0-100.
-#[macro_export]
-macro_rules! uint {
-    (0) => { $crate::typenum::U0 };
-    (1) => { $crate::typenum::U1 };
-    (2) => { $crate::typenum::U2 };
-    (3) => { $crate::typenum::U3 };
-    (4) => { $crate::typenum::U4 };
-    (5) => { $crate::typenum::U5 };
-    (6) => { $crate::typenum::U6 };
-    (7) => { $crate::typenum::U7 };
-    (8) => { $crate::typenum::U8 };
-    (9) => { $crate::typenum::U9 };
-    (10) => { $crate::typenum::U10 };
-    (11) => { $crate::typenum::U11 };
-    (12) => { $crate::typenum::U12 };
-    (13) => { $crate::typenum::U13 };
-    (14) => { $crate::typenum::U14 };
-    (15) => { $crate::typenum::U15 };
-    (16) => { $crate::typenum::U16 };
-    (17) => { $crate::typenum::U17 };
-    (18) => { $crate::typenum::U18 };
-    (19) => { $crate::typenum::U19 };
-    (20) => { $crate::typenum::U20 };
-    (21) => { $crate::typenum::U21 };
-    (22) => { $crate::typenum::U22 };
-    (23) => { $crate::typenum::U23 };
-    (24) => { $crate::typenum::U24 };
-    (25) => { $crate::typenum::U25 };
-    (26) => { $crate::typenum::U26 };
-    (27) => { $crate::typenum::U27 };
-    (28) => { $crate::typenum::U28 };
-    (29) => { $crate::typenum::U29 };
-    (30) => { $crate::typenum::U30 };
-    (31) => { $crate::typenum::U31 };
-    (32) => { $crate::typenum::U32 };
-    (33) => { $crate::typenum::U33 };
-    (34) => { $crate::typenum::U34 };
-    (35) => { $crate::typenum::U35 };
-    (36) => { $crate::typenum::U36 };
-    (37) => { $crate::typenum::U37 };
-    (38) => { $crate::typenum::U38 };
-    (39) => { $crate::typenum::U39 };
-    (40) => { $crate::typenum::U40 };
-    (41) => { $crate::typenum::U41 };
-    (42) => { $crate::typenum::U42 };
-    (43) => { $crate::typenum::U43 };
-    (44) => { $crate::typenum::U44 };
-    (45) => { $crate::typenum::U45 };
-    (46) => { $crate::typenum::U46 };
-    (47) => { $crate::typenum::U47 };
-    (48) => { $crate::typenum::U48 };
-    (49) => { $crate::typenum::U49 };
-    (50) => { $crate::typenum::U50 };
-    (51) => { $crate::typenum::U51 };
-    (52) => { $crate::typenum::U52 };
-    (53) => { $crate::typenum::U53 };
-    (54) => { $crate::typenum::U54 };
-    (55) => { $crate::typenum::U55 };
-    (56) => { $crate::typenum::U56 };
-    (57) => { $crate::typenum::U57 };
-    (58) => { $crate::typenum::U58 };
-    (59) => { $crate::typenum::U59 };
-    (60) => { $crate::typenum::U60 };
-    (61) => { $crate::typenum::U61 };
-    (62) => { $crate::typenum::U62 };
-    (63) => { $crate::typenum::U63 };
-    (64) => { $crate::typenum::U64 };
-    (65) => { $crate::typenum::U65 };
-    (66) => { $crate::typenum::U66 };
-    (67) => { $crate::typenum::U67 };
-    (68) => { $crate::typenum::U68 };
-    (69) => { $crate::typenum::U69 };
-    (70) => { $crate::typenum::U70 };
-    (71) => { $crate::typenum::U71 };
-    (72) => { $crate::typenum::U72 };
-    (73) => { $crate::typenum::U73 };
-    (74) => { $crate::typenum::U74 };
-    (75) => { $crate::typenum::U75 };
-    (76) => { $crate::typenum::U76 };
-    (77) => { $crate::typenum::U77 };
-    (78) => { $crate::typenum::U78 };
-    (79) => { $crate::typenum::U79 };
-    (80) => { $crate::typenum::U80 };
-    (81) => { $crate::typenum::U81 };
-    (82) => { $crate::typenum::U82 };
-    (83) => { $crate::typenum::U83 };
-    (84) => { $crate::typenum::U84 };
-    (85) => { $crate::typenum::U85 };
-    (86) => { $crate::typenum::U86 };
-    (87) => { $crate::typenum::U87 };
-    (88) => { $crate::typenum::U88 };
-    (89) => { $crate::typenum::U89 };
-    (90) => { $crate::typenum::U90 };
-    (91) => { $crate::typenum::U91 };
-    (92) => { $crate::typenum::U92 };
-    (93) => { $crate::typenum::U93 };
-    (94) => { $crate::typenum::U94 };
-    (95) => { $crate::typenum::U95 };
-    (96) => { $crate::typenum::U96 };
-    (97) => { $crate::typenum::U97 };
-    (98) => { $crate::typenum::U98 };
-    (99) => { $crate::typenum::U99 };
-    (100) => { $crate::typenum::U100 };
-    // Fallback for non-matching tokens (e.g. types)
-    ($other:tt) => { $other };
-}
-
 /// Defines variable aliases for memory addresses.
 #[macro_export]
 macro_rules! define_vars {
@@ -162,26 +49,50 @@ macro_rules! define_vars_mapper_accum {
                 };
             ],
             $d
-        }
+        );
     };
 }
 
 #[macro_export]
 macro_rules! unary_to_uint {
-    () => { $crate::typenum::U0 };
-    (I) => { $crate::typenum::U1 };
-    (I I) => { $crate::typenum::U2 };
-    (I I I) => { $crate::typenum::U3 };
-    (I I I I) => { $crate::typenum::U4 };
-    (I I I I I) => { $crate::typenum::U5 };
-    (I I I I I I) => { $crate::typenum::U6 };
-    (I I I I I I I) => { $crate::typenum::U7 };
-    (I I I I I I I I) => { $crate::typenum::U8 };
-    (I I I I I I I I I) => { $crate::typenum::U9 };
-    (I I I I I I I I I I) => { $crate::typenum::U10 };
+    () => {
+        $crate::typenum::U0
+    };
+    (I) => {
+        $crate::typenum::U1
+    };
+    (I I) => {
+        $crate::typenum::U2
+    };
+    (I I I) => {
+        $crate::typenum::U3
+    };
+    (I I I I) => {
+        $crate::typenum::U4
+    };
+    (I I I I I) => {
+        $crate::typenum::U5
+    };
+    (I I I I I I) => {
+        $crate::typenum::U6
+    };
+    (I I I I I I I) => {
+        $crate::typenum::U7
+    };
+    (I I I I I I I I) => {
+        $crate::typenum::U8
+    };
+    (I I I I I I I I I) => {
+        $crate::typenum::U9
+    };
+    (I I I I I I I I I I) => {
+        $crate::typenum::U10
+    };
 }
 
-// --- Local Variable Lookup Helper ---
+//
+// Local Variable Lookup Helper
+//
 
 /// Finds the index of a variable in the local variable list.
 /// Format: `find_var_index!(TargetVar, [HeadVar TailVars...], IndexAccumulator)`
@@ -244,8 +155,23 @@ macro_rules! check_unary_eq {
     ( [$($a:tt)*], [$($b:tt)*], [$($then:tt)*], [$($else:tt)*] ) => { $($else)* };
 }
 
+//
+// Type-Level Program Macros
+//
+// Macros for writing type-level stack machine programs in an S-expression style.
 
-// --- Main Program Macro ---
+/// Maps integer literals to typenum types using const-generics.
+/// Supports any integer that fits in strict `typenum::Const<N>`.
+#[macro_export]
+macro_rules! uint {
+    ($n:literal) => {
+        <$crate::typenum::Const<$n> as $crate::typenum::ToUInt>::Output
+    };
+}
+
+//
+// Main Program Macro
+//
 
 /// The main macro for writing programs.
 ///
@@ -276,7 +202,9 @@ macro_rules! parse_body {
         $crate::tyarray![ $($prog)* $($cleanup)* ]
     };
 
-    // --- Instructions ---
+    //
+    // Instructions
+    //
 
     // (push ...)
     ( [$($prog:tt)*] [$($cleanup:tt)*] [$($vars:ident)*] (push $($args:tt)+) $($rest:tt)* ) => {
@@ -353,7 +281,9 @@ macro_rules! parse_body {
         $crate::parse_body!( [$($prog)* $crate::machine::instruction::OpReturn,] [$($cleanup)*] [$($vars)*] $($rest)* )
     };
 
-    // --- Local Variables ---
+    //
+    // Local Variables
+    //
 
     // (let var)
     // Adds variable to Vars (Prepend), adds OpLet to Prog, adds OpDropLocal to Cleanup
@@ -386,7 +316,9 @@ macro_rules! parse_body {
         )
     };
 
-    // --- Global Variables (Legacy/Global Memory) ---
+    //
+    // Global Variables (Legacy/Global Memory)
+    //
 
     // (load var)
     ( [$($prog:tt)*] [$($cleanup:tt)*] [$($vars:ident)*] (load $v:ident) $($rest:tt)* ) => {
@@ -415,7 +347,9 @@ macro_rules! parse_body {
         )
     };
 
-    // --- Control Flow (Blocks) ---
+    //
+    // Control Flow (Blocks)
+    //
 
     // (if (Then...) (Else...))
     ( [$($prog:tt)*] [$($cleanup:tt)*] [$($vars:ident)*] (if ($($then:tt)*) ($($else:tt)*)) $($rest:tt)* ) => {
@@ -478,9 +412,29 @@ macro_rules! parse_block_impl {
 #[macro_export]
 macro_rules! parse_body_push_helper {
     // Single token: try uint! with fallback
-    ( [$($prog:tt)*] [$($cleanup:tt)*] [$($vars:ident)*] [ $n:tt ] $($rest:tt)* ) => {
+    // We try to use uint!($n) first. If $n is a literal, it works.
+    // If $n is a type (U10), uint! might fail if not handled carefully,
+    // BUT since we removed the manual uint! which failed on types,
+    // the new uint! relies on Const<$n>. Const<Type> fails.
+    //
+    // However, macro_rules matching order:
+    // We can differentiate `literal` from `ident` or `path`?
+    // Rust macros match `literal` specifically.
+
+    // Case 1: Literal (e.g. 10)
+    ( [$($prog:tt)*] [$($cleanup:tt)*] [$($vars:ident)*] [ $n:literal ] $($rest:tt)* ) => {
         $crate::parse_body!(
             [$($prog)* $crate::machine::instruction::OpPush< $crate::uint!($n) >, ]
+            [$($cleanup)*]
+            [$($vars)*]
+            $($rest)*
+        )
+    };
+
+    // Case 2: Type/Ident/Path (e.g. U10, MyType)
+    ( [$($prog:tt)*] [$($cleanup:tt)*] [$($vars:ident)*] [ $n:tt ] $($rest:tt)* ) => {
+        $crate::parse_body!(
+            [$($prog)* $crate::machine::instruction::OpPush< $n >, ]
             [$($cleanup)*]
             [$($vars)*]
             $($rest)*
@@ -500,12 +454,13 @@ macro_rules! parse_body_push_helper {
 
 #[cfg(test)]
 mod tests {
-    use crate::eval::{Evaluator};
-    use crate::machine::execution::ERun;
-    use crate::machine::state::MachineState;
-    use crate::std::array::{TyNil, TyArray};
-    use typenum::{U0, U4, U10};
     use static_assertions::assert_type_eq_all;
+
+    use crate::{
+        eval::Evaluator,
+        machine::{execution::ERun, state::MachineState},
+        std::array::{TyArray, TyNil},
+    };
 
     // Helper trait to extract stack from MachineState
     trait GetStack {
@@ -517,6 +472,7 @@ mod tests {
 
     #[test]
     fn test_simple_program() {
+        use crate::typenum::U4;
         type Prog = crate::program! {
             (push 3)
             (push 1)
@@ -553,6 +509,7 @@ mod tests {
             (push 3)
             (while ((dup) (push 0) (gt)) ((push 1) (sub)))
         };
+        use crate::typenum::U0;
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
         type FinalState = Evaluator<ERun<InitialState>>;
         type FinalStack = <FinalState as GetStack>::Output;
@@ -563,6 +520,7 @@ mod tests {
     #[test]
     fn test_variables() {
         // Define vars
+        use crate::typenum::U0;
         define_vars! { x, y }
         // x=0, y=1
 
@@ -580,7 +538,7 @@ mod tests {
         };
 
         // Need to initialize memory with enough zeros for x and y
-        type InitialMemory = crate::tyarray![U0, U0];
+        type InitialMemory = crate::tyarray![crate::typenum::U0, crate::typenum::U0];
         type InitialState = MachineState<TyNil, TyNil, InitialMemory, TyNil, Prog>;
         type FinalState = Evaluator<ERun<InitialState>>;
         type FinalStack = <FinalState as GetStack>::Output;
@@ -590,6 +548,7 @@ mod tests {
 
     #[test]
     fn test_local_vars() {
+        use crate::typenum::U15; // 10 + 5
         define_vars! { x, y } // Required for local var naming now
 
         // (push 10)
@@ -615,11 +574,14 @@ mod tests {
         // Result stack should be [15]
         assert_type_eq_all!(FinalStack, TyArray<crate::typenum::U15, TyNil>);
 
-        // Removed assertion for full state because History makes it hard to match exactly
+        type ExpectedState =
+            MachineState<TyArray<crate::typenum::U15, TyNil>, TyNil, TyNil, TyNil, TyNil>;
+        assert_type_eq_all!(FinalState, ExpectedState);
     }
 
     #[test]
     fn test_local_vars_scoping() {
+        use crate::typenum::U40;
         define_vars! { x, y }
 
         // (let x)
@@ -644,7 +606,9 @@ mod tests {
         type FinalState = Evaluator<ERun<InitialState>>;
         type FinalStack = <FinalState as GetStack>::Output;
 
-        assert_type_eq_all!(FinalStack, TyArray<crate::typenum::U40, TyNil>);
+        type ExpectedState =
+            MachineState<TyArray<crate::typenum::U40, TyNil>, TyNil, TyNil, TyNil, TyNil>;
+        assert_type_eq_all!(FinalState, ExpectedState);
     }
 
     #[test]
@@ -668,8 +632,8 @@ mod tests {
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
         type FinalState = Evaluator<ERun<InitialState>>;
-        type FinalStack = <FinalState as GetStack>::Output;
-
-        assert_type_eq_all!(FinalStack, TyArray<crate::typenum::U20, TyNil>);
+        type ExpectedState =
+            MachineState<TyArray<crate::typenum::U20, TyNil>, TyNil, TyNil, TyNil, TyNil>;
+        assert_type_eq_all!(FinalState, ExpectedState);
     }
 }
