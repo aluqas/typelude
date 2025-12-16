@@ -44,7 +44,7 @@ mod tests {
         eval::{EIf, ELit, EWhile, Evaluator},
         std::{
             array::{Cons, TyArray, TyNil},
-            bool::{ToTyBool, ToTyBoolOut, TyFalse, TyTrue},
+            bool::{ToTyBoolOut, TyFalse, TyTrue},
             cmp::{EEq, ENotEq},
             traits::EFunction,
         },
@@ -111,11 +111,13 @@ mod tests {
     fn while_loop_plus_one() {
         use typenum::{Add1, IsLess, U1, U10, Unsigned};
 
+        use crate::std::conv::Translate;
+
         struct IsLessThan10;
         impl<T> EFunction<T> for IsLessThan10
         where
             T: IsLess<U10>,
-            <T as IsLess<U10>>::Output: ToTyBool,
+            <T as IsLess<U10>>::Output: Translate<bool>,
         {
             type Output = ToTyBoolOut<<T as IsLess<U10>>::Output>;
         }

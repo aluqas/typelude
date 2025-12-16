@@ -47,40 +47,36 @@ impl Evaluable for TyFalse {
 // Bool Conversion Utilities
 //
 
-/// Trait to convert boolean values to TyBool type
-#[doc(hidden)]
-pub trait Bool2TyBool<const COND: bool> {
-    type Output: KindBool;
-}
-impl Bool2TyBool<true> for () {
-    type Output = TyTrue;
-}
-impl Bool2TyBool<false> for () {
-    type Output = TyFalse;
-}
-
 pub struct Assert<const COND: bool>;
 
 impl<const COND: bool> Evaluable for Assert<COND>
 where
-    (): Bool2TyBool<COND>,
+    (): crate::std::conv::ReflectBool<COND>,
+    <() as crate::std::conv::ReflectBool<COND>>::Output: Evaluable,
 {
-    type Output = <() as Bool2TyBool<COND>>::Output;
+    type Output = <() as crate::std::conv::ReflectBool<COND>>::Output;
 }
 
-/// Conversion from typenum::B0/B1 to TyFalse/TyTrue
-pub trait ToTyBool {
-    type Output;
-}
+// Re-export for compatibility if needed, or just remove local traits.
+// User asked to abstract it, implies replacement.
 
-impl ToTyBool for B1 {
+// Previous ToTyBool adaptation:
+// B1 -> TyTrue, B0 -> TyFalse
+// We use Translate<bool> for this if we want generic "To Boolean Type".
+// Implementation of Translate<bool> for B1/B0 should be in `reify.rs` or here?
+// Ideally here if B0/B1 are external, but `reify` is central.
+// Let's implement Translate<bool> for B0/B1 here.
+
+use crate::std::conv::Translate;
+
+impl Translate<bool> for B1 {
     type Output = TyTrue;
 }
-impl ToTyBool for B0 {
+impl Translate<bool> for B0 {
     type Output = TyFalse;
 }
 
-pub type ToTyBoolOut<T> = <T as ToTyBool>::Output;
+pub type ToTyBoolOut<T> = <T as Translate<bool>>::Output;
 
 //
 // Helper Traits for Logical Operations

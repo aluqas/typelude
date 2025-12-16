@@ -2,11 +2,14 @@
 //!
 //! Implementation of comparison operations using `typenum`.
 
-use typenum::{Equal, Greater, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual, Less};
+use typenum::{IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
 use crate::{
     eval::{EApply2, Evaluable, Evaluator, Sealed},
-    std::bool::{Assert, ToTyBool, ToTyBoolOut, TyFalse, TyTrue},
+    std::{
+        bool::{Assert, ToTyBoolOut},
+        conv::{ReflectBool, Translate},
+    },
 };
 
 //
@@ -50,45 +53,6 @@ impl Sealed for FGe {}
 
 // Comparison Operations
 
-// --- Helper Trait for Cmp to TyBool ---
-
-#[doc(hidden)]
-pub trait CmpToTyBool<Ordering> {
-    type IsEq;
-    type IsNeq;
-    type IsLt;
-    type IsLe;
-    type IsGt;
-    type IsGe;
-}
-
-impl<T> CmpToTyBool<Equal> for T {
-    type IsEq = TyTrue;
-    type IsNeq = TyFalse;
-    type IsLt = TyFalse;
-    type IsLe = TyTrue;
-    type IsGt = TyFalse;
-    type IsGe = TyTrue;
-}
-
-impl<T> CmpToTyBool<Less> for T {
-    type IsEq = TyFalse;
-    type IsNeq = TyTrue;
-    type IsLt = TyTrue;
-    type IsLe = TyTrue;
-    type IsGt = TyFalse;
-    type IsGe = TyFalse;
-}
-
-impl<T> CmpToTyBool<Greater> for T {
-    type IsEq = TyFalse;
-    type IsNeq = TyTrue;
-    type IsLt = TyFalse;
-    type IsLe = TyFalse;
-    type IsGt = TyTrue;
-    type IsGe = TyTrue;
-}
-
 // --- Implementations ---
 
 // FEq: Lhs == Rhs (Generic via IsEq)
@@ -97,7 +61,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsEq<Evaluator<Rhs>>,
-    (): crate::std::bool::Bool2TyBool<{ <Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>,
+    (): ReflectBool<{ <Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>,
 {
     type Output = Evaluator<Assert<{ <Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>>;
 }
@@ -108,7 +72,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsEq<Evaluator<Rhs>>,
-    (): crate::std::bool::Bool2TyBool<{ !<Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>,
+    (): ReflectBool<{ !<Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>,
 {
     type Output = Evaluator<Assert<{ !<Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>>;
 }
@@ -119,7 +83,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsLess<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as IsLess<Evaluator<Rhs>>>::Output: ToTyBool,
+    <Evaluator<Lhs> as IsLess<Evaluator<Rhs>>>::Output: Translate<bool>,
 {
     type Output = ToTyBoolOut<<Evaluator<Lhs> as IsLess<Evaluator<Rhs>>>::Output>;
 }
@@ -130,7 +94,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsLessOrEqual<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as IsLessOrEqual<Evaluator<Rhs>>>::Output: ToTyBool,
+    <Evaluator<Lhs> as IsLessOrEqual<Evaluator<Rhs>>>::Output: Translate<bool>,
 {
     type Output = ToTyBoolOut<<Evaluator<Lhs> as IsLessOrEqual<Evaluator<Rhs>>>::Output>;
 }
@@ -141,7 +105,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsGreater<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as IsGreater<Evaluator<Rhs>>>::Output: ToTyBool,
+    <Evaluator<Lhs> as IsGreater<Evaluator<Rhs>>>::Output: Translate<bool>,
 {
     type Output = ToTyBoolOut<<Evaluator<Lhs> as IsGreater<Evaluator<Rhs>>>::Output>;
 }
@@ -152,7 +116,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsGreaterOrEqual<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as IsGreaterOrEqual<Evaluator<Rhs>>>::Output: ToTyBool,
+    <Evaluator<Lhs> as IsGreaterOrEqual<Evaluator<Rhs>>>::Output: Translate<bool>,
 {
     type Output = ToTyBoolOut<<Evaluator<Lhs> as IsGreaterOrEqual<Evaluator<Rhs>>>::Output>;
 }

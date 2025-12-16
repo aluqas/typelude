@@ -21,7 +21,7 @@ pub use crate::{
         // Bool (Logical)
         bool::{
             Assert, EAnd, ENand, ENor, ENot, EOr, EXnor, EXor, FAnd, FNand, FNor, FNot, FOr,
-            FXnor, FXor, KindBool, ToTyBool, ToTyBoolOut, TyFalse, TyTrue,
+            FXnor, FXor, KindBool, ToTyBoolOut, TyFalse, TyTrue,
         },
         // Compare
         cmp::{EEq, EGe, EGt, ELe, ELt, ENotEq, FEq, FGe, FGt, FLe, FLt, FNeq},
