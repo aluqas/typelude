@@ -2,7 +2,7 @@
 // Instruction Set
 //
 
-/// Defines the instruction types for the stack machine.
+// Defines the instruction types for the stack machine.
 use core::marker::PhantomData;
 
 // Marker trait for instructions could be added here if needed in future.

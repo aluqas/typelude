@@ -49,7 +49,7 @@ macro_rules! define_vars_mapper_accum {
                 };
             ],
             $d
-        );
+        }
     };
 }
 

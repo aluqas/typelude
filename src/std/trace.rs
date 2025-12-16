@@ -2,15 +2,14 @@
 //!
 //! A trait for converting type-level structures into runtime strings for debugging and tracing.
 
-use crate::std::array::{TyArray, TyNil, Cons};
-use typenum::{UInt, UTerm, B0, B1, PInt, NInt, Z0, Unsigned, Integer};
+use typenum::{B0, B1, Integer, NInt, PInt, UInt, UTerm, Unsigned, Z0};
+
+use crate::std::array::{Cons, TyArray, TyNil};
 
 /// A trait for types that can be traced at runtime.
 pub trait Trace {
     fn fmt() -> String;
 }
-
-// --- Typenum Implementations ---
 
 impl Trace for UTerm {
     fn fmt() -> String {
@@ -62,8 +61,6 @@ impl Trace for B1 {
         "true".to_string()
     }
 }
-
-// --- TyArray Implementation ---
 
 impl Trace for TyNil {
     fn fmt() -> String {
