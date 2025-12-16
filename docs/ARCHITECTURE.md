@@ -142,7 +142,7 @@ program! {
 Cons<OpPush<U10>,
     Cons<OpLet<"x">,
         Cons<OpGet<"x">,
-           Cons<OpAdd, Nil>
+            Cons<OpAdd, Nil>
         >
     >
 >
@@ -151,3 +151,94 @@ Cons<OpPush<U10>,
 ### 4.2 Handling Variables
 
 The macro layer handles the translation of identifiers (`x`) into symbol types. Because `OpLet` and `OpGet` work on the `Locals` HList, variable shadowing and scoping work exactly as they do in normal Rust, purely as a side effect of the list structure (searching from the head finds the most recently pushed variable first).
+
+---
+
+## 5. Standard Library Design Patterns
+
+This section details the design choices behind the "Functional" part of the library (boolean logic, arithmetic, etc.), specifically how we handle trait dispatch and public APIs.
+
+### 5.1 Trait Implementation Strategies
+
+In Rust's type system, conditional branching is effectively achieved by having the trait solver select different `impl` blocks (or different `Output` types) based on trait bounds. We considered three main patterns:
+
+#### Pattern A: Self-Based Dispatch (Adopted)
+
+The left-hand side (`Lhs`) acts as the subject.
+
+```rust
+impl<Lhs, Rhs> TyAnd<Rhs> for Lhs { ... }
+```
+
+* **Pros**: Natural syntax (`Lhs.and(Rhs)`).
+
+* **Usage**: Used for most core operations.
+
+#### Pattern B: Unit/Context Dispatch
+
+The unit type `()` or a specific Context object acts as the subject.
+
+```rust
+where (): TyAnd<Lhs, Rhs, Output = TyTrue>
+```
+
+* **Pros**: Decouples logic from the data types.
+
+* **Cons**: Verbose.
+* **Status**: Generally avoided, but reserved for future "Predicate Trait" patterns where we need to validate properties without consuming the values.
+
+#### Pattern C: Result-Based Dispatch (Unused)
+
+The expected result (`Output`) acts as the subject.
+
+```rust
+where IsTrue: TyAnd<Lhs, Rhs>
+```
+
+* **Cons**: Counter-intuitive readability.
+
+* **Status**: Documented as a theoretical possibility but not used.
+
+**Note**: We do not provide "Shortcut Traits" (e.g., `TyAndTrue<Lhs, Rhs>`) to strictly check for specific outputs. Wrapping every possible output condition leads to trait explosion. If needed, we will solve this via macros.
+
+### 5.2 Public API Design Models
+
+We explored how to expose these traits to the user:
+
+#### Model 1: Function-style Type Aliases
+
+```rust
+pub type And<L, R> = <L as TyAnd<R>>::Output;
+```
+
+* **Pros**: Simple, intuitive, looks like a function.
+
+* **Cons**: **Trait Bound Hell**. Usage propagates bounds deeper and deeper (e.g., `Or<A, And<B, C>>` requires satisfying bounds for `A`, `B`, and `C` explicitly).
+* **Status**: Used for internal aliases, but problematic for complex nested logic.
+
+#### Model 2: The `Evaluable` Pattern (Adopted)
+
+This is the architecture described in Section 3 ("The CPU").
+
+1. Define a struct representing the AST node (e.g., `struct EAnd<L, R>`).
+2. Implement `Evaluable` for this struct.
+3. Encapsulate all trait bounds and calculation logic *inside* the `Evaluable` implementation.
+
+```rust
+impl<L, R> Evaluable for EAnd<L, R>
+where
+    L: Evaluable,
+    R: Evaluable,
+    Evaluator<L>: TyAnd<Evaluator<R>>,
+{
+    type Output = <Evaluator<L> as TyAnd<Evaluator<R>>>::Output;
+}
+```
+
+* **Pros**: The user only sees `where T: Evaluable`. exact bounds are hidden.
+
+* **Status**: The standard way Typelude exposes functionality.
+
+#### Model 3: Predicate Traits
+
+(Future work) - Specialized traits for asserting properties of types.

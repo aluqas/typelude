@@ -1,10 +1,9 @@
 #![recursion_limit = "1024"]
 use typelude::{
     eval::Evaluator,
-    machine::{trace::{ETracedRun, TracedMachineState}},
+    machine::trace::{ETracedRun, TracedMachineState},
     program,
-    std::array::TyNil,
-    std::trace::Trace,
+    std::{array::TyNil, trace::Trace},
 };
 
 #[test]
