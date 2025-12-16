@@ -282,18 +282,20 @@ dependencies = [
 
 [[package]]
 name = "tstr"
-version = "0.2.4"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f8e0294f14baae476d0dd0a2d780b2e24d66e349a9de876f5126777a37bdba7"
+checksum = "2930cee181f98b58de2355a51f2c7d12869ec96a018a1eb06a23e3d75ab6a24e"
 dependencies = [
+ "const_panic",
  "tstr_proc_macros",
+ "typewit",
 ]
 
 [[package]]
 name = "tstr_proc_macros"
-version = "0.2.2"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e78122066b0cb818b8afd08f7ed22f7fdbc3e90815035726f0840d0d26c0747a"
+checksum = "2fad459dea5bb7c36d66edfa9a7062518af055bbe7288da10fb53f26f46e7d7b"
 
 [[package]]
 name = "typelude"

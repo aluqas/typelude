@@ -14,9 +14,9 @@ hybrid-array = "0.4.5"
 const_panic = "0.2.15"
 derive_more = { version = "2.1.0", features = ["full"] }
 paste = "1.0.15"
-tstr = "0.2.3"
+tstr = "0.3.0"
 
-# tstr, const_fn, const_fn, const-primes, typemap...
+# const_fn, const_fn, const-primes, typemap...
 
 [dev-dependencies]
 static_assertions = "1.1.0"
