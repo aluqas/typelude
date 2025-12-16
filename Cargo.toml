@@ -2,16 +2,21 @@
 name = "typelude"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.94.0-nightly"
+rust-version = "1.94.0"
 description = "Type-level programming utilities for Rust"
 license = "MIT"
 keywords = ["type-level", "compile-time", "type-system"]
 categories = ["rust-patterns", "no-std"]
 
 [dependencies]
-derive_more = { version = "2.1.0" }
+typenum = { version = "1.19.0", features = ["const-generics"] }
+hybrid-array = "0.4.5"
+const_panic = "0.2.15"
+derive_more = { version = "2.1.0", features = ["full"] }
 paste = "1.0.15"
-typenum = { version = "1.18.0", features = ["const-generics"] }
+tstr = "0.2.3"
+
+# tstr, const_fn, const_fn, const-primes, typemap...
 
 [dev-dependencies]
 static_assertions = "1.1.0"

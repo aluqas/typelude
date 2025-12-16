@@ -1,0 +1,54 @@
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task: test
+
+  # Run all tests using cargo-nextest
+  test:
+    desc: Run tests with cargo nextest
+    cmds:
+      - cargo nextest run
+
+  # Run standard cargo test (fallback)
+  test-std:
+    desc: Run tests with standard cargo test
+    cmds:
+      - cargo test
+
+  # Run robustness tests (slow)
+  verify:
+    desc: Run robustness property tests
+    cmds:
+      - cargo test --test robustness
+
+  # Run cargo check
+  check:
+    desc: Run cargo check
+    cmds:
+      - cargo check
+
+  # Run cargo expand (requires cargo-expand)
+  expand:
+    desc: Expand macros for debugging
+    cmds:
+      - cargo expand
+
+  # Development watch mode
+  dev:
+    desc: Watch for changes and run tests
+    cmds:
+      - cargo watch -x check -x "nextest run"
+
+  # Run the program with optimizations
+  run:
+    desc: Run the main program
+    cmds:
+      - cargo run
+
+  # Run with release optimizations
+  run-release:
+    desc: Run in release mode
+    cmds:
+      - cargo run --release
