@@ -9,10 +9,13 @@ keywords = ["type-level", "compile-time", "type-system"]
 categories = ["rust-patterns", "no-std"]
 
 [dependencies]
+paste = "1.0.15"
+seq-macro = "0.3.6"
 typenum = { version = "1.18.0", features = ["const-generics"] }
 
 [dev-dependencies]
 static_assertions = "1.1.0"
+trybuild = "1.0.114"
 
 [lints.rust]
 unsafe_code = "deny"

@@ -1,0 +1,26 @@
+warning: unused imports: `machine::execution::Execute` and `prelude::*`
+ --> tests/ui/fail_pop_empty.rs:1:16
+  |
+1 | use typelude::{machine::execution::Execute, prelude::*, program};
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0277]: the trait bound `OpDrop: RunStep<TyNil>` is not satisfied
+  --> tests/ui/fail_pop_empty.rs:23:40
+   |
+23 |     let _ = std::marker::PhantomData::<FinalState>;
+   |                                        ^^^^^^^^^^ the trait `RunStep<TyNil>` is not implemented for `OpDrop`
+   |
+help: the trait `RunStep<TyNil>` is not implemented for `OpDrop`
+      but trait `RunStep<TyArray<_, _>>` is implemented for it
+  --> src/machine/execution.rs
+   |
+   | / impl<Val, RestStack> RunStep<TyArray<Val, RestStack>> for OpDrop
+   | | where
+   | |     TyArray<Val, RestStack>: Cons,
+   | |     RestStack: Cons,
+   | |____________________^
+   = help: for that trait implementation, expected `TyArray<_, _>`, found `TyNil`
+   = note: required for `OpDrop` to implement `Execute<TyNil, TyNil, TyNil, TyNil, TyNil>`
+   = note: required for `TyTrue` to implement `WhileHelper<FIsFinished, FStep, MachineState<TyNil, TyNil, TyNil, TyNil, TyArray<OpDrop, TyNil>>>`

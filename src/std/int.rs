@@ -50,104 +50,41 @@ impl Evaluable for B1 {
 // Arithmetic Functions
 //
 
-/// Addition: A + B
-pub struct FAdd;
-impl Sealed for FAdd {}
-
-/// Subtraction: A - B
-pub struct FSub;
-impl Sealed for FSub {}
-
-/// Multiplication: A * B
-pub struct FMul;
-impl Sealed for FMul {}
-
-/// Division: A / B
-pub struct FDiv;
-impl Sealed for FDiv {}
-
-/// Remainder: A % B
-pub struct FRem;
-impl Sealed for FRem {}
-
-/// Exponentiation: A ^ B
-pub struct FPow;
-impl Sealed for FPow {}
-
-// --- Implementations ---
-
-// --- Implementations ---
-
-impl<Lhs, Rhs> Evaluable for EApply2<FAdd, Lhs, Rhs>
-where
-    Lhs: Evaluable,
-    Rhs: Evaluable,
-    Evaluator<Lhs>: Add<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as Add<Evaluator<Rhs>>>::Output: Evaluable,
-{
-    type Output = <Evaluator<Lhs> as Add<Evaluator<Rhs>>>::Output;
-}
-
-impl<Lhs, Rhs> Evaluable for EApply2<FSub, Lhs, Rhs>
-where
-    Lhs: Evaluable,
-    Rhs: Evaluable,
-    Evaluator<Lhs>: Sub<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as Sub<Evaluator<Rhs>>>::Output: Evaluable,
-{
-    type Output = <Evaluator<Lhs> as Sub<Evaluator<Rhs>>>::Output;
-}
-
-impl<Lhs, Rhs> Evaluable for EApply2<FMul, Lhs, Rhs>
-where
-    Lhs: Evaluable,
-    Rhs: Evaluable,
-    Evaluator<Lhs>: Mul<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as Mul<Evaluator<Rhs>>>::Output: Evaluable,
-{
-    type Output = <Evaluator<Lhs> as Mul<Evaluator<Rhs>>>::Output;
-}
-
-impl<Lhs, Rhs> Evaluable for EApply2<FDiv, Lhs, Rhs>
-where
-    Lhs: Evaluable,
-    Rhs: Evaluable,
-    Evaluator<Lhs>: Div<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as Div<Evaluator<Rhs>>>::Output: Evaluable,
-{
-    type Output = <Evaluator<Lhs> as Div<Evaluator<Rhs>>>::Output;
-}
-
-impl<Lhs, Rhs> Evaluable for EApply2<FRem, Lhs, Rhs>
-where
-    Lhs: Evaluable,
-    Rhs: Evaluable,
-    Evaluator<Lhs>: Rem<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as Rem<Evaluator<Rhs>>>::Output: Evaluable,
-{
-    type Output = <Evaluator<Lhs> as Rem<Evaluator<Rhs>>>::Output;
-}
-
-impl<Lhs, Rhs> Evaluable for EApply2<FPow, Lhs, Rhs>
-where
-    Lhs: Evaluable,
-    Rhs: Evaluable,
-    Evaluator<Lhs>: Pow<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as Pow<Evaluator<Rhs>>>::Output: Evaluable,
-{
-    type Output = <Evaluator<Lhs> as Pow<Evaluator<Rhs>>>::Output;
-}
+use paste::paste;
 
 //
-// Aliases
+// Arithmetic Functions
 //
 
-pub type EAdd<Lhs, Rhs> = EApply2<FAdd, Lhs, Rhs>;
-pub type ESub<Lhs, Rhs> = EApply2<FSub, Lhs, Rhs>;
-pub type EMul<Lhs, Rhs> = EApply2<FMul, Lhs, Rhs>;
-pub type EDiv<Lhs, Rhs> = EApply2<FDiv, Lhs, Rhs>;
-pub type ERem<Lhs, Rhs> = EApply2<FRem, Lhs, Rhs>;
-pub type EPow<Lhs, Rhs> = EApply2<FPow, Lhs, Rhs>;
+macro_rules! define_arith_op {
+    ($op_name:ident, $trait:path, $doc:literal) => {
+        paste! {
+            #[doc = $doc]
+            pub struct [<F $op_name>];
+            impl Sealed for [<F $op_name>] {}
+
+            impl<Lhs, Rhs> Evaluable for EApply2<[<F $op_name>], Lhs, Rhs>
+            where
+                Lhs: Evaluable,
+                Rhs: Evaluable,
+                Evaluator<Lhs>: $trait<Evaluator<Rhs>>,
+                <Evaluator<Lhs> as $trait<Evaluator<Rhs>>>::Output: Evaluable,
+            {
+                type Output = <Evaluator<Lhs> as $trait<Evaluator<Rhs>>>::Output;
+            }
+
+            // Aliases
+            pub type [<E $op_name>]<Lhs, Rhs> = EApply2<[<F $op_name>], Lhs, Rhs>;
+        }
+    };
+}
+
+define_arith_op!(Add, Add, "Addition: A + B");
+define_arith_op!(Sub, Sub, "Subtraction: A - B");
+define_arith_op!(Mul, Mul, "Multiplication: A * B");
+define_arith_op!(Div, Div, "Division: A / B");
+define_arith_op!(Rem, Rem, "Remainder: A % B");
+define_arith_op!(Pow, Pow, "Exponentiation: A ^ B");
 
 //
 // Tests

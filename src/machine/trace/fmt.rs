@@ -1,4 +1,20 @@
+use paste::paste;
+
 use crate::{machine::instruction::*, std::trace::Trace};
+
+macro_rules! impl_trace_simple {
+    ( $($name:ident),* ) => {
+        paste! {
+            $(
+                impl Trace for [<Op $name>] {
+                    fn fmt() -> String {
+                        stringify!($name).to_string()
+                    }
+                }
+            )*
+        }
+    };
+}
 
 impl<Val: Trace> Trace for OpPush<Val> {
     fn fmt() -> String {
@@ -6,91 +22,9 @@ impl<Val: Trace> Trace for OpPush<Val> {
     }
 }
 
-impl Trace for OpAdd {
-    fn fmt() -> String {
-        "Add".to_string()
-    }
-}
-impl Trace for OpSub {
-    fn fmt() -> String {
-        "Sub".to_string()
-    }
-}
-impl Trace for OpDup {
-    fn fmt() -> String {
-        "Dup".to_string()
-    }
-}
-impl Trace for OpSwap {
-    fn fmt() -> String {
-        "Swap".to_string()
-    }
-}
-impl Trace for OpDrop {
-    fn fmt() -> String {
-        "Drop".to_string()
-    }
-}
-impl Trace for OpEq {
-    fn fmt() -> String {
-        "Eq".to_string()
-    }
-}
-impl Trace for OpNeq {
-    fn fmt() -> String {
-        "Neq".to_string()
-    }
-}
-impl Trace for OpLt {
-    fn fmt() -> String {
-        "Lt".to_string()
-    }
-}
-impl Trace for OpGt {
-    fn fmt() -> String {
-        "Gt".to_string()
-    }
-}
-impl Trace for OpNot {
-    fn fmt() -> String {
-        "Not".to_string()
-    }
-}
-impl Trace for OpAnd {
-    fn fmt() -> String {
-        "And".to_string()
-    }
-}
-impl Trace for OpOr {
-    fn fmt() -> String {
-        "Or".to_string()
-    }
-}
-impl Trace for OpLoad {
-    fn fmt() -> String {
-        "Load".to_string()
-    }
-}
-impl Trace for OpStore {
-    fn fmt() -> String {
-        "Store".to_string()
-    }
-}
-impl Trace for OpReturn {
-    fn fmt() -> String {
-        "Return".to_string()
-    }
-}
-impl Trace for OpLet {
-    fn fmt() -> String {
-        "Let".to_string()
-    }
-}
-impl Trace for OpDropLocal {
-    fn fmt() -> String {
-        "DropLocal".to_string()
-    }
-}
+impl_trace_simple!(
+    Add, Sub, Dup, Swap, Drop, Eq, Neq, Lt, Gt, Not, And, Or, Load, Store, Return, Let, DropLocal
+);
 
 impl<T: Trace, E: Trace> Trace for OpIf<T, E> {
     fn fmt() -> String {
