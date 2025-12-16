@@ -2,20 +2,21 @@
 name = "typelude"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.91.0"
+rust-version = "1.94.0-nightly"
 description = "Type-level programming utilities for Rust"
 license = "MIT"
 keywords = ["type-level", "compile-time", "type-system"]
 categories = ["rust-patterns", "no-std"]
 
 [dependencies]
+derive_more = { version = "2.1.0" }
 paste = "1.0.15"
-seq-macro = "0.3.6"
 typenum = { version = "1.18.0", features = ["const-generics"] }
 
 [dev-dependencies]
 static_assertions = "1.1.0"
 trybuild = "1.0.114"
+seq-macro = "0.3.6"
 
 [lints.rust]
 unsafe_code = "deny"
