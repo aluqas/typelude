@@ -7,9 +7,9 @@ use core::marker::PhantomData;
 
 // Marker trait for instructions could be added here if needed in future.
 
-/// Pushes a value N onto the stack.
+/// Pushes a value Val onto the stack.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpPush<N>(PhantomData<N>);
+pub struct OpPush<Val>(PhantomData<Val>);
 
 /// Adds the top two values on the stack.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -33,7 +33,7 @@ pub struct OpDrop;
 
 /// Conditional execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpIf<ThenProg, ElseProg>(PhantomData<(ThenProg, ElseProg)>);
+pub struct OpIf<Then, Else>(PhantomData<(Then, Else)>);
 
 /// Loads a value from global memory at address specified on stack.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -45,7 +45,7 @@ pub struct OpStore;
 
 /// Calls a subroutine (Program type).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpCall<TargetProg>(PhantomData<TargetProg>);
+pub struct OpCall<Prog>(PhantomData<Prog>);
 
 /// Returns from a subroutine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -81,15 +81,15 @@ pub struct OpOr;
 
 /// While loop.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpWhile<CondProg, BodyProg>(PhantomData<(CondProg, BodyProg)>);
+pub struct OpWhile<Cond, Body>(PhantomData<(Cond, Body)>);
 
 /// Gets a local variable by De Bruijn index.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpGetLocal<Index>(PhantomData<Index>);
+pub struct OpGetLocal<Idx>(PhantomData<Idx>);
 
 /// Sets a local variable by De Bruijn index.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpSetLocal<Index>(PhantomData<Index>);
+pub struct OpSetLocal<Idx>(PhantomData<Idx>);
 
 /// Defines a new local variable (moves top of stack to locals).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]

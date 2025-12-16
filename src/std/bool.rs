@@ -88,35 +88,35 @@ pub type ToTyBoolOut<T> = <T as ToTyBool>::Output;
 
 /// Helper for NOT
 #[doc(hidden)]
-pub trait _NotHelper {
+pub trait NotHelper {
     type Output;
 }
 
-impl _NotHelper for TyTrue {
+impl NotHelper for TyTrue {
     type Output = TyFalse;
 }
-impl _NotHelper for TyFalse {
+impl NotHelper for TyFalse {
     type Output = TyTrue;
 }
 
 /// Lazy NAND Helper (Short-circuit evaluation)
 #[doc(hidden)]
-pub trait _NandHelper<Rhs> {
+pub trait NandHelper<Rhs> {
     type Output;
 }
 
 // False NAND X = True (Right side not evaluated)
-impl<Rhs> _NandHelper<Rhs> for TyFalse {
+impl<Rhs> NandHelper<Rhs> for TyFalse {
     type Output = TyTrue;
 }
 
 // True NAND X = NOT X
-impl<Rhs> _NandHelper<Rhs> for TyTrue
+impl<Rhs> NandHelper<Rhs> for TyTrue
 where
     Rhs: Evaluable,
-    Evaluator<Rhs>: _NotHelper,
+    Evaluator<Rhs>: NotHelper,
 {
-    type Output = <Evaluator<Rhs> as _NotHelper>::Output;
+    type Output = <Evaluator<Rhs> as NotHelper>::Output;
 }
 
 //
@@ -150,62 +150,62 @@ impl Sealed for FXnor {}
 // Evaluable Implementations for Boolean Functions
 //
 
-// FNot: NOT A
-impl<A> Evaluable for EApply<FNot, A>
+// FNot: NOT Val
+impl<Val> Evaluable for EApply<FNot, Val>
 where
-    A: Evaluable,
-    Evaluator<A>: _NotHelper,
+    Val: Evaluable,
+    Evaluator<Val>: NotHelper,
 {
-    type Output = <Evaluator<A> as _NotHelper>::Output;
+    type Output = <Evaluator<Val> as NotHelper>::Output;
 }
 
-// FNand: A NAND B (with short-circuit)
-impl<A, B> Evaluable for EApply2<FNand, A, B>
+// FNand: Lhs NAND Rhs (with short-circuit)
+impl<Lhs, Rhs> Evaluable for EApply2<FNand, Lhs, Rhs>
 where
-    A: Evaluable,
-    Evaluator<A>: _NandHelper<B>,
+    Lhs: Evaluable,
+    Evaluator<Lhs>: NandHelper<Rhs>,
 {
-    type Output = <Evaluator<A> as _NandHelper<B>>::Output;
+    type Output = <Evaluator<Lhs> as NandHelper<Rhs>>::Output;
 }
 
-// FAnd: A AND B = NOT (A NAND B)
-impl<A, B> Evaluable for EApply2<FAnd, A, B>
+// FAnd: Lhs AND Rhs = NOT (Lhs NAND Rhs)
+impl<Lhs, Rhs> Evaluable for EApply2<FAnd, Lhs, Rhs>
 where
-    EApply<FNot, EApply2<FNand, A, B>>: Evaluable,
+    EApply<FNot, EApply2<FNand, Lhs, Rhs>>: Evaluable,
 {
-    type Output = Evaluator<EApply<FNot, EApply2<FNand, A, B>>>;
+    type Output = Evaluator<EApply<FNot, EApply2<FNand, Lhs, Rhs>>>;
 }
 
-// FOr: A OR B = (NOT A) NAND (NOT B)
-impl<A, B> Evaluable for EApply2<FOr, A, B>
+// FOr: Lhs OR Rhs = (NOT Lhs) NAND (NOT Rhs)
+impl<Lhs, Rhs> Evaluable for EApply2<FOr, Lhs, Rhs>
 where
-    EApply2<FNand, EApply<FNot, A>, EApply<FNot, B>>: Evaluable,
+    EApply2<FNand, EApply<FNot, Lhs>, EApply<FNot, Rhs>>: Evaluable,
 {
-    type Output = Evaluator<EApply2<FNand, EApply<FNot, A>, EApply<FNot, B>>>;
+    type Output = Evaluator<EApply2<FNand, EApply<FNot, Lhs>, EApply<FNot, Rhs>>>;
 }
 
-// FNor: A NOR B = NOT (A OR B)
-impl<A, B> Evaluable for EApply2<FNor, A, B>
+// FNor: Lhs NOR Rhs = NOT (Lhs OR Rhs)
+impl<Lhs, Rhs> Evaluable for EApply2<FNor, Lhs, Rhs>
 where
-    EApply<FNot, EApply2<FOr, A, B>>: Evaluable,
+    EApply<FNot, EApply2<FOr, Lhs, Rhs>>: Evaluable,
 {
-    type Output = Evaluator<EApply<FNot, EApply2<FOr, A, B>>>;
+    type Output = Evaluator<EApply<FNot, EApply2<FOr, Lhs, Rhs>>>;
 }
 
-// FXor: A XOR B = (A OR B) AND (A NAND B)
-impl<A, B> Evaluable for EApply2<FXor, A, B>
+// FXor: Lhs XOR Rhs = (Lhs OR Rhs) AND (Lhs NAND Rhs)
+impl<Lhs, Rhs> Evaluable for EApply2<FXor, Lhs, Rhs>
 where
-    EApply2<FAnd, EApply2<FOr, A, B>, EApply2<FNand, A, B>>: Evaluable,
+    EApply2<FAnd, EApply2<FOr, Lhs, Rhs>, EApply2<FNand, Lhs, Rhs>>: Evaluable,
 {
-    type Output = Evaluator<EApply2<FAnd, EApply2<FOr, A, B>, EApply2<FNand, A, B>>>;
+    type Output = Evaluator<EApply2<FAnd, EApply2<FOr, Lhs, Rhs>, EApply2<FNand, Lhs, Rhs>>>;
 }
 
-// FXnor: A XNOR B = NOT (A XOR B)
-impl<A, B> Evaluable for EApply2<FXnor, A, B>
+// FXnor: Lhs XNOR Rhs = NOT (Lhs XOR Rhs)
+impl<Lhs, Rhs> Evaluable for EApply2<FXnor, Lhs, Rhs>
 where
-    EApply<FNot, EApply2<FXor, A, B>>: Evaluable,
+    EApply<FNot, EApply2<FXor, Lhs, Rhs>>: Evaluable,
 {
-    type Output = Evaluator<EApply<FNot, EApply2<FXor, A, B>>>;
+    type Output = Evaluator<EApply<FNot, EApply2<FXor, Lhs, Rhs>>>;
 }
 
 //
@@ -213,15 +213,15 @@ where
 //
 
 // Boolean (1 arg)
-pub type ENot<A> = EApply<FNot, A>;
+pub type ENot<Val> = EApply<FNot, Val>;
 
 // Boolean (2 args)
-pub type EAnd<A, B> = EApply2<FAnd, A, B>;
-pub type EOr<A, B> = EApply2<FOr, A, B>;
-pub type ENand<A, B> = EApply2<FNand, A, B>;
-pub type ENor<A, B> = EApply2<FNor, A, B>;
-pub type EXor<A, B> = EApply2<FXor, A, B>;
-pub type EXnor<A, B> = EApply2<FXnor, A, B>;
+pub type EAnd<Lhs, Rhs> = EApply2<FAnd, Lhs, Rhs>;
+pub type EOr<Lhs, Rhs> = EApply2<FOr, Lhs, Rhs>;
+pub type ENand<Lhs, Rhs> = EApply2<FNand, Lhs, Rhs>;
+pub type ENor<Lhs, Rhs> = EApply2<FNor, Lhs, Rhs>;
+pub type EXor<Lhs, Rhs> = EApply2<FXor, Lhs, Rhs>;
+pub type EXnor<Lhs, Rhs> = EApply2<FXnor, Lhs, Rhs>;
 
 //
 // Tests

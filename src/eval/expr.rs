@@ -41,7 +41,7 @@ impl<T> Evaluable for ELit<T> {
 /// ```ignore
 /// type LenExpr = EApply<FLen, ELit<MyArray>>;
 /// ```
-pub struct EApply<F, A>(PhantomData<(F, A)>);
+pub struct EApply<F, Arg>(PhantomData<(F, Arg)>);
 
 /// 2-argument function application
 ///
@@ -49,7 +49,7 @@ pub struct EApply<F, A>(PhantomData<(F, A)>);
 /// ```ignore
 /// type ConcatExpr = EApply2<FConcat, ELit<ArrayA>, ELit<ArrayB>>;
 /// ```
-pub struct EApply2<F, A, B>(PhantomData<(F, A, B)>);
+pub struct EApply2<F, Arg1, Arg2>(PhantomData<(F, Arg1, Arg2)>);
 
 /// 3-argument function application
 ///
@@ -57,7 +57,7 @@ pub struct EApply2<F, A, B>(PhantomData<(F, A, B)>);
 /// ```ignore
 /// type SetExpr = EApply3<FSet, ELit<Array>, ELit<Index>, ELit<Value>>;
 /// ```
-pub struct EApply3<F, A, B, C>(PhantomData<(F, A, B, C)>);
+pub struct EApply3<F, Arg1, Arg2, Arg3>(PhantomData<(F, Arg1, Arg2, Arg3)>);
 
 //
 // EIf: Conditional Expression
@@ -74,18 +74,18 @@ pub struct EIf<Cond, Then, Else>(PhantomData<(Cond, Then, Else)>);
 
 /// Helper implemented based on Cond result (True/False)
 #[doc(hidden)]
-pub trait _EIfHelper<Then, Else> {
+pub trait IfHelper<Then, Else> {
     type Output;
 }
 
-impl<Then, Else> _EIfHelper<Then, Else> for TyTrue
+impl<Then, Else> IfHelper<Then, Else> for TyTrue
 where
     Then: Evaluable,
 {
     type Output = Then::Output;
 }
 
-impl<Then, Else> _EIfHelper<Then, Else> for TyFalse
+impl<Then, Else> IfHelper<Then, Else> for TyFalse
 where
     Else: Evaluable,
 {
@@ -95,9 +95,9 @@ where
 impl<Cond, Then, Else> Evaluable for EIf<Cond, Then, Else>
 where
     Cond: Evaluable,
-    Evaluator<Cond>: _EIfHelper<Then, Else>,
+    Evaluator<Cond>: IfHelper<Then, Else>,
 {
-    type Output = <Evaluator<Cond> as _EIfHelper<Then, Else>>::Output;
+    type Output = <Evaluator<Cond> as IfHelper<Then, Else>>::Output;
 }
 
 //
@@ -121,12 +121,12 @@ type AppliedOutput<F, A> = <F as EFunction<A>>::Output;
 pub struct EWhile<Pred, Step, State>(PhantomData<(Pred, Step, State)>);
 
 #[doc(hidden)]
-pub trait _EWhileHelper<Pred, Step, State> {
+pub trait WhileHelper<Pred, Step, State> {
     type Output;
 }
 
 // Condition == True: Recurse
-impl<Pred, Step, State> _EWhileHelper<Pred, Step, State> for TyTrue
+impl<Pred, Step, State> WhileHelper<Pred, Step, State> for TyTrue
 where
     Step: EFunction<State>,
     Step::Output: Evaluable,
@@ -136,7 +136,7 @@ where
 }
 
 // Condition == False: Terminate
-impl<Pred, Step, State> _EWhileHelper<Pred, Step, State> for TyFalse
+impl<Pred, Step, State> WhileHelper<Pred, Step, State> for TyFalse
 where
     State: Evaluable,
 {
@@ -147,8 +147,8 @@ impl<Pred, Step, State> Evaluable for EWhile<Pred, Step, State>
 where
     Pred: EFunction<State>,
     AppliedOutput<Pred, State>: Evaluable,
-    Evaluator<AppliedOutput<Pred, State>>: _EWhileHelper<Pred, Step, State>,
+    Evaluator<AppliedOutput<Pred, State>>: WhileHelper<Pred, Step, State>,
 {
     type Output =
-        <Evaluator<AppliedOutput<Pred, State>> as _EWhileHelper<Pred, Step, State>>::Output;
+        <Evaluator<AppliedOutput<Pred, State>> as WhileHelper<Pred, Step, State>>::Output;
 }

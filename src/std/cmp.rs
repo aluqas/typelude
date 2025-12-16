@@ -91,70 +91,70 @@ impl<T> CmpToTyBool<Greater> for T {
 
 // --- Implementations ---
 
-// FEq: A == B (Generic via IsEq)
-impl<A, B> Evaluable for EApply2<FEq, A, B>
+// FEq: Lhs == Rhs (Generic via IsEq)
+impl<Lhs, Rhs> Evaluable for EApply2<FEq, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: IsEq<Evaluator<B>>,
-    (): crate::std::bool::Bool2TyBool<{ <Evaluator<A> as IsEq<Evaluator<B>>>::EQ }>,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: IsEq<Evaluator<Rhs>>,
+    (): crate::std::bool::Bool2TyBool<{ <Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>,
 {
-    type Output = Evaluator<Assert<{ <Evaluator<A> as IsEq<Evaluator<B>>>::EQ }>>;
+    type Output = Evaluator<Assert<{ <Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>>;
 }
 
-// FNeq: A != B (Generic via IsEq)
-impl<A, B> Evaluable for EApply2<FNeq, A, B>
+// FNeq: Lhs != Rhs (Generic via IsEq)
+impl<Lhs, Rhs> Evaluable for EApply2<FNeq, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: IsEq<Evaluator<B>>,
-    (): crate::std::bool::Bool2TyBool<{ !<Evaluator<A> as IsEq<Evaluator<B>>>::EQ }>,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: IsEq<Evaluator<Rhs>>,
+    (): crate::std::bool::Bool2TyBool<{ !<Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>,
 {
-    type Output = Evaluator<Assert<{ !<Evaluator<A> as IsEq<Evaluator<B>>>::EQ }>>;
+    type Output = Evaluator<Assert<{ !<Evaluator<Lhs> as IsEq<Evaluator<Rhs>>>::EQ }>>;
 }
 
-// --- FLt: A < B ---
-impl<A, B> Evaluable for EApply2<FLt, A, B>
+// --- FLt: Lhs < Rhs ---
+impl<Lhs, Rhs> Evaluable for EApply2<FLt, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: IsLess<Evaluator<B>>,
-    <Evaluator<A> as IsLess<Evaluator<B>>>::Output: ToTyBool,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: IsLess<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as IsLess<Evaluator<Rhs>>>::Output: ToTyBool,
 {
-    type Output = ToTyBoolOut<<Evaluator<A> as IsLess<Evaluator<B>>>::Output>;
+    type Output = ToTyBoolOut<<Evaluator<Lhs> as IsLess<Evaluator<Rhs>>>::Output>;
 }
 
-// --- FLe: A <= B ---
-impl<A, B> Evaluable for EApply2<FLe, A, B>
+// --- FLe: Lhs <= Rhs ---
+impl<Lhs, Rhs> Evaluable for EApply2<FLe, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: IsLessOrEqual<Evaluator<B>>,
-    <Evaluator<A> as IsLessOrEqual<Evaluator<B>>>::Output: ToTyBool,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: IsLessOrEqual<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as IsLessOrEqual<Evaluator<Rhs>>>::Output: ToTyBool,
 {
-    type Output = ToTyBoolOut<<Evaluator<A> as IsLessOrEqual<Evaluator<B>>>::Output>;
+    type Output = ToTyBoolOut<<Evaluator<Lhs> as IsLessOrEqual<Evaluator<Rhs>>>::Output>;
 }
 
-// --- FGt: A > B ---
-impl<A, B> Evaluable for EApply2<FGt, A, B>
+// --- FGt: Lhs > Rhs ---
+impl<Lhs, Rhs> Evaluable for EApply2<FGt, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: IsGreater<Evaluator<B>>,
-    <Evaluator<A> as IsGreater<Evaluator<B>>>::Output: ToTyBool,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: IsGreater<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as IsGreater<Evaluator<Rhs>>>::Output: ToTyBool,
 {
-    type Output = ToTyBoolOut<<Evaluator<A> as IsGreater<Evaluator<B>>>::Output>;
+    type Output = ToTyBoolOut<<Evaluator<Lhs> as IsGreater<Evaluator<Rhs>>>::Output>;
 }
 
-// --- FGe: A >= B ---
-impl<A, B> Evaluable for EApply2<FGe, A, B>
+// --- FGe: Lhs >= Rhs ---
+impl<Lhs, Rhs> Evaluable for EApply2<FGe, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: IsGreaterOrEqual<Evaluator<B>>,
-    <Evaluator<A> as IsGreaterOrEqual<Evaluator<B>>>::Output: ToTyBool,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: IsGreaterOrEqual<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as IsGreaterOrEqual<Evaluator<Rhs>>>::Output: ToTyBool,
 {
-    type Output = ToTyBoolOut<<Evaluator<A> as IsGreaterOrEqual<Evaluator<B>>>::Output>;
+    type Output = ToTyBoolOut<<Evaluator<Lhs> as IsGreaterOrEqual<Evaluator<Rhs>>>::Output>;
 }
 
 //
@@ -162,14 +162,14 @@ where
 //
 
 // Equality (2 args)
-pub type EEq<A, B> = EApply2<FEq, A, B>;
-pub type ENotEq<A, B> = EApply2<FNeq, A, B>;
+pub type EEq<Lhs, Rhs> = EApply2<FEq, Lhs, Rhs>;
+pub type ENotEq<Lhs, Rhs> = EApply2<FNeq, Lhs, Rhs>;
 
 // Comparison (2 args)
-pub type ELt<A, B> = EApply2<FLt, A, B>;
-pub type ELe<A, B> = EApply2<FLe, A, B>;
-pub type EGt<A, B> = EApply2<FGt, A, B>;
-pub type EGe<A, B> = EApply2<FGe, A, B>;
+pub type ELt<Lhs, Rhs> = EApply2<FLt, Lhs, Rhs>;
+pub type ELe<Lhs, Rhs> = EApply2<FLe, Lhs, Rhs>;
+pub type EGt<Lhs, Rhs> = EApply2<FGt, Lhs, Rhs>;
+pub type EGe<Lhs, Rhs> = EApply2<FGe, Lhs, Rhs>;
 
 //
 // Tests

@@ -86,130 +86,130 @@ impl_execute_via_runstep!(OpOr);
 //
 
 // --- OpPush<N> ---
-impl<N, Stack> RunStep<Stack> for OpPush<N>
+impl<Val, Stack> RunStep<Stack> for OpPush<Val>
 where
     Stack: Cons,
 {
-    type OutputStack = TyArray<N, Stack>;
+    type OutputStack = TyArray<Val, Stack>;
 }
 
 // --- OpAdd ---
-impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpAdd
+impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpAdd
 where
-    TyArray<B, TyArray<A, Rest>>: Cons,
-    Rest: Cons,
-    crate::std::int::EAdd<A, B>: Evaluable,
+    TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
+    RestStack: Cons,
+    crate::std::int::EAdd<Lhs, Rhs>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::int::EAdd<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::int::EAdd<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpSub ---
-impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpSub
+impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpSub
 where
-    TyArray<B, TyArray<A, Rest>>: Cons,
-    Rest: Cons,
-    crate::std::int::ESub<A, B>: Evaluable,
+    TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
+    RestStack: Cons,
+    crate::std::int::ESub<Lhs, Rhs>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::int::ESub<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::int::ESub<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpDup ---
-impl<A, Rest> RunStep<TyArray<A, Rest>> for OpDup
+impl<Val, RestStack> RunStep<TyArray<Val, RestStack>> for OpDup
 where
-    TyArray<A, Rest>: Cons,
-    Rest: Cons,
+    TyArray<Val, RestStack>: Cons,
+    RestStack: Cons,
 {
-    type OutputStack = TyArray<A, TyArray<A, Rest>>;
+    type OutputStack = TyArray<Val, TyArray<Val, RestStack>>;
 }
 
 // --- OpSwap ---
-impl<A, B, Rest> RunStep<TyArray<A, TyArray<B, Rest>>> for OpSwap
+impl<Top, Second, RestStack> RunStep<TyArray<Top, TyArray<Second, RestStack>>> for OpSwap
 where
-    TyArray<A, TyArray<B, Rest>>: Cons,
-    Rest: Cons,
+    TyArray<Top, TyArray<Second, RestStack>>: Cons,
+    RestStack: Cons,
 {
-    type OutputStack = TyArray<B, TyArray<A, Rest>>;
+    type OutputStack = TyArray<Second, TyArray<Top, RestStack>>;
 }
 
 // --- OpDrop ---
-impl<A, Rest> RunStep<TyArray<A, Rest>> for OpDrop
+impl<Val, RestStack> RunStep<TyArray<Val, RestStack>> for OpDrop
 where
-    TyArray<A, Rest>: Cons,
-    Rest: Cons,
+    TyArray<Val, RestStack>: Cons,
+    RestStack: Cons,
 {
-    type OutputStack = Rest;
+    type OutputStack = RestStack;
 }
 
 // --- OpEq ---
-impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpEq
+impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpEq
 where
-    TyArray<B, TyArray<A, Rest>>: Cons,
-    Rest: Cons,
-    crate::std::cmp::EEq<A, B>: Evaluable,
+    TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
+    RestStack: Cons,
+    crate::std::cmp::EEq<Lhs, Rhs>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::cmp::EEq<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::cmp::EEq<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpNeq ---
-impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpNeq
+impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpNeq
 where
-    TyArray<B, TyArray<A, Rest>>: Cons,
-    Rest: Cons,
-    crate::std::cmp::ENotEq<A, B>: Evaluable,
+    TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
+    RestStack: Cons,
+    crate::std::cmp::ENotEq<Lhs, Rhs>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::cmp::ENotEq<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::cmp::ENotEq<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpLt ---
-// Stack: [B, A, ...] -> Push A < B
-impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpLt
+// Stack: [Rhs, Lhs, ...] -> Push Lhs < Rhs
+impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpLt
 where
-    TyArray<B, TyArray<A, Rest>>: Cons,
-    Rest: Cons,
-    crate::std::cmp::ELt<A, B>: Evaluable,
+    TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
+    RestStack: Cons,
+    crate::std::cmp::ELt<Lhs, Rhs>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::cmp::ELt<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::cmp::ELt<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpGt ---
-// Stack: [B, A, ...] -> Push A > B
-impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpGt
+// Stack: [Rhs, Lhs, ...] -> Push Lhs > Rhs
+impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpGt
 where
-    TyArray<B, TyArray<A, Rest>>: Cons,
-    Rest: Cons,
-    crate::std::cmp::EGt<A, B>: Evaluable,
+    TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
+    RestStack: Cons,
+    crate::std::cmp::EGt<Lhs, Rhs>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::cmp::EGt<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::cmp::EGt<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpNot ---
-impl<A, Rest> RunStep<TyArray<A, Rest>> for OpNot
+impl<Val, RestStack> RunStep<TyArray<Val, RestStack>> for OpNot
 where
-    TyArray<A, Rest>: Cons,
-    Rest: Cons,
-    crate::std::bool::ENot<A>: Evaluable,
+    TyArray<Val, RestStack>: Cons,
+    RestStack: Cons,
+    crate::std::bool::ENot<Val>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::bool::ENot<A>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::bool::ENot<Val>>, RestStack>;
 }
 
 // --- OpAnd ---
-impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpAnd
+impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpAnd
 where
-    TyArray<B, TyArray<A, Rest>>: Cons,
-    Rest: Cons,
-    crate::std::bool::EAnd<A, B>: Evaluable,
+    TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
+    RestStack: Cons,
+    crate::std::bool::EAnd<Lhs, Rhs>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::bool::EAnd<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::bool::EAnd<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpOr ---
-impl<A, B, Rest> RunStep<TyArray<B, TyArray<A, Rest>>> for OpOr
+impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpOr
 where
-    TyArray<B, TyArray<A, Rest>>: Cons,
-    Rest: Cons,
-    crate::std::bool::EOr<A, B>: Evaluable,
+    TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
+    RestStack: Cons,
+    crate::std::bool::EOr<Lhs, Rhs>: Evaluable,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::bool::EOr<A, B>>, Rest>;
+    type OutputStack = TyArray<Evaluator<crate::std::bool::EOr<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpLoad ---
@@ -248,17 +248,17 @@ where
         MachineState<RestStack, Locals, <Memory as Set<Addr, Value>>::Output, CallStack, RestProg>;
 }
 
-// --- OpGetLocal<Index> ---
-impl<Index, Stack, Locals, Memory, CallStack, RestProg>
-    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpGetLocal<Index>
+// --- OpGetLocal<Idx> ---
+impl<Idx, Stack, Locals, Memory, CallStack, RestProg>
+    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpGetLocal<Idx>
 where
-    Index: Unsigned,
+    Idx: Unsigned,
     Stack: Cons,
-    Locals: Get<Index>,
+    Locals: Get<Idx>,
     RestProg: Cons,
 {
     type OutputState = MachineState<
-        TyArray<<Locals as Get<Index>>::Output, Stack>,
+        TyArray<<Locals as Get<Idx>>::Output, Stack>,
         Locals,
         Memory,
         CallStack,
@@ -266,23 +266,18 @@ where
     >;
 }
 
-// --- OpSetLocal<Index> ---
-impl<Index, Value, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<Value, RestStack>, Locals, Memory, CallStack, RestProg> for OpSetLocal<Index>
+// --- OpSetLocal<Idx> ---
+impl<Idx, Value, RestStack, Locals, Memory, CallStack, RestProg>
+    Execute<TyArray<Value, RestStack>, Locals, Memory, CallStack, RestProg> for OpSetLocal<Idx>
 where
-    Index: Unsigned,
+    Idx: Unsigned,
     TyArray<Value, RestStack>: Cons,
     RestStack: Cons, // Requirement for TyArray<Value, RestStack>
-    Locals: Set<Index, Value>,
+    Locals: Set<Idx, Value>,
     RestProg: Cons,
 {
-    type OutputState = MachineState<
-        RestStack,
-        <Locals as Set<Index, Value>>::Output,
-        Memory,
-        CallStack,
-        RestProg,
-    >;
+    type OutputState =
+        MachineState<RestStack, <Locals as Set<Idx, Value>>::Output, Memory, CallStack, RestProg>;
 }
 
 // --- OpLet ---
@@ -312,19 +307,19 @@ where
     type OutputState = MachineState<Stack, Tail, Memory, CallStack, RestProg>;
 }
 
-// --- OpCall<TargetProg> ---
+// --- OpCall<Prog> ---
 // CallStack: [...] -> [(RestProg, CallerLocals), ...]
-// Program: TargetProg
+// Program: Prog
 // Locals: Reset to empty (or we could keep them, but isolation is safer).
 // For now, let's reset to TyNil.
-impl<TargetProg, Stack, Locals, Memory, CallStack, RestProg>
-    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpCall<TargetProg>
+impl<Prog, Stack, Locals, Memory, CallStack, RestProg>
+    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpCall<Prog>
 where
     Stack: Cons,
     Locals: Cons, // Locals must be Cons (TyNil is Cons) to be put in TyArray
     Memory: Cons,
     CallStack: Cons,
-    TargetProg: Cons,
+    Prog: Cons,
     RestProg: Cons,
 {
     // CallStack: TyArray<TyArray<RestProg, Locals>, RestCallStack>
@@ -332,13 +327,8 @@ where
     // Note: Locals is a list (Cons). RestProg is a list (Cons).
     // TyArray<RestProg, Locals> means Head=RestProg, Tail=Locals.
     // This assumes Locals is a VALID Tail, which implies Locals: Cons.
-    type OutputState = MachineState<
-        Stack,
-        TyNil,
-        Memory,
-        TyArray<TyArray<RestProg, Locals>, CallStack>,
-        TargetProg,
-    >;
+    type OutputState =
+        MachineState<Stack, TyNil, Memory, TyArray<TyArray<RestProg, Locals>, CallStack>, Prog>;
 }
 
 // --- OpReturn ---
@@ -366,24 +356,24 @@ where
     type OutputState = MachineState<Stack, CallerLocals, Memory, RestCallStack, Continuation>;
 }
 
-// --- OpWhile<CondProg, BodyProg> ---
-// Expansion: CondProg + [OpIf<BodyProg + [OpWhile<CondProg, BodyProg>], []>] + RestProg
-impl<CondProg, BodyProg, Stack, Locals, Memory, CallStack, RestProg>
-    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpWhile<CondProg, BodyProg>
+// --- OpWhile<Cond, Body> ---
+// Expansion: Cond + [OpIf<Body + [OpWhile<Cond, Body>], []>] + RestProg
+impl<Cond, Body, Stack, Locals, Memory, CallStack, RestProg>
+    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpWhile<Cond, Body>
 where
     Stack: Cons,
     Locals: Cons,
-    CondProg: Cons,
-    BodyProg: Cons,
+    Cond: Cons,
+    Body: Cons,
     RestProg: Cons,
-    EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Evaluable,
+    EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>: Evaluable,
     // Alias for the recursive body: Body + [While]
-    EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Evaluable,
+    EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>: Evaluable,
     // Note: Use 'Evaluator<...>' for the recursive part to ensure it is treated as a type, not an expression that confuses the parser
     EConcat<
-        CondProg,
+        Cond,
         TyArray<
-            OpIf<Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>,
+            OpIf<Evaluator<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>,
             RestProg,
         >,
     >: Evaluable,
@@ -395,12 +385,9 @@ where
         CallStack,
         Evaluator<
             EConcat<
-                CondProg,
+                Cond,
                 TyArray<
-                    OpIf<
-                        Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>,
-                        TyNil,
-                    >,
+                    OpIf<Evaluator<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>,
                     RestProg,
                 >,
             >,
@@ -466,7 +453,7 @@ pub struct FIsFinished;
 impl<S, L, M, C, P> EFunction<MachineState<S, L, M, C, P>> for FIsFinished
 where
     EApply<FIsEmpty, P>: Evaluable,
-    Evaluator<EApply<FIsEmpty, P>>: crate::std::bool::_NotHelper,
+    Evaluator<EApply<FIsEmpty, P>>: crate::std::bool::NotHelper,
 {
     type Output = Evaluator<EApply<FNot, EApply<FIsEmpty, P>>>;
 }

@@ -76,76 +76,78 @@ impl Sealed for FPow {}
 
 // --- Implementations ---
 
-impl<A, B> Evaluable for EApply2<FAdd, A, B>
+// --- Implementations ---
+
+impl<Lhs, Rhs> Evaluable for EApply2<FAdd, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: Add<Evaluator<B>>,
-    <Evaluator<A> as Add<Evaluator<B>>>::Output: Evaluable,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: Add<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as Add<Evaluator<Rhs>>>::Output: Evaluable,
 {
-    type Output = <Evaluator<A> as Add<Evaluator<B>>>::Output;
+    type Output = <Evaluator<Lhs> as Add<Evaluator<Rhs>>>::Output;
 }
 
-impl<A, B> Evaluable for EApply2<FSub, A, B>
+impl<Lhs, Rhs> Evaluable for EApply2<FSub, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: Sub<Evaluator<B>>,
-    <Evaluator<A> as Sub<Evaluator<B>>>::Output: Evaluable,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: Sub<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as Sub<Evaluator<Rhs>>>::Output: Evaluable,
 {
-    type Output = <Evaluator<A> as Sub<Evaluator<B>>>::Output;
+    type Output = <Evaluator<Lhs> as Sub<Evaluator<Rhs>>>::Output;
 }
 
-impl<A, B> Evaluable for EApply2<FMul, A, B>
+impl<Lhs, Rhs> Evaluable for EApply2<FMul, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: Mul<Evaluator<B>>,
-    <Evaluator<A> as Mul<Evaluator<B>>>::Output: Evaluable,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: Mul<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as Mul<Evaluator<Rhs>>>::Output: Evaluable,
 {
-    type Output = <Evaluator<A> as Mul<Evaluator<B>>>::Output;
+    type Output = <Evaluator<Lhs> as Mul<Evaluator<Rhs>>>::Output;
 }
 
-impl<A, B> Evaluable for EApply2<FDiv, A, B>
+impl<Lhs, Rhs> Evaluable for EApply2<FDiv, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: Div<Evaluator<B>>,
-    <Evaluator<A> as Div<Evaluator<B>>>::Output: Evaluable,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: Div<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as Div<Evaluator<Rhs>>>::Output: Evaluable,
 {
-    type Output = <Evaluator<A> as Div<Evaluator<B>>>::Output;
+    type Output = <Evaluator<Lhs> as Div<Evaluator<Rhs>>>::Output;
 }
 
-impl<A, B> Evaluable for EApply2<FRem, A, B>
+impl<Lhs, Rhs> Evaluable for EApply2<FRem, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: Rem<Evaluator<B>>,
-    <Evaluator<A> as Rem<Evaluator<B>>>::Output: Evaluable,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: Rem<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as Rem<Evaluator<Rhs>>>::Output: Evaluable,
 {
-    type Output = <Evaluator<A> as Rem<Evaluator<B>>>::Output;
+    type Output = <Evaluator<Lhs> as Rem<Evaluator<Rhs>>>::Output;
 }
 
-impl<A, B> Evaluable for EApply2<FPow, A, B>
+impl<Lhs, Rhs> Evaluable for EApply2<FPow, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<A>: Pow<Evaluator<B>>,
-    <Evaluator<A> as Pow<Evaluator<B>>>::Output: Evaluable,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Lhs>: Pow<Evaluator<Rhs>>,
+    <Evaluator<Lhs> as Pow<Evaluator<Rhs>>>::Output: Evaluable,
 {
-    type Output = <Evaluator<A> as Pow<Evaluator<B>>>::Output;
+    type Output = <Evaluator<Lhs> as Pow<Evaluator<Rhs>>>::Output;
 }
 
 //
 // Aliases
 //
 
-pub type EAdd<A, B> = EApply2<FAdd, A, B>;
-pub type ESub<A, B> = EApply2<FSub, A, B>;
-pub type EMul<A, B> = EApply2<FMul, A, B>;
-pub type EDiv<A, B> = EApply2<FDiv, A, B>;
-pub type ERem<A, B> = EApply2<FRem, A, B>;
-pub type EPow<A, B> = EApply2<FPow, A, B>;
+pub type EAdd<Lhs, Rhs> = EApply2<FAdd, Lhs, Rhs>;
+pub type ESub<Lhs, Rhs> = EApply2<FSub, Lhs, Rhs>;
+pub type EMul<Lhs, Rhs> = EApply2<FMul, Lhs, Rhs>;
+pub type EDiv<Lhs, Rhs> = EApply2<FDiv, Lhs, Rhs>;
+pub type ERem<Lhs, Rhs> = EApply2<FRem, Lhs, Rhs>;
+pub type EPow<Lhs, Rhs> = EApply2<FPow, Lhs, Rhs>;
 
 //
 // Tests

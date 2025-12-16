@@ -14,9 +14,9 @@ use crate::{
     std::bool::{TyFalse, TyTrue},
 };
 
-//
-// Type-Level Array Types
-//
+// =============================================================================
+// Layer 1: Values (Data Structure)
+// =============================================================================
 
 /// **Marker Trait**
 ///
@@ -31,12 +31,12 @@ impl Cons for TyNil {}
 
 /// Type-level array (Cons Cell)
 ///
-/// - `TyHead`: Any type (`u32`, `String`, `TyArray<T, TyNil>`, etc.)
+/// - `Head`: Any type (`u32`, `String`, `TyArray<T, TyNil>`, etc.)
 /// - `Tail`: Rest part (recursive `TyArray`, `TyNil` is termination)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
-pub struct TyArray<TyHead, Tail: Cons>(pub PhantomData<(TyHead, Tail)>);
-impl<Ty, Tail: Cons> Sealed for TyArray<Ty, Tail> {}
-impl<Ty, Tail: Cons> Cons for TyArray<Ty, Tail> {}
+pub struct TyArray<Head, Tail: Cons>(pub PhantomData<(Head, Tail)>);
+impl<Head, Tail: Cons> Sealed for TyArray<Head, Tail> {}
+impl<Head, Tail: Cons> Cons for TyArray<Head, Tail> {}
 
 /// Macro for easily creating type lists
 #[macro_export]
@@ -49,12 +49,11 @@ macro_rules! tyarray {
     ($n:ty, $($tail:ty),+ $(,)?) => { $crate::std::array::TyArray<$n, $crate::tyarray![$($tail),+]> };
 }
 
-//
-// Helper Traits (Internal)
-//
+// =============================================================================
+// Layer 2: Capabilities (Verbs)
+// =============================================================================
 
 /// Array length
-#[doc(hidden)]
 pub trait Len {
     type Output: Unsigned;
 }
@@ -63,16 +62,15 @@ impl Len for TyNil {
     type Output = U0;
 }
 
-impl<H, T: Cons + Len> Len for TyArray<H, T>
+impl<Head, Tail: Cons + Len> Len for TyArray<Head, Tail>
 where
-    <T as Len>::Output: Add<B1>,
-    <<T as Len>::Output as Add<B1>>::Output: Unsigned,
+    <Tail as Len>::Output: Add<B1>,
+    <<Tail as Len>::Output as Add<B1>>::Output: Unsigned,
 {
-    type Output = <<T as Len>::Output as Add<B1>>::Output;
+    type Output = <<Tail as Len>::Output as Add<B1>>::Output;
 }
 
 /// Head element of array
-#[doc(hidden)]
 pub trait Head {
     type Output;
 }
@@ -82,7 +80,6 @@ impl<H, T: Cons> Head for TyArray<H, T> {
 }
 
 /// Tail of array (everything except head)
-#[doc(hidden)]
 pub trait Tail {
     type Output: Cons;
 }
@@ -92,7 +89,6 @@ impl<H, T: Cons> Tail for TyArray<H, T> {
 }
 
 /// Check if array is empty
-#[doc(hidden)]
 pub trait IsEmpty {
     type Output;
 }
@@ -101,50 +97,48 @@ impl IsEmpty for TyNil {
     type Output = TyTrue;
 }
 
-impl<H, T: Cons> IsEmpty for TyArray<H, T> {
+impl<Head, Tail: Cons> IsEmpty for TyArray<Head, Tail> {
     type Output = TyFalse;
 }
 
 /// Index access
-#[doc(hidden)]
-pub trait Get<IDX: Unsigned> {
+pub trait Get<Idx: Unsigned> {
     type Output;
 }
 
-impl<H, T: Cons> Get<U0> for TyArray<H, T> {
-    type Output = H;
+impl<Head, Tail: Cons> Get<U0> for TyArray<Head, Tail> {
+    type Output = Head;
 }
 
-impl<H, T: Cons, N: Unsigned, B: typenum::Bit> Get<UInt<N, B>> for TyArray<H, T>
+impl<Head, Tail: Cons, N: Unsigned, B: typenum::Bit> Get<UInt<N, B>> for TyArray<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
-    T: Get<Sub1<UInt<N, B>>>,
+    Tail: Get<Sub1<UInt<N, B>>>,
 {
-    type Output = <T as Get<Sub1<UInt<N, B>>>>::Output;
+    type Output = <Tail as Get<Sub1<UInt<N, B>>>>::Output;
 }
 
 /// Index update (Set)
-#[doc(hidden)]
-pub trait Set<IDX: Unsigned, VAL> {
+pub trait Set<Idx: Unsigned, Val> {
     type Output: Cons;
 }
 
-impl<H, T: Cons, VAL> Set<U0, VAL> for TyArray<H, T> {
-    type Output = TyArray<VAL, T>;
+impl<Head, Tail: Cons, Val> Set<U0, Val> for TyArray<Head, Tail> {
+    type Output = TyArray<Val, Tail>;
 }
 
-impl<H, T: Cons, N: Unsigned, B: typenum::Bit, VAL> Set<UInt<N, B>, VAL> for TyArray<H, T>
+impl<Head, Tail: Cons, N: Unsigned, B: typenum::Bit, Val> Set<UInt<N, B>, Val>
+    for TyArray<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
-    T: Set<Sub1<UInt<N, B>>, VAL>,
+    Tail: Set<Sub1<UInt<N, B>>, Val>,
 {
-    type Output = TyArray<H, <T as Set<Sub1<UInt<N, B>>, VAL>>::Output>;
+    type Output = TyArray<Head, <Tail as Set<Sub1<UInt<N, B>>, Val>>::Output>;
 }
 
 /// Array concatenation
-#[doc(hidden)]
 pub trait Concat<Other: Cons> {
     type Output: Cons;
 }
@@ -153,48 +147,35 @@ impl<Other: Cons> Concat<Other> for TyNil {
     type Output = Other;
 }
 
-impl<H, T: Cons, Other: Cons> Concat<Other> for TyArray<H, T>
+impl<Head, Tail: Cons, Other: Cons> Concat<Other> for TyArray<Head, Tail>
 where
-    T: Concat<Other>,
+    Tail: Concat<Other>,
 {
-    type Output = TyArray<H, <T as Concat<Other>>::Output>;
+    type Output = TyArray<Head, <Tail as Concat<Other>>::Output>;
 }
 
 // NOTE: Contains depends on Equality check.
 use crate::std::cmp::IsEq;
 
 /// Check if array contains element (const version)
-#[doc(hidden)]
-pub trait Contains<X> {
+pub trait Contains<Elem> {
     const VALUE: bool;
 }
 
-impl<X> Contains<X> for TyNil {
+impl<Elem> Contains<Elem> for TyNil {
     const VALUE: bool = false;
 }
 
-impl<H, T: Cons + Contains<X>, X> Contains<X> for TyArray<H, T>
+impl<Head, Tail: Cons + Contains<Elem>, Elem> Contains<Elem> for TyArray<Head, Tail>
 where
-    H: IsEq<X>,
+    Head: IsEq<Elem>,
 {
-    const VALUE: bool = <H as IsEq<X>>::EQ || <T as Contains<X>>::VALUE;
+    const VALUE: bool = <Head as IsEq<Elem>>::EQ || <Tail as Contains<Elem>>::VALUE;
 }
 
-//
-// Evaluable: Self-evaluating for concrete types
-//
-
-impl Evaluable for TyNil {
-    type Output = TyNil;
-}
-
-impl<H, T: Cons> Evaluable for TyArray<H, T> {
-    type Output = TyArray<H, T>;
-}
-
-//
-// Function Markers: Array Operations
-//
+// =============================================================================
+// Layer 3: OpCodes (Instruction Markers)
+// =============================================================================
 
 /// Array length
 pub struct FLen;
@@ -216,6 +197,12 @@ pub struct FAppend;
 pub struct FPrepend;
 /// Contains element
 pub struct FContains;
+/// Map: Apply function to each element
+pub struct FMap;
+/// Filter: Keep only elements matching condition
+pub struct FFilter;
+/// Fold: Left Fold
+pub struct FFold;
 
 impl Sealed for FLen {}
 impl Sealed for FHead {}
@@ -227,10 +214,107 @@ impl Sealed for FConcat {}
 impl Sealed for FAppend {}
 impl Sealed for FPrepend {}
 impl Sealed for FContains {}
+impl Sealed for FMap {}
+impl Sealed for FFilter {}
+impl Sealed for FFold {}
 
-//
-// Evaluable Implementations for Array Functions
-//
+// =============================================================================
+// Layer 4: Backends (Helpers)
+// =============================================================================
+
+/// Helper for Map
+#[doc(hidden)]
+pub trait MapHelper<F> {
+    type Output: Cons;
+}
+
+impl<F> MapHelper<F> for TyNil {
+    type Output = TyNil;
+}
+
+impl<F, Head, Tail> MapHelper<F> for TyArray<Head, Tail>
+where
+    F: crate::std::traits::EFunction<Head>,
+    Tail: Cons + MapHelper<F>,
+    <Tail as MapHelper<F>>::Output: Cons,
+{
+    type Output = TyArray<
+        <F as crate::std::traits::EFunction<Head>>::Output,
+        <Tail as MapHelper<F>>::Output,
+    >;
+}
+
+/// Helper for Filter
+#[doc(hidden)]
+pub trait FilterHelper<Pred> {
+    type Output: Cons;
+}
+
+impl<P> FilterHelper<P> for TyNil {
+    type Output = TyNil;
+}
+
+impl<P, Head, Tail> FilterHelper<P> for TyArray<Head, Tail>
+where
+    P: crate::std::traits::EFunction<Head>,
+    Tail: Cons + FilterHelper<P>,
+    <Tail as FilterHelper<P>>::Output: Cons,
+    // Check Predicate
+    <P as crate::std::traits::EFunction<Head>>::Output: Evaluable,
+    // EIf<Pred(Head), Cons<Head, Filter(Tail)>, Filter(Tail)>
+    crate::eval::EIf<
+        <P as crate::std::traits::EFunction<Head>>::Output,
+        crate::eval::ELit<TyArray<Head, <Tail as FilterHelper<P>>::Output>>,
+        crate::eval::ELit<<Tail as FilterHelper<P>>::Output>,
+    >: Evaluable,
+    Evaluator<
+        crate::eval::EIf<
+            <P as crate::std::traits::EFunction<Head>>::Output,
+            crate::eval::ELit<TyArray<Head, <Tail as FilterHelper<P>>::Output>>,
+            crate::eval::ELit<<Tail as FilterHelper<P>>::Output>,
+        >,
+    >: Cons,
+{
+    type Output = Evaluator<
+        crate::eval::EIf<
+            <P as crate::std::traits::EFunction<Head>>::Output,
+            crate::eval::ELit<TyArray<Head, <Tail as FilterHelper<P>>::Output>>,
+            crate::eval::ELit<<Tail as FilterHelper<P>>::Output>,
+        >,
+    >;
+}
+
+/// Helper for Fold
+#[doc(hidden)]
+pub trait FoldHelper<F, Acc> {
+    type Output;
+}
+
+impl<F, Acc> FoldHelper<F, Acc> for TyNil {
+    type Output = Acc;
+}
+
+impl<F, Acc, Head, Tail> FoldHelper<F, Acc> for TyArray<Head, Tail>
+where
+    F: crate::std::traits::EFunction<(Acc, Head)>,
+    Tail: Cons + FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, Head)>>::Output>,
+{
+    type Output =
+        <Tail as FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, Head)>>::Output>>::Output;
+}
+
+// =============================================================================
+// Layer 5: Evaluator Integration
+// =============================================================================
+
+// --- Self Evaluation for Values ---
+impl Evaluable for TyNil {
+    type Output = TyNil;
+}
+
+impl<Head, Tail: Cons> Evaluable for TyArray<Head, Tail> {
+    type Output = TyArray<Head, Tail>;
+}
 
 // --- FLen: Array length ---
 impl<Array> Evaluable for EApply<FLen, Array>
@@ -269,37 +353,37 @@ where
 }
 
 // --- FGet: Index get ---
-impl<Array, Index> Evaluable for EApply2<FGet, Array, Index>
+impl<Array, Idx> Evaluable for EApply2<FGet, Array, Idx>
 where
     Array: Evaluable,
-    Index: Evaluable,
-    Evaluator<Index>: Unsigned,
-    Evaluator<Array>: Get<Evaluator<Index>>,
+    Idx: Evaluable,
+    Evaluator<Idx>: Unsigned,
+    Evaluator<Array>: Get<Evaluator<Idx>>,
 {
-    type Output = <Evaluator<Array> as Get<Evaluator<Index>>>::Output;
+    type Output = <Evaluator<Array> as Get<Evaluator<Idx>>>::Output;
 }
 
 // --- FSet: Index set ---
-impl<Array, Index, Value> Evaluable for EApply3<FSet, Array, Index, Value>
+impl<Array, Idx, Val> Evaluable for EApply3<FSet, Array, Idx, Val>
 where
     Array: Evaluable,
-    Index: Evaluable,
-    Value: Evaluable,
-    Evaluator<Index>: Unsigned,
-    Evaluator<Array>: Set<Evaluator<Index>, Evaluator<Value>>,
+    Idx: Evaluable,
+    Val: Evaluable,
+    Evaluator<Idx>: Unsigned,
+    Evaluator<Array>: Set<Evaluator<Idx>, Evaluator<Val>>,
 {
-    type Output = <Evaluator<Array> as Set<Evaluator<Index>, Evaluator<Value>>>::Output;
+    type Output = <Evaluator<Array> as Set<Evaluator<Idx>, Evaluator<Val>>>::Output;
 }
 
 // --- FConcat: Concatenation ---
-impl<A, B> Evaluable for EApply2<FConcat, A, B>
+impl<Lhs, Rhs> Evaluable for EApply2<FConcat, Lhs, Rhs>
 where
-    A: Evaluable,
-    B: Evaluable,
-    Evaluator<B>: Cons,
-    Evaluator<A>: Concat<Evaluator<B>>,
+    Lhs: Evaluable,
+    Rhs: Evaluable,
+    Evaluator<Rhs>: Cons,
+    Evaluator<Lhs>: Concat<Evaluator<Rhs>>,
 {
-    type Output = <Evaluator<A> as Concat<Evaluator<B>>>::Output;
+    type Output = <Evaluator<Lhs> as Concat<Evaluator<Rhs>>>::Output;
 }
 
 // --- FAppend: Append to end ---
@@ -323,42 +407,19 @@ where
 }
 
 // --- FContains: Contains element ---
-impl<Array, X> Evaluable for EApply2<FContains, Array, X>
+impl<Array, Elem> Evaluable for EApply2<FContains, Array, Elem>
 where
     Array: Evaluable,
-    X: Evaluable,
-    Evaluator<Array>: Contains<Evaluator<X>>,
-    (): crate::std::bool::Bool2TyBool<{ <Evaluator<Array> as Contains<Evaluator<X>>>::VALUE }>,
+    Elem: Evaluable,
+    Evaluator<Array>: Contains<Evaluator<Elem>>,
+    (): crate::std::bool::Bool2TyBool<{ <Evaluator<Array> as Contains<Evaluator<Elem>>>::VALUE }>,
 {
     type Output = Evaluator<
-        crate::std::bool::Assert<{ <Evaluator<Array> as Contains<Evaluator<X>>>::VALUE }>,
+        crate::std::bool::Assert<{ <Evaluator<Array> as Contains<Evaluator<Elem>>>::VALUE }>,
     >;
 }
 
-// --- FMap: Apply function to each element of array (Map) ---
-pub struct FMap;
-impl Sealed for FMap {}
-
-// Helper trait
-pub trait MapHelper<F> {
-    type Output: Cons;
-}
-
-impl<F> MapHelper<F> for TyNil {
-    type Output = TyNil;
-}
-
-impl<F, H, T> MapHelper<F> for TyArray<H, T>
-where
-    F: crate::std::traits::EFunction<H>,
-    T: Cons + MapHelper<F>,
-    <T as MapHelper<F>>::Output: Cons,
-{
-    type Output =
-        TyArray<<F as crate::std::traits::EFunction<H>>::Output, <T as MapHelper<F>>::Output>;
-}
-
-// Evaluable impl
+// --- FMap ---
 impl<F, List> Evaluable for EApply2<FMap, F, List>
 where
     List: Evaluable,
@@ -367,48 +428,7 @@ where
     type Output = <Evaluator<List> as MapHelper<F>>::Output;
 }
 
-// --- FFilter: Keep only elements matching condition (Filter) ---
-pub struct FFilter;
-impl Sealed for FFilter {}
-
-pub trait FilterHelper<Pred> {
-    type Output: Cons;
-}
-
-impl<P> FilterHelper<P> for TyNil {
-    type Output = TyNil;
-}
-
-impl<P, H, T> FilterHelper<P> for TyArray<H, T>
-where
-    P: crate::std::traits::EFunction<H>,
-    T: Cons + FilterHelper<P>,
-    <T as FilterHelper<P>>::Output: Cons,
-    // Check Predicate
-    <P as crate::std::traits::EFunction<H>>::Output: Evaluable,
-    // EIf<Pred(H), Cons<H, Filter(T)>, Filter(T)>
-    crate::eval::EIf<
-        <P as crate::std::traits::EFunction<H>>::Output,
-        crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
-        crate::eval::ELit<<T as FilterHelper<P>>::Output>,
-    >: Evaluable,
-    Evaluator<
-        crate::eval::EIf<
-            <P as crate::std::traits::EFunction<H>>::Output,
-            crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
-            crate::eval::ELit<<T as FilterHelper<P>>::Output>,
-        >,
-    >: Cons,
-{
-    type Output = Evaluator<
-        crate::eval::EIf<
-            <P as crate::std::traits::EFunction<H>>::Output,
-            crate::eval::ELit<TyArray<H, <T as FilterHelper<P>>::Output>>,
-            crate::eval::ELit<<T as FilterHelper<P>>::Output>,
-        >,
-    >;
-}
-
+// --- FFilter ---
 impl<Pred, List> Evaluable for EApply2<FFilter, Pred, List>
 where
     List: Evaluable,
@@ -417,27 +437,7 @@ where
     type Output = <Evaluator<List> as FilterHelper<Pred>>::Output;
 }
 
-// --- FFold: Fold list (Left Fold) ---
-pub struct FFold;
-impl Sealed for FFold {}
-
-pub trait FoldHelper<F, Acc> {
-    type Output;
-}
-
-impl<F, Acc> FoldHelper<F, Acc> for TyNil {
-    type Output = Acc;
-}
-
-impl<F, Acc, H, T> FoldHelper<F, Acc> for TyArray<H, T>
-where
-    F: crate::std::traits::EFunction<(Acc, H)>,
-    T: Cons + FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, H)>>::Output>,
-{
-    type Output =
-        <T as FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, H)>>::Output>>::Output;
-}
-
+// --- FFold ---
 impl<F, Init, List> Evaluable for EApply3<FFold, F, Init, List>
 where
     Init: Evaluable,
@@ -447,32 +447,32 @@ where
     type Output = <Evaluator<List> as FoldHelper<F, Evaluator<Init>>>::Output;
 }
 
-//
-// Aliases
-//
+// =============================================================================
+// Layer 6: Expressions (Aliases)
+// =============================================================================
 
 // Array (1 arg)
-pub type ELen<A> = EApply<FLen, A>;
-pub type EHead<A> = EApply<FHead, A>;
-pub type ETail<A> = EApply<FTail, A>;
-pub type EIsEmpty<A> = EApply<FIsEmpty, A>;
+pub type ELen<Array> = EApply<FLen, Array>;
+pub type EHead<Array> = EApply<FHead, Array>;
+pub type ETail<Array> = EApply<FTail, Array>;
+pub type EIsEmpty<Array> = EApply<FIsEmpty, Array>;
 
 // Array (2 args)
-pub type EGet<A, I> = EApply2<FGet, A, I>;
-pub type EConcat<A, B> = EApply2<FConcat, A, B>;
-pub type EAppend<A, E> = EApply2<FAppend, A, E>;
-pub type EPrepend<E, A> = EApply2<FPrepend, E, A>;
-pub type EContains<A, X> = EApply2<FContains, A, X>;
-pub type EMap<F, A> = EApply2<FMap, F, A>;
-pub type EFilter<P, A> = EApply2<FFilter, P, A>;
+pub type EGet<Array, Idx> = EApply2<FGet, Array, Idx>;
+pub type EConcat<Lhs, Rhs> = EApply2<FConcat, Lhs, Rhs>;
+pub type EAppend<Array, Elem> = EApply2<FAppend, Array, Elem>;
+pub type EPrepend<Elem, Array> = EApply2<FPrepend, Elem, Array>;
+pub type EContains<Array, Elem> = EApply2<FContains, Array, Elem>;
+pub type EMap<F, Array> = EApply2<FMap, F, Array>;
+pub type EFilter<Pred, Array> = EApply2<FFilter, Pred, Array>;
 
 // Array (3 args)
-pub type ESet<A, I, V> = EApply3<FSet, A, I, V>;
+pub type ESet<Array, Idx, Val> = EApply3<FSet, Array, Idx, Val>;
 pub type EFold<F, Init, List> = EApply3<FFold, F, Init, List>;
 
-//
+// =============================================================================
 // Tests
-//
+// =============================================================================
 
 #[cfg(test)]
 mod tests {
@@ -481,7 +481,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        eval::ELit,
+        eval::{ELit, ELit as ELitAlias}, // Alias for testing
         std::bool::{TyFalse, TyTrue},
     };
 
