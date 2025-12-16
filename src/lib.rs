@@ -35,6 +35,7 @@
 // Unstable features required for type-level programming
 #![feature(specialization)]
 #![feature(generic_const_exprs)]
+#![feature(inherent_associated_types)]
 #![allow(incomplete_features)]
 
 // Export typenum for macros
