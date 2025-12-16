@@ -111,13 +111,13 @@ mod tests {
     fn while_loop_plus_one() {
         use typenum::{Add1, IsLess, U1, U10, Unsigned};
 
-        use crate::std::conv::Translate;
+        use crate::std::conv::TyFrom;
 
         struct IsLessThan10;
         impl<T> EFunction<T> for IsLessThan10
         where
             T: IsLess<U10>,
-            <T as IsLess<U10>>::Output: Translate<bool>,
+            bool: TyFrom<<T as IsLess<U10>>::Output>,
         {
             type Output = ToTyBoolOut<<T as IsLess<U10>>::Output>;
         }

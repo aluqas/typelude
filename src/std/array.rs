@@ -412,7 +412,7 @@ where
     Array: Evaluable,
     Elem: Evaluable,
     Evaluator<Array>: Contains<Evaluator<Elem>>,
-    (): crate::std::conv::ReflectBool<{ <Evaluator<Array> as Contains<Evaluator<Elem>>>::VALUE }>,
+    (): crate::std::reify::ReflectBool<{ <Evaluator<Array> as Contains<Evaluator<Elem>>>::VALUE }>,
 {
     type Output = Evaluator<
         crate::std::bool::Assert<{ <Evaluator<Array> as Contains<Evaluator<Elem>>>::VALUE }>,
@@ -576,13 +576,15 @@ mod tests {
     fn test_efilter() {
         use typenum::{IsLess, U1, U2, U3, U4, U5};
 
-        use crate::std::{bool::ToTyBoolOut, conv::Translate, traits::EFunction};
+        use crate::std::{bool::ToTyBoolOut, conv::TyFrom, traits::EFunction};
 
         struct LessThan3;
         impl<T> EFunction<T> for LessThan3
         where
             T: IsLess<U3>,
-            <T as IsLess<U3>>::Output: Translate<bool>,
+            // T < 3 returns B1/B0. We want a boolean.
+            // TyFrom checks: bool is target.
+            bool: TyFrom<<T as IsLess<U3>>::Output>,
         {
             type Output = ToTyBoolOut<<T as IsLess<U3>>::Output>;
         }

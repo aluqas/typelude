@@ -51,10 +51,10 @@ pub struct Assert<const COND: bool>;
 
 impl<const COND: bool> Evaluable for Assert<COND>
 where
-    (): crate::std::conv::ReflectBool<COND>,
-    <() as crate::std::conv::ReflectBool<COND>>::Output: Evaluable,
+    (): crate::std::reify::ReflectBool<COND>,
+    <() as crate::std::reify::ReflectBool<COND>>::Output: Evaluable,
 {
-    type Output = <() as crate::std::conv::ReflectBool<COND>>::Output;
+    type Output = <() as crate::std::reify::ReflectBool<COND>>::Output;
 }
 
 // Re-export for compatibility if needed, or just remove local traits.
@@ -67,16 +67,16 @@ where
 // Ideally here if B0/B1 are external, but `reify` is central.
 // Let's implement Translate<bool> for B0/B1 here.
 
-use crate::std::conv::Translate;
+use crate::std::conv::TyFrom;
 
-impl Translate<bool> for B1 {
+impl TyFrom<B1> for bool {
     type Output = TyTrue;
 }
-impl Translate<bool> for B0 {
+impl TyFrom<B0> for bool {
     type Output = TyFalse;
 }
 
-pub type ToTyBoolOut<T> = <T as Translate<bool>>::Output;
+pub type ToTyBoolOut<T> = <bool as TyFrom<T>>::Output;
 
 //
 // Helper Traits for Logical Operations

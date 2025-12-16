@@ -8,7 +8,8 @@ use crate::{
     eval::{EApply2, Evaluable, Evaluator, Sealed},
     std::{
         bool::{Assert, ToTyBoolOut},
-        conv::{ReflectBool, Translate},
+        conv::TyFrom,
+        reify::ReflectBool,
     },
 };
 
@@ -83,7 +84,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsLess<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as IsLess<Evaluator<Rhs>>>::Output: Translate<bool>,
+    bool: TyFrom<<Evaluator<Lhs> as IsLess<Evaluator<Rhs>>>::Output>,
 {
     type Output = ToTyBoolOut<<Evaluator<Lhs> as IsLess<Evaluator<Rhs>>>::Output>;
 }
@@ -94,7 +95,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsLessOrEqual<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as IsLessOrEqual<Evaluator<Rhs>>>::Output: Translate<bool>,
+    bool: TyFrom<<Evaluator<Lhs> as IsLessOrEqual<Evaluator<Rhs>>>::Output>,
 {
     type Output = ToTyBoolOut<<Evaluator<Lhs> as IsLessOrEqual<Evaluator<Rhs>>>::Output>;
 }
@@ -105,7 +106,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsGreater<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as IsGreater<Evaluator<Rhs>>>::Output: Translate<bool>,
+    bool: TyFrom<<Evaluator<Lhs> as IsGreater<Evaluator<Rhs>>>::Output>,
 {
     type Output = ToTyBoolOut<<Evaluator<Lhs> as IsGreater<Evaluator<Rhs>>>::Output>;
 }
@@ -116,7 +117,7 @@ where
     Lhs: Evaluable,
     Rhs: Evaluable,
     Evaluator<Lhs>: IsGreaterOrEqual<Evaluator<Rhs>>,
-    <Evaluator<Lhs> as IsGreaterOrEqual<Evaluator<Rhs>>>::Output: Translate<bool>,
+    bool: TyFrom<<Evaluator<Lhs> as IsGreaterOrEqual<Evaluator<Rhs>>>::Output>,
 {
     type Output = ToTyBoolOut<<Evaluator<Lhs> as IsGreaterOrEqual<Evaluator<Rhs>>>::Output>;
 }

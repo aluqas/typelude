@@ -16,7 +16,7 @@ help: the trait `RunStep<TyNil>` is not implemented for `OpDrop`
       but trait `RunStep<TyArray<_, _>>` is implemented for it
   --> src/machine/execution.rs
    |
-   | / impl<Val, RestStack> RunStep<TyArray<Val, RestStack>> for OpDrop
+   | / impl<Val, RestStack> RunStep<TyArray<Val, RestStack>> for Op...
    | | where
    | |     TyArray<Val, RestStack>: Cons,
    | |     RestStack: Cons,

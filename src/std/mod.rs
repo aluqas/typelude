@@ -6,8 +6,9 @@
 pub mod array;
 pub mod bool;
 pub mod cmp;
-pub mod int;
 pub mod conv;
+pub mod int;
+pub mod reify;
 pub mod str;
 pub mod trace;
 pub mod traits;
