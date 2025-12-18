@@ -382,8 +382,11 @@ where
 pub struct OpTracedStep;
 
 impl<Stack, Locals, Memory, CallStack, Inst, RestProg, History>
-    Apply<TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>>
-    for OpTracedStep
+    Apply<
+        ELit<
+            TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>,
+        >,
+    > for OpTracedStep
 where
     Inst: TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>,
     TyArray<Inst, RestProg>: Cons,
@@ -397,7 +400,7 @@ where
 
 pub struct OpTracedIsFinished;
 
-impl<S, L, M, C, P, H> Apply<TracedMachineState<S, L, M, C, P, H>> for OpTracedIsFinished
+impl<S, L, M, C, P, H> Apply<ELit<TracedMachineState<S, L, M, C, P, H>>> for OpTracedIsFinished
 where
     crate::std::array::EIsEmpty<ELit<P>>: Eval,
     EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,

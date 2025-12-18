@@ -17,7 +17,7 @@ fn main() {
     >;
 
     // Attempt evaluation. This should fail because OpDrop cannot execute on TyNil stack.
-    type FinalState = typelude::eval::Evaluator<typelude::machine::execution::ERun<InitialState>>;
+    type FinalState = typelude::eval::Evaluate<typelude::machine::execution::ERun<InitialState>>;
 
     // We don't need to instantiate it, just naming the type triggers the check.
     let _ = std::marker::PhantomData::<FinalState>;

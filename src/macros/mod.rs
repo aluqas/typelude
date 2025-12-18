@@ -453,6 +453,7 @@ macro_rules! parse_body_push_helper {
 }
 
 #[cfg(test)]
+#[allow(unused)]
 mod tests {
     use static_assertions::assert_type_eq_all;
 
@@ -519,8 +520,6 @@ mod tests {
 
     #[test]
     fn test_variables() {
-        // Define vars
-        use crate::typenum::U0;
         define_vars! { x, y }
         // x=0, y=1
 

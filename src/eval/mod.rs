@@ -50,12 +50,14 @@ mod tests {
     };
 
     // Define simple equality check for testing
+    #[allow(dead_code)]
     pub struct OpEq;
     impl<L, R> Apply<(L, R)> for OpEq {
         type Output = TyFalse;
     }
     // Specialize for equal types? Rust specialization is unstable.
     // Hack for test: Use a concrete impl for specific types
+    #[allow(dead_code)]
     struct TestOpEq;
     impl Apply<(TyTrue, TyTrue)> for TestOpEq {
         type Output = TyTrue;

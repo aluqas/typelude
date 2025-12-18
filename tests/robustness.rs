@@ -8,7 +8,7 @@ macro_rules! check_add {
         type N = typelude::uint!($n);
         type M = typelude::uint!($m);
         // Result of adding two Unsigned is Unsigned
-        type Res = <EAdd<N, M> as Evaluable>::Output;
+        type Res = <EAdd<N, M> as Eval>::Output;
         assert_eq!(Res::to_u64(), $n + $m, "Add mismatch for {} + {}", $n, $m);
     }};
 }

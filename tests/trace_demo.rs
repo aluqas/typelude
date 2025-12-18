@@ -1,6 +1,6 @@
 #![recursion_limit = "1024"]
 use typelude::{
-    eval::Evaluate,
+    eval::{ELit, Evaluate},
     machine::trace::{ETracedRun, TracedMachineState},
     program,
     std::{array::TyNil, trace::Trace},
@@ -19,7 +19,7 @@ fn test_trace_output() {
     // Use TracedMachineState instead of MachineState. It requires 6th param History (default TyNil if we set it, but we can just pass TyNil)
     // Actually in trace.rs, TracedMachineState has NO default for History.
     type InitialState = TracedMachineState<TyNil, TyNil, TyNil, TyNil, Prog, TyNil>;
-    type FinalState = Evaluate<ETracedRun<InitialState>>;
+    type FinalState = Evaluate<ETracedRun<ELit<InitialState>>>;
 
     let trace_output = FinalState::fmt();
 

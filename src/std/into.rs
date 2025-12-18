@@ -13,7 +13,7 @@
 /// ```rust
 /// use typelude::std::{
 ///     bool::{TyFalse, TyTrue},
-///     conv::{TyFrom, TyInto},
+///     into::{TyFrom, TyInto},
 /// };
 /// use typenum::{B0, B1};
 ///

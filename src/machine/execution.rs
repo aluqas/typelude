@@ -576,7 +576,7 @@ mod tests {
 
     #[test]
     fn test_while_loop_countdown() {
-        use typenum::{U0, U1, U3, U10};
+        use typenum::{U0, U1, U3};
 
         // Loop: While StackTop > 0, Decrement
         // Stack: [N]
