@@ -10,7 +10,10 @@
 
 use std::marker::PhantomData;
 
-use crate::{kernel::traits::Apply, lambda::Lambda};
+use crate::{
+    eval::{Eval, Evaluate},
+    lambda::{LApp, Lambda},
+};
 
 // =========================================================================
 // Thunk
@@ -31,13 +34,16 @@ impl<F, Arg> Lambda for LThunk<F, Arg> {
 
 /// Force: Trigger evaluation of a Thunk.
 pub struct LForce;
+impl Lambda for LForce { type Output = LForce; }
 
 // Thunk<F, Arg> Force -> F Arg
-impl<F, Arg> Apply<LForce> for LThunk<F, Arg>
+impl<F, Arg> Lambda for LApp<LThunk<F, Arg>, LForce>
 where
-    F: Apply<Arg>,
+    F: Eval,
+    Arg: Eval,
+    LApp<F, Arg>: Lambda,
 {
-    type Output = <F as Apply<Arg>>::Output;
+    type Output = <LApp<F, Arg> as Lambda>::Output;
 }
 
 #[cfg(test)]
@@ -46,11 +52,21 @@ mod tests {
 
     use super::*;
 
-    struct AddOne;
-    struct Zero;
-    struct One;
+    type App<F, A> = Evaluate<LApp<F, A>>;
 
-    impl Apply<Zero> for AddOne {
+    #[derive(Clone)]
+    struct AddOne;
+    impl Lambda for AddOne { type Output = AddOne; }
+
+    #[derive(Clone)]
+    struct Zero;
+    impl Lambda for Zero { type Output = Zero; }
+
+    #[derive(Clone)]
+    struct One;
+    impl Lambda for One { type Output = One; }
+
+    impl Lambda for LApp<AddOne, Zero> {
         type Output = One;
     }
 
@@ -60,7 +76,7 @@ mod tests {
         type Delayed = LThunk<AddOne, Zero>;
 
         // Force it
-        type Result = <Delayed as Apply<LForce>>::Output;
+        type Result = App<Delayed, LForce>;
 
         assert_type_eq_all!(Result, One);
     }

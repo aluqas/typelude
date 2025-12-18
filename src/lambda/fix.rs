@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
-use super::{Apply, Lambda};
+use super::{LApp, Lambda};
+use crate::eval::{Eval, Evaluate};
 
 // =========================================================================
 // Fixed-Point Combinator
@@ -14,12 +15,17 @@ impl<F> Lambda for LFix<F> {
     type Output = LFix<F>;
 }
 
-impl<F, X> Apply<X> for LFix<F>
+// Fix<F> X -> F Fix<F> X
+impl<F, X> Lambda for LApp<LFix<F>, X>
 where
-    F: Apply<LFix<F>>,
-    <F as Apply<LFix<F>>>::Output: Apply<X>,
+    F: Eval + Clone,
+    X: Eval,
+    // (F Fix<F>)
+    LApp<F, LFix<F>>: Lambda,
+    // (F Fix<F>) X
+    LApp<<LApp<F, LFix<F>> as Lambda>::Output, X>: Lambda,
 {
-    type Output = <<F as Apply<LFix<F>>>::Output as Apply<X>>::Output;
+    type Output = <LApp<<LApp<F, LFix<F>> as Lambda>::Output, X> as Lambda>::Output;
 }
 
 #[cfg(test)]
@@ -27,79 +33,117 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::lambda::church::{LFalse, LPureIf, LTrue};
+    use crate::lambda::church::{LFalse, LTrue};
 
-    type App<F, A> = <F as Apply<A>>::Output;
+    // Helper alias
+    type App<F, A> = Evaluate<LApp<F, A>>;
 
     #[test]
     fn test_loop_basic_unroll() {
         struct Thunk<F, A>(std::marker::PhantomData<(F, A)>);
+        impl<F, A> Lambda for Thunk<F, A> { type Output = Thunk<F, A>; }
 
         struct Force;
-        impl<F, A> Apply<Force> for Thunk<F, A>
+        impl Lambda for Force { type Output = Force; }
+
+        // Thunk<F, A> Force -> F A
+        impl<F, A> Lambda for LApp<Thunk<F, A>, Force>
         where
-            F: Apply<A>,
+            F: Eval, A: Eval,
+            LApp<F, A>: Lambda,
         {
-            type Output = <F as Apply<A>>::Output;
+            type Output = Evaluate<LApp<F, A>>;
         }
 
+        #[derive(Clone)]
         struct LoopBody;
-        struct LoopBody1<R>(std::marker::PhantomData<R>);
+        impl Lambda for LoopBody { type Output = LoopBody; }
 
-        impl<R> Apply<R> for LoopBody {
-            type Output = LoopBody1<R>;
+        struct LoopBody1<R>(std::marker::PhantomData<R>);
+        impl<R> Lambda for LoopBody1<R> { type Output = LoopBody1<R>; }
+
+        // LoopBody R -> LoopBody1<R>
+        impl<R> Lambda for LApp<LoopBody, R> where R: Eval {
+            type Output = LoopBody1<Evaluate<R>>;
         }
 
-        impl<R, Arg> Apply<Arg> for LoopBody1<R>
+        // LoopBody1<R> Arg -> If Arg True (Thunk R True)
+        impl<R, Arg> Lambda for LApp<LoopBody1<R>, Arg>
         where
-            Arg: Apply<LTrue>,
-            <Arg as Apply<LTrue>>::Output: Apply<Thunk<R, LTrue>>,
+            R: Eval,
+            Arg: Eval,
+            // LPureIf<Arg, LTrue, Thunk<R, LTrue>>
+            // Arg LTrue (Thunk<R, LTrue>)
+            LApp<Arg, LTrue>: Lambda,
+            LApp<<LApp<Arg, LTrue> as Lambda>::Output, Thunk<R, LTrue>>: Lambda,
         {
-            // Use PureIf alias
-            type Output = LPureIf<Arg, LTrue, Thunk<R, LTrue>>;
+            type Output = <LApp<<LApp<Arg, LTrue> as Lambda>::Output, Thunk<R, LTrue>> as Lambda>::Output;
         }
 
         type F = LFix<LoopBody>;
 
+        // F True -> LoopBody F True -> LoopBody1<F> True -> True True (Thunk F True) -> True
         type Res1 = App<F, LTrue>;
         assert_type_eq_all!(Res1, LTrue);
 
+        // F False -> LoopBody F False -> LoopBody1<F> False -> False True (Thunk F True) -> Thunk F True
         type Res2 = App<F, LFalse>;
         assert_type_eq_all!(Res2, Thunk<F, LTrue>);
 
+        // Force Res2 -> F True -> True
         type Res3 = App<Res2, Force>;
         assert_type_eq_all!(Res3, LTrue);
     }
 
     #[test]
     fn test_church_factorial_ish() {
+        #[derive(Clone)]
         struct Z;
+        impl Lambda for Z { type Output = Z; }
+
+        #[derive(Clone)]
         struct S<N>(std::marker::PhantomData<N>);
+        impl<N> Lambda for S<N> { type Output = S<N>; }
 
+        #[derive(Clone)]
         struct Unroll;
-        struct Unroll1<R>(std::marker::PhantomData<R>);
+        impl Lambda for Unroll { type Output = Unroll; }
 
-        impl<R> Apply<R> for Unroll {
-            type Output = Unroll1<R>;
+        struct Unroll1<R>(std::marker::PhantomData<R>);
+        impl<R> Lambda for Unroll1<R> { type Output = Unroll1<R>; }
+
+        // Unroll R -> Unroll1<R>
+        impl<R> Lambda for LApp<Unroll, R> where R: Eval {
+            type Output = Unroll1<Evaluate<R>>;
         }
 
+        #[derive(Clone)]
         struct Done;
+        impl Lambda for Done { type Output = Done; }
 
-        impl<R> Apply<Z> for Unroll1<R> {
+        // Unroll1<R> Z -> Done
+        impl<R> Lambda for LApp<Unroll1<R>, Z> where R: Eval {
             type Output = Done;
         }
 
-        impl<R, P> Apply<S<P>> for Unroll1<R>
+        // Unroll1<R> S<P> -> R P
+        impl<R, P> Lambda for LApp<Unroll1<R>, S<P>>
         where
-            R: Apply<P>,
+            R: Eval, P: Eval,
+            LApp<R, P>: Lambda
         {
-            type Output = <R as Apply<P>>::Output;
+            type Output = <LApp<R, P> as Lambda>::Output;
         }
 
         type RecFunc = LFix<Unroll>;
 
+        // RecFunc Z -> Unroll RecFunc Z -> Unroll1<RecFunc> Z -> Done
         assert_type_eq_all!(App<RecFunc, Z>, Done);
+
+        // RecFunc S<Z> -> Unroll RecFunc S<Z> -> Unroll1<RecFunc> S<Z> -> RecFunc Z -> Done
         assert_type_eq_all!(App<RecFunc, S<Z>>, Done);
+
+        // RecFunc S<S<Z>> -> ... -> Done
         assert_type_eq_all!(App<RecFunc, S<S<Z>>>, Done);
     }
 }

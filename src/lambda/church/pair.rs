@@ -6,51 +6,94 @@
 use std::marker::PhantomData;
 
 use super::bool::{LFalse, LTrue};
-use crate::{kernel::traits::Apply, lambda::Lambda};
+use crate::{
+    eval::{Eval, Evaluate},
+    lambda::{LApp, Lambda},
+};
 
 // =========================================================================
 // Church Pairs
 // =========================================================================
 
 /// Pair: λx y. λf. f x y
-pub struct LPair<X, Y>(PhantomData<(X, Y)>);
+pub struct LPair;
 
-impl<X, Y> Lambda for LPair<X, Y> {
-    type Output = LPair<X, Y>;
+impl Lambda for LPair {
+    type Output = LPair;
 }
 
-/// Pure Fst/Snd Aliases
-pub type LPureFst<P> = <P as Apply<LTrue>>::Output;
-pub type LPureSnd<P> = <P as Apply<LFalse>>::Output;
+// Pair X -> Pair1<X>
+pub struct LPair1<X>(PhantomData<X>);
+impl<X> Lambda for LPair1<X> {
+    type Output = LPair1<X>;
+}
 
-/// Fst Struct
-pub struct LFst<P>(PhantomData<P>);
-
-impl<P> Lambda for LFst<P>
+impl<X> Lambda for LApp<LPair, X>
 where
-    P: Apply<LTrue>,
+    X: Eval,
 {
-    type Output = LPureFst<P>;
+    type Output = LPair1<Evaluate<X>>;
 }
 
-/// Snd Struct
-pub struct LSnd<P>(PhantomData<P>);
+// Pair1<X> Y -> Pair2<X, Y> (The actual pair value)
+pub struct LPair2<X, Y>(PhantomData<(X, Y)>);
+impl<X, Y> Lambda for LPair2<X, Y> {
+    type Output = LPair2<X, Y>;
+}
 
-impl<P> Lambda for LSnd<P>
+impl<X, Y> Lambda for LApp<LPair1<X>, Y>
 where
-    P: Apply<LFalse>,
+    Y: Eval,
 {
-    type Output = LPureSnd<P>;
+    type Output = LPair2<X, Evaluate<Y>>;
 }
 
-// Helpers for internal use
-pub(super) type LSndEval<P> = <P as Apply<LFalse>>::Output;
-
-// Pair<X, Y> f -> f X Y
-impl<X, Y, F> Apply<F> for LPair<X, Y>
+// Pair2<X, Y> F -> F X Y
+impl<X, Y, F> Lambda for LApp<LPair2<X, Y>, F>
 where
-    F: Apply<X>,
-    <F as Apply<X>>::Output: Apply<Y>,
+    X: Eval,
+    Y: Eval,
+    F: Eval,
+    LApp<F, X>: Lambda,
+    LApp<<LApp<F, X> as Lambda>::Output, Y>: Lambda,
 {
-    type Output = <<F as Apply<X>>::Output as Apply<Y>>::Output;
+    type Output = <LApp<<LApp<F, X> as Lambda>::Output, Y> as Lambda>::Output;
 }
+
+// =========================================================================
+// Projections (Fst, Snd)
+// =========================================================================
+
+// Fst P -> P True
+pub struct LFst;
+impl Lambda for LFst {
+    type Output = LFst;
+}
+
+impl<P> Lambda for LApp<LFst, P>
+where
+    P: Eval,
+    LApp<P, LTrue>: Lambda,
+{
+    type Output = <LApp<P, LTrue> as Lambda>::Output;
+}
+
+// Snd P -> P False
+pub struct LSnd;
+impl Lambda for LSnd {
+    type Output = LSnd;
+}
+
+impl<P> Lambda for LApp<LSnd, P>
+where
+    P: Eval,
+    LApp<P, LFalse>: Lambda,
+{
+    type Output = <LApp<P, LFalse> as Lambda>::Output;
+}
+
+// Helpers for internal use (Evaluated via Lambda)
+// Note: LSndEval was used in numeral.rs, we can redefine it or just use LApp chain in numeral.rs
+// Since we are refactoring numeral.rs to use LApp, we don't strictly need this type alias if we write it out.
+// But for compatibility with partially refactored code, we'll see.
+// pub(super) type LSndEval<P> = Evaluate<LApp<LSnd, P>>;

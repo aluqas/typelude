@@ -5,10 +5,11 @@
 use std::marker::PhantomData;
 
 use crate::{
-    kernel::traits::Apply,
+    eval::{Eval, Evaluate},
     lambda::{
-        church::{LFalse, LPair, LTrue},
-        traits::{LBind, LBool},
+        LApp, Lambda,
+        church::{LPair2},
+        traits::{LBind},
     },
 };
 
@@ -16,12 +17,16 @@ use crate::{
 /// F is a function S -> (A, S)
 pub struct LState<F>(PhantomData<F>);
 
+impl<F> Lambda for LState<F> { type Output = LState<F>; }
+
 // State<F> s -> F s
-impl<F, S> Apply<S> for LState<F>
+impl<F, S> Lambda for LApp<LState<F>, S>
 where
-    F: Apply<S>,
+    F: Eval,
+    S: Eval,
+    LApp<F, S>: Lambda,
 {
-    type Output = <F as Apply<S>>::Output;
+    type Output = <LApp<F, S> as Lambda>::Output;
 }
 
 // -------------------------------------------------------------------------
@@ -34,29 +39,46 @@ impl<F, K> LBind<K> for LState<F> {
 }
 
 pub struct LBindState<F, K>(PhantomData<(F, K)>);
+impl<F, K> Lambda for LBindState<F, K> { type Output = LBindState<F, K>; }
 
-// Apply BindState to S
-impl<F, K, S> Apply<S> for LBindState<F, K>
+// BindState<F, K> S -> Result
+impl<F, K, S> Lambda for LApp<LBindState<F, K>, S>
 where
+    F: Eval,
+    K: Eval,
+    S: Eval,
     // 1. Run m s -> pair
-    F: Apply<S>,
-    // The output must be a Pair, meaning it applies True to get Fst, and False to get Snd.
-    <F as Apply<S>>::Output: Apply<LTrue> + Apply<LFalse>,
-    // Safety check: The transitions must be Boolean-compatible (Pair-compatible)
-    LTrue: LBool,
-    LFalse: LBool,
-    // 2. Extract a = Fst p
-    // K a -> m'
-    K: Apply<<<F as Apply<S>>::Output as Apply<LTrue>>::Output>,
-    // 3. Extract s' = Snd p
+    LApp<F, S>: Lambda,
+    // The output must be a Pair2<A, NewS>.
+    // To get A and NewS, we can use LFst and LSnd if they work on Pair2.
+    // Or we can assume the result is LPair2<A, NewS> and extract via Pattern Matching?
+    // Rust traits don't support pattern matching on types easily in where clauses.
+    // But we can use LFst/LSnd.
+    // LFst<Pair2<A, S>> -> A.
+    // We defined LFst/LSnd in pair.rs to work via LApp.
+
+    // Let Pair = (m s)
+    // Fst Pair
+    LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output>: Lambda,
+    // Snd Pair
+    LApp<crate::lambda::church::LSnd, <LApp<F, S> as Lambda>::Output>: Lambda,
+
+    // k a -> m'
+    // Let A = Fst Pair
+    LApp<K, <LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output> as Lambda>::Output>: Lambda,
+
     // m' s' -> Result
-    <K as Apply<<<F as Apply<S>>::Output as Apply<LTrue>>::Output>>::Output:
-        Apply<<<F as Apply<S>>::Output as Apply<LFalse>>::Output>,
+    // Let M' = k a
+    // Let S' = Snd Pair
+    LApp<
+        <LApp<K, <LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output> as Lambda>::Output> as Lambda>::Output,
+        <LApp<crate::lambda::church::LSnd, <LApp<F, S> as Lambda>::Output> as Lambda>::Output
+    >: Lambda,
 {
-    type Output =
-        <<K as Apply<<<F as Apply<S>>::Output as Apply<LTrue>>::Output>>::Output as Apply<
-            <<F as Apply<S>>::Output as Apply<LFalse>>::Output,
-        >>::Output;
+    type Output = <LApp<
+        <LApp<K, <LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output> as Lambda>::Output> as Lambda>::Output,
+        <LApp<crate::lambda::church::LSnd, <LApp<F, S> as Lambda>::Output> as Lambda>::Output
+    > as Lambda>::Output;
 }
 
 // -------------------------------------------------------------------------
@@ -64,17 +86,29 @@ where
 // -------------------------------------------------------------------------
 
 pub struct LReturn<A>(PhantomData<A>);
+impl<A> Lambda for LReturn<A> { type Output = LReturn<A>; }
 
-impl<A, S> Apply<S> for LReturn<A> {
-    type Output = LPair<A, S>;
+// Return<A> S -> (A, S)
+impl<A, S> Lambda for LApp<LReturn<A>, S>
+where
+    A: Eval,
+    S: Eval,
+{
+    // Return a Pair Value directly.
+    // LApp<LApp<LPair, A>, S> -> LPair2<A, S>
+    // We can just return LPair2<A, S> since A and S are Evaluated.
+    // Wait, Evaluate<A> and Evaluate<S>.
+    type Output = LPair2<Evaluate<A>, Evaluate<S>>;
 }
 
 // Return<A> >>= k  === k A
 impl<A, K> LBind<K> for LReturn<A>
 where
-    K: Apply<A>,
+    K: Eval,
+    A: Eval,
+    LApp<K, A>: Lambda,
 {
-    type Output = <K as Apply<A>>::Output;
+    type Output = <LApp<K, A> as Lambda>::Output;
 }
 
 // -------------------------------------------------------------------------
@@ -82,9 +116,14 @@ where
 // -------------------------------------------------------------------------
 
 pub struct LGet;
+impl Lambda for LGet { type Output = LGet; }
 
-impl<S> Apply<S> for LGet {
-    type Output = LPair<S, S>;
+// Get S -> (S, S)
+impl<S> Lambda for LApp<LGet, S>
+where
+    S: Eval,
+{
+    type Output = LPair2<Evaluate<S>, Evaluate<S>>;
 }
 
 // Get >>= k
@@ -94,13 +133,18 @@ impl<K> LBind<K> for LGet {
 }
 
 pub struct LBindGet<K>(PhantomData<K>);
+impl<K> Lambda for LBindGet<K> { type Output = LBindGet<K>; }
 
-impl<K, S> Apply<S> for LBindGet<K>
+impl<K, S> Lambda for LApp<LBindGet<K>, S>
 where
-    K: Apply<S>,
-    <K as Apply<S>>::Output: Apply<S>,
+    K: Eval,
+    S: Eval + Clone, // Used twice
+    // k s -> m'
+    LApp<K, S>: Lambda,
+    // m' s
+    LApp<<LApp<K, S> as Lambda>::Output, S>: Lambda,
 {
-    type Output = <<K as Apply<S>>::Output as Apply<S>>::Output;
+    type Output = <LApp<<LApp<K, S> as Lambda>::Output, S> as Lambda>::Output;
 }
 
 // -------------------------------------------------------------------------
@@ -108,12 +152,19 @@ where
 // -------------------------------------------------------------------------
 
 pub struct LPut<NewS>(PhantomData<NewS>);
+impl<NewS> Lambda for LPut<NewS> { type Output = LPut<NewS>; }
 
 // Helper Unit type
 pub struct Unit;
+impl Lambda for Unit { type Output = Unit; }
 
-impl<NewS, OldS> Apply<OldS> for LPut<NewS> {
-    type Output = LPair<Unit, NewS>;
+// Put<NewS> OldS -> ((), NewS)
+impl<NewS, OldS> Lambda for LApp<LPut<NewS>, OldS>
+where
+    NewS: Eval,
+    OldS: Eval,
+{
+    type Output = LPair2<Unit, Evaluate<NewS>>;
 }
 
 // Put<NewS> >>= k
@@ -123,13 +174,19 @@ impl<NewS, K> LBind<K> for LPut<NewS> {
 }
 
 pub struct LBindPut<NewS, K>(PhantomData<(NewS, K)>);
+impl<NewS, K> Lambda for LBindPut<NewS, K> { type Output = LBindPut<NewS, K>; }
 
-impl<NewS, K, OldS> Apply<OldS> for LBindPut<NewS, K>
+impl<NewS, K, OldS> Lambda for LApp<LBindPut<NewS, K>, OldS>
 where
-    K: Apply<Unit>,
-    <K as Apply<Unit>>::Output: Apply<NewS>,
+    NewS: Eval,
+    K: Eval,
+    OldS: Eval,
+    // k () -> m'
+    LApp<K, Unit>: Lambda,
+    // m' NewS
+    LApp<<LApp<K, Unit> as Lambda>::Output, NewS>: Lambda,
 {
-    type Output = <<K as Apply<Unit>>::Output as Apply<NewS>>::Output;
+    type Output = <LApp<<LApp<K, Unit> as Lambda>::Output, NewS> as Lambda>::Output;
 }
 
 #[cfg(test)]
@@ -139,30 +196,59 @@ mod tests {
     use super::*;
     use crate::lambda::church::{LSucc, LZero};
 
+    // Helper alias
+    type App<F, A> = Evaluate<LApp<F, A>>;
+
     #[test]
     fn test_state_monad() {
         // Scenario: Return(Zero) >>= PutSucc >>= DoGet
+
+        // PutSucc: \x. Put (Succ x)
         struct PutSucc;
-        impl<X> Apply<X> for PutSucc
+        impl Lambda for PutSucc { type Output = PutSucc; }
+
+        impl<X> Lambda for LApp<PutSucc, X>
         where
-            X: crate::lambda::traits::LNat,
+            X: crate::lambda::traits::LNat + Eval,
         {
-            type Output = LPut<LSucc<X>>;
+            type Output = LPut<LSucc<Evaluate<X>>>;
         }
 
+        // DoGet: \x. Get
         struct DoGet;
-        impl<X> Apply<X> for DoGet {
+        impl Lambda for DoGet { type Output = DoGet; }
+
+        impl<X> Lambda for LApp<DoGet, X>
+        where X: Eval
+        {
             type Output = LGet;
         }
 
         type Step1 = LReturn<LZero>;
         type M1 = Step1;
+        // M1 >>= PutSucc
         type M2 = <M1 as LBind<PutSucc>>::Output;
+        // M2 >>= DoGet
         type M3 = <M2 as LBind<DoGet>>::Output;
 
-        type FinalResult = <M3 as Apply<LZero>>::Output;
-        type Val = <FinalResult as Apply<LTrue>>::Output;
-        type St = <FinalResult as Apply<LFalse>>::Output;
+        // Run M3 with LZero state
+        type FinalResult = App<M3, LZero>;
+
+        // Result is (Val, St).
+        // Val = Fst FinalResult
+        type Val = App<crate::lambda::church::LFst, FinalResult>;
+        type St = App<crate::lambda::church::LSnd, FinalResult>;
+
+        // Expected: PutSucc(Zero) -> Put(1). State becomes 1. Val is ().
+        // Then DoGet -> Get. Returns (1, 1).
+        // Wait.
+        // Return(0) >>= k. -> k 0.
+        // PutSucc 0 -> Put 1.
+        // Put 1 >>= k'. -> \old. k' () 1.
+        // DoGet () -> Get.
+        // \old. Get 1. -> (1, 1).
+
+        // So Val should be 1, St should be 1.
 
         assert_type_eq_all!(Val, LSucc<LZero>);
         assert_type_eq_all!(St, LSucc<LZero>);

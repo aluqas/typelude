@@ -5,6 +5,8 @@
 //! - `Lambda`: Pure lambda term trait with automatic `Eval` implementation
 //! - `Bind`: Monadic bind operation (`m >>= f`)
 
+use std::marker::PhantomData;
+
 use crate::eval::Eval;
 
 // =========================================================================
@@ -25,6 +27,19 @@ pub trait Lambda {
 impl<T: Lambda> Eval for T {
     type Output = <T as Lambda>::Output;
 }
+
+// =========================================================================
+// Application Struct (Eval Pattern)
+// =========================================================================
+
+/// **Lambda Application**: `LApp<F, A>`
+///
+/// Represents the application of function `F` to argument `A`.
+/// This struct is used with the `Eval` pattern.
+///
+/// - `F`: Function term (e.g., `S`, `K`, `S1<X>`)
+/// - `A`: Argument term
+pub struct LApp<F, A>(PhantomData<(F, A)>);
 
 // =========================================================================
 // Bind Trait (Monad)

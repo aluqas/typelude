@@ -7,9 +7,9 @@
 use std::marker::PhantomData;
 
 use crate::{
-    kernel::traits::Apply,
+    eval::{Eval, Evaluate},
     lambda::{
-        Lambda,
+        LApp, Lambda,
         traits::{LBool, LTerm},
     },
 };
@@ -20,41 +20,60 @@ use crate::{
 
 /// Church True: λt f. t
 pub struct LTrue;
-/// Church False: λt f. f
-pub struct LFalse;
-
+impl LTerm for LTrue {}
+impl LBool for LTrue {}
 impl Lambda for LTrue {
     type Output = LTrue;
 }
-impl LTerm for LTrue {}
-impl LBool for LTrue {}
 
+/// Church False: λt f. f
+pub struct LFalse;
+impl LTerm for LFalse {}
+impl LBool for LFalse {}
 impl Lambda for LFalse {
     type Output = LFalse;
 }
-impl LTerm for LFalse {}
-impl LBool for LFalse {}
 
 // Partial Application States
 pub struct LTrue1<T>(PhantomData<T>);
+impl<T> Lambda for LTrue1<T> { type Output = LTrue1<T>; }
+
 pub struct LFalse1<T>(PhantomData<T>);
+impl<T> Lambda for LFalse1<T> { type Output = LFalse1<T>; }
+
 
 // --- True Implementation ---
-// λt f. t
-impl<T> Apply<T> for LTrue {
-    type Output = LTrue1<T>;
+// True T -> True1<T>
+impl<T> Lambda for LApp<LTrue, T>
+where
+    T: Eval,
+{
+    type Output = LTrue1<Evaluate<T>>;
 }
-impl<T, F> Apply<F> for LTrue1<T> {
-    type Output = T;
+
+// True1<T> F -> T
+impl<T, F> Lambda for LApp<LTrue1<T>, F>
+where
+    T: Eval,
+{
+    type Output = Evaluate<T>;
 }
 
 // --- False Implementation ---
-// λt f. f
-impl<T> Apply<T> for LFalse {
-    type Output = LFalse1<T>;
+// False T -> False1<T>
+impl<T> Lambda for LApp<LFalse, T>
+where
+    T: Eval,
+{
+    type Output = LFalse1<Evaluate<T>>;
 }
-impl<T, F> Apply<F> for LFalse1<T> {
-    type Output = F;
+
+// False1<T> F -> F
+impl<T, F> Lambda for LApp<LFalse1<T>, F>
+where
+    F: Eval,
+{
+    type Output = Evaluate<F>;
 }
 
 // =========================================================================
@@ -62,17 +81,34 @@ impl<T, F> Apply<F> for LFalse1<T> {
 // =========================================================================
 
 /// Pure If Alias: ((P T) E)
-pub type LPureIf<P, T, E> = <<P as Apply<T>>::Output as Apply<E>>::Output;
+pub type LPureIf<P, T, E> = Evaluate<LApp<LApp<LApp<LIf, P>, T>, E>>;
 
-/// Church If Struct
-pub struct LIf<P, T, E>(PhantomData<(P, T, E)>);
+/// LIf: P T E -> ((P T) E)
+pub struct LIf;
+impl Lambda for LIf { type Output = LIf; }
 
-impl<P, T, E> Lambda for LIf<P, T, E>
+// If P -> If1<P>
+pub struct LIf1<P>(PhantomData<P>);
+impl<P> Lambda for LIf1<P> { type Output = LIf1<P>; }
+
+impl<P> Lambda for LApp<LIf, P> where P: Eval { type Output = LIf1<Evaluate<P>>; }
+
+// If1<P> T -> If2<P, T>
+pub struct LIf2<P, T>(PhantomData<(P, T)>);
+impl<P, T> Lambda for LIf2<P, T> { type Output = LIf2<P, T>; }
+
+impl<P, T> Lambda for LApp<LIf1<P>, T> where T: Eval { type Output = LIf2<P, Evaluate<T>>; }
+
+// If2<P, T> E -> P T E
+impl<P, T, E> Lambda for LApp<LIf2<P, T>, E>
 where
-    P: Apply<T>,
-    <P as Apply<T>>::Output: Apply<E>,
+    P: Eval,
+    T: Eval,
+    E: Eval,
+    LApp<P, T>: Lambda,
+    LApp<<LApp<P, T> as Lambda>::Output, E>: Lambda,
 {
-    type Output = LPureIf<P, T, E>;
+    type Output = <LApp<<LApp<P, T> as Lambda>::Output, E> as Lambda>::Output;
 }
 
 #[cfg(test)]
@@ -80,16 +116,29 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::eval::Evaluate;
+
+    // Helper alias
+    type App<F, A> = Evaluate<LApp<F, A>>;
 
     #[test]
     fn test_church_bools_basic() {
+        #[derive(Clone)]
         struct A;
+        impl Lambda for A { type Output = A; }
+        #[derive(Clone)]
         struct B;
-        // Using Structs
-        type TrueRes = Evaluate<LIf<LTrue, A, B>>;
-        type FalseRes = Evaluate<LIf<LFalse, A, B>>;
+        impl Lambda for B { type Output = B; }
+
+        // True A B -> A
+        type TrueRes = App<App<App<LIf, LTrue>, A>, B>;
         assert_type_eq_all!(TrueRes, A);
+
+        // False A B -> B
+        type FalseRes = App<App<App<LIf, LFalse>, A>, B>;
         assert_type_eq_all!(FalseRes, B);
+
+        // Direct application without If
+        assert_type_eq_all!(App<App<LTrue, A>, B>, A);
+        assert_type_eq_all!(App<App<LFalse, A>, B>, B);
     }
 }

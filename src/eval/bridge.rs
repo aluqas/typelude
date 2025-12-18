@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     eval::{Eval, Evaluate},
-    lambda::Apply,
+    kernel::traits::Apply,
 };
 
 // =========================================================================

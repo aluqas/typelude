@@ -5,8 +5,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    kernel::traits::Apply,
-    lambda::{Lambda, traits::LBind},
+    eval::{Eval, Evaluate},
+    lambda::{LApp, Lambda, traits::LBind},
 };
 
 /// Identity Monad: Id<T>
@@ -22,9 +22,11 @@ impl<T> Lambda for LId<T> {
 // F must be a function that takes T and returns Id<U>.
 impl<T, F> LBind<F> for LId<T>
 where
-    F: Apply<T>,
+    F: Eval,
+    T: Eval,
+    LApp<F, T>: Lambda,
 {
-    type Output = <F as Apply<T>>::Output;
+    type Output = <LApp<F, T> as Lambda>::Output;
 }
 
 #[cfg(test)]
@@ -34,12 +36,15 @@ mod tests {
     use super::*;
     use crate::lambda::church::{LSucc, LZero};
 
+    #[derive(Clone)]
     struct AddOne;
-    impl<X> Apply<X> for AddOne
+    impl Lambda for AddOne { type Output = AddOne; }
+
+    impl<X> Lambda for LApp<AddOne, X>
     where
-        X: crate::lambda::traits::LNat,
+        X: crate::lambda::traits::LNat + Eval,
     {
-        type Output = LId<LSucc<X>>;
+        type Output = LId<LSucc<Evaluate<X>>>;
     }
 
     #[test]
