@@ -2,16 +2,16 @@
 //!
 //! Defines the syntax for type-level expressions.
 //! - `ELit`: Literal
-//! - `EApply`, `EApply2`: Function Application
+//! - `EApp`: Function Application (formerly `EApply`)
 //! - `EIf`: Conditional Branch
 //! - `EWhile`: Loop
 
 use std::marker::PhantomData;
 
 use super::{Eval, Evaluate};
-use crate::std::{
+use crate::kernel::{
     bool::{TyFalse, TyTrue},
-    traits::TyFn,
+    traits::Apply,
 };
 
 //
@@ -32,24 +32,27 @@ impl<T> Eval for ELit<T> {
 }
 
 //
-// EApply: Function Application
+// EApp: Function Application (formerly EApply)
 //
 
 /// 1-argument function application
 ///
-/// # Example
-/// ```ignore
-/// type LenExpr = EApply<FLen, ELit<MyArray>>;
-/// ```
-pub struct EApply<F, Arg>(PhantomData<(F, Arg)>);
+/// Use `Call` alias if preferred.
+pub struct EApp<Op, Arg>(PhantomData<(Op, Arg)>);
 
-/// 2-argument function application
-///
-/// # Example
-/// ```ignore
-/// type ConcatExpr = EApply2<FConcat, ELit<ArrayA>, ELit<ArrayB>>;
-/// ```
-pub struct EApply2<F, Arg1, Arg2>(PhantomData<(F, Arg1, Arg2)>);
+impl<Op, Arg> Eval for EApp<Op, Arg>
+where
+    Op: Apply<Arg>,
+    Op::Output: Eval,
+{
+    type Output = Evaluate<Op::Output>;
+}
+
+/// 2-argument function application alias
+pub type EApp2<Op, A, B> = EApp<Op, (A, B)>;
+
+/// 3-argument function application alias
+pub type EApp3<Op, A, B, C> = EApp<Op, (A, B, C)>;
 
 /// 3-argument function application
 ///
@@ -104,7 +107,7 @@ where
 // EWhile: Loop Expression
 //
 
-type AppliedOutput<F, A> = <F as TyFn<A>>::Output;
+type AppliedOutput<Op, A> = <Op as Apply<A>>::Output;
 
 /// Expression representing a While loop
 ///
@@ -128,7 +131,7 @@ pub trait WhileHelper<Pred, Step, State> {
 // Condition == True: Recurse
 impl<Pred, Step, State> WhileHelper<Pred, Step, State> for TyTrue
 where
-    Step: TyFn<State>,
+    Step: Apply<State>,
     Step::Output: Eval,
     EWhile<Pred, Step, AppliedOutput<Step, State>>: Eval,
 {
@@ -145,7 +148,7 @@ where
 
 impl<Pred, Step, State> Eval for EWhile<Pred, Step, State>
 where
-    Pred: TyFn<State>,
+    Pred: Apply<State>,
     AppliedOutput<Pred, State>: Eval,
     Evaluate<AppliedOutput<Pred, State>>: WhileHelper<Pred, Step, State>,
 {
