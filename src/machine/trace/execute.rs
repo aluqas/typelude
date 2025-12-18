@@ -1,12 +1,13 @@
 use typenum::Unsigned;
 
 use crate::{
-    eval::{EApply, EIf, EWhile, Eval, Evaluate},
+    eval::{EApp, EIf, ELit, EWhile, Eval, Evaluate},
+    kernel::traits::Apply, // Explicit kernel import to be safe
     machine::{execution::RunStep, instruction::*, trace::TracedMachineState},
     std::{
-        array::{Cons, EConcat, FIsEmpty, Get, Set, TyArray, TyNil},
-        bool::FNot,
-        traits::TyFn,
+        array::{Cons, EConcat, Get, Set, TyArray, TyNil}, // OpIsEmpty unused
+        bool::OpNot,
+        // traits::Apply is in kernel
     },
 };
 
@@ -14,6 +15,14 @@ use crate::{
 pub trait TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History> {
     type OutputState;
 }
+
+// ... (Rest of trait impls are fine, they use TracedMachineState construction directly) ...
+// But I need to preserve the impl blocks!
+// The tool instruction says "Update imports and implementation". I should be careful not to delete the impl_traced_execute_via_runstep macro and calls.
+// I will only replace the top imports and the bottom FTracedStep/FTracedIsFinished.
+
+// SKIP MIDDLE CONTENT REPLACEMENT - wait, I can't skip with one replace call if I want to update top AND bottom.
+// I will do imports first. Then bottom.
 
 // --- Implementation for Stack-only Ops (via RunStep) ---
 
@@ -370,37 +379,31 @@ where
 }
 
 /// Step function for Traced Machine
-pub struct FTracedStep;
+pub struct OpTracedStep;
 
 impl<Stack, Locals, Memory, CallStack, Inst, RestProg, History>
-    TyFn<TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>>
-    for FTracedStep
+    Apply<TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>>
+    for OpTracedStep
 where
     Inst: TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>,
     TyArray<Inst, RestProg>: Cons,
     RestProg: Cons,
     History: Cons,
 {
-    type Output =
-        <Inst as TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>>::OutputState;
+    type Output = ELit<
+        <Inst as TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>>::OutputState,
+    >;
 }
 
-impl<S, L, M, C, P, H> Eval for EApply<FTracedStep, TracedMachineState<S, L, M, C, P, H>>
-where
-    FTracedStep: TyFn<TracedMachineState<S, L, M, C, P, H>>,
-{
-    type Output = <FTracedStep as TyFn<TracedMachineState<S, L, M, C, P, H>>>::Output;
-}
+pub struct OpTracedIsFinished;
 
-pub struct FTracedIsFinished;
-
-impl<S, L, M, C, P, H> TyFn<TracedMachineState<S, L, M, C, P, H>> for FTracedIsFinished
+impl<S, L, M, C, P, H> Apply<TracedMachineState<S, L, M, C, P, H>> for OpTracedIsFinished
 where
-    EApply<FIsEmpty, P>: Eval,
-    Evaluate<EApply<FIsEmpty, P>>: crate::std::bool::NotHelper,
+    crate::std::array::EIsEmpty<ELit<P>>: Eval,
+    EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
-    type Output = Evaluate<EApply<FNot, EApply<FIsEmpty, P>>>;
+    type Output = EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
 }
 
 /// Runner for traced execution
-pub type ETracedRun<S> = EWhile<FTracedIsFinished, FTracedStep, S>;
+pub type ETracedRun<S> = EWhile<OpTracedIsFinished, OpTracedStep, S>;
