@@ -2,12 +2,30 @@
 //!
 //! Type-level booleans (`TyTrue`, `TyFalse`) and logical operations.
 
+use std::marker::PhantomData;
+
 use typenum::{B0, B1};
 
-use crate::eval::{EApply, EApply2, Eval, Evaluate, Sealed};
+// Re-export kernel types
+pub use crate::kernel::bool::{TyBool, TyFalse, TyTrue};
+use crate::{
+    eval::{Eval, Evaluate, Sealed},
+    kernel::traits::Apply,
+};
 
 //
-// Type-Level Boolean Types
+// Identity Eval Implementation (Should typically be in eval crate, but std is fine)
+//
+
+impl Eval for TyTrue {
+    type Output = TyTrue;
+}
+impl Eval for TyFalse {
+    type Output = TyFalse;
+}
+
+//
+// KindBool (Extension)
 //
 
 /// Marker Trait: TyTrue, TyFalse
@@ -16,17 +34,6 @@ pub trait KindBool: Sealed + Eval {
     type Or<Rhs: KindBool>: KindBool;
 }
 
-/// TyTrue: Type representing True
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default, PartialOrd, Ord)]
-pub struct TyTrue;
-
-/// TyFalse: Type representing False
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default, PartialOrd, Ord)]
-pub struct TyFalse;
-
-impl Sealed for TyTrue {}
-impl Sealed for TyFalse {}
-
 impl KindBool for TyTrue {
     const BOOL: bool = true;
     type Or<Rhs: KindBool> = TyTrue;
@@ -34,13 +41,6 @@ impl KindBool for TyTrue {
 impl KindBool for TyFalse {
     const BOOL: bool = false;
     type Or<Rhs: KindBool> = Rhs;
-}
-
-impl Eval for TyTrue {
-    type Output = TyTrue;
-}
-impl Eval for TyFalse {
-    type Output = TyFalse;
 }
 
 //
@@ -57,16 +57,6 @@ where
     type Output = <() as crate::std::reify::ReflectBool<COND>>::Output;
 }
 
-// Re-export for compatibility if needed, or just remove local traits.
-// User asked to abstract it, implies replacement.
-
-// Previous ToTyBool adaptation:
-// B1 -> TyTrue, B0 -> TyFalse
-// We use Translate<bool> for this if we want generic "To Boolean Type".
-// Implementation of Translate<bool> for B1/B0 should be in `reify.rs` or here?
-// Ideally here if B0/B1 are external, but `reify` is central.
-// Let's implement Translate<bool> for B0/B1 here.
-
 use crate::std::into::TyFrom;
 
 impl TyFrom<B1> for bool {
@@ -79,15 +69,13 @@ impl TyFrom<B0> for bool {
 pub type ToTyBoolOut<T> = <bool as TyFrom<T>>::Output;
 
 //
-// Helper Traits for Logical Operations
+// Helper Traits
 //
 
-/// Helper for NOT
 #[doc(hidden)]
 pub trait NotHelper {
     type Output;
 }
-
 impl NotHelper for TyTrue {
     type Output = TyFalse;
 }
@@ -95,18 +83,13 @@ impl NotHelper for TyFalse {
     type Output = TyTrue;
 }
 
-/// Lazy NAND Helper (Short-circuit evaluation)
 #[doc(hidden)]
 pub trait NandHelper<Rhs> {
     type Output;
 }
-
-// False NAND X = True (Right side not evaluated)
 impl<Rhs> NandHelper<Rhs> for TyFalse {
     type Output = TyTrue;
 }
-
-// True NAND X = NOT X
 impl<Rhs> NandHelper<Rhs> for TyTrue
 where
     Rhs: Eval,
@@ -116,38 +99,13 @@ where
 }
 
 //
-// Function Markers: Boolean Operations
+// Expression Structs (Direct Style)
 //
 
-/// NOT: !A
-pub struct FNot;
-/// AND: A && B
-pub struct FAnd;
-/// OR: A || B
-pub struct FOr;
-/// NAND: !(A && B)
-pub struct FNand;
-/// NOR: !(A || B)
-pub struct FNor;
-/// XOR: A ^ B
-pub struct FXor;
-/// XNOR: !(A ^ B)
-pub struct FXnor;
+/// Expression: NOT A
+pub struct ENot<Val>(PhantomData<Val>);
 
-impl Sealed for FNot {}
-impl Sealed for FAnd {}
-impl Sealed for FOr {}
-impl Sealed for FNand {}
-impl Sealed for FNor {}
-impl Sealed for FXor {}
-impl Sealed for FXnor {}
-
-//
-// Evaluable Implementations for Boolean Functions
-//
-
-// FNot: NOT Val
-impl<Val> Eval for EApply<FNot, Val>
+impl<Val> Eval for ENot<Val>
 where
     Val: Eval,
     Evaluate<Val>: NotHelper,
@@ -155,8 +113,10 @@ where
     type Output = <Evaluate<Val> as NotHelper>::Output;
 }
 
-// FNand: Lhs NAND Rhs (with short-circuit)
-impl<Lhs, Rhs> Eval for EApply2<FNand, Lhs, Rhs>
+/// Expression: A NAND B
+pub struct ENand<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for ENand<Lhs, Rhs>
 where
     Lhs: Eval,
     Evaluate<Lhs>: NandHelper<Rhs>,
@@ -164,60 +124,103 @@ where
     type Output = <Evaluate<Lhs> as NandHelper<Rhs>>::Output;
 }
 
-// FAnd: Lhs AND Rhs = NOT (Lhs NAND Rhs)
-impl<Lhs, Rhs> Eval for EApply2<FAnd, Lhs, Rhs>
+/// Expression: A AND B
+pub struct EAnd<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for EAnd<Lhs, Rhs>
 where
-    EApply<FNot, EApply2<FNand, Lhs, Rhs>>: Eval,
+    ENot<ENand<Lhs, Rhs>>: Eval,
 {
-    type Output = Evaluate<EApply<FNot, EApply2<FNand, Lhs, Rhs>>>;
+    type Output = Evaluate<ENot<ENand<Lhs, Rhs>>>;
 }
 
-// FOr: Lhs OR Rhs = (NOT Lhs) NAND (NOT Rhs)
-impl<Lhs, Rhs> Eval for EApply2<FOr, Lhs, Rhs>
+/// Expression: A OR B
+pub struct EOr<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for EOr<Lhs, Rhs>
 where
-    EApply2<FNand, EApply<FNot, Lhs>, EApply<FNot, Rhs>>: Eval,
+    ENand<ENot<Lhs>, ENot<Rhs>>: Eval,
 {
-    type Output = Evaluate<EApply2<FNand, EApply<FNot, Lhs>, EApply<FNot, Rhs>>>;
+    type Output = Evaluate<ENand<ENot<Lhs>, ENot<Rhs>>>;
 }
 
-// FNor: Lhs NOR Rhs = NOT (Lhs OR Rhs)
-impl<Lhs, Rhs> Eval for EApply2<FNor, Lhs, Rhs>
+/// Expression: A NOR B
+pub struct ENor<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for ENor<Lhs, Rhs>
 where
-    EApply<FNot, EApply2<FOr, Lhs, Rhs>>: Eval,
+    ENot<EOr<Lhs, Rhs>>: Eval,
 {
-    type Output = Evaluate<EApply<FNot, EApply2<FOr, Lhs, Rhs>>>;
+    type Output = Evaluate<ENot<EOr<Lhs, Rhs>>>;
 }
 
-// FXor: Lhs XOR Rhs = (Lhs OR Rhs) AND (Lhs NAND Rhs)
-impl<Lhs, Rhs> Eval for EApply2<FXor, Lhs, Rhs>
+/// Expression: A XOR B
+pub struct EXor<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for EXor<Lhs, Rhs>
 where
-    EApply2<FAnd, EApply2<FOr, Lhs, Rhs>, EApply2<FNand, Lhs, Rhs>>: Eval,
+    EAnd<EOr<Lhs, Rhs>, ENand<Lhs, Rhs>>: Eval,
 {
-    type Output = Evaluate<EApply2<FAnd, EApply2<FOr, Lhs, Rhs>, EApply2<FNand, Lhs, Rhs>>>;
+    type Output = Evaluate<EAnd<EOr<Lhs, Rhs>, ENand<Lhs, Rhs>>>;
 }
 
-// FXnor: Lhs XNOR Rhs = NOT (Lhs XOR Rhs)
-impl<Lhs, Rhs> Eval for EApply2<FXnor, Lhs, Rhs>
+/// Expression: A XNOR B
+pub struct EXnor<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for EXnor<Lhs, Rhs>
 where
-    EApply<FNot, EApply2<FXor, Lhs, Rhs>>: Eval,
+    ENot<EXor<Lhs, Rhs>>: Eval,
 {
-    type Output = Evaluate<EApply<FNot, EApply2<FXor, Lhs, Rhs>>>;
+    type Output = Evaluate<ENot<EXor<Lhs, Rhs>>>;
 }
 
 //
-// Aliases
+// Operator Symbols (For HOF)
 //
 
-// Boolean (1 arg)
-pub type ENot<Val> = EApply<FNot, Val>;
+pub struct OpNot;
+pub struct OpAnd;
+pub struct OpOr;
+pub struct OpNand;
+pub struct OpNor;
+pub struct OpXor;
+pub struct OpXnor;
 
-// Boolean (2 args)
-pub type EAnd<Lhs, Rhs> = EApply2<FAnd, Lhs, Rhs>;
-pub type EOr<Lhs, Rhs> = EApply2<FOr, Lhs, Rhs>;
-pub type ENand<Lhs, Rhs> = EApply2<FNand, Lhs, Rhs>;
-pub type ENor<Lhs, Rhs> = EApply2<FNor, Lhs, Rhs>;
-pub type EXor<Lhs, Rhs> = EApply2<FXor, Lhs, Rhs>;
-pub type EXnor<Lhs, Rhs> = EApply2<FXnor, Lhs, Rhs>;
+impl Sealed for OpNot {}
+impl Sealed for OpAnd {}
+impl Sealed for OpOr {}
+impl Sealed for OpNand {}
+impl Sealed for OpNor {}
+impl Sealed for OpXor {}
+impl Sealed for OpXnor {}
+
+impl<Val> Apply<Val> for OpNot {
+    type Output = ENot<Val>;
+}
+
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpAnd {
+    type Output = EAnd<Lhs, Rhs>;
+}
+
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpOr {
+    type Output = EOr<Lhs, Rhs>;
+}
+
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpNand {
+    type Output = ENand<Lhs, Rhs>;
+}
+
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpNor {
+    type Output = ENor<Lhs, Rhs>;
+}
+
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpXor {
+    type Output = EXor<Lhs, Rhs>;
+}
+
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpXnor {
+    type Output = EXnor<Lhs, Rhs>;
+}
 
 //
 // Tests

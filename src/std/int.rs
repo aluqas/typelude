@@ -6,10 +6,13 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use typenum::{B0, B1, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
 
-use crate::eval::{EApply2, Eval, Evaluate, Sealed};
+use crate::{
+    eval::{Eval, Evaluate, Sealed},
+    kernel::traits::Apply,
+};
 
 //
-// Evaluable Implementation for typenum Types
+// Eval Implementation for typenum Types
 //
 
 // --- Unsigned Integers ---
@@ -17,7 +20,6 @@ use crate::eval::{EApply2, Eval, Evaluate, Sealed};
 impl Eval for UTerm {
     type Output = Self;
 }
-
 impl<U, B> Eval for UInt<U, B> {
     type Output = Self;
 }
@@ -27,11 +29,9 @@ impl<U, B> Eval for UInt<U, B> {
 impl Eval for Z0 {
     type Output = Self;
 }
-
 impl<U: Unsigned + typenum::NonZero> Eval for PInt<U> {
     type Output = Self;
 }
-
 impl<U: Unsigned + typenum::NonZero> Eval for NInt<U> {
     type Output = Self;
 }
@@ -41,7 +41,6 @@ impl<U: Unsigned + typenum::NonZero> Eval for NInt<U> {
 impl Eval for B0 {
     type Output = Self;
 }
-
 impl Eval for B1 {
     type Output = Self;
 }
@@ -50,31 +49,35 @@ impl Eval for B1 {
 // Arithmetic Functions
 //
 
-use paste::paste;
+use std::marker::PhantomData;
 
-//
-// Arithmetic Functions
-//
+use paste::paste;
 
 macro_rules! define_arith_op {
     ($op_name:ident, $trait:path, $doc:literal) => {
         paste! {
+            // Operator Symbol
             #[doc = $doc]
-            pub struct [<F $op_name>];
-            impl Sealed for [<F $op_name>] {}
+            pub struct [<Op $op_name>];
+            impl Sealed for [<Op $op_name>] {}
 
-            impl<Lhs, Rhs> Evaluable for EApply2<[<F $op_name>], Lhs, Rhs>
+            // Expression Struct
+            pub struct [<E $op_name>]<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+            impl<Lhs, Rhs> Eval for [<E $op_name>]<Lhs, Rhs>
             where
-                Lhs: Evaluable,
-                Rhs: Evaluable,
-                Evaluator<Lhs>: $trait<Evaluator<Rhs>>,
-                <Evaluator<Lhs> as $trait<Evaluator<Rhs>>>::Output: Evaluable,
+                Lhs: Eval,
+                Rhs: Eval,
+                Evaluate<Lhs>: $trait<Evaluate<Rhs>>,
+                <Evaluate<Lhs> as $trait<Evaluate<Rhs>>>::Output: Eval, // Ensure result is well-formed (usually is)
             {
-                type Output = <Evaluator<Lhs> as $trait<Evaluator<Rhs>>>::Output;
+                type Output = <Evaluate<Lhs> as $trait<Evaluate<Rhs>>>::Output;
             }
 
-            // Aliases
-            pub type [<E $op_name>]<Lhs, Rhs> = EApply2<[<F $op_name>], Lhs, Rhs>;
+            // Apply Implementation
+            impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for [<Op $op_name>] {
+                type Output = [<E $op_name>]<Lhs, Rhs>;
+            }
         }
     };
 }

@@ -6,11 +6,11 @@
 use typenum::{Bit, Integer, UInt, UTerm, Unsigned};
 
 use crate::{
-    prelude::KindBool,
-    std::{
-        array::*,
+    kernel::{
+        array::{Cons, TyArray, TyNil},
         bool::{TyFalse, TyTrue},
     },
+    std::bool::KindBool,
 };
 
 // ======================================================================================
