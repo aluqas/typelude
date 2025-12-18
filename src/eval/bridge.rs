@@ -17,6 +17,14 @@ impl<T> Eval for ELit<T> {
     type Output = T;
 }
 
+// Allow ELit<T> to act as a function T
+impl<T, A> Apply<A> for ELit<T>
+where
+    T: Apply<A>,
+{
+    type Output = <T as Apply<A>>::Output;
+}
+
 // =========================================================================
 // EApp: Classic Application (Compatible with existing code)
 // =========================================================================
@@ -59,6 +67,15 @@ where
     Evaluate<Ef>: Apply<Evaluate<Ea>>,
 {
     type Output = <Evaluate<Ef> as Apply<Evaluate<Ea>>>::Output;
+}
+
+// Allow ECall<Ef, Ea> to act as a function if it evaluates to one.
+impl<Ef, Ea, A> Apply<A> for ECall<Ef, Ea>
+where
+    ECall<Ef, Ea>: Eval,
+    Evaluate<ECall<Ef, Ea>>: Apply<A>,
+{
+    type Output = <Evaluate<ECall<Ef, Ea>> as Apply<A>>::Output;
 }
 
 // =========================================================================

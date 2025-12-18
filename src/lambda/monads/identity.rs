@@ -35,7 +35,10 @@ mod tests {
     use crate::lambda::church::{LSucc, LZero};
 
     struct AddOne;
-    impl<X> Apply<X> for AddOne {
+    impl<X> Apply<X> for AddOne
+    where
+        X: crate::lambda::traits::LNat,
+    {
         type Output = LId<LSucc<X>>;
     }
 

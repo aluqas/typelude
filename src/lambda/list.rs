@@ -5,7 +5,6 @@ use super::{
     church::{LFalse, LTrue},
     traits::{LList, LTerm},
 };
-use crate::eval::Eval;
 
 // =========================================================================
 // Scott Encoded List
@@ -148,11 +147,8 @@ impl<F, Z, L: LList> Lambda for LFoldr<F, Z, L>
 where
     L: Apply<LFoldrConsBuilder<F, Z>>,
     <L as Apply<LFoldrConsBuilder<F, Z>>>::Output: Apply<ELit<Z>>,
-    <<L as Apply<LFoldrConsBuilder<F, Z>>>::Output as Apply<ELit<Z>>>::Output: Eval,
 {
-    type Output = crate::eval::Evaluate<
-        <<L as Apply<LFoldrConsBuilder<F, Z>>>::Output as Apply<ELit<Z>>>::Output,
-    >;
+    type Output = <<L as Apply<LFoldrConsBuilder<F, Z>>>::Output as Apply<ELit<Z>>>::Output;
 }
 
 // Cons Builder: \h t. ECall<F, H, Foldr<F, Z, T>>

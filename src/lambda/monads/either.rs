@@ -84,12 +84,18 @@ mod tests {
     use crate::lambda::church::{LSucc, LZero};
 
     struct RightAddOne;
-    impl<X> Apply<X> for RightAddOne {
+    impl<X> Apply<X> for RightAddOne
+    where
+        X: crate::lambda::traits::LNat,
+    {
         type Output = LRight<LSucc<X>>;
     }
 
     struct FailAtStep;
-    impl<X> Apply<X> for FailAtStep {
+    impl<X> Apply<X> for FailAtStep
+    where
+        X: crate::lambda::traits::LNat,
+    {
         type Output = LLeft<LSucc<X>>;
     }
 

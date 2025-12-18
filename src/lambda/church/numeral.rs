@@ -32,11 +32,11 @@ impl Lambda for LZero {
 }
 
 /// Succ: λn f x. f (n f x)
-pub struct LSucc<N>(PhantomData<N>);
+pub struct LSucc<N: LNat>(PhantomData<N>);
 impl<N: LNat> LTerm for LSucc<N> {}
 impl<N: LNat> LNat for LSucc<N> {}
 
-impl<N> Lambda for LSucc<N> {
+impl<N: LNat> Lambda for LSucc<N> {
     type Output = LSucc<N>;
 }
 
@@ -51,11 +51,11 @@ impl<F, X> Apply<X> for LZero1<F> {
     type Output = X;
 }
 
-impl<N, F> Apply<F> for LSucc<N> {
+impl<N: LNat, F> Apply<F> for LSucc<N> {
     type Output = LSucc1<N, F>;
 }
 
-impl<N, F, X> Apply<X> for LSucc1<N, F>
+impl<N: LNat, F, X> Apply<X> for LSucc1<N, F>
 where
     N: Apply<F>,
     <N as Apply<F>>::Output: Apply<X>,
@@ -67,7 +67,7 @@ where
 /// SuccGen: Generates Succ<N> from N
 pub struct LSuccGen;
 
-impl<N> Apply<N> for LSuccGen {
+impl<N: LNat> Apply<N> for LSuccGen {
     type Output = LSucc<N>;
 }
 
@@ -214,6 +214,8 @@ impl<P> Apply<P> for LPredStep
 where
     P: Apply<super::bool::LFalse>,                              // Snd
     <P as Apply<super::bool::LFalse>>::Output: Apply<LSuccGen>, // Succ(Snd)
+    <P as Apply<super::bool::LFalse>>::Output: LNat,
+    LSndEval<P>: LNat,
 {
     type Output = LPair<LSndEval<P>, LSucc<LSndEval<P>>>;
 }

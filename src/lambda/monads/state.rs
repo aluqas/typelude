@@ -143,7 +143,10 @@ mod tests {
     fn test_state_monad() {
         // Scenario: Return(Zero) >>= PutSucc >>= DoGet
         struct PutSucc;
-        impl<X> Apply<X> for PutSucc {
+        impl<X> Apply<X> for PutSucc
+        where
+            X: crate::lambda::traits::LNat,
+        {
             type Output = LPut<LSucc<X>>;
         }
 

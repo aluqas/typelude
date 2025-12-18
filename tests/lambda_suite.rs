@@ -202,11 +202,7 @@ fn test_list_fold_sum() {
     }
     struct OpSum1<X>(PhantomData<X>);
 
-    impl<X, Acc> Apply<Acc> for OpSum1<X>
-    where
-        X: Apply<LSuccGen>,
-        <X as Apply<LSuccGen>>::Output: Apply<Acc>,
-    {
+    impl<X, Acc> Apply<Acc> for OpSum1<X> {
         // Return PureAdd directly, so ECall gets the result value, not the Add expression.
         type Output = LPureAdd<X, Acc>;
     }
