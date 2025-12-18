@@ -12,7 +12,8 @@ pub mod identity;
 pub mod state;
 
 // Re-export all items for backwards compatibility
-pub use cps::*;
-pub use either::*;
-pub use identity::*;
-pub use state::*;
+// Re-export specific items
+pub use cps::LCont;
+pub use either::{LLeft, LRight};
+pub use identity::LId;
+pub use state::{LBindGet, LBindPut, LBindState, LGet, LPut, LReturn, LState};

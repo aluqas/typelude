@@ -39,6 +39,9 @@
 #![allow(incomplete_features)]
 
 // Export typenum for macros
+// Root Facade Exports
+pub use eval::{Eval, Evaluate};
+pub use kernel::traits::Apply;
 pub use typenum;
 
 pub mod eval;
@@ -46,5 +49,4 @@ pub mod kernel;
 pub mod lambda;
 pub mod machine;
 pub mod macros;
-pub mod prelude;
 pub mod std;

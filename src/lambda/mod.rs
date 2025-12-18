@@ -1,19 +1,4 @@
-//! Pure Lambda Calculus Module
-//!
-//! This module implements theoretical foundations of computation using pure type-level programming.
-//! It does not rely on `std` or `typenum` logic, building everything from axioms.
-//!
-//! ## Structure
-//!
-//! - **traits**: Core traits (`Lambda`, `Bind`)
-//! - **church**: Church encodings (Booleans, Numerals, Pairs)
-//! - **monads**: Monad implementations (Identity, State, Either, CPS)
-//! - **ski**: SKI combinators
-//! - **fix**: Y-combinator (fixed-point)
-//! - **curry**: Curry/Uncurry transformations
-//! - **list**: Scott-encoded lists
-//! - **proof**: Type-level theorem proving
-
+// Modules
 pub mod church;
 pub mod curry;
 pub mod fix;
@@ -24,12 +9,20 @@ pub mod ski;
 pub mod thunk;
 pub mod traits;
 
-// Re-export core traits
-// Backwards compatibility: re-export all items from subdirectories
-pub use church::*;
-pub use monads::*;
-pub use thunk::{LForce, LThunk};
-pub use traits::{LBind, Lambda};
+// =========================================================================
+// Facade Exports
+// =========================================================================
 
-// Re-export Apply from kernel for convenience
+// 1. Core Traits
+// 2. Church Encodings (Terms)
+pub use church::*;
+// 3. Lists
+pub use list::{LCons, LFoldr, LHeadOr, LIsEmpty, LNil, LTailOr};
+// 4. Monads
+pub use monads::*;
+// 5. Control
+pub use thunk::{LForce, LThunk};
+pub use traits::{LBind, LBool, LList, LNat, LTerm, Lambda};
+
+// 6. Helpers
 pub use crate::kernel::traits::Apply;
