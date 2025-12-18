@@ -11,10 +11,10 @@ use super::Lambda;
 // =========================================================================
 
 /// Reflexivity witness: `Refl<A>` proves that `A` equals itself.
-pub struct Refl<A>(PhantomData<A>);
+pub struct LRefl<A>(PhantomData<A>);
 
-impl<A> Lambda for Refl<A> {
-    type Output = Refl<A>;
+impl<A> Lambda for LRefl<A> {
+    type Output = LRefl<A>;
 }
 
 // =========================================================================
@@ -23,13 +23,13 @@ impl<A> Lambda for Refl<A> {
 
 /// Marker trait asserting that two types are equal.
 /// If `A: TypeEq<B>`, then `A` and `B` are the same type.
-pub trait TypeEq<B> {
+pub trait LTypeEq<B> {
     type Proof;
 }
 
 /// Any type is equal to itself (reflexivity).
-impl<A> TypeEq<A> for A {
-    type Proof = Refl<A>;
+impl<A> LTypeEq<A> for A {
+    type Proof = LRefl<A>;
 }
 
 // =========================================================================
@@ -37,10 +37,10 @@ impl<A> TypeEq<A> for A {
 // =========================================================================
 
 /// Symmetry witness: transforms `Proof<A, B>` into `Proof<B, A>`.
-pub struct Sym<Proof>(PhantomData<Proof>);
+pub struct LSym<Proof>(PhantomData<Proof>);
 
-impl<A> Lambda for Sym<Refl<A>> {
-    type Output = Refl<A>;
+impl<A> Lambda for LSym<LRefl<A>> {
+    type Output = LRefl<A>;
 }
 
 // =========================================================================
@@ -48,10 +48,10 @@ impl<A> Lambda for Sym<Refl<A>> {
 // =========================================================================
 
 /// Transitivity witness: combines two proofs.
-pub struct Trans<Proof1, Proof2>(PhantomData<(Proof1, Proof2)>);
+pub struct LTrans<Proof1, Proof2>(PhantomData<(Proof1, Proof2)>);
 
-impl<A> Lambda for Trans<Refl<A>, Refl<A>> {
-    type Output = Refl<A>;
+impl<A> Lambda for LTrans<LRefl<A>, LRefl<A>> {
+    type Output = LRefl<A>;
 }
 
 // =========================================================================
@@ -59,7 +59,7 @@ impl<A> Lambda for Trans<Refl<A>, Refl<A>> {
 // =========================================================================
 
 /// Congruence witness: lifts equality through a type constructor.
-pub struct Cong<F, Proof>(PhantomData<(F, Proof)>);
+pub struct LCong<F, Proof>(PhantomData<(F, Proof)>);
 
 // We can't directly express this in Rust without HKT, but we can provide
 // specific instances.
@@ -76,21 +76,21 @@ mod tests {
     #[test]
     fn test_reflexivity() {
         // A is equal to A
-        type Proof = <A as TypeEq<A>>::Proof;
-        assert_type_eq_all!(Proof, Refl<A>);
+        type Proof = <A as LTypeEq<A>>::Proof;
+        assert_type_eq_all!(Proof, LRefl<A>);
     }
 
     #[test]
     fn test_symmetry() {
         // Sym<Refl<A>> = Refl<A>
-        type Proof = <Sym<Refl<A>> as Lambda>::Output;
-        assert_type_eq_all!(Proof, Refl<A>);
+        type Proof = <LSym<LRefl<A>> as Lambda>::Output;
+        assert_type_eq_all!(Proof, LRefl<A>);
     }
 
     #[test]
     fn test_transitivity() {
         // Trans<Refl<A>, Refl<A>> = Refl<A>
-        type Proof = <Trans<Refl<A>, Refl<A>> as Lambda>::Output;
-        assert_type_eq_all!(Proof, Refl<A>);
+        type Proof = <LTrans<LRefl<A>, LRefl<A>> as Lambda>::Output;
+        assert_type_eq_all!(Proof, LRefl<A>);
     }
 }

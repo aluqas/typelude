@@ -24,11 +24,10 @@ pub mod ski;
 pub mod traits;
 
 // Re-export core traits
-pub use traits::{Bind, Lambda};
-
-// Re-export Apply from kernel for convenience
-pub use crate::kernel::traits::Apply;
-
 // Backwards compatibility: re-export all items from subdirectories
 pub use church::*;
 pub use monads::*;
+pub use traits::{LBind, Lambda};
+
+// Re-export Apply from kernel for convenience
+pub use crate::kernel::traits::Apply;

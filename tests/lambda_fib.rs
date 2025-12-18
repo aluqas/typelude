@@ -4,7 +4,7 @@ use typelude::{
     eval::Evaluate,
     lambda::{
         Apply, Lambda,
-        church::{False, Pair, Succ, SuccGen, True, Zero},
+        church::{LFalse, LPair, LSucc, LSuccGen, LTrue, LZero},
     },
 };
 
@@ -23,12 +23,12 @@ pub struct Fib<N>(std::marker::PhantomData<N>);
 impl<N> Lambda for Fib<N>
 where
     N: Apply<FibStep>,
-    <N as Apply<FibStep>>::Output: Apply<Pair<Zero, Succ<Zero>>>,
-    <<N as Apply<FibStep>>::Output as Apply<Pair<Zero, Succ<Zero>>>>::Output: Apply<True>,
+    <N as Apply<FibStep>>::Output: Apply<LPair<LZero, LSucc<LZero>>>,
+    <<N as Apply<FibStep>>::Output as Apply<LPair<LZero, LSucc<LZero>>>>::Output: Apply<LTrue>,
 {
     type Output =
-        <<<N as Apply<FibStep>>::Output as Apply<Pair<Zero, Succ<Zero>>>>::Output as Apply<
-            True,
+        <<<N as Apply<FibStep>>::Output as Apply<LPair<LZero, LSucc<LZero>>>>::Output as Apply<
+            LTrue,
         >>::Output;
 }
 
@@ -36,15 +36,15 @@ pub struct FibStep;
 
 impl<P> Apply<P> for FibStep
 where
-    P: Apply<True> + Apply<False>,
-    <P as Apply<False>>::Output: Apply<SuccGen>,
-    <P as Apply<True>>::Output: Apply<SuccGen>,
-    <<P as Apply<True>>::Output as Apply<SuccGen>>::Output: Apply<<P as Apply<False>>::Output>,
+    P: Apply<LTrue> + Apply<LFalse>,
+    <P as Apply<LFalse>>::Output: Apply<LSuccGen>,
+    <P as Apply<LTrue>>::Output: Apply<LSuccGen>,
+    <<P as Apply<LTrue>>::Output as Apply<LSuccGen>>::Output: Apply<<P as Apply<LFalse>>::Output>,
 {
-    type Output = Pair<
-        <P as Apply<False>>::Output, // Snd p
-        <<<P as Apply<True>>::Output as Apply<typelude::lambda::church::SuccGen>>::Output
-            as Apply<<P as Apply<False>>::Output>>::Output, // Add (Fst p) (Snd p)
+    type Output = LPair<
+        <P as Apply<LFalse>>::Output, // Snd p
+        <<<P as Apply<LTrue>>::Output as Apply<typelude::lambda::church::LSuccGen>>::Output
+            as Apply<<P as Apply<LFalse>>::Output>>::Output, // Add (Fst p) (Snd p)
     >;
 }
 
@@ -53,15 +53,15 @@ fn test_fib_small() {
     use static_assertions::assert_type_eq_all;
 
     // Numbers
-    type One = Succ<Zero>;
-    type Two = Succ<One>;
-    type Three = Succ<Two>;
-    type Four = Succ<Three>;
-    type Five = Succ<Four>;
+    type One = LSucc<LZero>;
+    type Two = LSucc<One>;
+    type Three = LSucc<Two>;
+    type Four = LSucc<Three>;
+    type Five = LSucc<Four>;
 
     // Fib 0 = 0
-    type F0 = Evaluate<Fib<Zero>>;
-    assert_type_eq_all!(F0, Zero);
+    type F0 = Evaluate<Fib<LZero>>;
+    assert_type_eq_all!(F0, LZero);
 
     // Fib 1 = 1
     type F1 = Evaluate<Fib<One>>;

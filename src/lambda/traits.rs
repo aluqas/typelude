@@ -35,7 +35,7 @@ impl<T: Lambda> Eval for T {
 /// `Self` is the Monad (e.g., `Option<T>`).
 /// `F` is the Binder function (`T -> Option<U>`).
 /// `Output` is the result Monad (`Option<U>`).
-pub trait Bind<F> {
+pub trait LBind<F> {
     type Output;
 }
 

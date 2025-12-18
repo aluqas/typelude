@@ -6,44 +6,43 @@
 
 use std::marker::PhantomData;
 
-use crate::kernel::traits::Apply;
-use crate::lambda::Lambda;
+use crate::{kernel::traits::Apply, lambda::Lambda};
 
 // =========================================================================
 // Church Booleans
 // =========================================================================
 
 /// Church True: λt f. t
-pub struct True;
+pub struct LTrue;
 /// Church False: λt f. f
-pub struct False;
+pub struct LFalse;
 
-impl Lambda for True {
-    type Output = True;
+impl Lambda for LTrue {
+    type Output = LTrue;
 }
-impl Lambda for False {
-    type Output = False;
+impl Lambda for LFalse {
+    type Output = LFalse;
 }
 
 // Partial Application States
-pub struct True1<T>(PhantomData<T>);
-pub struct False1<T>(PhantomData<T>);
+pub struct LTrue1<T>(PhantomData<T>);
+pub struct LFalse1<T>(PhantomData<T>);
 
 // --- True Implementation ---
 // λt f. t
-impl<T> Apply<T> for True {
-    type Output = True1<T>;
+impl<T> Apply<T> for LTrue {
+    type Output = LTrue1<T>;
 }
-impl<T, F> Apply<F> for True1<T> {
+impl<T, F> Apply<F> for LTrue1<T> {
     type Output = T;
 }
 
 // --- False Implementation ---
 // λt f. f
-impl<T> Apply<T> for False {
-    type Output = False1<T>;
+impl<T> Apply<T> for LFalse {
+    type Output = LFalse1<T>;
 }
-impl<T, F> Apply<F> for False1<T> {
+impl<T, F> Apply<F> for LFalse1<T> {
     type Output = F;
 }
 
@@ -52,17 +51,17 @@ impl<T, F> Apply<F> for False1<T> {
 // =========================================================================
 
 /// Pure If Alias: ((P T) E)
-pub type PureIf<P, T, E> = <<P as Apply<T>>::Output as Apply<E>>::Output;
+pub type LPureIf<P, T, E> = <<P as Apply<T>>::Output as Apply<E>>::Output;
 
 /// Church If Struct
-pub struct If<P, T, E>(PhantomData<(P, T, E)>);
+pub struct LIf<P, T, E>(PhantomData<(P, T, E)>);
 
-impl<P, T, E> Lambda for If<P, T, E>
+impl<P, T, E> Lambda for LIf<P, T, E>
 where
     P: Apply<T>,
     <P as Apply<T>>::Output: Apply<E>,
 {
-    type Output = PureIf<P, T, E>;
+    type Output = LPureIf<P, T, E>;
 }
 
 #[cfg(test)]
@@ -77,8 +76,8 @@ mod tests {
         struct A;
         struct B;
         // Using Structs
-        type TrueRes = Evaluate<If<True, A, B>>;
-        type FalseRes = Evaluate<If<False, A, B>>;
+        type TrueRes = Evaluate<LIf<LTrue, A, B>>;
+        type FalseRes = Evaluate<LIf<LFalse, A, B>>;
         assert_type_eq_all!(TrueRes, A);
         assert_type_eq_all!(FalseRes, B);
     }

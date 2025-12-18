@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 
 use crate::{
     kernel::traits::Apply,
-    lambda::{Lambda, traits::Bind},
+    lambda::{Lambda, traits::LBind},
 };
 
 // =========================================================================
@@ -18,18 +18,18 @@ use crate::{
 ///
 /// `Cont<R, A>` wraps a computation that takes a continuation and produces `R`.
 /// Here, `F` is the internal function `(A -> R) -> R`.
-pub struct Cont<F>(PhantomData<F>);
+pub struct LCont<F>(PhantomData<F>);
 
-impl<F> Lambda for Cont<F> {
-    type Output = Cont<F>;
+impl<F> Lambda for LCont<F> {
+    type Output = LCont<F>;
 }
 
 /// Run a continuation with a given continuation function.
 ///
 /// `RunCont<C, K>` applies continuation `K: A -> R` to `C: Cont<F>`.
-pub struct RunCont<C, K>(PhantomData<(C, K)>);
+pub struct LRunCont<C, K>(PhantomData<(C, K)>);
 
-impl<F, K> Lambda for RunCont<Cont<F>, K>
+impl<F, K> Lambda for LRunCont<LCont<F>, K>
 where
     F: Apply<K>,
 {
@@ -43,17 +43,17 @@ where
 /// Pure/Return for Cont: wraps a value in a continuation.
 ///
 /// `ContPure<A>` represents `\k. k a`.
-pub struct ContPure<A>(PhantomData<A>);
+pub struct LContPure<A>(PhantomData<A>);
 
-impl<A> Lambda for ContPure<A> {
-    type Output = ContPure<A>;
+impl<A> Lambda for LContPure<A> {
+    type Output = LContPure<A>;
 }
 
 // ContPure<A> is Cont where F = PureF<A>
 // PureF<A> K -> K A
-pub struct PureF<A>(PhantomData<A>);
+pub struct LPureF<A>(PhantomData<A>);
 
-impl<A, K> Apply<K> for PureF<A>
+impl<A, K> Apply<K> for LPureF<A>
 where
     K: Apply<A>,
 {
@@ -67,42 +67,42 @@ where
 /// Bind implementation for Cont.
 ///
 /// `m >>= f` becomes `\k. runCont m (\a. runCont (f a) k)`
-impl<F, G> Bind<G> for Cont<F> {
-    type Output = Cont<BindF<F, G>>;
+impl<F, G> LBind<G> for LCont<F> {
+    type Output = LCont<LBindF<F, G>>;
 }
 
 /// Internal bind function: `\k. runCont m (\a. runCont (f a) k)`
-pub struct BindF<F, G>(PhantomData<(F, G)>);
+pub struct LBindF<F, G>(PhantomData<(F, G)>);
 
-impl<F, G, K> Apply<K> for BindF<F, G>
+impl<F, G, K> Apply<K> for LBindF<F, G>
 where
     // F is the inner function of Cont<F>
     // We need to apply F to a continuation that:
     // 1. Takes A
     // 2. Applies G to A to get Cont<G'>
     // 3. Runs Cont<G'> with K
-    F: Apply<BindK<G, K>>,
+    F: Apply<LBindK<G, K>>,
 {
-    type Output = <F as Apply<BindK<G, K>>>::Output;
+    type Output = <F as Apply<LBindK<G, K>>>::Output;
 }
 
 /// Inner continuation: `\a. runCont (f a) k`
-pub struct BindK<G, K>(PhantomData<(G, K)>);
+pub struct LBindK<G, K>(PhantomData<(G, K)>);
 
-impl<G, K, A> Apply<A> for BindK<G, K>
+impl<G, K, A> Apply<A> for LBindK<G, K>
 where
     G: Apply<A>,                            // f a -> Cont<G'>
-    <G as Apply<A>>::Output: ContRunner<K>, // runCont (f a) k
+    <G as Apply<A>>::Output: LContRunner<K>, // runCont (f a) k
 {
-    type Output = <<G as Apply<A>>::Output as ContRunner<K>>::Output;
+    type Output = <<G as Apply<A>>::Output as LContRunner<K>>::Output;
 }
 
 /// Helper trait to run a Cont with a continuation.
-pub trait ContRunner<K> {
+pub trait LContRunner<K> {
     type Output;
 }
 
-impl<F, K> ContRunner<K> for Cont<F>
+impl<F, K> LContRunner<K> for LCont<F>
 where
     F: Apply<K>,
 {
@@ -128,8 +128,8 @@ mod tests {
     #[test]
     fn test_cont_pure() {
         // ContPure<A> with IdK should give A
-        type Pure = Cont<PureF<A>>;
-        type Result = <PureF<A> as Apply<IdK>>::Output;
+        type Pure = LCont<LPureF<A>>;
+        type Result = <LPureF<A> as Apply<IdK>>::Output;
         assert_type_eq_all!(Result, A);
     }
 
@@ -138,11 +138,11 @@ mod tests {
         // Create a simple transformation: A -> Cont<PureF<B>>
         struct Transform;
         impl Apply<A> for Transform {
-            type Output = Cont<PureF<B>>;
+            type Output = LCont<LPureF<B>>;
         }
 
         // ContPure<A> >>= Transform should give Cont that produces B
-        type Bound = <Cont<PureF<A>> as Bind<Transform>>::Output;
+        type Bound = <LCont<LPureF<A>> as LBind<Transform>>::Output;
 
         // Run with IdK
         type Result = <<Bound as ExtractF>::F as Apply<IdK>>::Output;
@@ -153,7 +153,7 @@ mod tests {
     trait ExtractF {
         type F;
     }
-    impl<F> ExtractF for Cont<F> {
+    impl<F> ExtractF for LCont<F> {
         type F = F;
     }
 }

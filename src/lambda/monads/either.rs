@@ -6,23 +6,23 @@ use std::marker::PhantomData;
 
 use crate::{
     kernel::traits::Apply,
-    lambda::{Lambda, traits::Bind},
+    lambda::{Lambda, traits::LBind},
 };
 
 /// Left<L>: Represents the Error case or Left side of Either.
 /// Church encoding: λl r. l L
-pub struct Left<L>(PhantomData<L>);
+pub struct LLeft<L>(PhantomData<L>);
 
-impl<L> Lambda for Left<L> {
-    type Output = Left<L>;
+impl<L> Lambda for LLeft<L> {
+    type Output = LLeft<L>;
 }
 
 /// Right<R>: Represents the Success case or Right side of Either.
 /// Church encoding: λl r. r R
-pub struct Right<R>(PhantomData<R>);
+pub struct LRight<R>(PhantomData<R>);
 
-impl<R> Lambda for Right<R> {
-    type Output = Right<R>;
+impl<R> Lambda for LRight<R> {
+    type Output = LRight<R>;
 }
 
 // =========================================================================
@@ -30,12 +30,12 @@ impl<R> Lambda for Right<R> {
 // =========================================================================
 
 // Left<L> >>= k  -->  Left<L> (Short-circuit error)
-impl<L, K> Bind<K> for Left<L> {
-    type Output = Left<L>;
+impl<L, K> LBind<K> for LLeft<L> {
+    type Output = LLeft<L>;
 }
 
 // Right<R> >>= k  -->  k R (Apply continuation)
-impl<R, K> Bind<K> for Right<R>
+impl<R, K> LBind<K> for LRight<R>
 where
     K: Apply<R>,
 {
@@ -47,14 +47,14 @@ where
 // =========================================================================
 
 // Left<L> \l -> Left1<L, l>
-impl<L, HandlL> Apply<HandlL> for Left<L> {
-    type Output = Left1<L, HandlL>;
+impl<L, HandlL> Apply<HandlL> for LLeft<L> {
+    type Output = LLeft1<L, HandlL>;
 }
 
-pub struct Left1<L, HandlL>(PhantomData<(L, HandlL)>);
+pub struct LLeft1<L, HandlL>(PhantomData<(L, HandlL)>);
 
 // Left1<L, l> \r -> l L
-impl<L, HandlL, HandlR> Apply<HandlR> for Left1<L, HandlL>
+impl<L, HandlL, HandlR> Apply<HandlR> for LLeft1<L, HandlL>
 where
     HandlL: Apply<L>,
 {
@@ -62,14 +62,14 @@ where
 }
 
 // Right<R> \l -> Right1<R, l>
-impl<R, HandlL> Apply<HandlL> for Right<R> {
-    type Output = Right1<R, HandlL>;
+impl<R, HandlL> Apply<HandlL> for LRight<R> {
+    type Output = LRight1<R, HandlL>;
 }
 
-pub struct Right1<R, HandlL>(PhantomData<(R, HandlL)>);
+pub struct LRight1<R, HandlL>(PhantomData<(R, HandlL)>);
 
 // Right1<R, l> \r -> r R
-impl<R, HandlL, HandlR> Apply<HandlR> for Right1<R, HandlL>
+impl<R, HandlL, HandlR> Apply<HandlR> for LRight1<R, HandlL>
 where
     HandlR: Apply<R>,
 {
@@ -81,36 +81,36 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::lambda::church::{Succ, Zero};
+    use crate::lambda::church::{LSucc, LZero};
 
     struct RightAddOne;
     impl<X> Apply<X> for RightAddOne {
-        type Output = Right<Succ<X>>;
+        type Output = LRight<LSucc<X>>;
     }
 
     struct FailAtStep;
     impl<X> Apply<X> for FailAtStep {
-        type Output = Left<Succ<X>>;
+        type Output = LLeft<LSucc<X>>;
     }
 
     #[test]
     fn test_either_right() {
-        type RightInput = Right<Zero>;
-        type RightResult = <RightInput as Bind<RightAddOne>>::Output;
-        assert_type_eq_all!(RightResult, Right<Succ<Zero>>);
+        type RightInput = LRight<LZero>;
+        type RightResult = <RightInput as LBind<RightAddOne>>::Output;
+        assert_type_eq_all!(RightResult, LRight<LSucc<LZero>>);
     }
 
     #[test]
     fn test_either_left_short_circuit() {
-        type LeftInput = Left<Zero>;
-        type LeftOutput = <LeftInput as Bind<RightAddOne>>::Output;
-        assert_type_eq_all!(LeftOutput, Left<Zero>);
+        type LeftInput = LLeft<LZero>;
+        type LeftOutput = <LeftInput as LBind<RightAddOne>>::Output;
+        assert_type_eq_all!(LeftOutput, LLeft<LZero>);
     }
 
     #[test]
     fn test_either_right_to_left() {
-        type RightToLeftInput = Right<Zero>;
-        type RightToLeftResult = <RightToLeftInput as Bind<FailAtStep>>::Output;
-        assert_type_eq_all!(RightToLeftResult, Left<Succ<Zero>>);
+        type RightToLeftInput = LRight<LZero>;
+        type RightToLeftResult = <RightToLeftInput as LBind<FailAtStep>>::Output;
+        assert_type_eq_all!(RightToLeftResult, LLeft<LSucc<LZero>>);
     }
 }

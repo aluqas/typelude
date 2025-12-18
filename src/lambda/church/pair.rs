@@ -5,50 +5,49 @@
 
 use std::marker::PhantomData;
 
-use super::bool::{False, True};
-use crate::kernel::traits::Apply;
-use crate::lambda::Lambda;
+use super::bool::{LFalse, LTrue};
+use crate::{kernel::traits::Apply, lambda::Lambda};
 
 // =========================================================================
 // Church Pairs
 // =========================================================================
 
 /// Pair: λx y. λf. f x y
-pub struct Pair<X, Y>(PhantomData<(X, Y)>);
+pub struct LPair<X, Y>(PhantomData<(X, Y)>);
 
-impl<X, Y> Lambda for Pair<X, Y> {
-    type Output = Pair<X, Y>;
+impl<X, Y> Lambda for LPair<X, Y> {
+    type Output = LPair<X, Y>;
 }
 
 /// Pure Fst/Snd Aliases
-pub type PureFst<P> = <P as Apply<True>>::Output;
-pub type PureSnd<P> = <P as Apply<False>>::Output;
+pub type LPureFst<P> = <P as Apply<LTrue>>::Output;
+pub type LPureSnd<P> = <P as Apply<LFalse>>::Output;
 
 /// Fst Struct
-pub struct Fst<P>(PhantomData<P>);
+pub struct LFst<P>(PhantomData<P>);
 
-impl<P> Lambda for Fst<P>
+impl<P> Lambda for LFst<P>
 where
-    P: Apply<True>,
+    P: Apply<LTrue>,
 {
-    type Output = PureFst<P>;
+    type Output = LPureFst<P>;
 }
 
 /// Snd Struct
-pub struct Snd<P>(PhantomData<P>);
+pub struct LSnd<P>(PhantomData<P>);
 
-impl<P> Lambda for Snd<P>
+impl<P> Lambda for LSnd<P>
 where
-    P: Apply<False>,
+    P: Apply<LFalse>,
 {
-    type Output = PureSnd<P>;
+    type Output = LPureSnd<P>;
 }
 
 // Helpers for internal use
-pub(super) type SndEval<P> = <P as Apply<False>>::Output;
+pub(super) type LSndEval<P> = <P as Apply<LFalse>>::Output;
 
 // Pair<X, Y> f -> f X Y
-impl<X, Y, F> Apply<F> for Pair<X, Y>
+impl<X, Y, F> Apply<F> for LPair<X, Y>
 where
     F: Apply<X>,
     <F as Apply<X>>::Output: Apply<Y>,

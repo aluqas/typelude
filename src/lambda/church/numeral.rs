@@ -6,45 +6,46 @@
 
 use std::marker::PhantomData;
 
-use super::bool::True;
-use super::pair::{Pair, SndEval};
-use crate::kernel::traits::Apply;
-use crate::lambda::Lambda;
+use super::{
+    bool::LTrue,
+    pair::{LPair, LSndEval},
+};
+use crate::{kernel::traits::Apply, lambda::Lambda};
 
 // =========================================================================
 // Church Numerals
 // =========================================================================
 
 /// Zero: λf x. x
-pub struct Zero;
+pub struct LZero;
 
-impl Lambda for Zero {
-    type Output = Zero;
+impl Lambda for LZero {
+    type Output = LZero;
 }
 
 /// Succ: λn f x. f (n f x)
-pub struct Succ<N>(PhantomData<N>);
+pub struct LSucc<N>(PhantomData<N>);
 
-impl<N> Lambda for Succ<N> {
-    type Output = Succ<N>;
+impl<N> Lambda for LSucc<N> {
+    type Output = LSucc<N>;
 }
 
 // Partial Application States
-pub struct Zero1<F>(PhantomData<F>);
-pub struct Succ1<N, F>(PhantomData<(N, F)>);
+pub struct LZero1<F>(PhantomData<F>);
+pub struct LSucc1<N, F>(PhantomData<(N, F)>);
 
-impl<F> Apply<F> for Zero {
-    type Output = Zero1<F>;
+impl<F> Apply<F> for LZero {
+    type Output = LZero1<F>;
 }
-impl<F, X> Apply<X> for Zero1<F> {
+impl<F, X> Apply<X> for LZero1<F> {
     type Output = X;
 }
 
-impl<N, F> Apply<F> for Succ<N> {
-    type Output = Succ1<N, F>;
+impl<N, F> Apply<F> for LSucc<N> {
+    type Output = LSucc1<N, F>;
 }
 
-impl<N, F, X> Apply<X> for Succ1<N, F>
+impl<N, F, X> Apply<X> for LSucc1<N, F>
 where
     N: Apply<F>,
     <N as Apply<F>>::Output: Apply<X>,
@@ -54,10 +55,10 @@ where
 }
 
 /// SuccGen: Generates Succ<N> from N
-pub struct SuccGen;
+pub struct LSuccGen;
 
-impl<N> Apply<N> for SuccGen {
-    type Output = Succ<N>;
+impl<N> Apply<N> for LSuccGen {
+    type Output = LSucc<N>;
 }
 
 // =========================================================================
@@ -65,51 +66,51 @@ impl<N> Apply<N> for SuccGen {
 // =========================================================================
 
 // --- Add ---
-pub type PureAdd<M, N> = <<M as Apply<SuccGen>>::Output as Apply<N>>::Output;
+pub type LPureAdd<M, N> = <<M as Apply<LSuccGen>>::Output as Apply<N>>::Output;
 
-pub struct Add<M, N>(PhantomData<(M, N)>);
+pub struct LAdd<M, N>(PhantomData<(M, N)>);
 
-impl<M, N> Lambda for Add<M, N>
+impl<M, N> Lambda for LAdd<M, N>
 where
-    M: Apply<SuccGen>,
-    <M as Apply<SuccGen>>::Output: Apply<N>,
+    M: Apply<LSuccGen>,
+    <M as Apply<LSuccGen>>::Output: Apply<N>,
 {
-    type Output = PureAdd<M, N>;
+    type Output = LPureAdd<M, N>;
 }
 
 // --- Mul ---
-pub type PureMul<M, N> = <<M as Apply<AddPart<N>>>::Output as Apply<Zero>>::Output;
+pub type LPureMul<M, N> = <<M as Apply<LAddPart<N>>>::Output as Apply<LZero>>::Output;
 
-pub struct Mul<M, N>(PhantomData<(M, N)>);
+pub struct LMul<M, N>(PhantomData<(M, N)>);
 
-impl<M, N> Lambda for Mul<M, N>
+impl<M, N> Lambda for LMul<M, N>
 where
-    M: Apply<AddPart<N>>,
-    <M as Apply<AddPart<N>>>::Output: Apply<Zero>,
+    M: Apply<LAddPart<N>>,
+    <M as Apply<LAddPart<N>>>::Output: Apply<LZero>,
 {
-    type Output = PureMul<M, N>;
+    type Output = LPureMul<M, N>;
 }
 
-pub struct AddPart<N>(PhantomData<N>);
+pub struct LAddPart<N>(PhantomData<N>);
 
-impl<N, X> Apply<X> for AddPart<N>
+impl<N, X> Apply<X> for LAddPart<N>
 where
-    N: Apply<SuccGen>,
-    <N as Apply<SuccGen>>::Output: Apply<X>,
+    N: Apply<LSuccGen>,
+    <N as Apply<LSuccGen>>::Output: Apply<X>,
 {
-    type Output = PureAdd<N, X>;
+    type Output = LPureAdd<N, X>;
 }
 
 // --- Exp ---
-pub type PureExp<M, N> = <N as Apply<M>>::Output;
+pub type LPureExp<M, N> = <N as Apply<M>>::Output;
 
-pub struct Exp<M, N>(PhantomData<(M, N)>);
+pub struct LExp<M, N>(PhantomData<(M, N)>);
 
-impl<M, N> Lambda for Exp<M, N>
+impl<M, N> Lambda for LExp<M, N>
 where
     N: Apply<M>,
 {
-    type Output = PureExp<M, N>;
+    type Output = LPureExp<M, N>;
 }
 
 // =========================================================================
@@ -117,52 +118,53 @@ where
 // =========================================================================
 
 // --- Pred ---
-pub type PurePred<N> =
-    super::pair::PureFst<<<N as Apply<PredStep>>::Output as Apply<Pair<Zero, Zero>>>::Output>;
+pub type LPurePred<N> = super::pair::LPureFst<
+    <<N as Apply<LPredStep>>::Output as Apply<LPair<LZero, LZero>>>::Output,
+>;
 
-pub struct Pred<N>(PhantomData<N>);
+pub struct LPred<N>(PhantomData<N>);
 
-impl<N> Lambda for Pred<N>
+impl<N> Lambda for LPred<N>
 where
-    N: Apply<PredStep>,
-    <N as Apply<PredStep>>::Output: Apply<Pair<Zero, Zero>>,
-    <<N as Apply<PredStep>>::Output as Apply<Pair<Zero, Zero>>>::Output: Apply<True>,
+    N: Apply<LPredStep>,
+    <N as Apply<LPredStep>>::Output: Apply<LPair<LZero, LZero>>,
+    <<N as Apply<LPredStep>>::Output as Apply<LPair<LZero, LZero>>>::Output: Apply<LTrue>,
 {
-    type Output = PurePred<N>;
+    type Output = LPurePred<N>;
 }
 
-pub struct PredStep;
+pub struct LPredStep;
 
-impl<P> Apply<P> for PredStep
+impl<P> Apply<P> for LPredStep
 where
-    P: Apply<super::bool::False>,               // Snd
-    <P as Apply<super::bool::False>>::Output: Apply<SuccGen>, // Succ(Snd)
+    P: Apply<super::bool::LFalse>,                               // Snd
+    <P as Apply<super::bool::LFalse>>::Output: Apply<LSuccGen>, // Succ(Snd)
 {
-    type Output = Pair<SndEval<P>, Succ<SndEval<P>>>;
+    type Output = LPair<LSndEval<P>, LSucc<LSndEval<P>>>;
 }
 
 // --- Sub ---
-pub type PureSub<M, N> = <<N as Apply<PredGen>>::Output as Apply<M>>::Output;
+pub type LPureSub<M, N> = <<N as Apply<LPredGen>>::Output as Apply<M>>::Output;
 
-pub struct Sub<M, N>(PhantomData<(M, N)>);
+pub struct LSub<M, N>(PhantomData<(M, N)>);
 
-impl<M, N> Lambda for Sub<M, N>
+impl<M, N> Lambda for LSub<M, N>
 where
-    N: Apply<PredGen>,
-    <N as Apply<PredGen>>::Output: Apply<M>,
+    N: Apply<LPredGen>,
+    <N as Apply<LPredGen>>::Output: Apply<M>,
 {
-    type Output = PureSub<M, N>;
+    type Output = LPureSub<M, N>;
 }
 
-pub struct PredGen;
+pub struct LPredGen;
 
-impl<N> Apply<N> for PredGen
+impl<N> Apply<N> for LPredGen
 where
-    N: Apply<PredStep>,
-    <N as Apply<PredStep>>::Output: Apply<Pair<Zero, Zero>>,
-    <<N as Apply<PredStep>>::Output as Apply<Pair<Zero, Zero>>>::Output: Apply<True>,
+    N: Apply<LPredStep>,
+    <N as Apply<LPredStep>>::Output: Apply<LPair<LZero, LZero>>,
+    <<N as Apply<LPredStep>>::Output as Apply<LPair<LZero, LZero>>>::Output: Apply<LTrue>,
 {
-    type Output = PurePred<N>;
+    type Output = LPurePred<N>;
 }
 
 #[cfg(test)]
@@ -175,8 +177,8 @@ mod tests {
     type App<F, A> = <F as Apply<A>>::Output;
 
     // Numbers
-    type One = Succ<Zero>;
-    type Two = Succ<One>;
+    type One = LSucc<LZero>;
+    type Two = LSucc<One>;
 
     #[test]
     fn test_church_numerals_basic() {
@@ -187,7 +189,7 @@ mod tests {
             type Output = F1<T>;
         }
 
-        type ResZero = App<App<Zero, F>, X>;
+        type ResZero = App<App<LZero, F>, X>;
         assert_type_eq_all!(ResZero, X);
     }
 
@@ -200,7 +202,7 @@ mod tests {
             type Output = F1<T>;
         }
 
-        type Sum = Evaluate<Add<One, One>>;
+        type Sum = Evaluate<LAdd<One, One>>;
         type ResSum = App<App<Sum, F>, X>;
         assert_type_eq_all!(ResSum, F1<F1<X>>);
     }

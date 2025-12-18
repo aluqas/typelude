@@ -14,26 +14,26 @@ use super::{Apply, Lambda};
 /// Curry a function that takes a tuple into a curried function.
 ///
 /// `Curry<F>` transforms `F: Apply<(A, B)>` into a two-argument curried form.
-pub struct Curry<F>(PhantomData<F>);
+pub struct LCurry<F>(PhantomData<F>);
 
-impl<F> Lambda for Curry<F> {
-    type Output = Curry<F>;
+impl<F> Lambda for LCurry<F> {
+    type Output = LCurry<F>;
 }
 
 /// Partially applied Curry: waiting for second argument.
-pub struct Curry1<F, A>(PhantomData<(F, A)>);
+pub struct LCurry1<F, A>(PhantomData<(F, A)>);
 
-impl<F, A> Lambda for Curry1<F, A> {
-    type Output = Curry1<F, A>;
+impl<F, A> Lambda for LCurry1<F, A> {
+    type Output = LCurry1<F, A>;
 }
 
 // Curry<F> A -> Curry1<F, A>
-impl<F, A> Apply<A> for Curry<F> {
-    type Output = Curry1<F, A>;
+impl<F, A> Apply<A> for LCurry<F> {
+    type Output = LCurry1<F, A>;
 }
 
 // Curry1<F, A> B -> F(A, B)
-impl<F, A, B> Apply<B> for Curry1<F, A>
+impl<F, A, B> Apply<B> for LCurry1<F, A>
 where
     F: Apply<(A, B)>,
 {
@@ -47,14 +47,14 @@ where
 /// Uncurry a curried function into one that takes a tuple.
 ///
 /// `Uncurry<F>` transforms `F: Apply<A, Output: Apply<B>>` into tuple form.
-pub struct Uncurry<F>(PhantomData<F>);
+pub struct LUncurry<F>(PhantomData<F>);
 
-impl<F> Lambda for Uncurry<F> {
-    type Output = Uncurry<F>;
+impl<F> Lambda for LUncurry<F> {
+    type Output = LUncurry<F>;
 }
 
 // Uncurry<F> (A, B) -> (F A) B
-impl<F, A, B> Apply<(A, B)> for Uncurry<F>
+impl<F, A, B> Apply<(A, B)> for LUncurry<F>
 where
     F: Apply<A>,
     <F as Apply<A>>::Output: Apply<B>,
@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn test_curry() {
         // Curry<TupleAdd> X Y == TupleResult<X, Y>
-        type Curried = Curry<TupleAdd>;
+        type Curried = LCurry<TupleAdd>;
         type Step1 = <Curried as Apply<X>>::Output;
         type Result = <Step1 as Apply<Y>>::Output;
         assert_type_eq_all!(Result, TupleResult<X, Y>);
@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn test_uncurry() {
         // Uncurry<CurriedAdd> (X, Y) == CurriedResult<X, Y>
-        type Uncurried = Uncurry<CurriedAdd>;
+        type Uncurried = LUncurry<CurriedAdd>;
         type Result = <Uncurried as Apply<(X, Y)>>::Output;
         assert_type_eq_all!(Result, CurriedResult<X, Y>);
     }
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn test_curry_uncurry_roundtrip() {
         // Uncurry<Curry<TupleAdd>> (X, Y) == TupleResult<X, Y>
-        type Roundtrip = Uncurry<Curry<TupleAdd>>;
+        type Roundtrip = LUncurry<LCurry<TupleAdd>>;
         type Result = <Roundtrip as Apply<(X, Y)>>::Output;
         assert_type_eq_all!(Result, TupleResult<X, Y>);
     }

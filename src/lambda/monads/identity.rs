@@ -6,21 +6,21 @@ use std::marker::PhantomData;
 
 use crate::{
     kernel::traits::Apply,
-    lambda::{Lambda, traits::Bind},
+    lambda::{Lambda, traits::LBind},
 };
 
 /// Identity Monad: Id<T>
 ///
 /// `Id<T>` allows treating a plain value `T` as a Monad.
-pub struct Id<T>(PhantomData<T>);
+pub struct LId<T>(PhantomData<T>);
 
-impl<T> Lambda for Id<T> {
-    type Output = Id<T>;
+impl<T> Lambda for LId<T> {
+    type Output = LId<T>;
 }
 
 // Bind: Id<T> >>= F  ->  F T
 // F must be a function that takes T and returns Id<U>.
-impl<T, F> Bind<F> for Id<T>
+impl<T, F> LBind<F> for LId<T>
 where
     F: Apply<T>,
 {
@@ -32,17 +32,17 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::lambda::church::{Succ, Zero};
+    use crate::lambda::church::{LSucc, LZero};
 
     struct AddOne;
     impl<X> Apply<X> for AddOne {
-        type Output = Id<Succ<X>>;
+        type Output = LId<LSucc<X>>;
     }
 
     #[test]
     fn test_identity_monad() {
-        type IdInput = Id<Zero>;
-        type IdResult = <IdInput as Bind<AddOne>>::Output;
-        assert_type_eq_all!(IdResult, Id<Succ<Zero>>);
+        type IdInput = LId<LZero>;
+        type IdResult = <IdInput as LBind<AddOne>>::Output;
+        assert_type_eq_all!(IdResult, LId<LSucc<LZero>>);
     }
 }

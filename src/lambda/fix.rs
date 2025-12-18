@@ -9,17 +9,17 @@ use super::{Apply, Lambda};
 /// The Fixed-Point Combinator `Fix`
 ///
 /// Rule: Fix<F> x = (F Fix<F>) x
-pub struct Fix<F>(PhantomData<F>);
-impl<F> Lambda for Fix<F> {
-    type Output = Fix<F>;
+pub struct LFix<F>(PhantomData<F>);
+impl<F> Lambda for LFix<F> {
+    type Output = LFix<F>;
 }
 
-impl<F, X> Apply<X> for Fix<F>
+impl<F, X> Apply<X> for LFix<F>
 where
-    F: Apply<Fix<F>>,
-    <F as Apply<Fix<F>>>::Output: Apply<X>,
+    F: Apply<LFix<F>>,
+    <F as Apply<LFix<F>>>::Output: Apply<X>,
 {
-    type Output = <<F as Apply<Fix<F>>>::Output as Apply<X>>::Output;
+    type Output = <<F as Apply<LFix<F>>>::Output as Apply<X>>::Output;
 }
 
 #[cfg(test)]
@@ -27,7 +27,7 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::lambda::church::{False, PureIf, True};
+    use crate::lambda::church::{LFalse, LPureIf, LTrue};
 
     type App<F, A> = <F as Apply<A>>::Output;
 
@@ -52,23 +52,23 @@ mod tests {
 
         impl<R, Arg> Apply<Arg> for LoopBody1<R>
         where
-            Arg: Apply<True>,
-            <Arg as Apply<True>>::Output: Apply<Thunk<R, True>>,
+            Arg: Apply<LTrue>,
+            <Arg as Apply<LTrue>>::Output: Apply<Thunk<R, LTrue>>,
         {
             // Use PureIf alias
-            type Output = PureIf<Arg, True, Thunk<R, True>>;
+            type Output = LPureIf<Arg, LTrue, Thunk<R, LTrue>>;
         }
 
-        type F = Fix<LoopBody>;
+        type F = LFix<LoopBody>;
 
-        type Res1 = App<F, True>;
-        assert_type_eq_all!(Res1, True);
+        type Res1 = App<F, LTrue>;
+        assert_type_eq_all!(Res1, LTrue);
 
-        type Res2 = App<F, False>;
-        assert_type_eq_all!(Res2, Thunk<F, True>);
+        type Res2 = App<F, LFalse>;
+        assert_type_eq_all!(Res2, Thunk<F, LTrue>);
 
         type Res3 = App<Res2, Force>;
-        assert_type_eq_all!(Res3, True);
+        assert_type_eq_all!(Res3, LTrue);
     }
 
     #[test]
@@ -96,7 +96,7 @@ mod tests {
             type Output = <R as Apply<P>>::Output;
         }
 
-        type RecFunc = Fix<Unroll>;
+        type RecFunc = LFix<Unroll>;
 
         assert_type_eq_all!(App<RecFunc, Z>, Done);
         assert_type_eq_all!(App<RecFunc, S<Z>>, Done);
