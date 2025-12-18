@@ -4,11 +4,14 @@
 //! It does not rely on `std` or `typenum` logic, building everything from axioms.
 
 pub mod church;
+pub mod cps;
+pub mod curry;
 pub mod either;
 pub mod fix;
 pub mod identity;
 pub mod list;
 pub mod monad;
+pub mod proof;
 pub mod ski;
 pub mod state;
 pub mod traits;
