@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use super::Apply;
+use super::{Apply, Lambda};
 
 // =========================================================================
 // The Fundamental Combinators
@@ -10,16 +10,25 @@ use super::Apply;
 /// Term: \x. x
 /// Rule: I x -> x
 pub struct I;
+impl Lambda for I {
+    type Output = I;
+}
 
 /// The Constant Combinator `K`
 /// Term: \x y. x
 /// Rule: K x y -> x
 pub struct K;
+impl Lambda for K {
+    type Output = K;
+}
 
 /// The Substitution Combinator `S`
 /// Term: \x y z. (x z) (y z)
 /// Rule: S x y z -> (x z) (y z)
 pub struct S;
+impl Lambda for S {
+    type Output = S;
+}
 
 // =========================================================================
 // Partial Application States (The "Pending" Computation)
@@ -27,12 +36,21 @@ pub struct S;
 
 /// K applied to one argument: `K x`
 pub struct K1<X>(PhantomData<X>);
+impl<X> Lambda for K1<X> {
+    type Output = K1<X>;
+}
 
 /// S applied to one argument: `S x`
 pub struct S1<X>(PhantomData<X>);
+impl<X> Lambda for S1<X> {
+    type Output = S1<X>;
+}
 
 /// S applied to two arguments: `S x y`
 pub struct S2<X, Y>(PhantomData<(X, Y)>);
+impl<X, Y> Lambda for S2<X, Y> {
+    type Output = S2<X, Y>;
+}
 
 // =========================================================================
 // Reduction Rules (The "Logic")

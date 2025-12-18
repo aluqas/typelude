@@ -1,10 +1,14 @@
+//! State Monad
+//!
+//! `State<F>` wraps a function `S -> (A, S)` for stateful computations.
+
 use std::marker::PhantomData;
 
 use crate::{
     kernel::traits::Apply,
     lambda::{
         church::{False, Pair, True},
-        monad::Bind,
+        traits::Bind,
     },
 };
 
