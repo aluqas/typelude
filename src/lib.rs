@@ -43,6 +43,7 @@ pub use typenum;
 
 pub mod eval;
 pub mod kernel;
+pub mod lambda;
 pub mod machine;
 pub mod macros;
 pub mod prelude;
