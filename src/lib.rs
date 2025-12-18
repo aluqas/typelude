@@ -37,6 +37,7 @@
 #![feature(generic_const_exprs)]
 #![feature(inherent_associated_types)]
 #![allow(incomplete_features)]
+#![recursion_limit = "2048"]
 
 // Export typenum for macros
 // Root Facade Exports

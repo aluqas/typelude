@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
 use super::{
-    Apply, Lambda,
+    Lambda, LApp,
     church::{LFalse, LTrue},
     traits::{LList, LTerm},
 };
+use crate::eval::{Eval, Evaluate};
 
 // =========================================================================
 // Scott Encoded List
@@ -18,47 +19,62 @@ use super::{
 
 /// Nil: \c n. n
 pub struct LNil;
-impl Lambda for LNil {
-    type Output = LNil;
-}
+impl Lambda for LNil { type Output = LNil; }
 impl LTerm for LNil {}
 impl LList for LNil {}
 
 /// Cons: \h t. \c n. c h t
-pub struct LCons<H, T: LList>(PhantomData<(H, T)>);
-impl<H, T: LList> Lambda for LCons<H, T> {
-    type Output = LCons<H, T>;
-}
-impl<H, T: LList> LTerm for LCons<H, T> {}
-impl<H, T: LList> LList for LCons<H, T> {}
+pub struct LCons;
+impl Lambda for LCons { type Output = LCons; }
+
+// Cons H -> Cons1<H>
+pub struct LCons1<H>(PhantomData<H>);
+impl<H> Lambda for LCons1<H> { type Output = LCons1<H>; }
+
+impl<H> Lambda for LApp<LCons, H>
+where H: Eval
+{ type Output = LCons1<Evaluate<H>>; }
+
+// Cons1<H> T -> Cons2<H, T> (The list value)
+pub struct LCons2<H, T>(PhantomData<(H, T)>);
+impl<H, T> Lambda for LCons2<H, T> { type Output = LCons2<H, T>; }
+impl<H, T> LTerm for LCons2<H, T> {}
+impl<H, T> LList for LCons2<H, T> {} // Only if T is list? Not necessarily for encoding, but good for marking.
+
+impl<H, T> Lambda for LApp<LCons1<H>, T>
+where T: Eval
+{ type Output = LCons2<H, Evaluate<T>>; }
+
 
 // --- Nil Implementation ---
 // Nil c -> Nil1<c>
-impl<C> Apply<C> for LNil {
-    type Output = Nil1<C>;
-}
+impl<C> Lambda for LApp<LNil, C> where C: Eval { type Output = Nil1<Evaluate<C>>; }
 pub struct Nil1<C>(PhantomData<C>);
+impl<C> Lambda for Nil1<C> { type Output = Nil1<C>; }
 
 // Nil1<c> n -> n
-impl<C, N> Apply<N> for Nil1<C> {
-    type Output = N;
-}
+impl<C, N> Lambda for LApp<Nil1<C>, N>
+where N: Eval
+{ type Output = Evaluate<N>; }
 
 // --- Cons Implementation ---
-// Cons<H, T> c -> Cons1<H, T, c>
-impl<H, T: LList, C> Apply<C> for LCons<H, T> {
-    type Output = Cons1<H, T, C>;
-}
-
-pub struct Cons1<H, T, C>(PhantomData<(H, T, C)>);
-
-// Cons1<H, T, c> n -> c H T
-impl<H, T, C, N> Apply<N> for Cons1<H, T, C>
+// Cons2<H, T> C -> ConsApply1<H, T, C>
+impl<H, T, C> Lambda for LApp<LCons2<H, T>, C>
 where
-    C: Apply<H>,
-    <C as Apply<H>>::Output: Apply<T>,
+    H: Eval, T: Eval, C: Eval
+{ type Output = ConsApply1<H, T, Evaluate<C>>; }
+
+pub struct ConsApply1<H, T, C>(PhantomData<(H, T, C)>);
+impl<H, T, C> Lambda for ConsApply1<H, T, C> { type Output = ConsApply1<H, T, C>; }
+
+// ConsApply1<H, T, C> N -> C H T
+impl<H, T, C, N> Lambda for LApp<ConsApply1<H, T, C>, N>
+where
+    H: Eval, T: Eval, C: Eval, N: Eval,
+    LApp<C, H>: Lambda,
+    LApp<<LApp<C, H> as Lambda>::Output, T>: Lambda,
 {
-    type Output = <<C as Apply<H>>::Output as Apply<T>>::Output;
+    type Output = <LApp<<LApp<C, H> as Lambda>::Output, T> as Lambda>::Output;
 }
 
 // =========================================================================
@@ -66,48 +82,55 @@ where
 // =========================================================================
 
 /// Uncons l on_cons on_nil
-pub type LUncons<L, OnCons, OnNil> = <<L as Apply<OnCons>>::Output as Apply<OnNil>>::Output;
+// LApp<LApp<L, OnCons>, OnNil>
+pub type LPureUncons<L, OnCons, OnNil> = Evaluate<LApp<LApp<L, OnCons>, OnNil>>;
+
 
 // Helper K: \x y. x
 pub struct K;
-impl<X> Apply<X> for K {
-    type Output = K1<X>;
-}
+impl Lambda for K { type Output = K; }
+impl<X> Lambda for LApp<K, X> where X: Eval { type Output = K1<Evaluate<X>>; }
 pub struct K1<X>(PhantomData<X>);
-impl<X, Y> Apply<Y> for K1<X> {
-    type Output = X;
-}
+impl<X> Lambda for K1<X> { type Output = K1<X>; }
+impl<X, Y> Lambda for LApp<K1<X>, Y> where Y: Eval, X: Eval { type Output = Evaluate<X>; }
 
-// Helper K_I: \x y. y (which is False)
-pub struct KI;
-impl<X> Apply<X> for KI {
-    type Output = KI1;
-}
-pub struct KI1;
-impl<Y> Apply<Y> for KI1 {
-    type Output = Y;
-}
+// Helper K_I: \x y. y (False)
+// Use LFalse from bool.rs?
+// But list.rs shouldn't depend on bool.rs details ideally, but standard combinators are standard.
+// Let's reuse LFalse.
 
-/// Head: Extract head or return Default
-pub struct LHeadOr<L, Default>(PhantomData<(L, Default)>);
+/// HeadOr: \l d. l K d
+pub struct LHeadOr;
+impl Lambda for LHeadOr { type Output = LHeadOr; }
 
-impl<L: LList, D> Lambda for LHeadOr<L, D>
+impl<L> Lambda for LApp<LHeadOr, L> where L: Eval { type Output = LHeadOr1<Evaluate<L>>; }
+pub struct LHeadOr1<L>(PhantomData<L>);
+impl<L> Lambda for LHeadOr1<L> { type Output = LHeadOr1<L>; }
+
+impl<L, D> Lambda for LApp<LHeadOr1<L>, D>
 where
-    L: Apply<K>,
-    <L as Apply<K>>::Output: Apply<D>,
+    L: Eval, D: Eval,
+    LApp<L, K>: Lambda,
+    LApp<<LApp<L, K> as Lambda>::Output, D>: Lambda,
 {
-    type Output = LUncons<L, K, D>;
+    type Output = <LApp<<LApp<L, K> as Lambda>::Output, D> as Lambda>::Output;
 }
 
-/// Tail: Extract tail or return Default
-pub struct LTailOr<L, Default>(PhantomData<(L, Default)>);
+/// TailOr: \l d. l K_I d
+pub struct LTailOr;
+impl Lambda for LTailOr { type Output = LTailOr; }
 
-impl<L: LList, D> Lambda for LTailOr<L, D>
+impl<L> Lambda for LApp<LTailOr, L> where L: Eval { type Output = LTailOr1<Evaluate<L>>; }
+pub struct LTailOr1<L>(PhantomData<L>);
+impl<L> Lambda for LTailOr1<L> { type Output = LTailOr1<L>; }
+
+impl<L, D> Lambda for LApp<LTailOr1<L>, D>
 where
-    L: Apply<KI>,
-    <L as Apply<KI>>::Output: Apply<D>,
+    L: Eval, D: Eval,
+    LApp<L, LFalse>: Lambda,
+    LApp<<LApp<L, LFalse> as Lambda>::Output, D>: Lambda,
 {
-    type Output = LUncons<L, KI, D>;
+    type Output = <LApp<<LApp<L, LFalse> as Lambda>::Output, D> as Lambda>::Output;
 }
 
 // =========================================================================
@@ -115,22 +138,28 @@ where
 // =========================================================================
 
 /// IsEmpty: \l. l (\h t. False) True
-pub struct LIsEmpty<L>(PhantomData<L>);
+pub struct LIsEmpty;
+impl Lambda for LIsEmpty { type Output = LIsEmpty; }
 
-impl<L: LList> Lambda for LIsEmpty<L>
+impl<L> Lambda for LApp<LIsEmpty, L>
 where
-    L: Apply<LConstFalse>,
-    <L as Apply<LConstFalse>>::Output: Apply<LTrue>,
+    L: Eval,
+    LApp<L, LConstFalse>: Lambda,
+    LApp<<LApp<L, LConstFalse> as Lambda>::Output, LTrue>: Lambda,
 {
-    type Output = LUncons<L, LConstFalse, LTrue>;
+    type Output = <LApp<<LApp<L, LConstFalse> as Lambda>::Output, LTrue> as Lambda>::Output;
 }
 
 pub struct LConstFalse;
-impl<X> Apply<X> for LConstFalse {
+impl Lambda for LConstFalse { type Output = LConstFalse; }
+
+impl<X> Lambda for LApp<LConstFalse, X> where X: Eval {
     type Output = LConstFalse1;
 }
 pub struct LConstFalse1;
-impl<Y> Apply<Y> for LConstFalse1 {
+impl Lambda for LConstFalse1 { type Output = LConstFalse1; }
+
+impl<Y> Lambda for LApp<LConstFalse1, Y> where Y: Eval {
     type Output = LFalse;
 }
 
@@ -138,30 +167,61 @@ impl<Y> Apply<Y> for LConstFalse1 {
 // Foldr (Right Fold)
 // =========================================================================
 
-use crate::eval::{ECall, ELit};
-
 /// Foldr f z l
-pub struct LFoldr<F, Z, L>(PhantomData<(F, Z, L)>);
+pub struct LFoldr;
+impl Lambda for LFoldr { type Output = LFoldr; }
 
-impl<F, Z, L: LList> Lambda for LFoldr<F, Z, L>
+// Foldr F -> Foldr1<F>
+impl<F> Lambda for LApp<LFoldr, F> where F: Eval { type Output = LFoldr1<Evaluate<F>>; }
+pub struct LFoldr1<F>(PhantomData<F>);
+impl<F> Lambda for LFoldr1<F> { type Output = LFoldr1<F>; }
+
+// Foldr1<F> Z -> Foldr2<F, Z>
+impl<F, Z> Lambda for LApp<LFoldr1<F>, Z> where Z: Eval { type Output = LFoldr2<F, Evaluate<Z>>; }
+pub struct LFoldr2<F, Z>(PhantomData<(F, Z)>);
+impl<F, Z> Lambda for LFoldr2<F, Z> { type Output = LFoldr2<F, Z>; }
+
+// Foldr2<F, Z> L -> Result
+impl<F, Z, L> Lambda for LApp<LFoldr2<F, Z>, L>
 where
-    L: Apply<LFoldrConsBuilder<F, Z>>,
-    <L as Apply<LFoldrConsBuilder<F, Z>>>::Output: Apply<ELit<Z>>,
+    F: Eval + Clone, Z: Eval + Clone, L: Eval,
+    // L (ConsBuilder F Z) Z
+    LApp<L, LFoldrConsBuilder<F, Z>>: Lambda,
+    LApp<<LApp<L, LFoldrConsBuilder<F, Z>> as Lambda>::Output, Z>: Lambda,
 {
-    type Output = <<L as Apply<LFoldrConsBuilder<F, Z>>>::Output as Apply<ELit<Z>>>::Output;
+    type Output = <LApp<<LApp<L, LFoldrConsBuilder<F, Z>> as Lambda>::Output, Z> as Lambda>::Output;
 }
 
-// Cons Builder: \h t. ECall<F, H, Foldr<F, Z, T>>
+// Cons Builder: \h t. F h (Foldr F Z t)
 pub struct LFoldrConsBuilder<F, Z>(PhantomData<(F, Z)>);
+impl<F, Z> Lambda for LFoldrConsBuilder<F, Z> { type Output = LFoldrConsBuilder<F, Z>; }
 
-impl<F, Z, H> Apply<H> for LFoldrConsBuilder<F, Z> {
-    type Output = LFoldrConsBuilder2<F, Z, H>;
-}
+// Builder<F, Z> H -> Builder1<F, Z, H>
+impl<F, Z, H> Lambda for LApp<LFoldrConsBuilder<F, Z>, H>
+where F: Eval, Z: Eval, H: Eval
+{ type Output = LFoldrConsBuilder1<F, Z, Evaluate<H>>; }
 
-pub struct LFoldrConsBuilder2<F, Z, H>(PhantomData<(F, Z, H)>);
+pub struct LFoldrConsBuilder1<F, Z, H>(PhantomData<(F, Z, H)>);
+impl<F, Z, H> Lambda for LFoldrConsBuilder1<F, Z, H> { type Output = LFoldrConsBuilder1<F, Z, H>; }
 
-impl<F, Z, H, T> Apply<T> for LFoldrConsBuilder2<F, Z, H> {
-    type Output = ECall<ECall<ELit<F>, ELit<H>>, LFoldr<F, Z, T>>;
+// Builder1<F, Z, H> T -> F H (Foldr F Z T)
+impl<F, Z, H, T> Lambda for LApp<LFoldrConsBuilder1<F, Z, H>, T>
+where
+    F: Eval + Clone, Z: Eval + Clone, H: Eval, T: Eval,
+    // Recurse: Foldr F Z T
+    LApp<LFoldr, F>: Lambda, // Foldr1
+    LApp<<LApp<LFoldr, F> as Lambda>::Output, Z>: Lambda, // Foldr2
+    LApp<<LApp<<LApp<LFoldr, F> as Lambda>::Output, Z> as Lambda>::Output, T>: Lambda, // Result
+
+    // Apply F H
+    LApp<F, H>: Lambda,
+    // Apply (F H) to Recurse Result
+    LApp<<LApp<F, H> as Lambda>::Output, <LApp<<LApp<<LApp<LFoldr, F> as Lambda>::Output, Z> as Lambda>::Output, T> as Lambda>::Output>: Lambda,
+{
+    type Output = <LApp<
+        <LApp<F, H> as Lambda>::Output,
+        <LApp<<LApp<<LApp<LFoldr, F> as Lambda>::Output, Z> as Lambda>::Output, T> as Lambda>::Output
+    > as Lambda>::Output;
 }
 
 #[cfg(test)]
@@ -169,30 +229,38 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::eval::Evaluate;
+
+    // Helper alias
+    type App<F, A> = Evaluate<LApp<F, A>>;
 
     // Test utilities
+    #[derive(Clone)]
     struct E1;
+    impl Lambda for E1 { type Output = E1; }
+    #[derive(Clone)]
     struct E2;
+    impl Lambda for E2 { type Output = E2; }
+    #[derive(Clone)]
     struct DefaultVal;
+    impl Lambda for DefaultVal { type Output = DefaultVal; }
 
     #[test]
     fn test_list_construction_and_destructuring() {
         type L0 = LNil;
-        type L1 = LCons<E1, L0>;
-        type L2 = LCons<E2, L1>;
+        type L1 = App<App<LCons, E1>, L0>; // Cons E1 Nil
+        type L2 = App<App<LCons, E2>, L1>; // Cons E2 (Cons E1 Nil)
 
         // IsEmpty
-        assert_type_eq_all!(Evaluate<LIsEmpty<L0>>, LTrue);
-        assert_type_eq_all!(Evaluate<LIsEmpty<L1>>, LFalse);
+        assert_type_eq_all!(App<LIsEmpty, L0>, LTrue);
+        assert_type_eq_all!(App<LIsEmpty, L1>, LFalse);
 
         // HeadOr
-        assert_type_eq_all!(Evaluate<LHeadOr<L0, DefaultVal>>, DefaultVal);
-        assert_type_eq_all!(Evaluate<LHeadOr<L1, DefaultVal>>, E1);
-        assert_type_eq_all!(Evaluate<LHeadOr<L2, DefaultVal>>, E2);
+        assert_type_eq_all!(App<App<LHeadOr, L0>, DefaultVal>, DefaultVal);
+        assert_type_eq_all!(App<App<LHeadOr, L1>, DefaultVal>, E1);
+        assert_type_eq_all!(App<App<LHeadOr, L2>, DefaultVal>, E2);
 
         // TailOr
-        assert_type_eq_all!(Evaluate<LTailOr<L0, DefaultVal>>, DefaultVal);
-        assert_type_eq_all!(Evaluate<LTailOr<L1, DefaultVal>>, L0);
+        assert_type_eq_all!(App<App<LTailOr, L0>, DefaultVal>, DefaultVal);
+        assert_type_eq_all!(App<App<LTailOr, L1>, DefaultVal>, L0);
     }
 }
