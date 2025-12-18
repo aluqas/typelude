@@ -42,8 +42,8 @@ The project follows a strict 6-layer typology, reflected in naming:
     * *Note: Using full names (`Array`) vs prefixes (`TyArray`) vs short prefixes (`TArr`) is a subject of ongoing consideration for compiler error optimization.*
 2. **Expressions (`E*`)**: AST nodes for the evaluator.
     * Prefix: `E` (e.g., `EAdd`, `EIf`, `EApply`).
-3. **OpCodes (`F*`)**: Zero-sized markers representing functions/verbs.
-    * Prefix: `F` (e.g., `FAdd`, `FMap`).
+3. **OpCodes (`Op*`)**: Zero-sized markers representing functions/verbs.
+    * Prefix: `Op` (e.g., `OpAdd`, `OpMap`).
 4. **Capabilities**: Traits describing actions.
     * Naming: Verbs or Nouns (e.g., `Add`, `Cons`, `Len`).
 5. **Backends**: Internal recursive implementations.
