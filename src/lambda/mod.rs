@@ -25,4 +25,4 @@ pub use thunk::{LForce, LThunk};
 pub use traits::{LApp, LBind, LBool, LList, LNat, LTerm, Lambda};
 
 // 6. Helpers
-pub use crate::kernel::traits::Apply;
+// pub use crate::kernel::traits::Apply;

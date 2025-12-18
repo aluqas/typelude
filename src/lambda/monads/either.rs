@@ -5,8 +5,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    kernel::traits::Apply,
-    lambda::{Lambda, traits::LBind},
+    eval::{Eval, Evaluate},
+    lambda::{LApp, Lambda, traits::LBind},
 };
 
 /// Left<L>: Represents the Error case or Left side of Either.
@@ -37,43 +37,61 @@ impl<L, K> LBind<K> for LLeft<L> {
 // Right<R> >>= k  -->  k R (Apply continuation)
 impl<R, K> LBind<K> for LRight<R>
 where
-    K: Apply<R>,
+    K: Eval,
+    R: Eval,
+    LApp<K, R>: Lambda,
 {
-    type Output = <K as Apply<R>>::Output;
+    type Output = <LApp<K, R> as Lambda>::Output;
 }
 
 // =========================================================================
-// Church Encoding Apply Implementation
+// Church Encoding Apply Implementation (Eval Pattern)
 // =========================================================================
 
-// Left<L> \l -> Left1<L, l>
-impl<L, HandlL> Apply<HandlL> for LLeft<L> {
-    type Output = LLeft1<L, HandlL>;
+// Left<L> HandlL -> Left1<L, HandlL>
+impl<L, HandlL> Lambda for LApp<LLeft<L>, HandlL>
+where
+    L: Eval,
+    HandlL: Eval,
+{
+    type Output = LLeft1<Evaluate<L>, Evaluate<HandlL>>;
 }
 
 pub struct LLeft1<L, HandlL>(PhantomData<(L, HandlL)>);
+impl<L, HandlL> Lambda for LLeft1<L, HandlL> { type Output = LLeft1<L, HandlL>; }
 
-// Left1<L, l> \r -> l L
-impl<L, HandlL, HandlR> Apply<HandlR> for LLeft1<L, HandlL>
+// Left1<L, HandlL> HandlR -> HandlL L
+impl<L, HandlL, HandlR> Lambda for LApp<LLeft1<L, HandlL>, HandlR>
 where
-    HandlL: Apply<L>,
+    L: Eval,
+    HandlL: Eval,
+    HandlR: Eval,
+    LApp<HandlL, L>: Lambda,
 {
-    type Output = <HandlL as Apply<L>>::Output;
+    type Output = <LApp<HandlL, L> as Lambda>::Output;
 }
 
-// Right<R> \l -> Right1<R, l>
-impl<R, HandlL> Apply<HandlL> for LRight<R> {
-    type Output = LRight1<R, HandlL>;
+// Right<R> HandlL -> Right1<R, HandlL>
+impl<R, HandlL> Lambda for LApp<LRight<R>, HandlL>
+where
+    R: Eval,
+    HandlL: Eval,
+{
+    type Output = LRight1<Evaluate<R>, Evaluate<HandlL>>;
 }
 
 pub struct LRight1<R, HandlL>(PhantomData<(R, HandlL)>);
+impl<R, HandlL> Lambda for LRight1<R, HandlL> { type Output = LRight1<R, HandlL>; }
 
-// Right1<R, l> \r -> r R
-impl<R, HandlL, HandlR> Apply<HandlR> for LRight1<R, HandlL>
+// Right1<R, HandlL> HandlR -> HandlR R
+impl<R, HandlL, HandlR> Lambda for LApp<LRight1<R, HandlL>, HandlR>
 where
-    HandlR: Apply<R>,
+    R: Eval,
+    HandlL: Eval,
+    HandlR: Eval,
+    LApp<HandlR, R>: Lambda,
 {
-    type Output = <HandlR as Apply<R>>::Output;
+    type Output = <LApp<HandlR, R> as Lambda>::Output;
 }
 
 #[cfg(test)]
@@ -83,20 +101,26 @@ mod tests {
     use super::*;
     use crate::lambda::church::{LSucc, LZero};
 
+    #[derive(Clone)]
     struct RightAddOne;
-    impl<X> Apply<X> for RightAddOne
+    impl Lambda for RightAddOne { type Output = RightAddOne; }
+
+    impl<X> Lambda for LApp<RightAddOne, X>
     where
-        X: crate::lambda::traits::LNat,
+        X: crate::lambda::traits::LNat + Eval,
     {
-        type Output = LRight<LSucc<X>>;
+        type Output = LRight<LSucc<Evaluate<X>>>;
     }
 
+    #[derive(Clone)]
     struct FailAtStep;
-    impl<X> Apply<X> for FailAtStep
+    impl Lambda for FailAtStep { type Output = FailAtStep; }
+
+    impl<X> Lambda for LApp<FailAtStep, X>
     where
-        X: crate::lambda::traits::LNat,
+        X: crate::lambda::traits::LNat + Eval,
     {
-        type Output = LLeft<LSucc<X>>;
+        type Output = LLeft<LSucc<Evaluate<X>>>;
     }
 
     #[test]
