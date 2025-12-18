@@ -10,7 +10,13 @@ use super::{
     bool::LTrue,
     pair::{LPair, LSndEval},
 };
-use crate::{kernel::traits::Apply, lambda::Lambda};
+use crate::{
+    kernel::traits::Apply,
+    lambda::{
+        Lambda,
+        traits::{LNat, LTerm},
+    },
+};
 
 // =========================================================================
 // Church Numerals
@@ -18,6 +24,8 @@ use crate::{kernel::traits::Apply, lambda::Lambda};
 
 /// Zero: λf x. x
 pub struct LZero;
+impl LTerm for LZero {}
+impl LNat for LZero {}
 
 impl Lambda for LZero {
     type Output = LZero;
@@ -25,6 +33,8 @@ impl Lambda for LZero {
 
 /// Succ: λn f x. f (n f x)
 pub struct LSucc<N>(PhantomData<N>);
+impl<N: LNat> LTerm for LSucc<N> {}
+impl<N: LNat> LNat for LSucc<N> {}
 
 impl<N> Lambda for LSucc<N> {
     type Output = LSucc<N>;
@@ -65,41 +75,107 @@ impl<N> Apply<N> for LSuccGen {
 // Arithmetic Operations
 // =========================================================================
 
-// --- Add ---
-pub type LPureAdd<M, N> = <<M as Apply<LSuccGen>>::Output as Apply<N>>::Output;
+// --- Add: \m n f x. m f (n f x) ---
+// M f (N f x)
+// --- Add: \m n f x. m f (n f x) ---
+// M f (N f x)
+pub type LPureAdd<M, N> = LAdd2<M, N>;
 
-pub struct LAdd<M, N>(PhantomData<(M, N)>);
+pub struct LAdd;
 
-impl<M, N> Lambda for LAdd<M, N>
-where
-    M: Apply<LSuccGen>,
-    <M as Apply<LSuccGen>>::Output: Apply<N>,
-{
-    type Output = LPureAdd<M, N>;
+// Add is a Lambda
+impl Lambda for LAdd {
+    type Output = LAdd;
 }
 
-// --- Mul ---
-pub type LPureMul<M, N> = <<M as Apply<LAddPart<N>>>::Output as Apply<LZero>>::Output;
-
-pub struct LMul<M, N>(PhantomData<(M, N)>);
-
-impl<M, N> Lambda for LMul<M, N>
-where
-    M: Apply<LAddPart<N>>,
-    <M as Apply<LAddPart<N>>>::Output: Apply<LZero>,
-{
-    type Output = LPureMul<M, N>;
+// Add M N -> Add1<M, N>
+impl<M> Apply<M> for LAdd {
+    type Output = LAdd1<M>;
+}
+pub struct LAdd1<M>(PhantomData<M>);
+impl<M> Lambda for LAdd1<M> {
+    type Output = LAdd1<M>;
 }
 
-pub struct LAddPart<N>(PhantomData<N>);
-
-impl<N, X> Apply<X> for LAddPart<N>
-where
-    N: Apply<LSuccGen>,
-    <N as Apply<LSuccGen>>::Output: Apply<X>,
-{
-    type Output = LPureAdd<N, X>;
+impl<M, N> Apply<N> for LAdd1<M> {
+    type Output = LAdd2<M, N>;
 }
+
+// Add2 is the numeral: \f x. m f (n f x)
+pub struct LAdd2<M, N>(PhantomData<(M, N)>);
+impl<M, N> Lambda for LAdd2<M, N> {
+    type Output = LAdd2<M, N>;
+}
+
+impl<M, N, F> Apply<F> for LAdd2<M, N> {
+    type Output = LAdd3<M, N, F>;
+}
+pub struct LAdd3<M, N, F>(PhantomData<(M, N, F)>);
+impl<M, N, F> Lambda for LAdd3<M, N, F> {
+    type Output = LAdd3<M, N, F>;
+}
+
+impl<M, N, F, X> Apply<X> for LAdd3<M, N, F>
+where
+    // n f x
+    N: Apply<F>,
+    <N as Apply<F>>::Output: Apply<X>,
+    // m f (n f x)
+    M: Apply<F>,
+    <M as Apply<F>>::Output: Apply<<<N as Apply<F>>::Output as Apply<X>>::Output>,
+{
+    type Output =
+        <<M as Apply<F>>::Output as Apply<<<N as Apply<F>>::Output as Apply<X>>::Output>>::Output;
+}
+
+// --- Mul: \m n f x. m (n f) x ---
+pub type LPureMul<M, N> = LMul2<M, N>;
+
+pub struct LMul;
+impl Lambda for LMul {
+    type Output = LMul;
+}
+
+// Mul M N -> Mul1<M, N>
+impl<M> Apply<M> for LMul {
+    type Output = LMul1<M>;
+}
+pub struct LMul1<M>(PhantomData<M>);
+impl<M> Lambda for LMul1<M> {
+    type Output = LMul1<M>;
+}
+
+impl<M, N> Apply<N> for LMul1<M> {
+    type Output = LMul2<M, N>;
+}
+
+// Mul2 is the numeral: \f x. m (n f) x
+pub struct LMul2<M, N>(PhantomData<(M, N)>);
+impl<M, N> Lambda for LMul2<M, N> {
+    type Output = LMul2<M, N>;
+}
+
+impl<M, N, F> Apply<F> for LMul2<M, N>
+where
+    // n f -> nf (composed function)
+    N: Apply<F>,
+{
+    type Output = LMul3<M, <N as Apply<F>>::Output>;
+}
+pub struct LMul3<M, NF>(PhantomData<(M, NF)>);
+impl<M, NF> Lambda for LMul3<M, NF> {
+    type Output = LMul3<M, NF>;
+}
+
+impl<M, NF, X> Apply<X> for LMul3<M, NF>
+where
+    // m (nf) x
+    M: Apply<NF>,
+    <M as Apply<NF>>::Output: Apply<X>,
+{
+    type Output = <<M as Apply<NF>>::Output as Apply<X>>::Output;
+}
+// AddPart removed as it was for the old implementation
 
 // --- Exp ---
 pub type LPureExp<M, N> = <N as Apply<M>>::Output;
@@ -118,9 +194,8 @@ where
 // =========================================================================
 
 // --- Pred ---
-pub type LPurePred<N> = super::pair::LPureFst<
-    <<N as Apply<LPredStep>>::Output as Apply<LPair<LZero, LZero>>>::Output,
->;
+pub type LPurePred<N> =
+    super::pair::LPureFst<<<N as Apply<LPredStep>>::Output as Apply<LPair<LZero, LZero>>>::Output>;
 
 pub struct LPred<N>(PhantomData<N>);
 
@@ -137,7 +212,7 @@ pub struct LPredStep;
 
 impl<P> Apply<P> for LPredStep
 where
-    P: Apply<super::bool::LFalse>,                               // Snd
+    P: Apply<super::bool::LFalse>,                              // Snd
     <P as Apply<super::bool::LFalse>>::Output: Apply<LSuccGen>, // Succ(Snd)
 {
     type Output = LPair<LSndEval<P>, LSucc<LSndEval<P>>>;
@@ -202,7 +277,7 @@ mod tests {
             type Output = F1<T>;
         }
 
-        type Sum = Evaluate<LAdd<One, One>>;
+        type Sum = Evaluate<App<App<LAdd, One>, One>>;
         type ResSum = App<App<Sum, F>, X>;
         assert_type_eq_all!(ResSum, F1<F1<X>>);
     }

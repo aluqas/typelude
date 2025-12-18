@@ -17,16 +17,18 @@
 pub mod church;
 pub mod curry;
 pub mod fix;
-pub mod col;
+pub mod list;
 pub mod monads;
 pub mod proof;
 pub mod ski;
+pub mod thunk;
 pub mod traits;
 
 // Re-export core traits
 // Backwards compatibility: re-export all items from subdirectories
 pub use church::*;
 pub use monads::*;
+pub use thunk::{LForce, LThunk};
 pub use traits::{LBind, Lambda};
 
 // Re-export Apply from kernel for convenience

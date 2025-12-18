@@ -42,3 +42,18 @@ pub trait LBind<F> {
 // Note: `Pure` is usually specific to the Monad type constructor itself
 // (e.g. `Id<T>`, `State<S, A>`), so we might not need a universal trait for it
 // unless we want generic code over Monads.
+// =========================================================================
+// Kind System (Marker Traits)
+// =========================================================================
+
+/// Base trait for all Lambda Terms.
+pub trait LTerm {}
+
+/// Marker for Church Booleans.
+pub trait LBool: LTerm {}
+
+/// Marker for Church Numerals.
+pub trait LNat: LTerm {}
+
+/// Marker for Church Lists.
+pub trait LList: LTerm {}

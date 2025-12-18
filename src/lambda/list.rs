@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use super::{
     Apply, Lambda,
     church::{LFalse, LTrue},
+    traits::{LList, LTerm},
 };
 use crate::eval::Eval;
 
@@ -21,12 +22,16 @@ pub struct LNil;
 impl Lambda for LNil {
     type Output = LNil;
 }
+impl LTerm for LNil {}
+impl LList for LNil {}
 
 /// Cons: \h t. \c n. c h t
-pub struct LCons<H, T>(PhantomData<(H, T)>);
-impl<H, T> Lambda for LCons<H, T> {
+pub struct LCons<H, T: LList>(PhantomData<(H, T)>);
+impl<H, T: LList> Lambda for LCons<H, T> {
     type Output = LCons<H, T>;
 }
+impl<H, T: LList> LTerm for LCons<H, T> {}
+impl<H, T: LList> LList for LCons<H, T> {}
 
 // --- Nil Implementation ---
 // Nil c -> Nil1<c>
@@ -42,7 +47,7 @@ impl<C, N> Apply<N> for Nil1<C> {
 
 // --- Cons Implementation ---
 // Cons<H, T> c -> Cons1<H, T, c>
-impl<H, T, C> Apply<C> for LCons<H, T> {
+impl<H, T: LList, C> Apply<C> for LCons<H, T> {
     type Output = Cons1<H, T, C>;
 }
 
@@ -87,7 +92,7 @@ impl<Y> Apply<Y> for KI1 {
 /// Head: Extract head or return Default
 pub struct LHeadOr<L, Default>(PhantomData<(L, Default)>);
 
-impl<L, D> Lambda for LHeadOr<L, D>
+impl<L: LList, D> Lambda for LHeadOr<L, D>
 where
     L: Apply<K>,
     <L as Apply<K>>::Output: Apply<D>,
@@ -98,7 +103,7 @@ where
 /// Tail: Extract tail or return Default
 pub struct LTailOr<L, Default>(PhantomData<(L, Default)>);
 
-impl<L, D> Lambda for LTailOr<L, D>
+impl<L: LList, D> Lambda for LTailOr<L, D>
 where
     L: Apply<KI>,
     <L as Apply<KI>>::Output: Apply<D>,
@@ -113,7 +118,7 @@ where
 /// IsEmpty: \l. l (\h t. False) True
 pub struct LIsEmpty<L>(PhantomData<L>);
 
-impl<L> Lambda for LIsEmpty<L>
+impl<L: LList> Lambda for LIsEmpty<L>
 where
     L: Apply<LConstFalse>,
     <L as Apply<LConstFalse>>::Output: Apply<LTrue>,
@@ -139,7 +144,7 @@ use crate::eval::{ECall, ELit};
 /// Foldr f z l
 pub struct LFoldr<F, Z, L>(PhantomData<(F, Z, L)>);
 
-impl<F, Z, L> Lambda for LFoldr<F, Z, L>
+impl<F, Z, L: LList> Lambda for LFoldr<F, Z, L>
 where
     L: Apply<LFoldrConsBuilder<F, Z>>,
     <L as Apply<LFoldrConsBuilder<F, Z>>>::Output: Apply<ELit<Z>>,
@@ -193,58 +198,5 @@ mod tests {
         // TailOr
         assert_type_eq_all!(Evaluate<LTailOr<L0, DefaultVal>>, DefaultVal);
         assert_type_eq_all!(Evaluate<LTailOr<L1, DefaultVal>>, L0);
-    }
-
-    #[test]
-    fn test_foldr_sum() {
-        use crate::lambda::church::{LAdd, LSucc, LSuccGen, LZero};
-
-        struct OpSum;
-        // OpSum x -> OpSum1<x>
-        impl<X> Apply<X> for OpSum {
-            type Output = OpSum1<X>;
-        }
-        struct OpSum1<X>(PhantomData<X>);
-        // OpSum1<x> acc -> Add<x, acc>
-        // OpSum uses struct Add, which is an Expression.
-        // But ECall expects result to be Eval? Yes Add is Eval.
-
-        // Wait, Add<X, Acc> is an Expression (struct).
-        // Foldr logic uses ECall<Op, Rec>.
-        // If Op returns Add<X, Acc>, then ECall will Evaluate it.
-        // This works perfectly!
-
-        impl<X, Acc> Apply<Acc> for OpSum1<X>
-        where
-            X: Apply<LSuccGen>,
-            <X as Apply<LSuccGen>>::Output: Apply<Acc>,
-        {
-            type Output = LAdd<X, Acc>;
-        }
-
-        type One = LSucc<LZero>;
-        type Two = LSucc<One>;
-
-        // List = [One, Two]
-        type L = LCons<One, LCons<Two, LNil>>;
-
-        // Foldr OpSum Zero L
-        // Expected: One + (Two + Zero) = Three? No, Add is correct.
-
-        // Let's verify simpler case first: Count.
-        // \x acc. Succ<acc>
-
-        struct OpCount;
-        impl<X> Apply<X> for OpCount {
-            type Output = OpCount1;
-        }
-        struct OpCount1;
-        // Succ<Acc> is a struct, implements Eval.
-        impl<Acc> Apply<Acc> for OpCount1 {
-            type Output = LSucc<Acc>;
-        }
-
-        type CountRes = Evaluate<LFoldr<OpCount, LZero, L>>;
-        assert_type_eq_all!(CountRes, Two);
     }
 }

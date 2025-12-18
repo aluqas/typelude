@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use static_assertions::assert_type_eq_all;
 use typelude::{
-    eval::{Eval, Evaluate},
+    eval::Evaluate,
     lambda::{
         Apply,
         church::{
@@ -12,10 +12,12 @@ use typelude::{
             LSuccGen, LTrue, LZero,
         },
         fix::LFix,
-        col::{LCons, LFoldr, LHeadOr, LIsEmpty, LNil, LTailOr},
+        list::{LCons, LFoldr, LHeadOr, LIsEmpty, LNil, LTailOr},
         ski::{I, K, S},
     },
 };
+
+type App<F, A> = <F as Apply<A>>::Output;
 
 // =========================================================================
 // Helper Types
@@ -60,22 +62,27 @@ fn test_ski_logic() {
 #[test]
 fn test_church_arithmetic_add() {
     // 2 + 3 = 5
-    type Res = Evaluate<LAdd<Two, Three>>;
+    type RawRes = Evaluate<App<App<LAdd, Two>, Three>>;
+    type Res = Normalize<RawRes>;
     assert_type_eq_all!(Res, Five);
 }
 
 #[test]
 fn test_church_arithmetic_mul() {
     // 2 * 3 = 6
-    type Res = Evaluate<LMul<Two, Three>>;
+    // 2 * 3 = 6
+    type RawRes = Evaluate<App<App<LMul, Two>, Three>>;
+    type Res = Normalize<RawRes>;
     assert_type_eq_all!(Res, Six);
 
     // 3 * 2 = 6
-    type Res2 = Evaluate<LMul<Three, Two>>;
+    type RawRes2 = Evaluate<App<App<LMul, Three>, Two>>;
+    type Res2 = Normalize<RawRes2>;
     assert_type_eq_all!(Res2, Six);
 
     // 0 * 5 = 0
-    type Res3 = Evaluate<LMul<LZero, Five>>;
+    type RawRes3 = Evaluate<App<App<LMul, LZero>, Five>>;
+    type Res3 = Normalize<RawRes3>;
     assert_type_eq_all!(Res3, LZero);
 }
 
@@ -204,7 +211,8 @@ fn test_list_fold_sum() {
         type Output = LPureAdd<X, Acc>;
     }
 
-    type Res = Evaluate<LFoldr<OpSum, LZero, L>>;
+    type RawRes = Evaluate<LFoldr<OpSum, LZero, L>>;
+    type Res = Normalize<RawRes>;
     assert_type_eq_all!(Res, Six);
 }
 

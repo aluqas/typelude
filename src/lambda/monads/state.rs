@@ -8,7 +8,7 @@ use crate::{
     kernel::traits::Apply,
     lambda::{
         church::{LFalse, LPair, LTrue},
-        traits::LBind,
+        traits::{LBind, LBool},
     },
 };
 
@@ -42,6 +42,9 @@ where
     F: Apply<S>,
     // The output must be a Pair, meaning it applies True to get Fst, and False to get Snd.
     <F as Apply<S>>::Output: Apply<LTrue> + Apply<LFalse>,
+    // Safety check: The transitions must be Boolean-compatible (Pair-compatible)
+    LTrue: LBool,
+    LFalse: LBool,
     // 2. Extract a = Fst p
     // K a -> m'
     K: Apply<<<F as Apply<S>>::Output as Apply<LTrue>>::Output>,

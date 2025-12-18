@@ -6,7 +6,13 @@
 
 use std::marker::PhantomData;
 
-use crate::{kernel::traits::Apply, lambda::Lambda};
+use crate::{
+    kernel::traits::Apply,
+    lambda::{
+        Lambda,
+        traits::{LBool, LTerm},
+    },
+};
 
 // =========================================================================
 // Church Booleans
@@ -20,9 +26,14 @@ pub struct LFalse;
 impl Lambda for LTrue {
     type Output = LTrue;
 }
+impl LTerm for LTrue {}
+impl LBool for LTrue {}
+
 impl Lambda for LFalse {
     type Output = LFalse;
 }
+impl LTerm for LFalse {}
+impl LBool for LFalse {}
 
 // Partial Application States
 pub struct LTrue1<T>(PhantomData<T>);
