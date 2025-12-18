@@ -5,7 +5,8 @@
 use typenum::{IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
 use crate::{
-    eval::{EApply2, Eval, Evaluate, Sealed},
+    eval::{Eval, Evaluate, Sealed},
+    kernel::traits::Apply,
     std::{
         bool::{Assert, ToTyBoolOut},
         into::TyFrom,
@@ -30,34 +31,16 @@ impl<T> IsEq<T> for T {
     const EQ: bool = true;
 }
 
-// Function Markers: Comparison Operations
+// =============================================================================
+// Expression Structs
+// =============================================================================
 
-/// Equality: A == B -> TyBool
-pub struct FEq;
-/// Inequality: A != B -> TyBool
-pub struct FNeq;
-/// Less than: A < B
-pub struct FLt;
-/// Less than or equal: A <= B
-pub struct FLe;
-/// Greater than: A > B
-pub struct FGt;
-/// Greater than or equal: A >= B
-pub struct FGe;
+use std::marker::PhantomData;
 
-impl Sealed for FEq {}
-impl Sealed for FNeq {}
-impl Sealed for FLt {}
-impl Sealed for FLe {}
-impl Sealed for FGt {}
-impl Sealed for FGe {}
+/// Equality: A == B
+pub struct EEq<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
 
-// Comparison Operations
-
-// --- Implementations ---
-
-// FEq: Lhs == Rhs (Generic via IsEq)
-impl<Lhs, Rhs> Eval for EApply2<FEq, Lhs, Rhs>
+impl<Lhs, Rhs> Eval for EEq<Lhs, Rhs>
 where
     Lhs: Eval,
     Rhs: Eval,
@@ -67,8 +50,10 @@ where
     type Output = Evaluate<Assert<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>;
 }
 
-// FNeq: Lhs != Rhs (Generic via IsEq)
-impl<Lhs, Rhs> Eval for EApply2<FNeq, Lhs, Rhs>
+/// Inequality: A != B
+pub struct ENeq<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for ENeq<Lhs, Rhs>
 where
     Lhs: Eval,
     Rhs: Eval,
@@ -78,8 +63,10 @@ where
     type Output = Evaluate<Assert<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>;
 }
 
-// --- FLt: Lhs < Rhs ---
-impl<Lhs, Rhs> Eval for EApply2<FLt, Lhs, Rhs>
+/// Less than: A < B
+pub struct ELt<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for ELt<Lhs, Rhs>
 where
     Lhs: Eval,
     Rhs: Eval,
@@ -89,8 +76,10 @@ where
     type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>;
 }
 
-// --- FLe: Lhs <= Rhs ---
-impl<Lhs, Rhs> Eval for EApply2<FLe, Lhs, Rhs>
+/// Less than or equal: A <= B
+pub struct ELe<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for ELe<Lhs, Rhs>
 where
     Lhs: Eval,
     Rhs: Eval,
@@ -100,8 +89,10 @@ where
     type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>;
 }
 
-// --- FGt: Lhs > Rhs ---
-impl<Lhs, Rhs> Eval for EApply2<FGt, Lhs, Rhs>
+/// Greater than: A > B
+pub struct EGt<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for EGt<Lhs, Rhs>
 where
     Lhs: Eval,
     Rhs: Eval,
@@ -111,8 +102,10 @@ where
     type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>;
 }
 
-// --- FGe: Lhs >= Rhs ---
-impl<Lhs, Rhs> Eval for EApply2<FGe, Lhs, Rhs>
+/// Greater than or equal: A >= B
+pub struct EGe<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for EGe<Lhs, Rhs>
 where
     Lhs: Eval,
     Rhs: Eval,
@@ -122,23 +115,52 @@ where
     type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>;
 }
 
-//
-// Aliases
-//
+// =============================================================================
+// Operator Symbols (OpCodes)
+// =============================================================================
 
-// Equality (2 args)
-pub type EEq<Lhs, Rhs> = EApply2<FEq, Lhs, Rhs>;
-pub type ENotEq<Lhs, Rhs> = EApply2<FNeq, Lhs, Rhs>;
+/// Equality: A == B -> TyBool
+pub struct OpEq;
+/// Inequality: A != B -> TyBool
+pub struct OpNeq;
+/// Less than: A < B
+pub struct OpLt;
+/// Less than or equal: A <= B
+pub struct OpLe;
+/// Greater than: A > B
+pub struct OpGt;
+/// Greater than or equal: A >= B
+pub struct OpGe;
 
-// Comparison (2 args)
-pub type ELt<Lhs, Rhs> = EApply2<FLt, Lhs, Rhs>;
-pub type ELe<Lhs, Rhs> = EApply2<FLe, Lhs, Rhs>;
-pub type EGt<Lhs, Rhs> = EApply2<FGt, Lhs, Rhs>;
-pub type EGe<Lhs, Rhs> = EApply2<FGe, Lhs, Rhs>;
+impl Sealed for OpEq {}
+impl Sealed for OpNeq {}
+impl Sealed for OpLt {}
+impl Sealed for OpLe {}
+impl Sealed for OpGt {}
+impl Sealed for OpGe {}
 
-//
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpEq {
+    type Output = EEq<Lhs, Rhs>;
+}
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpNeq {
+    type Output = ENeq<Lhs, Rhs>;
+}
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpLt {
+    type Output = ELt<Lhs, Rhs>;
+}
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpLe {
+    type Output = ELe<Lhs, Rhs>;
+}
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpGt {
+    type Output = EGt<Lhs, Rhs>;
+}
+impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpGe {
+    type Output = EGe<Lhs, Rhs>;
+}
+
+// =============================================================================
 // Tests
-//
+// =============================================================================
 
 #[cfg(test)]
 mod tests {
@@ -156,8 +178,8 @@ mod tests {
         assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U1>>>, TyTrue);
         assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U2>>>, TyFalse);
 
-        assert_type_eq_all!(Evaluate<ENotEq<ELit<U1>, ELit<U1>>>, TyFalse);
-        assert_type_eq_all!(Evaluate<ENotEq<ELit<U1>, ELit<U2>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENeq<ELit<U1>, ELit<U1>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<ENeq<ELit<U1>, ELit<U2>>>, TyTrue);
     }
 
     #[test]
