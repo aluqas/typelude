@@ -2,28 +2,29 @@
 //!
 //! Pure data structures for type-level booleans.
 
-use crate::eval::Sealed;
+use crate::eval::{Eval, Sealed};
 
-/// Marker Trait for Kernel Booleans
-pub trait TyBool: Sealed {
-    const BOOL: bool;
-}
+/// **Marker Trait**
+///
+/// Represents that a type is a Boolean.
+pub trait Bool: Sealed {}
 
-/// Type representing True (Value)
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default, PartialOrd, Ord)]
+/// Type-level `true`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub struct TyTrue;
 
-/// Type representing False (Value)
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Default, PartialOrd, Ord)]
+/// Type-level `false`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub struct TyFalse;
 
 impl Sealed for TyTrue {}
-impl Sealed for TyFalse {}
-
-impl TyBool for TyTrue {
-    const BOOL: bool = true;
+impl Bool for TyTrue {}
+impl Eval for TyTrue {
+    type Output = Self;
 }
 
-impl TyBool for TyFalse {
-    const BOOL: bool = false;
+impl Sealed for TyFalse {}
+impl Bool for TyFalse {}
+impl Eval for TyFalse {
+    type Output = Self;
 }

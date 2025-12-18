@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use crate::eval::Sealed;
+use crate::eval::{Eval, Sealed};
 
 /// **Marker Trait**
 ///
@@ -24,9 +24,15 @@ pub struct TyArray<Head, Tail: Cons>(pub PhantomData<(Head, Tail)>);
 
 impl Sealed for TyNil {}
 impl Cons for TyNil {}
+impl Eval for TyNil {
+    type Output = Self;
+}
 
 impl<Head, Tail: Cons> Sealed for TyArray<Head, Tail> {}
 impl<Head, Tail: Cons> Cons for TyArray<Head, Tail> {}
+impl<Head, Tail: Cons> Eval for TyArray<Head, Tail> {
+    type Output = Self;
+}
 
 /// Macro for easily creating type lists
 #[macro_export]

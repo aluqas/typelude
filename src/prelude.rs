@@ -13,7 +13,7 @@ pub use crate::{
     // Kernel Types & Traits
     kernel::{
         array::{Cons, TyArray, TyNil},
-        bool::{TyBool, TyFalse, TyTrue},
+        bool::{Bool as TyBool, TyFalse, TyTrue},
         traits::Apply,
     },
     // Standard Library

@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 use typenum::{B0, B1};
 
 // Re-export kernel types
-pub use crate::kernel::bool::{TyBool, TyFalse, TyTrue};
+pub use crate::kernel::bool::{Bool as TyBool, TyFalse, TyTrue};
 use crate::{
     eval::{Eval, Evaluate, Sealed},
     kernel::traits::Apply,
@@ -16,13 +16,6 @@ use crate::{
 //
 // Identity Eval Implementation (Should typically be in eval crate, but std is fine)
 //
-
-impl Eval for TyTrue {
-    type Output = TyTrue;
-}
-impl Eval for TyFalse {
-    type Output = TyFalse;
-}
 
 //
 // KindBool (Extension)

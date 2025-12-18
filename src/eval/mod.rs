@@ -41,7 +41,7 @@ mod tests {
     use static_assertions::{assert_type_eq_all, assert_type_ne_all};
 
     use crate::{
-        eval::{EApp, EIf, ELit, EWhile, Evaluate},
+        eval::{EIf, ELit, EWhile, Evaluate},
         kernel::{
             array::{Cons, TyArray, TyNil},
             bool::{TyFalse, TyTrue},
@@ -77,10 +77,10 @@ mod tests {
     fn test_eval_while() {
         // Condition: IsNotEmpty
         struct IsNotEmpty;
-        impl Apply<TyNil> for IsNotEmpty {
+        impl Apply<ELit<TyNil>> for IsNotEmpty {
             type Output = TyFalse;
         }
-        impl<H, T> Apply<TyArray<H, T>> for IsNotEmpty
+        impl<H, T> Apply<ELit<TyArray<H, T>>> for IsNotEmpty
         where
             T: Cons,
         {
@@ -89,7 +89,7 @@ mod tests {
 
         // Step: GetTail
         struct GetTail;
-        impl<H, T> Apply<TyArray<H, T>> for GetTail
+        impl<H, T> Apply<ELit<TyArray<H, T>>> for GetTail
         where
             T: Cons,
         {
@@ -97,7 +97,9 @@ mod tests {
         }
 
         assert_type_eq_all!(
-            Evaluate<EWhile<IsNotEmpty, GetTail, TyArray<i32, TyArray<f64, TyArray<(), TyNil>>>>>,
+            Evaluate<
+                EWhile<IsNotEmpty, GetTail, ELit<TyArray<i32, TyArray<f64, TyArray<(), TyNil>>>>>,
+            >,
             TyNil
         );
     }
