@@ -1,12 +1,12 @@
 use typenum::Unsigned;
 
 use crate::{
-    eval::{EApply, EIf, EWhile, Evaluable, Evaluator},
+    eval::{EApply, EIf, EWhile, Eval, Evaluate},
     machine::{execution::RunStep, instruction::*, trace::TracedMachineState},
     std::{
         array::{Cons, EConcat, FIsEmpty, Get, Set, TyArray, TyNil},
         bool::FNot,
-        traits::EFunction,
+        traits::TyFn,
     },
 };
 
@@ -283,26 +283,26 @@ where
     BodyProg: Cons,
     RestProg: Cons,
     History: Cons,
-    EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Evaluable,
+    EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Eval,
     EConcat<
         CondProg,
         TyArray<
-            OpIf<Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>,
+            OpIf<Evaluate<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>,
             RestProg,
         >,
-    >: Evaluable,
+    >: Eval,
 {
     type OutputState = TracedMachineState<
         Stack,
         Locals,
         Memory,
         CallStack,
-        Evaluator<
+        Evaluate<
             EConcat<
                 CondProg,
                 TyArray<
                     OpIf<
-                        Evaluator<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>,
+                        Evaluate<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>,
                         TyNil,
                     >,
                     RestProg,
@@ -324,8 +324,8 @@ where
     History: Cons,
     Then: Cons,
     Else: Cons,
-    EConcat<Then, RestProg>: Evaluable,
-    EConcat<Else, RestProg>: Evaluable,
+    EConcat<Then, RestProg>: Eval,
+    EConcat<Else, RestProg>: Eval,
     EIf<
         Cond,
         TracedMachineState<
@@ -333,7 +333,7 @@ where
             Locals,
             Memory,
             CallStack,
-            Evaluator<EConcat<Then, RestProg>>,
+            Evaluate<EConcat<Then, RestProg>>,
             TyArray<OpIf<Then, Else>, History>,
         >,
         TracedMachineState<
@@ -341,12 +341,12 @@ where
             Locals,
             Memory,
             CallStack,
-            Evaluator<EConcat<Else, RestProg>>,
+            Evaluate<EConcat<Else, RestProg>>,
             TyArray<OpIf<Then, Else>, History>,
         >,
-    >: Evaluable,
+    >: Eval,
 {
-    type OutputState = Evaluator<
+    type OutputState = Evaluate<
         EIf<
             Cond,
             TracedMachineState<
@@ -354,7 +354,7 @@ where
                 Locals,
                 Memory,
                 CallStack,
-                Evaluator<EConcat<Then, RestProg>>,
+                Evaluate<EConcat<Then, RestProg>>,
                 TyArray<OpIf<Then, Else>, History>,
             >,
             TracedMachineState<
@@ -362,7 +362,7 @@ where
                 Locals,
                 Memory,
                 CallStack,
-                Evaluator<EConcat<Else, RestProg>>,
+                Evaluate<EConcat<Else, RestProg>>,
                 TyArray<OpIf<Then, Else>, History>,
             >,
         >,
@@ -373,9 +373,8 @@ where
 pub struct FTracedStep;
 
 impl<Stack, Locals, Memory, CallStack, Inst, RestProg, History>
-    EFunction<
-        TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>,
-    > for FTracedStep
+    TyFn<TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>>
+    for FTracedStep
 where
     Inst: TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>,
     TyArray<Inst, RestProg>: Cons,
@@ -386,21 +385,21 @@ where
         <Inst as TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>>::OutputState;
 }
 
-impl<S, L, M, C, P, H> Evaluable for EApply<FTracedStep, TracedMachineState<S, L, M, C, P, H>>
+impl<S, L, M, C, P, H> Eval for EApply<FTracedStep, TracedMachineState<S, L, M, C, P, H>>
 where
-    FTracedStep: EFunction<TracedMachineState<S, L, M, C, P, H>>,
+    FTracedStep: TyFn<TracedMachineState<S, L, M, C, P, H>>,
 {
-    type Output = <FTracedStep as EFunction<TracedMachineState<S, L, M, C, P, H>>>::Output;
+    type Output = <FTracedStep as TyFn<TracedMachineState<S, L, M, C, P, H>>>::Output;
 }
 
 pub struct FTracedIsFinished;
 
-impl<S, L, M, C, P, H> EFunction<TracedMachineState<S, L, M, C, P, H>> for FTracedIsFinished
+impl<S, L, M, C, P, H> TyFn<TracedMachineState<S, L, M, C, P, H>> for FTracedIsFinished
 where
-    EApply<FIsEmpty, P>: Evaluable,
-    Evaluator<EApply<FIsEmpty, P>>: crate::std::bool::NotHelper,
+    EApply<FIsEmpty, P>: Eval,
+    Evaluate<EApply<FIsEmpty, P>>: crate::std::bool::NotHelper,
 {
-    type Output = Evaluator<EApply<FNot, EApply<FIsEmpty, P>>>;
+    type Output = Evaluate<EApply<FNot, EApply<FIsEmpty, P>>>;
 }
 
 /// Runner for traced execution

@@ -4,14 +4,14 @@
 
 use typenum::{B0, B1};
 
-use crate::eval::{EApply, EApply2, Evaluable, Evaluator, Sealed};
+use crate::eval::{EApply, EApply2, Eval, Evaluate, Sealed};
 
 //
 // Type-Level Boolean Types
 //
 
 /// Marker Trait: TyTrue, TyFalse
-pub trait KindBool: Sealed + Evaluable {
+pub trait KindBool: Sealed + Eval {
     const BOOL: bool;
     type Or<Rhs: KindBool>: KindBool;
 }
@@ -36,10 +36,10 @@ impl KindBool for TyFalse {
     type Or<Rhs: KindBool> = Rhs;
 }
 
-impl Evaluable for TyTrue {
+impl Eval for TyTrue {
     type Output = TyTrue;
 }
-impl Evaluable for TyFalse {
+impl Eval for TyFalse {
     type Output = TyFalse;
 }
 
@@ -49,10 +49,10 @@ impl Evaluable for TyFalse {
 
 pub struct Assert<const COND: bool>;
 
-impl<const COND: bool> Evaluable for Assert<COND>
+impl<const COND: bool> Eval for Assert<COND>
 where
     (): crate::std::reify::ReflectBool<COND>,
-    <() as crate::std::reify::ReflectBool<COND>>::Output: Evaluable,
+    <() as crate::std::reify::ReflectBool<COND>>::Output: Eval,
 {
     type Output = <() as crate::std::reify::ReflectBool<COND>>::Output;
 }
@@ -109,10 +109,10 @@ impl<Rhs> NandHelper<Rhs> for TyFalse {
 // True NAND X = NOT X
 impl<Rhs> NandHelper<Rhs> for TyTrue
 where
-    Rhs: Evaluable,
-    Evaluator<Rhs>: NotHelper,
+    Rhs: Eval,
+    Evaluate<Rhs>: NotHelper,
 {
-    type Output = <Evaluator<Rhs> as NotHelper>::Output;
+    type Output = <Evaluate<Rhs> as NotHelper>::Output;
 }
 
 //
@@ -147,61 +147,61 @@ impl Sealed for FXnor {}
 //
 
 // FNot: NOT Val
-impl<Val> Evaluable for EApply<FNot, Val>
+impl<Val> Eval for EApply<FNot, Val>
 where
-    Val: Evaluable,
-    Evaluator<Val>: NotHelper,
+    Val: Eval,
+    Evaluate<Val>: NotHelper,
 {
-    type Output = <Evaluator<Val> as NotHelper>::Output;
+    type Output = <Evaluate<Val> as NotHelper>::Output;
 }
 
 // FNand: Lhs NAND Rhs (with short-circuit)
-impl<Lhs, Rhs> Evaluable for EApply2<FNand, Lhs, Rhs>
+impl<Lhs, Rhs> Eval for EApply2<FNand, Lhs, Rhs>
 where
-    Lhs: Evaluable,
-    Evaluator<Lhs>: NandHelper<Rhs>,
+    Lhs: Eval,
+    Evaluate<Lhs>: NandHelper<Rhs>,
 {
-    type Output = <Evaluator<Lhs> as NandHelper<Rhs>>::Output;
+    type Output = <Evaluate<Lhs> as NandHelper<Rhs>>::Output;
 }
 
 // FAnd: Lhs AND Rhs = NOT (Lhs NAND Rhs)
-impl<Lhs, Rhs> Evaluable for EApply2<FAnd, Lhs, Rhs>
+impl<Lhs, Rhs> Eval for EApply2<FAnd, Lhs, Rhs>
 where
-    EApply<FNot, EApply2<FNand, Lhs, Rhs>>: Evaluable,
+    EApply<FNot, EApply2<FNand, Lhs, Rhs>>: Eval,
 {
-    type Output = Evaluator<EApply<FNot, EApply2<FNand, Lhs, Rhs>>>;
+    type Output = Evaluate<EApply<FNot, EApply2<FNand, Lhs, Rhs>>>;
 }
 
 // FOr: Lhs OR Rhs = (NOT Lhs) NAND (NOT Rhs)
-impl<Lhs, Rhs> Evaluable for EApply2<FOr, Lhs, Rhs>
+impl<Lhs, Rhs> Eval for EApply2<FOr, Lhs, Rhs>
 where
-    EApply2<FNand, EApply<FNot, Lhs>, EApply<FNot, Rhs>>: Evaluable,
+    EApply2<FNand, EApply<FNot, Lhs>, EApply<FNot, Rhs>>: Eval,
 {
-    type Output = Evaluator<EApply2<FNand, EApply<FNot, Lhs>, EApply<FNot, Rhs>>>;
+    type Output = Evaluate<EApply2<FNand, EApply<FNot, Lhs>, EApply<FNot, Rhs>>>;
 }
 
 // FNor: Lhs NOR Rhs = NOT (Lhs OR Rhs)
-impl<Lhs, Rhs> Evaluable for EApply2<FNor, Lhs, Rhs>
+impl<Lhs, Rhs> Eval for EApply2<FNor, Lhs, Rhs>
 where
-    EApply<FNot, EApply2<FOr, Lhs, Rhs>>: Evaluable,
+    EApply<FNot, EApply2<FOr, Lhs, Rhs>>: Eval,
 {
-    type Output = Evaluator<EApply<FNot, EApply2<FOr, Lhs, Rhs>>>;
+    type Output = Evaluate<EApply<FNot, EApply2<FOr, Lhs, Rhs>>>;
 }
 
 // FXor: Lhs XOR Rhs = (Lhs OR Rhs) AND (Lhs NAND Rhs)
-impl<Lhs, Rhs> Evaluable for EApply2<FXor, Lhs, Rhs>
+impl<Lhs, Rhs> Eval for EApply2<FXor, Lhs, Rhs>
 where
-    EApply2<FAnd, EApply2<FOr, Lhs, Rhs>, EApply2<FNand, Lhs, Rhs>>: Evaluable,
+    EApply2<FAnd, EApply2<FOr, Lhs, Rhs>, EApply2<FNand, Lhs, Rhs>>: Eval,
 {
-    type Output = Evaluator<EApply2<FAnd, EApply2<FOr, Lhs, Rhs>, EApply2<FNand, Lhs, Rhs>>>;
+    type Output = Evaluate<EApply2<FAnd, EApply2<FOr, Lhs, Rhs>, EApply2<FNand, Lhs, Rhs>>>;
 }
 
 // FXnor: Lhs XNOR Rhs = NOT (Lhs XOR Rhs)
-impl<Lhs, Rhs> Evaluable for EApply2<FXnor, Lhs, Rhs>
+impl<Lhs, Rhs> Eval for EApply2<FXnor, Lhs, Rhs>
 where
-    EApply<FNot, EApply2<FXor, Lhs, Rhs>>: Evaluable,
+    EApply<FNot, EApply2<FXor, Lhs, Rhs>>: Eval,
 {
-    type Output = Evaluator<EApply<FNot, EApply2<FXor, Lhs, Rhs>>>;
+    type Output = Evaluate<EApply<FNot, EApply2<FXor, Lhs, Rhs>>>;
 }
 
 //
@@ -232,66 +232,66 @@ mod tests {
 
     #[test]
     fn test_not() {
-        assert_type_eq_all!(Evaluator<ENot<ELit<TyTrue>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<ENot<ELit<TyFalse>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENot<ELit<TyTrue>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<ENot<ELit<TyFalse>>>, TyTrue);
     }
 
     #[test]
     fn test_nand() {
-        assert_type_eq_all!(Evaluator<ENand<ELit<TyTrue>, ELit<TyTrue>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<ENand<ELit<TyTrue>, ELit<TyFalse>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<ENand<ELit<TyFalse>, ELit<TyTrue>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<ENand<ELit<TyFalse>, ELit<TyFalse>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENand<ELit<TyTrue>, ELit<TyTrue>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<ENand<ELit<TyTrue>, ELit<TyFalse>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENand<ELit<TyFalse>, ELit<TyTrue>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENand<ELit<TyFalse>, ELit<TyFalse>>>, TyTrue);
     }
 
     #[test]
     fn test_and() {
-        assert_type_eq_all!(Evaluator<EAnd<ELit<TyTrue>, ELit<TyTrue>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EAnd<ELit<TyTrue>, ELit<TyFalse>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<EAnd<ELit<TyFalse>, ELit<TyTrue>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<EAnd<ELit<TyFalse>, ELit<TyFalse>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EAnd<ELit<TyTrue>, ELit<TyTrue>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EAnd<ELit<TyTrue>, ELit<TyFalse>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EAnd<ELit<TyFalse>, ELit<TyTrue>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EAnd<ELit<TyFalse>, ELit<TyFalse>>>, TyFalse);
     }
 
     #[test]
     fn test_or() {
-        assert_type_eq_all!(Evaluator<EOr<ELit<TyTrue>, ELit<TyTrue>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EOr<ELit<TyTrue>, ELit<TyFalse>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EOr<ELit<TyFalse>, ELit<TyTrue>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EOr<ELit<TyFalse>, ELit<TyFalse>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EOr<ELit<TyTrue>, ELit<TyTrue>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EOr<ELit<TyTrue>, ELit<TyFalse>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EOr<ELit<TyFalse>, ELit<TyTrue>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EOr<ELit<TyFalse>, ELit<TyFalse>>>, TyFalse);
     }
 
     #[test]
     fn test_nor() {
-        assert_type_eq_all!(Evaluator<ENor<ELit<TyTrue>, ELit<TyTrue>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<ENor<ELit<TyTrue>, ELit<TyFalse>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<ENor<ELit<TyFalse>, ELit<TyTrue>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<ENor<ELit<TyFalse>, ELit<TyFalse>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENor<ELit<TyTrue>, ELit<TyTrue>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<ENor<ELit<TyTrue>, ELit<TyFalse>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<ENor<ELit<TyFalse>, ELit<TyTrue>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<ENor<ELit<TyFalse>, ELit<TyFalse>>>, TyTrue);
     }
 
     #[test]
     fn test_xor() {
-        assert_type_eq_all!(Evaluator<EXor<ELit<TyTrue>, ELit<TyTrue>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<EXor<ELit<TyTrue>, ELit<TyFalse>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EXor<ELit<TyFalse>, ELit<TyTrue>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EXor<ELit<TyFalse>, ELit<TyFalse>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EXor<ELit<TyTrue>, ELit<TyTrue>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EXor<ELit<TyTrue>, ELit<TyFalse>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EXor<ELit<TyFalse>, ELit<TyTrue>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EXor<ELit<TyFalse>, ELit<TyFalse>>>, TyFalse);
     }
 
     #[test]
     fn test_xnor() {
-        assert_type_eq_all!(Evaluator<EXnor<ELit<TyTrue>, ELit<TyTrue>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EXnor<ELit<TyTrue>, ELit<TyFalse>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<EXnor<ELit<TyFalse>, ELit<TyTrue>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<EXnor<ELit<TyFalse>, ELit<TyFalse>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EXnor<ELit<TyTrue>, ELit<TyTrue>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EXnor<ELit<TyTrue>, ELit<TyFalse>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EXnor<ELit<TyFalse>, ELit<TyTrue>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EXnor<ELit<TyFalse>, ELit<TyFalse>>>, TyTrue);
     }
 
     #[test]
     fn test_composition() {
         // NOT (True AND False) = True
-        assert_type_eq_all!(Evaluator<ENot<EAnd<ELit<TyTrue>, ELit<TyFalse>>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENot<EAnd<ELit<TyTrue>, ELit<TyFalse>>>>, TyTrue);
 
         // (True OR False) AND (False OR True) = True
         assert_type_eq_all!(
-            Evaluator<EAnd<EOr<ELit<TyTrue>, ELit<TyFalse>>, EOr<ELit<TyFalse>, ELit<TyTrue>>>>,
+            Evaluate<EAnd<EOr<ELit<TyTrue>, ELit<TyFalse>>, EOr<ELit<TyFalse>, ELit<TyTrue>>>>,
             TyTrue
         );
     }

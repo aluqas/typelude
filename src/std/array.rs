@@ -10,7 +10,7 @@ use std::{
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
 use crate::{
-    eval::{EApply, EApply2, EApply3, Evaluable, Evaluator, Sealed},
+    eval::{EApply, EApply2, EApply3, Eval, Evaluate, Sealed},
     std::bool::{TyFalse, TyTrue},
 };
 
@@ -234,14 +234,12 @@ impl<F> MapHelper<F> for TyNil {
 
 impl<F, Head, Tail> MapHelper<F> for TyArray<Head, Tail>
 where
-    F: crate::std::traits::EFunction<Head>,
+    F: crate::std::traits::TyFn<Head>,
     Tail: Cons + MapHelper<F>,
     <Tail as MapHelper<F>>::Output: Cons,
 {
-    type Output = TyArray<
-        <F as crate::std::traits::EFunction<Head>>::Output,
-        <Tail as MapHelper<F>>::Output,
-    >;
+    type Output =
+        TyArray<<F as crate::std::traits::TyFn<Head>>::Output, <Tail as MapHelper<F>>::Output>;
 }
 
 /// Helper for Filter
@@ -256,28 +254,28 @@ impl<P> FilterHelper<P> for TyNil {
 
 impl<P, Head, Tail> FilterHelper<P> for TyArray<Head, Tail>
 where
-    P: crate::std::traits::EFunction<Head>,
+    P: crate::std::traits::TyFn<Head>,
     Tail: Cons + FilterHelper<P>,
     <Tail as FilterHelper<P>>::Output: Cons,
     // Check Predicate
-    <P as crate::std::traits::EFunction<Head>>::Output: Evaluable,
+    <P as crate::std::traits::TyFn<Head>>::Output: Eval,
     // EIf<Pred(Head), Cons<Head, Filter(Tail)>, Filter(Tail)>
     crate::eval::EIf<
-        <P as crate::std::traits::EFunction<Head>>::Output,
+        <P as crate::std::traits::TyFn<Head>>::Output,
         crate::eval::ELit<TyArray<Head, <Tail as FilterHelper<P>>::Output>>,
         crate::eval::ELit<<Tail as FilterHelper<P>>::Output>,
-    >: Evaluable,
-    Evaluator<
+    >: Eval,
+    Evaluate<
         crate::eval::EIf<
-            <P as crate::std::traits::EFunction<Head>>::Output,
+            <P as crate::std::traits::TyFn<Head>>::Output,
             crate::eval::ELit<TyArray<Head, <Tail as FilterHelper<P>>::Output>>,
             crate::eval::ELit<<Tail as FilterHelper<P>>::Output>,
         >,
     >: Cons,
 {
-    type Output = Evaluator<
+    type Output = Evaluate<
         crate::eval::EIf<
-            <P as crate::std::traits::EFunction<Head>>::Output,
+            <P as crate::std::traits::TyFn<Head>>::Output,
             crate::eval::ELit<TyArray<Head, <Tail as FilterHelper<P>>::Output>>,
             crate::eval::ELit<<Tail as FilterHelper<P>>::Output>,
         >,
@@ -296,11 +294,11 @@ impl<F, Acc> FoldHelper<F, Acc> for TyNil {
 
 impl<F, Acc, Head, Tail> FoldHelper<F, Acc> for TyArray<Head, Tail>
 where
-    F: crate::std::traits::EFunction<(Acc, Head)>,
-    Tail: Cons + FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, Head)>>::Output>,
+    F: crate::std::traits::TyFn<(Acc, Head)>,
+    Tail: Cons + FoldHelper<F, <F as crate::std::traits::TyFn<(Acc, Head)>>::Output>,
 {
     type Output =
-        <Tail as FoldHelper<F, <F as crate::std::traits::EFunction<(Acc, Head)>>::Output>>::Output;
+        <Tail as FoldHelper<F, <F as crate::std::traits::TyFn<(Acc, Head)>>::Output>>::Output;
 }
 
 // =============================================================================
@@ -308,143 +306,143 @@ where
 // =============================================================================
 
 // --- Self Evaluation for Values ---
-impl Evaluable for TyNil {
+impl Eval for TyNil {
     type Output = TyNil;
 }
 
-impl<Head, Tail: Cons> Evaluable for TyArray<Head, Tail> {
+impl<Head, Tail: Cons> Eval for TyArray<Head, Tail> {
     type Output = TyArray<Head, Tail>;
 }
 
 // --- FLen: Array length ---
-impl<Array> Evaluable for EApply<FLen, Array>
+impl<Array> Eval for EApply<FLen, Array>
 where
-    Array: Evaluable,
-    Evaluator<Array>: Len,
+    Array: Eval,
+    Evaluate<Array>: Len,
 {
-    type Output = <Evaluator<Array> as Len>::Output;
+    type Output = <Evaluate<Array> as Len>::Output;
 }
 
 // --- FHead: Head element ---
-impl<Array> Evaluable for EApply<FHead, Array>
+impl<Array> Eval for EApply<FHead, Array>
 where
-    Array: Evaluable,
-    Evaluator<Array>: Head,
+    Array: Eval,
+    Evaluate<Array>: Head,
 {
-    type Output = <Evaluator<Array> as Head>::Output;
+    type Output = <Evaluate<Array> as Head>::Output;
 }
 
 // --- FTail: Tail ---
-impl<Array> Evaluable for EApply<FTail, Array>
+impl<Array> Eval for EApply<FTail, Array>
 where
-    Array: Evaluable,
-    Evaluator<Array>: Tail,
+    Array: Eval,
+    Evaluate<Array>: Tail,
 {
-    type Output = <Evaluator<Array> as Tail>::Output;
+    type Output = <Evaluate<Array> as Tail>::Output;
 }
 
 // --- FIsEmpty: Is empty ---
-impl<Array> Evaluable for EApply<FIsEmpty, Array>
+impl<Array> Eval for EApply<FIsEmpty, Array>
 where
-    Array: Evaluable,
-    Evaluator<Array>: IsEmpty,
+    Array: Eval,
+    Evaluate<Array>: IsEmpty,
 {
-    type Output = <Evaluator<Array> as IsEmpty>::Output;
+    type Output = <Evaluate<Array> as IsEmpty>::Output;
 }
 
 // --- FGet: Index get ---
-impl<Array, Idx> Evaluable for EApply2<FGet, Array, Idx>
+impl<Array, Idx> Eval for EApply2<FGet, Array, Idx>
 where
-    Array: Evaluable,
-    Idx: Evaluable,
-    Evaluator<Idx>: Unsigned,
-    Evaluator<Array>: Get<Evaluator<Idx>>,
+    Array: Eval,
+    Idx: Eval,
+    Evaluate<Idx>: Unsigned,
+    Evaluate<Array>: Get<Evaluate<Idx>>,
 {
-    type Output = <Evaluator<Array> as Get<Evaluator<Idx>>>::Output;
+    type Output = <Evaluate<Array> as Get<Evaluate<Idx>>>::Output;
 }
 
 // --- FSet: Index set ---
-impl<Array, Idx, Val> Evaluable for EApply3<FSet, Array, Idx, Val>
+impl<Array, Idx, Val> Eval for EApply3<FSet, Array, Idx, Val>
 where
-    Array: Evaluable,
-    Idx: Evaluable,
-    Val: Evaluable,
-    Evaluator<Idx>: Unsigned,
-    Evaluator<Array>: Set<Evaluator<Idx>, Evaluator<Val>>,
+    Array: Eval,
+    Idx: Eval,
+    Val: Eval,
+    Evaluate<Idx>: Unsigned,
+    Evaluate<Array>: Set<Evaluate<Idx>, Evaluate<Val>>,
 {
-    type Output = <Evaluator<Array> as Set<Evaluator<Idx>, Evaluator<Val>>>::Output;
+    type Output = <Evaluate<Array> as Set<Evaluate<Idx>, Evaluate<Val>>>::Output;
 }
 
 // --- FConcat: Concatenation ---
-impl<Lhs, Rhs> Evaluable for EApply2<FConcat, Lhs, Rhs>
+impl<Lhs, Rhs> Eval for EApply2<FConcat, Lhs, Rhs>
 where
-    Lhs: Evaluable,
-    Rhs: Evaluable,
-    Evaluator<Rhs>: Cons,
-    Evaluator<Lhs>: Concat<Evaluator<Rhs>>,
+    Lhs: Eval,
+    Rhs: Eval,
+    Evaluate<Rhs>: Cons,
+    Evaluate<Lhs>: Concat<Evaluate<Rhs>>,
 {
-    type Output = <Evaluator<Lhs> as Concat<Evaluator<Rhs>>>::Output;
+    type Output = <Evaluate<Lhs> as Concat<Evaluate<Rhs>>>::Output;
 }
 
 // --- FAppend: Append to end ---
-impl<Array, Elem> Evaluable for EApply2<FAppend, Array, Elem>
+impl<Array, Elem> Eval for EApply2<FAppend, Array, Elem>
 where
-    Array: Evaluable,
-    Elem: Evaluable,
-    Evaluator<Array>: Concat<TyArray<Evaluator<Elem>, TyNil>>,
+    Array: Eval,
+    Elem: Eval,
+    Evaluate<Array>: Concat<TyArray<Evaluate<Elem>, TyNil>>,
 {
-    type Output = <Evaluator<Array> as Concat<TyArray<Evaluator<Elem>, TyNil>>>::Output;
+    type Output = <Evaluate<Array> as Concat<TyArray<Evaluate<Elem>, TyNil>>>::Output;
 }
 
 // --- FPrepend: Prepend to start ---
-impl<Elem, Array> Evaluable for EApply2<FPrepend, Elem, Array>
+impl<Elem, Array> Eval for EApply2<FPrepend, Elem, Array>
 where
-    Elem: Evaluable,
-    Array: Evaluable,
-    Evaluator<Array>: Cons,
+    Elem: Eval,
+    Array: Eval,
+    Evaluate<Array>: Cons,
 {
-    type Output = TyArray<Evaluator<Elem>, Evaluator<Array>>;
+    type Output = TyArray<Evaluate<Elem>, Evaluate<Array>>;
 }
 
 // --- FContains: Contains element ---
-impl<Array, Elem> Evaluable for EApply2<FContains, Array, Elem>
+impl<Array, Elem> Eval for EApply2<FContains, Array, Elem>
 where
-    Array: Evaluable,
-    Elem: Evaluable,
-    Evaluator<Array>: Contains<Evaluator<Elem>>,
-    (): crate::std::reify::ReflectBool<{ <Evaluator<Array> as Contains<Evaluator<Elem>>>::VALUE }>,
+    Array: Eval,
+    Elem: Eval,
+    Evaluate<Array>: Contains<Evaluate<Elem>>,
+    (): crate::std::reify::ReflectBool<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>,
 {
-    type Output = Evaluator<
-        crate::std::bool::Assert<{ <Evaluator<Array> as Contains<Evaluator<Elem>>>::VALUE }>,
+    type Output = Evaluate<
+        crate::std::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>,
     >;
 }
 
 // --- FMap ---
-impl<F, List> Evaluable for EApply2<FMap, F, List>
+impl<F, List> Eval for EApply2<FMap, F, List>
 where
-    List: Evaluable,
-    Evaluator<List>: MapHelper<F>,
+    List: Eval,
+    Evaluate<List>: MapHelper<F>,
 {
-    type Output = <Evaluator<List> as MapHelper<F>>::Output;
+    type Output = <Evaluate<List> as MapHelper<F>>::Output;
 }
 
 // --- FFilter ---
-impl<Pred, List> Evaluable for EApply2<FFilter, Pred, List>
+impl<Pred, List> Eval for EApply2<FFilter, Pred, List>
 where
-    List: Evaluable,
-    Evaluator<List>: FilterHelper<Pred>,
+    List: Eval,
+    Evaluate<List>: FilterHelper<Pred>,
 {
-    type Output = <Evaluator<List> as FilterHelper<Pred>>::Output;
+    type Output = <Evaluate<List> as FilterHelper<Pred>>::Output;
 }
 
 // --- FFold ---
-impl<F, Init, List> Evaluable for EApply3<FFold, F, Init, List>
+impl<F, Init, List> Eval for EApply3<FFold, F, Init, List>
 where
-    Init: Evaluable,
-    List: Evaluable,
-    Evaluator<List>: FoldHelper<F, Evaluator<Init>>,
+    Init: Eval,
+    List: Eval,
+    Evaluate<List>: FoldHelper<F, Evaluate<Init>>,
 {
-    type Output = <Evaluator<List> as FoldHelper<F, Evaluator<Init>>>::Output;
+    type Output = <Evaluate<List> as FoldHelper<F, Evaluate<Init>>>::Output;
 }
 
 // =============================================================================
@@ -492,22 +490,22 @@ mod tests {
     #[test]
     fn test_simple_evals() {
         // ELen
-        assert_type_eq_all!(Evaluator<ELen<ELit<TyNil>>>, U0);
-        assert_type_eq_all!(Evaluator<ELen<MyListExpr>>, U12);
+        assert_type_eq_all!(Evaluate<ELen<ELit<TyNil>>>, U0);
+        assert_type_eq_all!(Evaluate<ELen<MyListExpr>>, U12);
 
         // EHead/ETail
         type List3Expr = ELit<tyarray![i32, f64, bool]>;
-        assert_type_eq_all!(Evaluator<EHead<List3Expr>>, i32);
-        assert_type_eq_all!(Evaluator<ETail<List3Expr>>, tyarray![f64, bool]);
+        assert_type_eq_all!(Evaluate<EHead<List3Expr>>, i32);
+        assert_type_eq_all!(Evaluate<ETail<List3Expr>>, tyarray![f64, bool]);
 
         // EIsEmpty
-        assert_type_eq_all!(Evaluator<EIsEmpty<ELit<TyNil>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EIsEmpty<ELit<tyarray![i32]>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EIsEmpty<ELit<TyNil>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EIsEmpty<ELit<tyarray![i32]>>>, TyFalse);
 
         // EGet
-        assert_type_eq_all!(Evaluator<EGet<MyListExpr, ELit<U0>>>, i32);
-        assert_type_eq_all!(Evaluator<EGet<MyListExpr, ELit<U1>>>, String);
-        assert_type_eq_all!(Evaluator<EGet<MyListExpr, ELit<U10>>>, (usize, usize));
+        assert_type_eq_all!(Evaluate<EGet<MyListExpr, ELit<U0>>>, i32);
+        assert_type_eq_all!(Evaluate<EGet<MyListExpr, ELit<U1>>>, String);
+        assert_type_eq_all!(Evaluate<EGet<MyListExpr, ELit<U10>>>, (usize, usize));
     }
 
     #[test]
@@ -517,21 +515,21 @@ mod tests {
 
         // EConcat
         type Concatenated = EConcat<ELit<ListA>, ELit<ListB>>;
-        assert_type_eq_all!(Evaluator<Concatenated>, tyarray![i32, f64, bool, char]);
+        assert_type_eq_all!(Evaluate<Concatenated>, tyarray![i32, f64, bool, char]);
 
         // ELen<EConcat<...>> - 式のネスト！
-        assert_type_eq_all!(Evaluator<ELen<Concatenated>>, typenum::U4);
+        assert_type_eq_all!(Evaluate<ELen<Concatenated>>, typenum::U4);
 
         // EAppend
         type Appended = EAppend<ELit<ListA>, ELit<bool>>;
-        assert_type_eq_all!(Evaluator<Appended>, tyarray![i32, f64, bool]);
+        assert_type_eq_all!(Evaluate<Appended>, tyarray![i32, f64, bool]);
 
         // EPrepend
         type Prepended = EPrepend<ELit<bool>, ELit<ListA>>;
-        assert_type_eq_all!(Evaluator<Prepended>, tyarray![bool, i32, f64]);
+        assert_type_eq_all!(Evaluate<Prepended>, tyarray![bool, i32, f64]);
 
         // EGet<EConcat<...>> - 式のネスト！
-        assert_type_eq_all!(Evaluator<EGet<Concatenated, ELit<U2>>>, bool);
+        assert_type_eq_all!(Evaluate<EGet<Concatenated, ELit<U2>>>, bool);
     }
 
     #[test]
@@ -539,27 +537,27 @@ mod tests {
         type ListExpr = ELit<tyarray![i32, f64, bool, char]>;
 
         // 含まれる場合 → TyTrue
-        assert_type_eq_all!(Evaluator<EContains<ListExpr, ELit<i32>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EContains<ListExpr, ELit<char>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<i32>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<char>>>, TyTrue);
 
         // 含まれない場合 → TyFalse
-        assert_type_eq_all!(Evaluator<EContains<ListExpr, ELit<String>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<EContains<ListExpr, ELit<()>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<String>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<()>>>, TyFalse);
 
         // 合成したリストでテスト - 式のネスト！
         type Concatenated = EConcat<ELit<tyarray![i32]>, ELit<tyarray![f64]>>;
-        assert_type_eq_all!(Evaluator<EContains<Concatenated, ELit<f64>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EContains<Concatenated, ELit<bool>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<f64>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<bool>>>, TyFalse);
     }
 
     #[test]
     fn test_emap() {
         use typenum::{Add1, U1, U2, U3, U4};
 
-        use crate::std::traits::EFunction;
+        use crate::std::traits::TyFn;
 
         struct AddOne;
-        impl<T> EFunction<T> for AddOne
+        impl<T> TyFn<T> for AddOne
         where
             T: std::ops::Add<typenum::B1>,
         {
@@ -569,17 +567,17 @@ mod tests {
         type List = tyarray![U1, U2, U3];
         type Mapped = EMap<AddOne, ELit<List>>;
 
-        assert_type_eq_all!(Evaluator<Mapped>, tyarray![U2, U3, U4]);
+        assert_type_eq_all!(Evaluate<Mapped>, tyarray![U2, U3, U4]);
     }
 
     #[test]
     fn test_efilter() {
         use typenum::{IsLess, U1, U2, U3, U4, U5};
 
-        use crate::std::{bool::ToTyBoolOut, into::TyFrom, traits::EFunction};
+        use crate::std::{bool::ToTyBoolOut, into::TyFrom, traits::TyFn};
 
         struct LessThan3;
-        impl<T> EFunction<T> for LessThan3
+        impl<T> TyFn<T> for LessThan3
         where
             T: IsLess<U3>,
             // T < 3 returns B1/B0. We want a boolean.
@@ -593,18 +591,18 @@ mod tests {
         // Filter < 3 -> [1, 2]
         type Filtered = EFilter<LessThan3, ELit<List>>;
 
-        assert_type_eq_all!(Evaluator<Filtered>, tyarray![U1, U2]);
+        assert_type_eq_all!(Evaluate<Filtered>, tyarray![U1, U2]);
     }
 
     #[test]
     fn test_efold() {
         use typenum::{U0, U1, U2, U3, U6};
 
-        use crate::std::traits::EFunction;
+        use crate::std::traits::TyFn;
 
         // Sum: (Acc, Elem) -> Acc + Elem
         struct Sum;
-        impl<Acc, Elem> EFunction<(Acc, Elem)> for Sum
+        impl<Acc, Elem> TyFn<(Acc, Elem)> for Sum
         where
             Acc: std::ops::Add<Elem>,
         {
@@ -615,6 +613,6 @@ mod tests {
         // Fold Sum 0 [1, 2, 3] -> 6
         type Summed = EFold<Sum, ELit<U0>, ELit<List>>;
 
-        assert_type_eq_all!(Evaluator<Summed>, U6);
+        assert_type_eq_all!(Evaluate<Summed>, U6);
     }
 }

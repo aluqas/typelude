@@ -8,10 +8,10 @@
 
 use std::marker::PhantomData;
 
-use super::{Evaluable, Evaluator};
+use super::{Eval, Evaluate};
 use crate::std::{
     bool::{TyFalse, TyTrue},
-    traits::EFunction,
+    traits::TyFn,
 };
 
 //
@@ -27,7 +27,7 @@ use crate::std::{
 /// ```
 pub struct ELit<T>(PhantomData<T>);
 
-impl<T> Evaluable for ELit<T> {
+impl<T> Eval for ELit<T> {
     type Output = T;
 }
 
@@ -80,31 +80,31 @@ pub trait IfHelper<Then, Else> {
 
 impl<Then, Else> IfHelper<Then, Else> for TyTrue
 where
-    Then: Evaluable,
+    Then: Eval,
 {
     type Output = Then::Output;
 }
 
 impl<Then, Else> IfHelper<Then, Else> for TyFalse
 where
-    Else: Evaluable,
+    Else: Eval,
 {
     type Output = Else::Output;
 }
 
-impl<Cond, Then, Else> Evaluable for EIf<Cond, Then, Else>
+impl<Cond, Then, Else> Eval for EIf<Cond, Then, Else>
 where
-    Cond: Evaluable,
-    Evaluator<Cond>: IfHelper<Then, Else>,
+    Cond: Eval,
+    Evaluate<Cond>: IfHelper<Then, Else>,
 {
-    type Output = <Evaluator<Cond> as IfHelper<Then, Else>>::Output;
+    type Output = <Evaluate<Cond> as IfHelper<Then, Else>>::Output;
 }
 
 //
 // EWhile: Loop Expression
 //
 
-type AppliedOutput<F, A> = <F as EFunction<A>>::Output;
+type AppliedOutput<F, A> = <F as TyFn<A>>::Output;
 
 /// Expression representing a While loop
 ///
@@ -128,27 +128,26 @@ pub trait WhileHelper<Pred, Step, State> {
 // Condition == True: Recurse
 impl<Pred, Step, State> WhileHelper<Pred, Step, State> for TyTrue
 where
-    Step: EFunction<State>,
-    Step::Output: Evaluable,
-    EWhile<Pred, Step, AppliedOutput<Step, State>>: Evaluable,
+    Step: TyFn<State>,
+    Step::Output: Eval,
+    EWhile<Pred, Step, AppliedOutput<Step, State>>: Eval,
 {
-    type Output = <EWhile<Pred, Step, AppliedOutput<Step, State>> as Evaluable>::Output;
+    type Output = <EWhile<Pred, Step, AppliedOutput<Step, State>> as Eval>::Output;
 }
 
 // Condition == False: Terminate
 impl<Pred, Step, State> WhileHelper<Pred, Step, State> for TyFalse
 where
-    State: Evaluable,
+    State: Eval,
 {
-    type Output = Evaluator<State>;
+    type Output = Evaluate<State>;
 }
 
-impl<Pred, Step, State> Evaluable for EWhile<Pred, Step, State>
+impl<Pred, Step, State> Eval for EWhile<Pred, Step, State>
 where
-    Pred: EFunction<State>,
-    AppliedOutput<Pred, State>: Evaluable,
-    Evaluator<AppliedOutput<Pred, State>>: WhileHelper<Pred, Step, State>,
+    Pred: TyFn<State>,
+    AppliedOutput<Pred, State>: Eval,
+    Evaluate<AppliedOutput<Pred, State>>: WhileHelper<Pred, Step, State>,
 {
-    type Output =
-        <Evaluator<AppliedOutput<Pred, State>> as WhileHelper<Pred, Step, State>>::Output;
+    type Output = <Evaluate<AppliedOutput<Pred, State>> as WhileHelper<Pred, Step, State>>::Output;
 }

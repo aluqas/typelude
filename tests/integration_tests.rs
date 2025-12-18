@@ -2,7 +2,7 @@
 use static_assertions::assert_type_eq_all;
 use typelude::{
     define_vars,
-    eval::Evaluator,
+    eval::Evaluate,
     machine::{execution::ERun, state::MachineState},
     program,
     std::array::{TyArray, TyNil},
@@ -52,7 +52,7 @@ fn test_fibonacci_iterative() {
     };
 
     type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-    type FinalState = Evaluator<ERun<InitialState>>;
+    type FinalState = Evaluate<ERun<InitialState>>;
     type FinalStack = <FinalState as GetStack>::Output;
 
     // The 10th fibonacci number (starting 0, 1, 1, 2...)
@@ -74,7 +74,7 @@ fn test_sum_list() {
         (get sum)
     };
     type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-    type FinalState = Evaluator<ERun<InitialState>>;
+    type FinalState = Evaluate<ERun<InitialState>>;
     type FinalStack = <FinalState as GetStack>::Output;
 
     assert_type_eq_all!(FinalStack, TyArray<U21, TyNil>);

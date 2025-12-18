@@ -457,7 +457,7 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use crate::{
-        eval::Evaluator,
+        eval::Evaluate,
         machine::{execution::ERun, state::MachineState},
         std::array::{TyArray, TyNil},
     };
@@ -479,7 +479,7 @@ mod tests {
             (add)
         };
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
         type FinalStack = <FinalState as GetStack>::Output;
 
         assert_type_eq_all!(FinalStack, TyArray<U4, TyNil>);
@@ -495,7 +495,7 @@ mod tests {
             (if ((push 10)) ((push 20)))
         };
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
         type FinalStack = <FinalState as GetStack>::Output;
 
         assert_type_eq_all!(FinalStack, TyArray<crate::typenum::U10, TyNil>);
@@ -511,7 +511,7 @@ mod tests {
         };
         use crate::typenum::U0;
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
         type FinalStack = <FinalState as GetStack>::Output;
 
         assert_type_eq_all!(FinalStack, TyArray<U0, TyNil>);
@@ -540,7 +540,7 @@ mod tests {
         // Need to initialize memory with enough zeros for x and y
         type InitialMemory = crate::tyarray![crate::typenum::U0, crate::typenum::U0];
         type InitialState = MachineState<TyNil, TyNil, InitialMemory, TyNil, Prog>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
         type FinalStack = <FinalState as GetStack>::Output;
 
         assert_type_eq_all!(FinalStack, TyArray<crate::typenum::U15, TyNil>);
@@ -569,7 +569,7 @@ mod tests {
             (add)
         };
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
         type FinalStack = <FinalState as GetStack>::Output;
         // Result stack should be [15]
         assert_type_eq_all!(FinalStack, TyArray<crate::typenum::U15, TyNil>);
@@ -603,7 +603,7 @@ mod tests {
         };
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
         type FinalStack = <FinalState as GetStack>::Output;
 
         type ExpectedState =
@@ -631,7 +631,7 @@ mod tests {
         // After program: stack [20]. Cleanup drops both.
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
         type ExpectedState =
             MachineState<TyArray<crate::typenum::U20, TyNil>, TyNil, TyNil, TyNil, TyNil>;
         assert_type_eq_all!(FinalState, ExpectedState);

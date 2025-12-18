@@ -23,7 +23,7 @@ pub trait Sealed {}
 /// Trait to evaluate type-level expressions
 ///
 /// Types implementing `Evaluable` can get evaluation results via `Evaluator<T>`.
-pub trait Evaluable {
+pub trait Eval {
     type Output;
 }
 
@@ -34,58 +34,58 @@ pub trait Evaluable {
 /// type Result = Evaluator<EIf<ELit<TyTrue>, ELit<i32>, ELit<f64>>>;
 /// // Result = i32
 /// ```
-pub type Evaluator<T> = <T as Evaluable>::Output;
+pub type Evaluate<T> = <T as Eval>::Output;
 
 #[cfg(test)]
 mod tests {
     use static_assertions::{assert_type_eq_all, assert_type_ne_all};
 
     use crate::{
-        eval::{EIf, ELit, EWhile, Evaluator},
+        eval::{EIf, ELit, EWhile, Evaluate},
         std::{
             array::{Cons, TyArray, TyNil},
             bool::{ToTyBoolOut, TyFalse, TyTrue},
             cmp::{EEq, ENotEq},
-            traits::EFunction,
+            traits::TyFn,
         },
     };
 
     #[test]
     fn test_eeq() {
         // 同じ型 → TyTrue
-        assert_type_eq_all!(Evaluator<EEq<ELit<i32>, ELit<i32>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EEq<ELit<TyTrue>, ELit<TyTrue>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<EEq<ELit<String>, ELit<String>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EEq<ELit<i32>, ELit<i32>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EEq<ELit<TyTrue>, ELit<TyTrue>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EEq<ELit<String>, ELit<String>>>, TyTrue);
 
         // 異なる型 → TyFalse
-        assert_type_eq_all!(Evaluator<EEq<ELit<i32>, ELit<f64>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<EEq<ELit<TyTrue>, ELit<TyFalse>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<EEq<ELit<i32>, ELit<String>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EEq<ELit<i32>, ELit<f64>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EEq<ELit<TyTrue>, ELit<TyFalse>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EEq<ELit<i32>, ELit<String>>>, TyFalse);
 
         // ENotEq: 同じ型 → TyFalse
-        assert_type_eq_all!(Evaluator<ENotEq<ELit<i32>, ELit<i32>>>, TyFalse);
-        assert_type_eq_all!(Evaluator<ENotEq<ELit<TyTrue>, ELit<TyTrue>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<ENotEq<ELit<i32>, ELit<i32>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<ENotEq<ELit<TyTrue>, ELit<TyTrue>>>, TyFalse);
 
         // ENotEq: 異なる型 → TyTrue
-        assert_type_eq_all!(Evaluator<ENotEq<ELit<i32>, ELit<f64>>>, TyTrue);
-        assert_type_eq_all!(Evaluator<ENotEq<ELit<TyTrue>, ELit<TyFalse>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENotEq<ELit<i32>, ELit<f64>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENotEq<ELit<TyTrue>, ELit<TyFalse>>>, TyTrue);
     }
 
     #[test]
     fn test_eval_if() {
-        assert_type_eq_all!(Evaluator<EIf<ELit<TyTrue>, ELit<i32>, ELit<f64>>>, i32);
-        assert_type_eq_all!(Evaluator<EIf<ELit<TyFalse>, ELit<i32>, ELit<f64>>>, f64);
-        assert_type_ne_all!(Evaluator<EIf<ELit<TyTrue>, ELit<i32>, ELit<()>>>, ());
+        assert_type_eq_all!(Evaluate<EIf<ELit<TyTrue>, ELit<i32>, ELit<f64>>>, i32);
+        assert_type_eq_all!(Evaluate<EIf<ELit<TyFalse>, ELit<i32>, ELit<f64>>>, f64);
+        assert_type_ne_all!(Evaluate<EIf<ELit<TyTrue>, ELit<i32>, ELit<()>>>, ());
     }
 
     #[test]
     fn test_eval_while() {
         // Condition: IsNotEmpty
         struct IsNotEmpty;
-        impl EFunction<TyNil> for IsNotEmpty {
+        impl TyFn<TyNil> for IsNotEmpty {
             type Output = TyFalse;
         }
-        impl<H, T> EFunction<TyArray<H, T>> for IsNotEmpty
+        impl<H, T> TyFn<TyArray<H, T>> for IsNotEmpty
         where
             T: Cons,
         {
@@ -94,7 +94,7 @@ mod tests {
 
         // Step: GetTail
         struct GetTail;
-        impl<H, T> EFunction<TyArray<H, T>> for GetTail
+        impl<H, T> TyFn<TyArray<H, T>> for GetTail
         where
             T: Cons,
         {
@@ -102,7 +102,7 @@ mod tests {
         }
 
         assert_type_eq_all!(
-            Evaluator<EWhile<IsNotEmpty, GetTail, TyArray<i32, TyArray<f64, TyArray<(), TyNil>>>>>,
+            Evaluate<EWhile<IsNotEmpty, GetTail, TyArray<i32, TyArray<f64, TyArray<(), TyNil>>>>>,
             TyNil
         );
     }
@@ -114,7 +114,7 @@ mod tests {
         use crate::std::into::TyFrom;
 
         struct IsLessThan10;
-        impl<T> EFunction<T> for IsLessThan10
+        impl<T> TyFn<T> for IsLessThan10
         where
             T: IsLess<U10>,
             bool: TyFrom<<T as IsLess<U10>>::Output>,
@@ -123,7 +123,7 @@ mod tests {
         }
 
         struct PlusOne;
-        impl<T> EFunction<T> for PlusOne
+        impl<T> TyFn<T> for PlusOne
         where
             T: std::ops::Add<typenum::B1>,
             Add1<T>: Unsigned,
@@ -131,7 +131,7 @@ mod tests {
             type Output = ELit<Add1<T>>;
         }
 
-        type Result = Evaluator<EWhile<IsLessThan10, PlusOne, U1>>;
+        type Result = Evaluate<EWhile<IsLessThan10, PlusOne, U1>>;
         assert_type_eq_all!(Result, U10);
     }
 }

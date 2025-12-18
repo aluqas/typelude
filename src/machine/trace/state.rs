@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use crate::{
-    eval::{Evaluable, Sealed},
+    eval::{Eval, Sealed},
     std::trace::Trace,
 };
 
@@ -13,7 +13,7 @@ pub struct TracedMachineState<Stack, Locals, Memory, CallStack, Program, History
 
 impl<S, L, M, C, P, H> Sealed for TracedMachineState<S, L, M, C, P, H> {}
 
-impl<S, L, M, C, P, H> Evaluable for TracedMachineState<S, L, M, C, P, H> {
+impl<S, L, M, C, P, H> Eval for TracedMachineState<S, L, M, C, P, H> {
     type Output = TracedMachineState<S, L, M, C, P, H>;
 }
 

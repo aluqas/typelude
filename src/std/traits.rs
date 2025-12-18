@@ -7,14 +7,14 @@ use crate::eval::ELit;
 /// Trait representing a function
 ///
 /// Represents a transformation from type to type, used in `EWhile` etc.
-pub trait EFunction<Arg> {
+pub trait TyFn<Arg> {
     type Output;
 }
 
 // Automatically unwrap ELit
-impl<F, Arg> EFunction<ELit<Arg>> for F
+impl<F, Arg> TyFn<ELit<Arg>> for F
 where
-    F: EFunction<Arg>,
+    F: TyFn<Arg>,
 {
-    type Output = <F as EFunction<Arg>>::Output;
+    type Output = <F as TyFn<Arg>>::Output;
 }

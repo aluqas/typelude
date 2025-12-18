@@ -8,12 +8,12 @@ use typenum::Unsigned;
 #[allow(unused_imports)]
 use crate::std::int;
 use crate::{
-    eval::{EApply, EIf, EWhile, Evaluable, Evaluator},
+    eval::{EApply, EIf, EWhile, Eval, Evaluate},
     machine::{instruction::*, state::MachineState},
     std::{
         array::{Cons, EConcat, FIsEmpty, Get, Set, TyArray, TyNil},
         bool::FNot,
-        traits::EFunction,
+        traits::TyFn,
     },
 };
 
@@ -98,9 +98,9 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpA
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::int::EAdd<Lhs, Rhs>: Evaluable,
+    crate::std::int::EAdd<Lhs, Rhs>: Eval,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::int::EAdd<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::int::EAdd<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpSub ---
@@ -108,9 +108,9 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpS
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::int::ESub<Lhs, Rhs>: Evaluable,
+    crate::std::int::ESub<Lhs, Rhs>: Eval,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::int::ESub<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::int::ESub<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpDup ---
@@ -145,9 +145,9 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpE
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::cmp::EEq<Lhs, Rhs>: Evaluable,
+    crate::std::cmp::EEq<Lhs, Rhs>: Eval,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::cmp::EEq<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::cmp::EEq<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpNeq ---
@@ -155,9 +155,9 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpN
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::cmp::ENotEq<Lhs, Rhs>: Evaluable,
+    crate::std::cmp::ENotEq<Lhs, Rhs>: Eval,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::cmp::ENotEq<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::cmp::ENotEq<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpLt ---
@@ -166,9 +166,9 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpL
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::cmp::ELt<Lhs, Rhs>: Evaluable,
+    crate::std::cmp::ELt<Lhs, Rhs>: Eval,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::cmp::ELt<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::cmp::ELt<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpGt ---
@@ -177,9 +177,9 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpG
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::cmp::EGt<Lhs, Rhs>: Evaluable,
+    crate::std::cmp::EGt<Lhs, Rhs>: Eval,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::cmp::EGt<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::cmp::EGt<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpNot ---
@@ -187,9 +187,9 @@ impl<Val, RestStack> RunStep<TyArray<Val, RestStack>> for OpNot
 where
     TyArray<Val, RestStack>: Cons,
     RestStack: Cons,
-    crate::std::bool::ENot<Val>: Evaluable,
+    crate::std::bool::ENot<Val>: Eval,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::bool::ENot<Val>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::bool::ENot<Val>>, RestStack>;
 }
 
 // --- OpAnd ---
@@ -197,9 +197,9 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpA
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::bool::EAnd<Lhs, Rhs>: Evaluable,
+    crate::std::bool::EAnd<Lhs, Rhs>: Eval,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::bool::EAnd<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::bool::EAnd<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpOr ---
@@ -207,9 +207,9 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpO
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::bool::EOr<Lhs, Rhs>: Evaluable,
+    crate::std::bool::EOr<Lhs, Rhs>: Eval,
 {
-    type OutputStack = TyArray<Evaluator<crate::std::bool::EOr<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::bool::EOr<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpLoad ---
@@ -366,28 +366,28 @@ where
     Cond: Cons,
     Body: Cons,
     RestProg: Cons,
-    EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>: Evaluable,
+    EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>: Eval,
     // Alias for the recursive body: Body + [While]
-    EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>: Evaluable,
+    EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>: Eval,
     // Note: Use 'Evaluator<...>' for the recursive part to ensure it is treated as a type, not an expression that confuses the parser
     EConcat<
         Cond,
         TyArray<
-            OpIf<Evaluator<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>,
+            OpIf<Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>,
             RestProg,
         >,
-    >: Evaluable,
+    >: Eval,
 {
     type OutputState = MachineState<
         Stack,
         Locals,
         Memory,
         CallStack,
-        Evaluator<
+        Evaluate<
             EConcat<
                 Cond,
                 TyArray<
-                    OpIf<Evaluator<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>,
+                    OpIf<Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>,
                     RestProg,
                 >,
             >,
@@ -404,19 +404,19 @@ where
     RestProg: Cons,
     Then: Cons,
     Else: Cons,
-    EConcat<Then, RestProg>: Evaluable,
-    EConcat<Else, RestProg>: Evaluable,
+    EConcat<Then, RestProg>: Eval,
+    EConcat<Else, RestProg>: Eval,
     EIf<
         Cond,
-        MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Then, RestProg>>>,
-        MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Else, RestProg>>>,
-    >: Evaluable,
+        MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<Then, RestProg>>>,
+        MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<Else, RestProg>>>,
+    >: Eval,
 {
-    type OutputState = Evaluator<
+    type OutputState = Evaluate<
         EIf<
             Cond,
-            MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Then, RestProg>>>,
-            MachineState<RestStack, Locals, Memory, CallStack, Evaluator<EConcat<Else, RestProg>>>,
+            MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<Then, RestProg>>>,
+            MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<Else, RestProg>>>,
         >,
     >;
 }
@@ -430,7 +430,7 @@ where
 pub struct FStep;
 
 impl<Stack, Locals, Memory, CallStack, Inst, RestProg>
-    EFunction<MachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>>> for FStep
+    TyFn<MachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>>> for FStep
 where
     Inst: Execute<Stack, Locals, Memory, CallStack, RestProg>,
     TyArray<Inst, RestProg>: Cons,
@@ -440,22 +440,22 @@ where
 }
 
 // Evaluable wrapper for FStep
-impl<S, L, M, C, P> Evaluable for EApply<FStep, MachineState<S, L, M, C, P>>
+impl<S, L, M, C, P> Eval for EApply<FStep, MachineState<S, L, M, C, P>>
 where
-    FStep: EFunction<MachineState<S, L, M, C, P>>,
+    FStep: TyFn<MachineState<S, L, M, C, P>>,
 {
-    type Output = <FStep as EFunction<MachineState<S, L, M, C, P>>>::Output;
+    type Output = <FStep as TyFn<MachineState<S, L, M, C, P>>>::Output;
 }
 
 // --- IsFinished: Check if program is empty ---
 pub struct FIsFinished;
 
-impl<S, L, M, C, P> EFunction<MachineState<S, L, M, C, P>> for FIsFinished
+impl<S, L, M, C, P> TyFn<MachineState<S, L, M, C, P>> for FIsFinished
 where
-    EApply<FIsEmpty, P>: Evaluable,
-    Evaluator<EApply<FIsEmpty, P>>: crate::std::bool::NotHelper,
+    EApply<FIsEmpty, P>: Eval,
+    Evaluate<EApply<FIsEmpty, P>>: crate::std::bool::NotHelper,
 {
-    type Output = Evaluator<EApply<FNot, EApply<FIsEmpty, P>>>;
+    type Output = Evaluate<EApply<FNot, EApply<FIsEmpty, P>>>;
 }
 
 // --- Machine Runner ---
@@ -493,7 +493,7 @@ mod tests {
 
         // Empty Memory, Empty CallStack, Empty Locals
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
 
         type ExpectedStack = tyarray![typenum::U0];
         type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
@@ -511,7 +511,7 @@ mod tests {
         type MainProg = tyarray![OpPush<U3>, OpCall<SubRoutine>, OpAdd];
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, MainProg>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
 
         type ExpectedStack = tyarray![typenum::U8];
         type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
@@ -549,7 +549,7 @@ mod tests {
         type Main = tyarray![OpCall<Func>];
 
         type InitialState = MachineState<TyNil, TyNil, InitialMemory, TyNil, Main>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
 
         // Expected Memory: [30] (10 + 20)
         type ExpectedMemory = tyarray![typenum::U30];
@@ -577,7 +577,7 @@ mod tests {
         ];
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
 
         // Result should be 0
         type ExpectedStack = tyarray![U0];
@@ -638,7 +638,7 @@ mod tests {
         ];
 
         type InitialState = MachineState<TyNil, TyNil, InitialMemory, TyNil, SortProg>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
 
         type ExpectedMemory = tyarray![U1, U3];
         type ExpectedState = MachineState<TyNil, TyNil, ExpectedMemory, TyNil, TyNil>;
@@ -674,7 +674,7 @@ mod tests {
         type Main = tyarray![OpCall<FuncA>];
 
         type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Main>;
-        type FinalState = Evaluator<ERun<InitialState>>;
+        type FinalState = Evaluate<ERun<InitialState>>;
 
         // FinalStack should contain [10] (result of GetLocal)
         type ExpectedStack = tyarray![U10];

@@ -6,7 +6,7 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use typenum::{B0, B1, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
 
-use crate::eval::{EApply2, Evaluable, Evaluator, Sealed};
+use crate::eval::{EApply2, Eval, Evaluate, Sealed};
 
 //
 // Evaluable Implementation for typenum Types
@@ -14,35 +14,35 @@ use crate::eval::{EApply2, Evaluable, Evaluator, Sealed};
 
 // --- Unsigned Integers ---
 
-impl Evaluable for UTerm {
+impl Eval for UTerm {
     type Output = Self;
 }
 
-impl<U, B> Evaluable for UInt<U, B> {
+impl<U, B> Eval for UInt<U, B> {
     type Output = Self;
 }
 
 // --- Signed Integers ---
 
-impl Evaluable for Z0 {
+impl Eval for Z0 {
     type Output = Self;
 }
 
-impl<U: Unsigned + typenum::NonZero> Evaluable for PInt<U> {
+impl<U: Unsigned + typenum::NonZero> Eval for PInt<U> {
     type Output = Self;
 }
 
-impl<U: Unsigned + typenum::NonZero> Evaluable for NInt<U> {
+impl<U: Unsigned + typenum::NonZero> Eval for NInt<U> {
     type Output = Self;
 }
 
 // --- Bits ---
 
-impl Evaluable for B0 {
+impl Eval for B0 {
     type Output = Self;
 }
 
-impl Evaluable for B1 {
+impl Eval for B1 {
     type Output = Self;
 }
 
@@ -99,49 +99,49 @@ mod tests {
 
     #[test]
     fn test_eval_typenum() {
-        assert_type_eq_all!(Evaluator<U1>, U1);
-        assert_type_eq_all!(Evaluator<P5>, P5);
-        assert_type_eq_all!(Evaluator<N2>, N2);
-        assert_type_eq_all!(Evaluator<B0>, B0);
-        assert_type_eq_all!(Evaluator<B1>, B1);
+        assert_type_eq_all!(Evaluate<U1>, U1);
+        assert_type_eq_all!(Evaluate<P5>, P5);
+        assert_type_eq_all!(Evaluate<N2>, N2);
+        assert_type_eq_all!(Evaluate<B0>, B0);
+        assert_type_eq_all!(Evaluate<B1>, B1);
     }
 
     #[test]
     fn test_add() {
-        assert_type_eq_all!(Evaluator<EAdd<U1, U2>>, U3);
-        assert_type_eq_all!(Evaluator<EAdd<P1, N2>>, N1);
+        assert_type_eq_all!(Evaluate<EAdd<U1, U2>>, U3);
+        assert_type_eq_all!(Evaluate<EAdd<P1, N2>>, N1);
     }
 
     #[test]
     fn test_sub() {
-        assert_type_eq_all!(Evaluator<ESub<U10, U2>>, U8);
-        assert_type_eq_all!(Evaluator<ESub<N1, P1>>, N2);
+        assert_type_eq_all!(Evaluate<ESub<U10, U2>>, U8);
+        assert_type_eq_all!(Evaluate<ESub<N1, P1>>, N2);
     }
 
     #[test]
     fn test_mul() {
-        assert_type_eq_all!(Evaluator<EMul<U2, U10>>, U20);
-        assert_type_eq_all!(Evaluator<EMul<N2, N2>>, P4);
+        assert_type_eq_all!(Evaluate<EMul<U2, U10>>, U20);
+        assert_type_eq_all!(Evaluate<EMul<N2, N2>>, P4);
     }
 
     #[test]
     fn test_div() {
-        assert_type_eq_all!(Evaluator<EDiv<U10, U2>>, U5);
+        assert_type_eq_all!(Evaluate<EDiv<U10, U2>>, U5);
     }
 
     #[test]
     fn test_rem() {
-        assert_type_eq_all!(Evaluator<ERem<U10, U3>>, U1);
+        assert_type_eq_all!(Evaluate<ERem<U10, U3>>, U1);
     }
 
     #[test]
     fn test_pow() {
-        assert_type_eq_all!(Evaluator<EPow<U2, U3>>, U8);
+        assert_type_eq_all!(Evaluate<EPow<U2, U3>>, U8);
     }
 
     #[test]
     fn test_composition() {
         // (1 + 2) * 3 = 9
-        assert_type_eq_all!(Evaluator<EMul<EAdd<U1, U2>, U3>>, U9);
+        assert_type_eq_all!(Evaluate<EMul<EAdd<U1, U2>, U3>>, U9);
     }
 }

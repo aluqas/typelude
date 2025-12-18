@@ -9,7 +9,7 @@
 
 pub use crate::{
     // Evaluation infrastructure
-    eval::{EApply, EApply2, EIf, ELit, EWhile, Evaluable, Evaluator},
+    eval::{EApply, EApply2, EIf, ELit, EWhile, Eval, Evaluate},
     // Standard Library
     std::{
         // Array (Collection)
@@ -28,7 +28,7 @@ pub use crate::{
         // Int (Arithmetic)
         int::{EAdd, EDiv, EMul, EPow, ERem, ESub, FAdd, FDiv, FMul, FPow, FRem, FSub},
         // Traits (Core)
-        traits::EFunction,
+        traits::TyFn,
     },
     // Macros
     tyarray,
