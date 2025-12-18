@@ -17,7 +17,7 @@
 pub mod church;
 pub mod curry;
 pub mod fix;
-pub mod list;
+pub mod col;
 pub mod monads;
 pub mod proof;
 pub mod ski;

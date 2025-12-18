@@ -12,7 +12,7 @@ use typelude::{
             LSuccGen, LTrue, LZero,
         },
         fix::LFix,
-        list::{LCons, LFoldr, LHeadOr, LIsEmpty, LNil, LTailOr},
+        col::{LCons, LFoldr, LHeadOr, LIsEmpty, LNil, LTailOr},
         ski::{I, K, S},
     },
 };
