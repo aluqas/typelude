@@ -12,5 +12,7 @@ pub mod list;
 pub mod monad;
 pub mod ski;
 pub mod state;
+pub mod traits;
 
 pub use crate::kernel::traits::Apply;
+pub use traits::Lambda;

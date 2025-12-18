@@ -8,28 +8,12 @@ use super::Apply;
 
 /// The Fixed-Point Combinator `Fix`
 ///
-/// Semantics: Fix f -> f (Fix f)
-///
-/// In a strict setting (like Rust trait resolution), we have to be careful.
-/// `Fix<F>` represents the *result* of `Fix` applied to `F`.
-/// It acts like a function that, when applied to `x`, unrolls one layer of recursion.
-///
 /// Rule: Fix<F> x = (F Fix<F>) x
 pub struct Fix<F>(PhantomData<F>);
 
-// We implement Apply<X> for Fix<F>.
-// This corresponds to applying the "Recursive Function" to an argument `X`.
-//
-// The process:
-// 1. We have `F` (the body of the recursion).
-// 2. We explicitly pass `Fix<F>` (Self) to `F` as its first argument (the 'recurse' handle).
-// 3. `F` returns a function (let's call it `Body`).
-// 4. We apply `Body` to `X`.
 impl<F, X> Apply<X> for Fix<F>
 where
-    // Step 1: Apply F to Fix<F>
     F: Apply<Fix<F>>,
-    // Step 2: Apply the result to X
     <F as Apply<Fix<F>>>::Output: Apply<X>,
 {
     type Output = <<F as Apply<Fix<F>>>::Output as Apply<X>>::Output;
@@ -40,7 +24,7 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::lambda::church::{False, If, True};
+    use crate::lambda::church::{False, True, PureIf};
 
     type App<F, A> = <F as Apply<A>>::Output;
 
@@ -68,7 +52,8 @@ mod tests {
             Arg: Apply<True>,
             <Arg as Apply<True>>::Output: Apply<Thunk<R, True>>,
         {
-            type Output = If<Arg, True, Thunk<R, True>>;
+            // Use PureIf alias
+            type Output = PureIf<Arg, True, Thunk<R, True>>;
         }
 
         type F = Fix<LoopBody>;

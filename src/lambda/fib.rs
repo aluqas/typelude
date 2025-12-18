@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use super::{Apply, church::{Pair, Zero, Succ, Add, Fst, Snd, Zero1, Succ1, Succ2}};
+use super::{Apply, church::{Pair, Zero, Succ, PureAdd, PureFst, PureSnd}};
 
 // =========================================================================
 // Fibonacci Calculation (Iterative Pair Approach)
@@ -12,12 +12,7 @@ use super::{Apply, church::{Pair, Zero, Succ, Add, Fst, Snd, Zero1, Succ1, Succ2
 /// Step: (a, b) -> (b, a+b)
 /// End: (F(n), F(n+1))
 /// Result: Fst -> F(n)
-///
-/// Note: Fib(0) -> Fst (0 step (0,1)) -> Fst(0,1) -> 0. Correct.
-/// Note: Fib(1) -> Fst (1 step (0,1)) -> Fst(1,1) -> 1. Correct.
-/// Note: Fib(2) -> Fst (2 step (0,1)) -> Fst(1,2) -> 1. Correct.
-/// Note: Fib(3) -> Fst (3 step (0,1)) -> Fst(2,3) -> 2. Correct.
-pub type Fib<N> = Fst<
+pub type Fib<N> = PureFst<
     <<N as Apply<FibStep>>::Output as Apply<Pair<Zero, Succ<Zero>>>>::Output
 >;
 
@@ -30,18 +25,12 @@ where
     P: Apply<crate::lambda::church::True>,  // Fst
     <P as Apply<crate::lambda::church::False>>::Output: Apply<crate::lambda::church::SuccGen>, // Add Support
     // Add<Fst, Snd>
-    // Fst<P> must be applicable to AddPart<Snd<P>>
-    // AddPart<Snd<P>> defined in church.rs? Yes but private?
-    // We used Add<M, N> type alias.
-    // Add<Fst<P>, Snd<P>> = Fst<P> (SuccGen) Snd<P>
-    // Wait, Add definition: <<M as Apply<SuccGen>>::Output as Apply<N>>::Output
-    // So:
-    Fst<P>: Apply<crate::lambda::church::SuccGen>,
-    <Fst<P> as Apply<crate::lambda::church::SuccGen>>::Output: Apply<Snd<P>>,
+    PureFst<P>: Apply<crate::lambda::church::SuccGen>,
+    <PureFst<P> as Apply<crate::lambda::church::SuccGen>>::Output: Apply<PureSnd<P>>,
 {
     type Output = Pair<
-        Snd<P>,
-        Add<Fst<P>, Snd<P>>
+        PureSnd<P>,
+        PureAdd<PureFst<P>, PureSnd<P>>
     >;
 }
 
@@ -59,7 +48,6 @@ mod tests {
     type Three = Succ<Two>;
     type Four = Succ<Three>;
     type Five = Succ<Four>;
-    type Eight = Add<Four, Four>; // Fib(6) = 8. Need Add to construct expected 8? Or just recursive Succ.
 
     #[test]
     fn test_fib_small() {
