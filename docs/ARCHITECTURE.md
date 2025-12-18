@@ -92,12 +92,12 @@ where
     // Ensure the stack has at least 2 elements
     TyArray<B, TyArray<A, Rest>>: Cons,
     // Ensure A and B can be added (Delegating to Typenum or Std lib)
-    crate::std::int::EAdd<A, B>: Evaluable,
+    crate::std::int::EAdd<A, B>: Eval,
 {
     // The result is the Tail (Rest) with the Sum pushed on front
     type OutputStack = TyArray<
         // Call the helper evaluator
-        Evaluator<crate::std::int::EAdd<A, B>>,
+        Evaluate<crate::std::int::EAdd<A, B>>,
         Rest
     >;
 }
@@ -216,26 +216,26 @@ pub type And<L, R> = <L as TyAnd<R>>::Output;
 * **Cons**: **Trait Bound Hell**. Usage propagates bounds deeper and deeper (e.g., `Or<A, And<B, C>>` requires satisfying bounds for `A`, `B`, and `C` explicitly).
 * **Status**: Used for internal aliases, but problematic for complex nested logic.
 
-#### Model 2: The `Evaluable` Pattern (Adopted)
+#### Model 2: The `Eval` Pattern (Adopted)
 
 This is the architecture described in Section 3 ("The CPU").
 
 1. Define a struct representing the AST node (e.g., `struct EAnd<L, R>`).
-2. Implement `Evaluable` for this struct.
-3. Encapsulate all trait bounds and calculation logic *inside* the `Evaluable` implementation.
+2. Implement `Eval` for this struct.
+3. Encapsulate all trait bounds and calculation logic *inside* the `Eval` implementation.
 
 ```rust
-impl<L, R> Evaluable for EAnd<L, R>
+impl<L, R> Eval for EAnd<L, R>
 where
-    L: Evaluable,
-    R: Evaluable,
-    Evaluator<L>: TyAnd<Evaluator<R>>,
+    L: Eval,
+    R: Eval,
+    Evaluate<L>: TyAnd<Evaluate<R>>,
 {
-    type Output = <Evaluator<L> as TyAnd<Evaluator<R>>>::Output;
+    type Output = <Evaluate<L> as TyAnd<Evaluate<R>>>::Output;
 }
 ```
 
-* **Pros**: The user only sees `where T: Evaluable`. exact bounds are hidden.
+* **Pros**: The user only sees `where T: Eval`. exact bounds are hidden.
 
 * **Status**: The standard way Typelude exposes functionality.
 
