@@ -4,16 +4,17 @@
 
 use typenum::Unsigned;
 
-// Important: Ensure std::int is imported so Evaluable impls for Arithmetic are visible
+// Important: Ensure std::int is imported so Eval impls for Arithmetic are visible
 #[allow(unused_imports)]
 use crate::std::int;
 use crate::{
-    eval::{EApply, EIf, EWhile, Eval, Evaluate},
+    eval::{EApp, EIf, ELit, EWhile, Eval, Evaluate},
+    kernel::traits::Apply,
     machine::{instruction::*, state::MachineState},
     std::{
-        array::{Cons, EConcat, FIsEmpty, Get, Set, TyArray, TyNil},
-        bool::FNot,
-        traits::TyFn,
+        array::{Cons, EConcat, Get, Set, TyArray, TyNil}, // OpIsEmpty unused
+        bool::OpNot,
+        // traits::Apply is in kernel
     },
 };
 
@@ -155,9 +156,9 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpN
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::cmp::ENotEq<Lhs, Rhs>: Eval,
+    crate::std::cmp::ENeq<Lhs, Rhs>: Eval,
 {
-    type OutputStack = TyArray<Evaluate<crate::std::cmp::ENotEq<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::std::cmp::ENeq<Lhs, Rhs>>, RestStack>;
 }
 
 // --- OpLt ---
@@ -427,42 +428,57 @@ where
 
 /// Execute one step
 /// MachineState<Stack, Locals, Memory, CallStack, Cons<Inst, RestProg>> -> NewState
-pub struct FStep;
+pub struct OpStep;
 
 impl<Stack, Locals, Memory, CallStack, Inst, RestProg>
-    TyFn<MachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>>> for FStep
+    Apply<MachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>>> for OpStep
 where
     Inst: Execute<Stack, Locals, Memory, CallStack, RestProg>,
     TyArray<Inst, RestProg>: Cons,
     RestProg: Cons,
 {
-    type Output = <Inst as Execute<Stack, Locals, Memory, CallStack, RestProg>>::OutputState;
+    // Wrap result in ELit because Apply returns an Expression
+    type Output = ELit<<Inst as Execute<Stack, Locals, Memory, CallStack, RestProg>>::OutputState>;
 }
 
-// Evaluable wrapper for FStep
-impl<S, L, M, C, P> Eval for EApply<FStep, MachineState<S, L, M, C, P>>
+// OpStep for ELit-wrapped state (handles subsequent loop iterations)
+impl<Stack, Locals, Memory, CallStack, Inst, RestProg>
+    Apply<ELit<MachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>>>> for OpStep
 where
-    FStep: TyFn<MachineState<S, L, M, C, P>>,
+    Inst: Execute<Stack, Locals, Memory, CallStack, RestProg>,
+    TyArray<Inst, RestProg>: Cons,
+    RestProg: Cons,
 {
-    type Output = <FStep as TyFn<MachineState<S, L, M, C, P>>>::Output;
+    type Output = ELit<<Inst as Execute<Stack, Locals, Memory, CallStack, RestProg>>::OutputState>;
 }
 
-// --- IsFinished: Check if program is empty ---
-pub struct FIsFinished;
+// --- OpIsFinished: Check if program is empty ---
+pub struct OpIsFinished;
 
-impl<S, L, M, C, P> TyFn<MachineState<S, L, M, C, P>> for FIsFinished
+impl<S, L, M, C, P> Apply<MachineState<S, L, M, C, P>> for OpIsFinished
 where
-    EApply<FIsEmpty, P>: Eval,
-    Evaluate<EApply<FIsEmpty, P>>: crate::std::bool::NotHelper,
+    crate::std::array::EIsEmpty<ELit<P>>: Eval,
+    // We need to evaluate IsEmpty(P) and then Not it.
+    // EApp<OpNot, EApp<OpIsEmpty, P>>
+    EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
-    type Output = Evaluate<EApply<FNot, EApply<FIsEmpty, P>>>;
+    type Output = EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
+}
+
+// OpIsFinished for ELit-wrapped state (handles subsequent loop iterations)
+impl<S, L, M, C, P> Apply<ELit<MachineState<S, L, M, C, P>>> for OpIsFinished
+where
+    crate::std::array::EIsEmpty<ELit<P>>: Eval,
+    EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
+{
+    type Output = EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
 }
 
 // --- Machine Runner ---
 // Run<InitialState> -> FinalState
 // uses EWhile<Condition, Step, State>
 
-pub type ERun<S> = EWhile<FIsFinished, FStep, S>;
+pub type ERun<S> = EWhile<OpIsFinished, OpStep, S>;
 
 //
 // Tests
