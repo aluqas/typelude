@@ -16,14 +16,6 @@ pub trait TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History> {
     type OutputState;
 }
 
-// ... (Rest of trait impls are fine, they use TracedMachineState construction directly) ...
-// But I need to preserve the impl blocks!
-// The tool instruction says "Update imports and implementation". I should be careful not to delete the impl_traced_execute_via_runstep macro and calls.
-// I will only replace the top imports and the bottom FTracedStep/FTracedIsFinished.
-
-// SKIP MIDDLE CONTENT REPLACEMENT - wait, I can't skip with one replace call if I want to update top AND bottom.
-// I will do imports first. Then bottom.
-
 // --- Implementation for Stack-only Ops (via RunStep) ---
 
 macro_rules! impl_traced_execute_via_runstep {
@@ -381,11 +373,11 @@ where
 /// Step function for Traced Machine
 pub struct OpTracedStep;
 
+// Update: Now EWhile passes RAW State, not ELit<State>.
+// So we implement Apply<State> directly.
 impl<Stack, Locals, Memory, CallStack, Inst, RestProg, History>
     Apply<
-        ELit<
-            TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>,
-        >,
+        TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>,
     > for OpTracedStep
 where
     Inst: TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>,
@@ -400,11 +392,13 @@ where
 
 pub struct OpTracedIsFinished;
 
-impl<S, L, M, C, P, H> Apply<ELit<TracedMachineState<S, L, M, C, P, H>>> for OpTracedIsFinished
+// Update: Implement Apply<State> directly.
+impl<S, L, M, C, P, H> Apply<TracedMachineState<S, L, M, C, P, H>> for OpTracedIsFinished
 where
     crate::std::array::EIsEmpty<ELit<P>>: Eval,
     EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
+    // Return Expression (Evaluation of OpNot(IsEmpty))
     type Output = EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
 }
 

@@ -2,8 +2,10 @@
 //!
 //! Provides core infrastructure for type-level computation.
 
+pub mod bridge;
 mod expr;
 
+pub use bridge::*;
 pub use expr::*;
 
 // -----------------------------------------------------------------------------
@@ -78,20 +80,27 @@ mod tests {
     #[test]
     fn test_eval_while() {
         // Condition: IsNotEmpty
+        // Note: EWhile passes the RAW STATE (Evaluate<S>) to Pred and Step.
+        // It does NOT wrap it in ELit automatically.
         struct IsNotEmpty;
-        impl Apply<ELit<TyNil>> for IsNotEmpty {
-            type Output = TyFalse;
+
+        // IsNotEmpty(TyNil) -> TyFalse
+        impl Apply<TyNil> for IsNotEmpty {
+            type Output = ELit<TyFalse>; // Pred returns an Expression
         }
-        impl<H, T> Apply<ELit<TyArray<H, T>>> for IsNotEmpty
+
+        // IsNotEmpty(TyArray) -> TyTrue
+        impl<H, T> Apply<TyArray<H, T>> for IsNotEmpty
         where
             T: Cons,
         {
-            type Output = TyTrue;
+            type Output = ELit<TyTrue>; // Pred returns an Expression
         }
 
         // Step: GetTail
+        // GetTail(TyArray) -> Expression(Tail)
         struct GetTail;
-        impl<H, T> Apply<ELit<TyArray<H, T>>> for GetTail
+        impl<H, T> Apply<TyArray<H, T>> for GetTail
         where
             T: Cons,
         {
@@ -105,6 +114,4 @@ mod tests {
             TyNil
         );
     }
-
-    // Removing dependencies on std::int for now to keep tests isolated to eval/kernel
 }

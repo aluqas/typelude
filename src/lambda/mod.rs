@@ -5,8 +5,10 @@
 
 pub mod church;
 pub mod either;
+pub mod fib;
 pub mod fix;
 pub mod identity;
+pub mod list;
 pub mod monad;
 pub mod ski;
 pub mod state;

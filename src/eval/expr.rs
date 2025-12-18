@@ -1,66 +1,28 @@
 //! **Expression Types**
 //!
 //! Defines the syntax for type-level expressions.
-//! - `ELit`: Literal
-//! - `EApp`: Function Application (formerly `EApply`)
 //! - `EIf`: Conditional Branch
 //! - `EWhile`: Loop
+//!
+//! Note: `ELit`, `EApp` are imported from `bridge`.
 
 use std::marker::PhantomData;
 
-use super::{Eval, Evaluate};
+use super::{Eval, Evaluate, EApp};
 use crate::kernel::{
     bool::{TyFalse, TyTrue},
     traits::Apply,
 };
 
-//
-// ELit: Literal Expression
-//
-
-/// Literal Expression - Embeds a concrete type as an expression
-///
-/// # Example
-/// ```ignore
-/// type Five = ELit<typenum::U5>;
-/// assert_type_eq!(Evaluator<Five>, typenum::U5);
-/// ```
-pub struct ELit<T>(PhantomData<T>);
-
-impl<T> Eval for ELit<T> {
-    type Output = T;
-}
-
-//
-// EApp: Function Application (formerly EApply)
-//
-
-/// 1-argument function application
-///
-/// Use `Call` alias if preferred.
-pub struct EApp<Op, Arg>(PhantomData<(Op, Arg)>);
-
-impl<Op, Arg> Eval for EApp<Op, Arg>
-where
-    Op: Apply<Arg>,
-    Op::Output: Eval,
-{
-    type Output = Evaluate<Op::Output>;
-}
+// =========================================================================
+// Convenience Aliases for EApp (imported from bridge)
+// =========================================================================
 
 /// 2-argument function application alias
 pub type EApp2<Op, A, B> = EApp<Op, (A, B)>;
 
 /// 3-argument function application alias
 pub type EApp3<Op, A, B, C> = EApp<Op, (A, B, C)>;
-
-/// 3-argument function application
-///
-/// # Example
-/// ```ignore
-/// type SetExpr = EApply3<FSet, ELit<Array>, ELit<Index>, ELit<Value>>;
-/// ```
-pub struct EApply3<F, Arg1, Arg2, Arg3>(PhantomData<(F, Arg1, Arg2, Arg3)>);
 
 //
 // EIf: Conditional Expression
@@ -111,46 +73,51 @@ type AppliedOutput<Op, A> = <Op as Apply<A>>::Output;
 
 /// Expression representing a While loop
 ///
-/// - `Pred`: Condition (State → TyTrue/TyFalse)
-/// - `Step`: Update function (State → NextState)
-/// - `State`: Current state
+/// - `Pred`: Condition (Val -> TyTrue/TyFalse)
+/// - `Step`: Update function (Val -> NextVal)
+/// - `State`: Initial State Expression (evaluates to Val)
 ///
-/// # Example
-/// ```ignore
-/// // while (x < 10) { x = x + 1 }
-/// type Result = Evaluator<EWhile<IsLessThan10, PlusOne, U1>>;
-/// // Result = U10
-/// ```
+/// Important: `EWhile` normalizes (evaluates) the state at each step.
+/// So `Pred` and `Step` receive the *Value*, not the *Expression*.
 pub struct EWhile<Pred, Step, State>(PhantomData<(Pred, Step, State)>);
 
 #[doc(hidden)]
-pub trait WhileHelper<Pred, Step, State> {
+pub trait WhileHelper<Pred, Step, Val> {
     type Output;
 }
 
 // Condition == True: Recurse
-impl<Pred, Step, State> WhileHelper<Pred, Step, State> for TyTrue
+impl<Pred, Step, Val> WhileHelper<Pred, Step, Val> for TyTrue
 where
-    Step: Apply<State>,
+    // Step applies to Value
+    Step: Apply<Val>,
+    // Step returns an Expression (which we must evaluate for the next loop)
     Step::Output: Eval,
-    EWhile<Pred, Step, AppliedOutput<Step, State>>: Eval,
+    // Recursive call: Next state is Evaluated Step Output
+    // Note: We pass ELit<Val> or just Val?
+    // Since EWhile now takes "State: Eval", and Step::Output is Eval,
+    // we can pass Step::Output directly as the next State.
+    EWhile<Pred, Step, Step::Output>: Eval,
 {
-    type Output = <EWhile<Pred, Step, AppliedOutput<Step, State>> as Eval>::Output;
+    type Output = <EWhile<Pred, Step, Step::Output> as Eval>::Output;
 }
 
 // Condition == False: Terminate
-impl<Pred, Step, State> WhileHelper<Pred, Step, State> for TyFalse
-where
-    State: Eval,
+impl<Pred, Step, Val> WhileHelper<Pred, Step, Val> for TyFalse
 {
-    type Output = Evaluate<State>;
+    type Output = Val;
 }
 
 impl<Pred, Step, State> Eval for EWhile<Pred, Step, State>
 where
-    Pred: Apply<State>,
-    AppliedOutput<Pred, State>: Eval,
-    Evaluate<AppliedOutput<Pred, State>>: WhileHelper<Pred, Step, State>,
+    // 1. Evaluate current State
+    State: Eval,
+    // 2. Apply Predicate to the Value
+    Pred: Apply<Evaluate<State>>,
+    // 3. Evaluate Predicate Result (to get TyTrue/TyFalse)
+    AppliedOutput<Pred, Evaluate<State>>: Eval,
+    // 4. Dispatch based on condition
+    Evaluate<AppliedOutput<Pred, Evaluate<State>>>: WhileHelper<Pred, Step, Evaluate<State>>,
 {
-    type Output = <Evaluate<AppliedOutput<Pred, State>> as WhileHelper<Pred, Step, State>>::Output;
+    type Output = <Evaluate<AppliedOutput<Pred, Evaluate<State>>> as WhileHelper<Pred, Step, Evaluate<State>>>::Output;
 }
