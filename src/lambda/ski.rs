@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
-use super::{Apply, Lambda};
+use super::{LApp, Lambda};
+use crate::eval::{Eval, Evaluate};
 
 // =========================================================================
 // The Fundamental Combinators
@@ -53,52 +54,76 @@ impl<X, Y> Lambda for S2<X, Y> {
 }
 
 // =========================================================================
-// Reduction Rules (The "Logic")
+// Reduction Rules (The "Logic") - Lambda Pattern
 // =========================================================================
+
+// Note: We use strict Call-by-Value strategy for arguments.
+// Arguments X, Y, Z are typically expected to be evaluated before being stored in state structs,
+// but the Lambda impl for LApp<Combinator, Arg> enforces this by calling Evaluate<Arg>.
 
 // --- I Combinator ---
 // I x -> x
-impl<X> Apply<X> for I {
-    type Output = X;
+impl<X> Lambda for LApp<I, X>
+where
+    X: Eval,
+{
+    type Output = Evaluate<X>;
 }
 
 // --- K Combinator ---
 // K x -> K1<x> (Partial)
-impl<X> Apply<X> for K {
-    type Output = K1<X>;
+impl<X> Lambda for LApp<K, X>
+where
+    X: Eval,
+{
+    type Output = K1<Evaluate<X>>;
 }
 
 // K1<x> y -> x (Reduction)
-impl<X, Y> Apply<Y> for K1<X> {
-    type Output = X;
+impl<X, Y> Lambda for LApp<K1<X>, Y>
+where
+    X: Eval,
+{
+    type Output = Evaluate<X>;
 }
 
 // --- S Combinator ---
 // S x -> S1<x> (Partial)
-impl<X> Apply<X> for S {
-    type Output = S1<X>;
+impl<X> Lambda for LApp<S, X>
+where
+    X: Eval,
+{
+    type Output = S1<Evaluate<X>>;
 }
 
 // S1<x> y -> S2<x, y> (Partial)
-impl<X, Y> Apply<Y> for S1<X> {
-    type Output = S2<X, Y>;
+impl<X, Y> Lambda for LApp<S1<X>, Y>
+where
+    X: Eval,
+    Y: Eval,
+{
+    type Output = S2<Evaluate<X>, Evaluate<Y>>;
 }
 
 // S2<x, y> z -> (x z) (y z) (Reduction)
-// This is the most complex rule. It requires Eval/Apply steps.
-// Since `Apply` is our primitive, we define the Output as the application Result.
-//
-// Logic:
-// 1. Let `XZ` = `x` applied to `z`
-// 2. Let `YZ` = `y` applied to `z`
-// 3. Result = `XZ` applied to `YZ`
-impl<X, Y, Z> Apply<Z> for S2<X, Y>
+impl<X, Y, Z> Lambda for LApp<S2<X, Y>, Z>
 where
-    X: Apply<Z>,                 // x z is valid
-    Y: Apply<Z>,                 // y z is valid
-    X::Output: Apply<Y::Output>, // (x z) (y z) is valid
+    X: Eval,
+    Y: Eval,
+    Z: Eval + Clone,
+    LApp<Evaluate<X>, Evaluate<Z>>: Eval,
+    LApp<Evaluate<Y>, Evaluate<Z>>: Eval,
+    LApp<
+        Evaluate<LApp<Evaluate<X>, Evaluate<Z>>>,
+        Evaluate<LApp<Evaluate<Y>, Evaluate<Z>>>,
+    >: Eval,
 {
-    type Output = <X::Output as Apply<Y::Output>>::Output;
+    type Output = Evaluate<
+        LApp<
+            Evaluate<LApp<Evaluate<X>, Evaluate<Z>>>,
+            Evaluate<LApp<Evaluate<Y>, Evaluate<Z>>>,
+        >,
+    >;
 }
 
 #[cfg(test)]
@@ -107,51 +132,83 @@ mod tests {
 
     use super::*;
 
-    type App<F, A> = <F as Apply<A>>::Output;
+    // Helper alias for Evaluate<LApp<F, A>>
+    type App<F, A> = Evaluate<LApp<F, A>>;
 
     #[test]
     fn test_identity_combinator() {
+        #[derive(Clone)]
         struct X;
+        impl Lambda for X { type Output = X; }
+
         assert_type_eq_all!(App<I, X>, X);
     }
 
     #[test]
     fn test_k_combinator() {
+        #[derive(Clone)]
         struct X;
+        impl Lambda for X { type Output = X; }
+        #[derive(Clone)]
         struct Y;
+        impl Lambda for Y { type Output = Y; }
+
+        // K X -> K1<X>
+        // (K X) Y -> X
         assert_type_eq_all!(App<App<K, X>, Y>, X);
     }
 
     #[test]
     fn test_s_combinator_basic() {
+        #[derive(Clone)]
         struct X;
+        impl Lambda for X { type Output = X; }
+
+        // SKK X -> (K X) (K X) -> X
         type SKK = App<App<S, K>, K>;
         assert_type_eq_all!(App<SKK, X>, X);
     }
 
     #[test]
     fn test_church_booleans() {
+        #[derive(Clone)]
         struct A;
+        impl Lambda for A { type Output = A; }
+        #[derive(Clone)]
         struct B;
+        impl Lambda for B { type Output = B; }
+
         type True = K;
-        type False = App<K, I>;
+        type False = App<K, I>; // K I -> K1<I>
+
+        // True A B -> A
         assert_type_eq_all!(App<App<True, A>, B>, A);
+
+        // False A B -> (K I) A B -> I B -> B
         assert_type_eq_all!(App<App<False, A>, B>, B);
     }
 
     #[test]
     fn test_associativity_check() {
         struct F;
+        impl Lambda for F { type Output = F; }
         struct A;
+        impl Lambda for A { type Output = A; }
         struct B;
-        struct F1<X>(std::marker::PhantomData<X>);
-        struct F2<X, Y>(std::marker::PhantomData<(X, Y)>);
+        impl Lambda for B { type Output = B; }
 
-        impl<X> Apply<X> for F {
-            type Output = F1<X>;
+        struct F1<X>(std::marker::PhantomData<X>);
+        impl<X> Lambda for F1<X> { type Output = F1<X>; }
+
+        struct F2<X, Y>(std::marker::PhantomData<(X, Y)>);
+        impl<X, Y> Lambda for F2<X, Y> { type Output = F2<X, Y>; }
+
+        // Define behavior for F
+        impl<X: Eval> Lambda for LApp<F, X> {
+            type Output = F1<Evaluate<X>>;
         }
-        impl<X, Y> Apply<Y> for F1<X> {
-            type Output = F2<X, Y>;
+        impl<X: Eval, Y: Eval> Lambda for LApp<F1<X>, Y> {
+            type Output = F2<X, Evaluate<Y>>;
         }
 
         assert_type_eq_all!(App<App<F, A>, B>, F2<A, B>);
