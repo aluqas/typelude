@@ -1,6 +1,9 @@
 use std::marker::PhantomData;
 
-use super::{Apply, Lambda, church::{True, False, PureIf}};
+use super::{
+    Apply, Lambda,
+    church::{False, True},
+};
 use crate::eval::Eval;
 
 // =========================================================================
@@ -15,14 +18,15 @@ use crate::eval::Eval;
 
 /// Nil: \c n. n
 pub struct Nil;
-impl Lambda for Nil {}
-impl Eval for Nil { type Output = Nil; }
+impl Lambda for Nil {
+    type Output = Nil;
+}
 
 /// Cons: \h t. \c n. c h t
 pub struct Cons<H, T>(PhantomData<(H, T)>);
-impl<H, T> Lambda for Cons<H, T> {}
-impl<H, T> Eval for Cons<H, T> { type Output = Cons<H, T>; }
-
+impl<H, T> Lambda for Cons<H, T> {
+    type Output = Cons<H, T>;
+}
 
 // --- Nil Implementation ---
 // Nil c -> Nil1<c>
@@ -62,40 +66,45 @@ pub type Uncons<L, OnCons, OnNil> = <<L as Apply<OnCons>>::Output as Apply<OnNil
 
 // Helper K: \x y. x
 pub struct K;
-impl<X> Apply<X> for K { type Output = K1<X>; }
+impl<X> Apply<X> for K {
+    type Output = K1<X>;
+}
 pub struct K1<X>(PhantomData<X>);
-impl<X, Y> Apply<Y> for K1<X> { type Output = X; }
+impl<X, Y> Apply<Y> for K1<X> {
+    type Output = X;
+}
 
 // Helper K_I: \x y. y (which is False)
 pub struct KI;
-impl<X> Apply<X> for KI { type Output = KI1; }
+impl<X> Apply<X> for KI {
+    type Output = KI1;
+}
 pub struct KI1;
-impl<Y> Apply<Y> for KI1 { type Output = Y; }
+impl<Y> Apply<Y> for KI1 {
+    type Output = Y;
+}
 
 /// Head: Extract head or return Default
 pub struct HeadOr<L, Default>(PhantomData<(L, Default)>);
 
-impl<L, Default> Eval for HeadOr<L, Default>
+impl<L, D> Lambda for HeadOr<L, D>
 where
     L: Apply<K>,
-    <L as Apply<K>>::Output: Apply<Default>,
+    <L as Apply<K>>::Output: Apply<D>,
 {
-    type Output = Uncons<L, K, Default>;
+    type Output = Uncons<L, K, D>;
 }
-impl<L, D> Lambda for HeadOr<L, D> where Self: Eval {}
 
 /// Tail: Extract tail or return Default
 pub struct TailOr<L, Default>(PhantomData<(L, Default)>);
 
-impl<L, Default> Eval for TailOr<L, Default>
+impl<L, D> Lambda for TailOr<L, D>
 where
     L: Apply<KI>,
-    <L as Apply<KI>>::Output: Apply<Default>,
+    <L as Apply<KI>>::Output: Apply<D>,
 {
-    type Output = Uncons<L, KI, Default>;
+    type Output = Uncons<L, KI, D>;
 }
-impl<L, D> Lambda for TailOr<L, D> where Self: Eval {}
-
 
 // =========================================================================
 // IsEmpty
@@ -104,40 +113,42 @@ impl<L, D> Lambda for TailOr<L, D> where Self: Eval {}
 /// IsEmpty: \l. l (\h t. False) True
 pub struct IsEmpty<L>(PhantomData<L>);
 
-impl<L> Eval for IsEmpty<L>
+impl<L> Lambda for IsEmpty<L>
 where
     L: Apply<ConstFalse>,
     <L as Apply<ConstFalse>>::Output: Apply<True>,
 {
     type Output = Uncons<L, ConstFalse, True>;
 }
-impl<L> Lambda for IsEmpty<L> where Self: Eval {}
 
 pub struct ConstFalse;
-impl<X> Apply<X> for ConstFalse { type Output = ConstFalse1; }
+impl<X> Apply<X> for ConstFalse {
+    type Output = ConstFalse1;
+}
 pub struct ConstFalse1;
-impl<Y> Apply<Y> for ConstFalse1 { type Output = False; }
-
+impl<Y> Apply<Y> for ConstFalse1 {
+    type Output = False;
+}
 
 // =========================================================================
 // Foldr (Right Fold)
 // =========================================================================
 
-use crate::eval::{ECall, ELit, ELazyCall};
+use crate::eval::{ECall, ELit};
 
 /// Foldr f z l
 pub struct Foldr<F, Z, L>(PhantomData<(F, Z, L)>);
 
-impl<F, Z, L> Eval for Foldr<F, Z, L>
+impl<F, Z, L> Lambda for Foldr<F, Z, L>
 where
-    L: Apply<FoldrConsBuilder<F, Z>>, // L (ConsBuilder) (NilBuilder)
+    L: Apply<FoldrConsBuilder<F, Z>>,
     <L as Apply<FoldrConsBuilder<F, Z>>>::Output: Apply<ELit<Z>>,
     <<L as Apply<FoldrConsBuilder<F, Z>>>::Output as Apply<ELit<Z>>>::Output: Eval,
 {
-    type Output = crate::eval::Evaluate<<<L as Apply<FoldrConsBuilder<F, Z>>>::Output as Apply<ELit<Z>>>::Output>;
+    type Output = crate::eval::Evaluate<
+        <<L as Apply<FoldrConsBuilder<F, Z>>>::Output as Apply<ELit<Z>>>::Output,
+    >;
 }
-
-impl<F, Z, L> Lambda for Foldr<F, Z, L> where Self: Eval {}
 
 // Cons Builder: \h t. ECall<F, H, Foldr<F, Z, T>>
 pub struct FoldrConsBuilder<F, Z>(PhantomData<(F, Z)>);
@@ -149,18 +160,15 @@ impl<F, Z, H> Apply<H> for FoldrConsBuilder<F, Z> {
 pub struct FoldrConsBuilder2<F, Z, H>(PhantomData<(F, Z, H)>);
 
 impl<F, Z, H, T> Apply<T> for FoldrConsBuilder2<F, Z, H> {
-    type Output = ECall<
-        ECall<ELit<F>, ELit<H>>,
-        Foldr<F, Z, T>
-    >;
+    type Output = ECall<ECall<ELit<F>, ELit<H>>, Foldr<F, Z, T>>;
 }
-
 
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use crate::eval::Evaluate;
+
     use super::*;
+    use crate::eval::Evaluate;
 
     // Test utilities
     struct E1;
@@ -189,11 +197,13 @@ mod tests {
 
     #[test]
     fn test_foldr_sum() {
-        use crate::lambda::church::{Zero, Succ, Add, SuccGen};
+        use crate::lambda::church::{Add, Succ, SuccGen, Zero};
 
         struct OpSum;
         // OpSum x -> OpSum1<x>
-        impl<X> Apply<X> for OpSum { type Output = OpSum1<X>; }
+        impl<X> Apply<X> for OpSum {
+            type Output = OpSum1<X>;
+        }
         struct OpSum1<X>(PhantomData<X>);
         // OpSum1<x> acc -> Add<x, acc>
         // OpSum uses struct Add, which is an Expression.
@@ -205,8 +215,9 @@ mod tests {
         // This works perfectly!
 
         impl<X, Acc> Apply<Acc> for OpSum1<X>
-        where X: Apply<SuccGen>,
-              <X as Apply<SuccGen>>::Output: Apply<Acc>
+        where
+            X: Apply<SuccGen>,
+            <X as Apply<SuccGen>>::Output: Apply<Acc>,
         {
             type Output = Add<X, Acc>;
         }
@@ -224,10 +235,14 @@ mod tests {
         // \x acc. Succ<acc>
 
         struct OpCount;
-        impl<X> Apply<X> for OpCount { type Output = OpCount1; }
+        impl<X> Apply<X> for OpCount {
+            type Output = OpCount1;
+        }
         struct OpCount1;
         // Succ<Acc> is a struct, implements Eval.
-        impl<Acc> Apply<Acc> for OpCount1 { type Output = Succ<Acc>; }
+        impl<Acc> Apply<Acc> for OpCount1 {
+            type Output = Succ<Acc>;
+        }
 
         type CountRes = Evaluate<Foldr<OpCount, Zero, L>>;
         assert_type_eq_all!(CountRes, Two);

@@ -5,7 +5,6 @@
 
 pub mod church;
 pub mod either;
-pub mod fib;
 pub mod fix;
 pub mod identity;
 pub mod list;
@@ -14,5 +13,6 @@ pub mod ski;
 pub mod state;
 pub mod traits;
 
-pub use crate::kernel::traits::Apply;
 pub use traits::Lambda;
+
+pub use crate::kernel::traits::Apply;

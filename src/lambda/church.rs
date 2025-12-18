@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use super::{Apply, Lambda};
-use crate::eval::Eval;
 
 // =========================================================================
 // Church Booleans
@@ -12,12 +11,12 @@ pub struct True;
 /// Church False: \t f. f
 pub struct False;
 
-impl Lambda for True {}
-impl Lambda for False {}
-
-// Evaluates to self
-impl Eval for True { type Output = True; }
-impl Eval for False { type Output = False; }
+impl Lambda for True {
+    type Output = True;
+}
+impl Lambda for False {
+    type Output = False;
+}
 
 // Partial Application States
 pub struct True1<T>(PhantomData<T>);
@@ -25,13 +24,21 @@ pub struct False1<T>(PhantomData<T>);
 
 // --- True Implementation ---
 // \t f. t
-impl<T> Apply<T> for True { type Output = True1<T>; }
-impl<T, F> Apply<F> for True1<T> { type Output = T; }
+impl<T> Apply<T> for True {
+    type Output = True1<T>;
+}
+impl<T, F> Apply<F> for True1<T> {
+    type Output = T;
+}
 
 // --- False Implementation ---
 // \t f. f
-impl<T> Apply<T> for False { type Output = False1<T>; }
-impl<T, F> Apply<F> for False1<T> { type Output = F; }
+impl<T> Apply<T> for False {
+    type Output = False1<T>;
+}
+impl<T, F> Apply<F> for False1<T> {
+    type Output = F;
+}
 
 // --- If ---
 /// Pure If Alias: ((P T) E)
@@ -40,7 +47,7 @@ pub type PureIf<P, T, E> = <<P as Apply<T>>::Output as Apply<E>>::Output;
 /// Church If Struct
 pub struct If<P, T, E>(PhantomData<(P, T, E)>);
 
-impl<P, T, E> Eval for If<P, T, E>
+impl<P, T, E> Lambda for If<P, T, E>
 where
     P: Apply<T>,
     <P as Apply<T>>::Output: Apply<E>,
@@ -48,30 +55,36 @@ where
     type Output = PureIf<P, T, E>;
 }
 
-impl<P, T, E> Lambda for If<P, T, E> where Self: Eval {}
-
 // =========================================================================
 // Church Numerals
 // =========================================================================
 
 /// Zero: \f x. x
 pub struct Zero;
-impl Lambda for Zero {}
-impl Eval for Zero { type Output = Zero; }
+impl Lambda for Zero {
+    type Output = Zero;
+}
 
 /// Succ: \n f x. f (n f x)
 pub struct Succ<N>(PhantomData<N>);
-impl<N> Lambda for Succ<N> {}
-impl<N> Eval for Succ<N> { type Output = Succ<N>; }
+impl<N> Lambda for Succ<N> {
+    type Output = Succ<N>;
+}
 
 // Partial Application States
 pub struct Zero1<F>(PhantomData<F>);
 pub struct Succ1<N, F>(PhantomData<(N, F)>);
 
-impl<F> Apply<F> for Zero { type Output = Zero1<F>; }
-impl<F, X> Apply<X> for Zero1<F> { type Output = X; }
+impl<F> Apply<F> for Zero {
+    type Output = Zero1<F>;
+}
+impl<F, X> Apply<X> for Zero1<F> {
+    type Output = X;
+}
 
-impl<N, F> Apply<F> for Succ<N> { type Output = Succ1<N, F>; }
+impl<N, F> Apply<F> for Succ<N> {
+    type Output = Succ1<N, F>;
+}
 
 impl<N, F, X> Apply<X> for Succ1<N, F>
 where
@@ -83,7 +96,9 @@ where
 }
 
 pub struct SuccGen;
-impl<N> Apply<N> for SuccGen { type Output = Succ<N>; }
+impl<N> Apply<N> for SuccGen {
+    type Output = Succ<N>;
+}
 
 // =========================================================================
 // Arithmetic Operations
@@ -94,28 +109,26 @@ pub type PureAdd<M, N> = <<M as Apply<SuccGen>>::Output as Apply<N>>::Output;
 
 pub struct Add<M, N>(PhantomData<(M, N)>);
 
-impl<M, N> Eval for Add<M, N>
+impl<M, N> Lambda for Add<M, N>
 where
     M: Apply<SuccGen>,
     <M as Apply<SuccGen>>::Output: Apply<N>,
 {
     type Output = PureAdd<M, N>;
 }
-impl<M, N> Lambda for Add<M, N> where Self: Eval {}
 
 // --- Mul ---
 pub type PureMul<M, N> = <<M as Apply<AddPart<N>>>::Output as Apply<Zero>>::Output;
 
 pub struct Mul<M, N>(PhantomData<(M, N)>);
 
-impl<M, N> Eval for Mul<M, N>
+impl<M, N> Lambda for Mul<M, N>
 where
     M: Apply<AddPart<N>>,
     <M as Apply<AddPart<N>>>::Output: Apply<Zero>,
 {
     type Output = PureMul<M, N>;
 }
-impl<M, N> Lambda for Mul<M, N> where Self: Eval {}
 
 pub struct AddPart<N>(PhantomData<N>);
 impl<N, X> Apply<X> for AddPart<N>
@@ -131,26 +144,24 @@ pub type PureExp<M, N> = <N as Apply<M>>::Output;
 
 pub struct Exp<M, N>(PhantomData<(M, N)>);
 
-impl<M, N> Eval for Exp<M, N>
+impl<M, N> Lambda for Exp<M, N>
 where
     N: Apply<M>,
 {
     type Output = PureExp<M, N>;
 }
-impl<M, N> Lambda for Exp<M, N> where Self: Eval {}
 
 // =========================================================================
 // Predecessor and Subtraction
 // =========================================================================
 
 // --- Pred ---
-pub type PurePred<N> = PureFst<
-    <<N as Apply<PredStep>>::Output as Apply<Pair<Zero, Zero>>>::Output
->;
+pub type PurePred<N> =
+    PureFst<<<N as Apply<PredStep>>::Output as Apply<Pair<Zero, Zero>>>::Output>;
 
 pub struct Pred<N>(PhantomData<N>);
 
-impl<N> Eval for Pred<N>
+impl<N> Lambda for Pred<N>
 where
     N: Apply<PredStep>,
     <N as Apply<PredStep>>::Output: Apply<Pair<Zero, Zero>>,
@@ -158,12 +169,11 @@ where
 {
     type Output = PurePred<N>;
 }
-impl<N> Lambda for Pred<N> where Self: Eval {}
 
 pub struct PredStep;
 impl<P> Apply<P> for PredStep
 where
-    P: Apply<False>, // Snd
+    P: Apply<False>,                             // Snd
     <P as Apply<False>>::Output: Apply<SuccGen>, // Succ(Snd)
 {
     type Output = Pair<SndEval<P>, Succ<SndEval<P>>>;
@@ -174,14 +184,13 @@ pub type PureSub<M, N> = <<N as Apply<PredGen>>::Output as Apply<M>>::Output;
 
 pub struct Sub<M, N>(PhantomData<(M, N)>);
 
-impl<M, N> Eval for Sub<M, N>
+impl<M, N> Lambda for Sub<M, N>
 where
     N: Apply<PredGen>,
     <N as Apply<PredGen>>::Output: Apply<M>,
 {
     type Output = PureSub<M, N>;
 }
-impl<M, N> Lambda for Sub<M, N> where Self: Eval {}
 
 pub struct PredGen;
 impl<N> Apply<N> for PredGen
@@ -198,16 +207,15 @@ where
     type Output = PurePred<N>;
 }
 
-
 // =========================================================================
 // Church Pairs
 // =========================================================================
 
 /// Pair: \x y. \f. f x y
 pub struct Pair<X, Y>(PhantomData<(X, Y)>);
-impl<X, Y> Lambda for Pair<X, Y> {}
-impl<X, Y> Eval for Pair<X, Y> { type Output = Pair<X, Y>; }
-
+impl<X, Y> Lambda for Pair<X, Y> {
+    type Output = Pair<X, Y>;
+}
 
 /// Pure Fst/Snd Aliases
 pub type PureFst<P> = <P as Apply<True>>::Output;
@@ -215,17 +223,24 @@ pub type PureSnd<P> = <P as Apply<False>>::Output;
 
 /// Fst Struct
 pub struct Fst<P>(PhantomData<P>);
-impl<P> Eval for Fst<P> where P: Apply<True> { type Output = PureFst<P>; }
-impl<P> Lambda for Fst<P> where Self: Eval {}
+impl<P> Lambda for Fst<P>
+where
+    P: Apply<True>,
+{
+    type Output = PureFst<P>;
+}
 
 /// Snd Struct
 pub struct Snd<P>(PhantomData<P>);
-impl<P> Eval for Snd<P> where P: Apply<False> { type Output = PureSnd<P>; }
-impl<P> Lambda for Snd<P> where Self: Eval {}
+impl<P> Lambda for Snd<P>
+where
+    P: Apply<False>,
+{
+    type Output = PureSnd<P>;
+}
 
 // Helpers for internal use
 type SndEval<P> = <P as Apply<False>>::Output;
-
 
 // Pair<X, Y> f -> f X Y
 impl<X, Y, F> Apply<F> for Pair<X, Y>
@@ -239,8 +254,9 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use crate::eval::Evaluate;
+
     use super::*;
+    use crate::eval::Evaluate;
 
     type App<F, A> = <F as Apply<A>>::Output;
 
@@ -274,9 +290,12 @@ mod tests {
 
     #[test]
     fn test_church_add() {
-        struct F; struct X;
+        struct F;
+        struct X;
         struct F1<T>(std::marker::PhantomData<T>);
-        impl<T> Apply<T> for F { type Output = F1<T>; }
+        impl<T> Apply<T> for F {
+            type Output = F1<T>;
+        }
 
         type Sum = Evaluate<Add<One, One>>;
         type ResSum = App<App<Sum, F>, X>;

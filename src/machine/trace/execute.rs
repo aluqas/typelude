@@ -376,9 +376,8 @@ pub struct OpTracedStep;
 // Update: Now EWhile passes RAW State, not ELit<State>.
 // So we implement Apply<State> directly.
 impl<Stack, Locals, Memory, CallStack, Inst, RestProg, History>
-    Apply<
-        TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>,
-    > for OpTracedStep
+    Apply<TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>>
+    for OpTracedStep
 where
     Inst: TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>,
     TyArray<Inst, RestProg>: Cons,

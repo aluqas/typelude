@@ -8,7 +8,7 @@
 
 use std::marker::PhantomData;
 
-use super::{Eval, Evaluate, EApp};
+use super::{EApp, Eval, Evaluate};
 use crate::kernel::{
     bool::{TyFalse, TyTrue},
     traits::Apply,
@@ -103,8 +103,7 @@ where
 }
 
 // Condition == False: Terminate
-impl<Pred, Step, Val> WhileHelper<Pred, Step, Val> for TyFalse
-{
+impl<Pred, Step, Val> WhileHelper<Pred, Step, Val> for TyFalse {
     type Output = Val;
 }
 
@@ -119,5 +118,9 @@ where
     // 4. Dispatch based on condition
     Evaluate<AppliedOutput<Pred, Evaluate<State>>>: WhileHelper<Pred, Step, Evaluate<State>>,
 {
-    type Output = <Evaluate<AppliedOutput<Pred, Evaluate<State>>> as WhileHelper<Pred, Step, Evaluate<State>>>::Output;
+    type Output = <Evaluate<AppliedOutput<Pred, Evaluate<State>>> as WhileHelper<
+        Pred,
+        Step,
+        Evaluate<State>,
+    >>::Output;
 }

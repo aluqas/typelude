@@ -1,14 +1,23 @@
 use std::marker::PhantomData;
 
-use crate::{kernel::traits::Apply, lambda::monad::Bind};
+use crate::{
+    kernel::traits::Apply,
+    lambda::{Lambda, monad::Bind},
+};
 
 /// Left<L>: Represents the Error case or Left side of Either.
 /// Church encoding: \l r. l L
 pub struct Left<L>(PhantomData<L>);
+impl<L> Lambda for Left<L> {
+    type Output = Left<L>;
+}
 
 /// Right<R>: Represents the Success case or Right side of Either.
 /// Church encoding: \l r. r R
 pub struct Right<R>(PhantomData<R>);
+impl<R> Lambda for Right<R> {
+    type Output = Right<R>;
+}
 
 // =========================================================================
 // Bind Implementation for Monad

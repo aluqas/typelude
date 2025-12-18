@@ -4,14 +4,17 @@
 
 use crate::eval::Eval;
 
-/// **Marker Trait for Pure Lambda Terms**
+/// **Pure Lambda Term Trait**
 ///
-/// Types implementing this trait assert that they represent pure lambda calculus terms
+/// Types implementing this trait represent pure lambda calculus terms
 /// or operations derived strictly from them.
 ///
-/// While they utilize the `Eval` infrastructure for execution on the Rust type system,
-/// semantically they belong to the pure functional world.
-pub trait Lambda: Eval {}
+/// Implementing `Lambda` automatically provides `Eval` via blanket impl.
+pub trait Lambda {
+    type Output;
+}
 
-// Automatically implement Lambda for things that are "Values" in Lambda Calculus?
-// No, we should implement it manually for our combinators to be explicit.
+/// Blanket impl: Lambda types automatically implement Eval
+impl<T: Lambda> Eval for T {
+    type Output = <T as Lambda>::Output;
+}

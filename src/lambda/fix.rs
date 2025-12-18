@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use super::Apply;
+use super::{Apply, Lambda};
 
 // =========================================================================
 // Fixed-Point Combinator
@@ -10,6 +10,9 @@ use super::Apply;
 ///
 /// Rule: Fix<F> x = (F Fix<F>) x
 pub struct Fix<F>(PhantomData<F>);
+impl<F> Lambda for Fix<F> {
+    type Output = Fix<F>;
+}
 
 impl<F, X> Apply<X> for Fix<F>
 where
@@ -24,7 +27,7 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::lambda::church::{False, True, PureIf};
+    use crate::lambda::church::{False, PureIf, True};
 
     type App<F, A> = <F as Apply<A>>::Output;
 
