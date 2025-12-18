@@ -55,7 +55,9 @@ impl<A> Lambda for LContPure<A> {
 // ContPure<A> is Cont where F = PureF<A>
 // PureF<A> K -> K A
 pub struct LPureF<A>(PhantomData<A>);
-impl<A> Lambda for LPureF<A> { type Output = LPureF<A>; }
+impl<A> Lambda for LPureF<A> {
+    type Output = LPureF<A>;
+}
 
 impl<A, K> Lambda for LApp<LPureF<A>, K>
 where
@@ -79,7 +81,9 @@ impl<F, G> LBind<G> for LCont<F> {
 
 /// Internal bind function: `\k. runCont m (\a. runCont (f a) k)`
 pub struct LBindF<F, G>(PhantomData<(F, G)>);
-impl<F, G> Lambda for LBindF<F, G> { type Output = LBindF<F, G>; }
+impl<F, G> Lambda for LBindF<F, G> {
+    type Output = LBindF<F, G>;
+}
 
 impl<F, G, K> Lambda for LApp<LBindF<F, G>, K>
 where
@@ -94,7 +98,9 @@ where
 
 /// Inner continuation: `\a. runCont (f a) k`
 pub struct LBindK<G, K>(PhantomData<(G, K)>);
-impl<G, K> Lambda for LBindK<G, K> { type Output = LBindK<G, K>; }
+impl<G, K> Lambda for LBindK<G, K> {
+    type Output = LBindK<G, K>;
+}
 
 impl<G, K, A> Lambda for LApp<LBindK<G, K>, A>
 where
@@ -140,18 +146,27 @@ mod tests {
 
     #[derive(Clone)]
     struct A;
-    impl Lambda for A { type Output = A; }
+    impl Lambda for A {
+        type Output = A;
+    }
     #[derive(Clone)]
     struct B;
-    impl Lambda for B { type Output = B; }
+    impl Lambda for B {
+        type Output = B;
+    }
     struct R;
 
     // Identity continuation: K A -> A
     #[derive(Clone)]
     struct IdK;
-    impl Lambda for IdK { type Output = IdK; }
+    impl Lambda for IdK {
+        type Output = IdK;
+    }
 
-    impl<X> Lambda for LApp<IdK, X> where X: Eval {
+    impl<X> Lambda for LApp<IdK, X>
+    where
+        X: Eval,
+    {
         type Output = Evaluate<X>;
     }
 
@@ -169,9 +184,14 @@ mod tests {
         // Create a simple transformation: A -> Cont<PureF<B>>
         #[derive(Clone)]
         struct Transform;
-        impl Lambda for Transform { type Output = Transform; }
+        impl Lambda for Transform {
+            type Output = Transform;
+        }
 
-        impl<X> Lambda for LApp<Transform, X> where X: Eval {
+        impl<X> Lambda for LApp<Transform, X>
+        where
+            X: Eval,
+        {
             type Output = LCont<LPureF<B>>;
         }
 

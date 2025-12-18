@@ -34,7 +34,9 @@ impl<F, Arg> Lambda for LThunk<F, Arg> {
 
 /// Force: Trigger evaluation of a Thunk.
 pub struct LForce;
-impl Lambda for LForce { type Output = LForce; }
+impl Lambda for LForce {
+    type Output = LForce;
+}
 
 // Thunk<F, Arg> Force -> F Arg
 impl<F, Arg> Lambda for LApp<LThunk<F, Arg>, LForce>
@@ -56,15 +58,21 @@ mod tests {
 
     #[derive(Clone)]
     struct AddOne;
-    impl Lambda for AddOne { type Output = AddOne; }
+    impl Lambda for AddOne {
+        type Output = AddOne;
+    }
 
     #[derive(Clone)]
     struct Zero;
-    impl Lambda for Zero { type Output = Zero; }
+    impl Lambda for Zero {
+        type Output = Zero;
+    }
 
     #[derive(Clone)]
     struct One;
-    impl Lambda for One { type Output = One; }
+    impl Lambda for One {
+        type Output = One;
+    }
 
     impl Lambda for LApp<AddOne, Zero> {
         type Output = One;

@@ -41,15 +41,20 @@ mod tests {
     #[test]
     fn test_loop_basic_unroll() {
         struct Thunk<F, A>(std::marker::PhantomData<(F, A)>);
-        impl<F, A> Lambda for Thunk<F, A> { type Output = Thunk<F, A>; }
+        impl<F, A> Lambda for Thunk<F, A> {
+            type Output = Thunk<F, A>;
+        }
 
         struct Force;
-        impl Lambda for Force { type Output = Force; }
+        impl Lambda for Force {
+            type Output = Force;
+        }
 
         // Thunk<F, A> Force -> F A
         impl<F, A> Lambda for LApp<Thunk<F, A>, Force>
         where
-            F: Eval, A: Eval,
+            F: Eval,
+            A: Eval,
             LApp<F, A>: Lambda,
         {
             type Output = Evaluate<LApp<F, A>>;
@@ -57,13 +62,20 @@ mod tests {
 
         #[derive(Clone)]
         struct LoopBody;
-        impl Lambda for LoopBody { type Output = LoopBody; }
+        impl Lambda for LoopBody {
+            type Output = LoopBody;
+        }
 
         struct LoopBody1<R>(std::marker::PhantomData<R>);
-        impl<R> Lambda for LoopBody1<R> { type Output = LoopBody1<R>; }
+        impl<R> Lambda for LoopBody1<R> {
+            type Output = LoopBody1<R>;
+        }
 
         // LoopBody R -> LoopBody1<R>
-        impl<R> Lambda for LApp<LoopBody, R> where R: Eval {
+        impl<R> Lambda for LApp<LoopBody, R>
+        where
+            R: Eval,
+        {
             type Output = LoopBody1<Evaluate<R>>;
         }
 
@@ -77,7 +89,8 @@ mod tests {
             LApp<Arg, LTrue>: Lambda,
             LApp<<LApp<Arg, LTrue> as Lambda>::Output, Thunk<R, LTrue>>: Lambda,
         {
-            type Output = <LApp<<LApp<Arg, LTrue> as Lambda>::Output, Thunk<R, LTrue>> as Lambda>::Output;
+            type Output =
+                <LApp<<LApp<Arg, LTrue> as Lambda>::Output, Thunk<R, LTrue>> as Lambda>::Output;
         }
 
         type F = LFix<LoopBody>;
@@ -99,38 +112,55 @@ mod tests {
     fn test_church_factorial_ish() {
         #[derive(Clone)]
         struct Z;
-        impl Lambda for Z { type Output = Z; }
+        impl Lambda for Z {
+            type Output = Z;
+        }
 
         #[derive(Clone)]
         struct S<N>(std::marker::PhantomData<N>);
-        impl<N> Lambda for S<N> { type Output = S<N>; }
+        impl<N> Lambda for S<N> {
+            type Output = S<N>;
+        }
 
         #[derive(Clone)]
         struct Unroll;
-        impl Lambda for Unroll { type Output = Unroll; }
+        impl Lambda for Unroll {
+            type Output = Unroll;
+        }
 
         struct Unroll1<R>(std::marker::PhantomData<R>);
-        impl<R> Lambda for Unroll1<R> { type Output = Unroll1<R>; }
+        impl<R> Lambda for Unroll1<R> {
+            type Output = Unroll1<R>;
+        }
 
         // Unroll R -> Unroll1<R>
-        impl<R> Lambda for LApp<Unroll, R> where R: Eval {
+        impl<R> Lambda for LApp<Unroll, R>
+        where
+            R: Eval,
+        {
             type Output = Unroll1<Evaluate<R>>;
         }
 
         #[derive(Clone)]
         struct Done;
-        impl Lambda for Done { type Output = Done; }
+        impl Lambda for Done {
+            type Output = Done;
+        }
 
         // Unroll1<R> Z -> Done
-        impl<R> Lambda for LApp<Unroll1<R>, Z> where R: Eval {
+        impl<R> Lambda for LApp<Unroll1<R>, Z>
+        where
+            R: Eval,
+        {
             type Output = Done;
         }
 
         // Unroll1<R> S<P> -> R P
         impl<R, P> Lambda for LApp<Unroll1<R>, S<P>>
         where
-            R: Eval, P: Eval,
-            LApp<R, P>: Lambda
+            R: Eval,
+            P: Eval,
+            LApp<R, P>: Lambda,
         {
             type Output = <LApp<R, P> as Lambda>::Output;
         }

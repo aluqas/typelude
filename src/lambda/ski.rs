@@ -113,16 +113,10 @@ where
     Z: Eval + Clone,
     LApp<Evaluate<X>, Evaluate<Z>>: Eval,
     LApp<Evaluate<Y>, Evaluate<Z>>: Eval,
-    LApp<
-        Evaluate<LApp<Evaluate<X>, Evaluate<Z>>>,
-        Evaluate<LApp<Evaluate<Y>, Evaluate<Z>>>,
-    >: Eval,
+    LApp<Evaluate<LApp<Evaluate<X>, Evaluate<Z>>>, Evaluate<LApp<Evaluate<Y>, Evaluate<Z>>>>: Eval,
 {
     type Output = Evaluate<
-        LApp<
-            Evaluate<LApp<Evaluate<X>, Evaluate<Z>>>,
-            Evaluate<LApp<Evaluate<Y>, Evaluate<Z>>>,
-        >,
+        LApp<Evaluate<LApp<Evaluate<X>, Evaluate<Z>>>, Evaluate<LApp<Evaluate<Y>, Evaluate<Z>>>>,
     >;
 }
 
@@ -139,7 +133,9 @@ mod tests {
     fn test_identity_combinator() {
         #[derive(Clone)]
         struct X;
-        impl Lambda for X { type Output = X; }
+        impl Lambda for X {
+            type Output = X;
+        }
 
         assert_type_eq_all!(App<I, X>, X);
     }
@@ -148,10 +144,14 @@ mod tests {
     fn test_k_combinator() {
         #[derive(Clone)]
         struct X;
-        impl Lambda for X { type Output = X; }
+        impl Lambda for X {
+            type Output = X;
+        }
         #[derive(Clone)]
         struct Y;
-        impl Lambda for Y { type Output = Y; }
+        impl Lambda for Y {
+            type Output = Y;
+        }
 
         // K X -> K1<X>
         // (K X) Y -> X
@@ -162,7 +162,9 @@ mod tests {
     fn test_s_combinator_basic() {
         #[derive(Clone)]
         struct X;
-        impl Lambda for X { type Output = X; }
+        impl Lambda for X {
+            type Output = X;
+        }
 
         // SKK X -> (K X) (K X) -> X
         type SKK = App<App<S, K>, K>;
@@ -173,10 +175,14 @@ mod tests {
     fn test_church_booleans() {
         #[derive(Clone)]
         struct A;
-        impl Lambda for A { type Output = A; }
+        impl Lambda for A {
+            type Output = A;
+        }
         #[derive(Clone)]
         struct B;
-        impl Lambda for B { type Output = B; }
+        impl Lambda for B {
+            type Output = B;
+        }
 
         type True = K;
         type False = App<K, I>; // K I -> K1<I>
@@ -191,17 +197,27 @@ mod tests {
     #[test]
     fn test_associativity_check() {
         struct F;
-        impl Lambda for F { type Output = F; }
+        impl Lambda for F {
+            type Output = F;
+        }
         struct A;
-        impl Lambda for A { type Output = A; }
+        impl Lambda for A {
+            type Output = A;
+        }
         struct B;
-        impl Lambda for B { type Output = B; }
+        impl Lambda for B {
+            type Output = B;
+        }
 
         struct F1<X>(std::marker::PhantomData<X>);
-        impl<X> Lambda for F1<X> { type Output = F1<X>; }
+        impl<X> Lambda for F1<X> {
+            type Output = F1<X>;
+        }
 
         struct F2<X, Y>(std::marker::PhantomData<(X, Y)>);
-        impl<X, Y> Lambda for F2<X, Y> { type Output = F2<X, Y>; }
+        impl<X, Y> Lambda for F2<X, Y> {
+            type Output = F2<X, Y>;
+        }
 
         // Define behavior for F
         impl<X: Eval> Lambda for LApp<F, X> {

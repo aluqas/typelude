@@ -58,7 +58,9 @@ where
 }
 
 pub struct LLeft1<L, HandlL>(PhantomData<(L, HandlL)>);
-impl<L, HandlL> Lambda for LLeft1<L, HandlL> { type Output = LLeft1<L, HandlL>; }
+impl<L, HandlL> Lambda for LLeft1<L, HandlL> {
+    type Output = LLeft1<L, HandlL>;
+}
 
 // Left1<L, HandlL> HandlR -> HandlL L
 impl<L, HandlL, HandlR> Lambda for LApp<LLeft1<L, HandlL>, HandlR>
@@ -81,7 +83,9 @@ where
 }
 
 pub struct LRight1<R, HandlL>(PhantomData<(R, HandlL)>);
-impl<R, HandlL> Lambda for LRight1<R, HandlL> { type Output = LRight1<R, HandlL>; }
+impl<R, HandlL> Lambda for LRight1<R, HandlL> {
+    type Output = LRight1<R, HandlL>;
+}
 
 // Right1<R, HandlL> HandlR -> HandlR R
 impl<R, HandlL, HandlR> Lambda for LApp<LRight1<R, HandlL>, HandlR>
@@ -103,7 +107,9 @@ mod tests {
 
     #[derive(Clone)]
     struct RightAddOne;
-    impl Lambda for RightAddOne { type Output = RightAddOne; }
+    impl Lambda for RightAddOne {
+        type Output = RightAddOne;
+    }
 
     impl<X> Lambda for LApp<RightAddOne, X>
     where
@@ -114,7 +120,9 @@ mod tests {
 
     #[derive(Clone)]
     struct FailAtStep;
-    impl Lambda for FailAtStep { type Output = FailAtStep; }
+    impl Lambda for FailAtStep {
+        type Output = FailAtStep;
+    }
 
     impl<X> Lambda for LApp<FailAtStep, X>
     where

@@ -38,7 +38,9 @@ mod tests {
 
     #[derive(Clone)]
     struct AddOne;
-    impl Lambda for AddOne { type Output = AddOne; }
+    impl Lambda for AddOne {
+        type Output = AddOne;
+    }
 
     impl<X> Lambda for LApp<AddOne, X>
     where

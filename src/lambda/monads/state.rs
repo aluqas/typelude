@@ -6,18 +6,16 @@ use std::marker::PhantomData;
 
 use crate::{
     eval::{Eval, Evaluate},
-    lambda::{
-        LApp, Lambda,
-        church::{LPair2},
-        traits::{LBind},
-    },
+    lambda::{LApp, Lambda, church::LPair2, traits::LBind},
 };
 
 /// State Monad Wrapper: State<F>
 /// F is a function S -> (A, S)
 pub struct LState<F>(PhantomData<F>);
 
-impl<F> Lambda for LState<F> { type Output = LState<F>; }
+impl<F> Lambda for LState<F> {
+    type Output = LState<F>;
+}
 
 // State<F> s -> F s
 impl<F, S> Lambda for LApp<LState<F>, S>
@@ -39,7 +37,9 @@ impl<F, K> LBind<K> for LState<F> {
 }
 
 pub struct LBindState<F, K>(PhantomData<(F, K)>);
-impl<F, K> Lambda for LBindState<F, K> { type Output = LBindState<F, K>; }
+impl<F, K> Lambda for LBindState<F, K> {
+    type Output = LBindState<F, K>;
+}
 
 // BindState<F, K> S -> Result
 impl<F, K, S> Lambda for LApp<LBindState<F, K>, S>
@@ -62,22 +62,27 @@ where
     LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output>: Lambda,
     // Snd Pair
     LApp<crate::lambda::church::LSnd, <LApp<F, S> as Lambda>::Output>: Lambda,
-
     // k a -> m'
     // Let A = Fst Pair
-    LApp<K, <LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output> as Lambda>::Output>: Lambda,
-
+    LApp<K, <LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output> as Lambda>::Output>:
+        Lambda,
     // m' s' -> Result
     // Let M' = k a
     // Let S' = Snd Pair
     LApp<
-        <LApp<K, <LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output> as Lambda>::Output> as Lambda>::Output,
-        <LApp<crate::lambda::church::LSnd, <LApp<F, S> as Lambda>::Output> as Lambda>::Output
+        <LApp<
+            K,
+            <LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output> as Lambda>::Output,
+        > as Lambda>::Output,
+        <LApp<crate::lambda::church::LSnd, <LApp<F, S> as Lambda>::Output> as Lambda>::Output,
     >: Lambda,
 {
     type Output = <LApp<
-        <LApp<K, <LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output> as Lambda>::Output> as Lambda>::Output,
-        <LApp<crate::lambda::church::LSnd, <LApp<F, S> as Lambda>::Output> as Lambda>::Output
+        <LApp<
+            K,
+            <LApp<crate::lambda::church::LFst, <LApp<F, S> as Lambda>::Output> as Lambda>::Output,
+        > as Lambda>::Output,
+        <LApp<crate::lambda::church::LSnd, <LApp<F, S> as Lambda>::Output> as Lambda>::Output,
     > as Lambda>::Output;
 }
 
@@ -86,7 +91,9 @@ where
 // -------------------------------------------------------------------------
 
 pub struct LReturn<A>(PhantomData<A>);
-impl<A> Lambda for LReturn<A> { type Output = LReturn<A>; }
+impl<A> Lambda for LReturn<A> {
+    type Output = LReturn<A>;
+}
 
 // Return<A> S -> (A, S)
 impl<A, S> Lambda for LApp<LReturn<A>, S>
@@ -116,7 +123,9 @@ where
 // -------------------------------------------------------------------------
 
 pub struct LGet;
-impl Lambda for LGet { type Output = LGet; }
+impl Lambda for LGet {
+    type Output = LGet;
+}
 
 // Get S -> (S, S)
 impl<S> Lambda for LApp<LGet, S>
@@ -133,7 +142,9 @@ impl<K> LBind<K> for LGet {
 }
 
 pub struct LBindGet<K>(PhantomData<K>);
-impl<K> Lambda for LBindGet<K> { type Output = LBindGet<K>; }
+impl<K> Lambda for LBindGet<K> {
+    type Output = LBindGet<K>;
+}
 
 impl<K, S> Lambda for LApp<LBindGet<K>, S>
 where
@@ -152,11 +163,15 @@ where
 // -------------------------------------------------------------------------
 
 pub struct LPut<NewS>(PhantomData<NewS>);
-impl<NewS> Lambda for LPut<NewS> { type Output = LPut<NewS>; }
+impl<NewS> Lambda for LPut<NewS> {
+    type Output = LPut<NewS>;
+}
 
 // Helper Unit type
 pub struct Unit;
-impl Lambda for Unit { type Output = Unit; }
+impl Lambda for Unit {
+    type Output = Unit;
+}
 
 // Put<NewS> OldS -> ((), NewS)
 impl<NewS, OldS> Lambda for LApp<LPut<NewS>, OldS>
@@ -174,7 +189,9 @@ impl<NewS, K> LBind<K> for LPut<NewS> {
 }
 
 pub struct LBindPut<NewS, K>(PhantomData<(NewS, K)>);
-impl<NewS, K> Lambda for LBindPut<NewS, K> { type Output = LBindPut<NewS, K>; }
+impl<NewS, K> Lambda for LBindPut<NewS, K> {
+    type Output = LBindPut<NewS, K>;
+}
 
 impl<NewS, K, OldS> Lambda for LApp<LBindPut<NewS, K>, OldS>
 where
@@ -205,7 +222,9 @@ mod tests {
 
         // PutSucc: \x. Put (Succ x)
         struct PutSucc;
-        impl Lambda for PutSucc { type Output = PutSucc; }
+        impl Lambda for PutSucc {
+            type Output = PutSucc;
+        }
 
         impl<X> Lambda for LApp<PutSucc, X>
         where
@@ -216,10 +235,13 @@ mod tests {
 
         // DoGet: \x. Get
         struct DoGet;
-        impl Lambda for DoGet { type Output = DoGet; }
+        impl Lambda for DoGet {
+            type Output = DoGet;
+        }
 
         impl<X> Lambda for LApp<DoGet, X>
-        where X: Eval
+        where
+            X: Eval,
         {
             type Output = LGet;
         }

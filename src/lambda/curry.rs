@@ -87,11 +87,18 @@ mod tests {
     // Test function: TupleAdd (A, B) -> Result<A, B>
     struct TupleAdd;
     struct TupleResult<A, B>(PhantomData<(A, B)>);
-    impl Lambda for TupleAdd { type Output = TupleAdd; }
-    impl<A, B> Lambda for TupleResult<A, B> { type Output = TupleResult<A, B>; }
+    impl Lambda for TupleAdd {
+        type Output = TupleAdd;
+    }
+    impl<A, B> Lambda for TupleResult<A, B> {
+        type Output = TupleResult<A, B>;
+    }
 
     impl<A, B> Lambda for LApp<TupleAdd, LPair2<A, B>>
-    where A: Eval, B: Eval {
+    where
+        A: Eval,
+        B: Eval,
+    {
         type Output = TupleResult<A, B>;
     }
 
@@ -99,23 +106,40 @@ mod tests {
     struct CurriedAdd;
     struct CurriedAdd1<A>(PhantomData<A>);
     struct CurriedResult<A, B>(PhantomData<(A, B)>);
-    impl Lambda for CurriedAdd { type Output = CurriedAdd; }
-    impl<A> Lambda for CurriedAdd1<A> { type Output = CurriedAdd1<A>; }
-    impl<A, B> Lambda for CurriedResult<A, B> { type Output = CurriedResult<A, B>; }
+    impl Lambda for CurriedAdd {
+        type Output = CurriedAdd;
+    }
+    impl<A> Lambda for CurriedAdd1<A> {
+        type Output = CurriedAdd1<A>;
+    }
+    impl<A, B> Lambda for CurriedResult<A, B> {
+        type Output = CurriedResult<A, B>;
+    }
 
-    impl<A> Lambda for LApp<CurriedAdd, A> where A: Eval {
+    impl<A> Lambda for LApp<CurriedAdd, A>
+    where
+        A: Eval,
+    {
         type Output = CurriedAdd1<Evaluate<A>>;
     }
-    impl<A, B> Lambda for LApp<CurriedAdd1<A>, B> where A: Eval, B: Eval {
+    impl<A, B> Lambda for LApp<CurriedAdd1<A>, B>
+    where
+        A: Eval,
+        B: Eval,
+    {
         type Output = CurriedResult<A, Evaluate<B>>;
     }
 
     #[derive(Clone)]
     struct X;
-    impl Lambda for X { type Output = X; }
+    impl Lambda for X {
+        type Output = X;
+    }
     #[derive(Clone)]
     struct Y;
-    impl Lambda for Y { type Output = Y; }
+    impl Lambda for Y {
+        type Output = Y;
+    }
 
     #[test]
     fn test_curry() {

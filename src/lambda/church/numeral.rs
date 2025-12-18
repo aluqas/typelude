@@ -76,12 +76,13 @@ where
     F: Eval + Clone,
     X: Eval,
     // (N F X)
-    LApp<N, F>: Lambda, // Ensure N applies to F
+    LApp<N, F>: Lambda,                              // Ensure N applies to F
     LApp<<LApp<N, F> as Lambda>::Output, X>: Lambda, // Ensure (N F) applies to X
     // F (N F X)
     LApp<F, <LApp<<LApp<N, F> as Lambda>::Output, X> as Lambda>::Output>: Lambda,
 {
-    type Output = <LApp<F, <LApp<<LApp<N, F> as Lambda>::Output, X> as Lambda>::Output> as Lambda>::Output;
+    type Output =
+        <LApp<F, <LApp<<LApp<N, F> as Lambda>::Output, X> as Lambda>::Output> as Lambda>::Output;
 }
 
 /// SuccGen: Generates Succ<N> from N
@@ -106,10 +107,18 @@ pub struct LAdd1<M>(PhantomData<M>);
 pub struct LAdd2<M, N>(PhantomData<(M, N)>);
 pub struct LAdd3<M, N, F>(PhantomData<(M, N, F)>);
 
-impl Lambda for LAdd { type Output = LAdd; }
-impl<M> Lambda for LAdd1<M> { type Output = LAdd1<M>; }
-impl<M, N> Lambda for LAdd2<M, N> { type Output = LAdd2<M, N>; }
-impl<M, N, F> Lambda for LAdd3<M, N, F> { type Output = LAdd3<M, N, F>; }
+impl Lambda for LAdd {
+    type Output = LAdd;
+}
+impl<M> Lambda for LAdd1<M> {
+    type Output = LAdd1<M>;
+}
+impl<M, N> Lambda for LAdd2<M, N> {
+    type Output = LAdd2<M, N>;
+}
+impl<M, N, F> Lambda for LAdd3<M, N, F> {
+    type Output = LAdd3<M, N, F>;
+}
 
 // Implementations commented out to avoid recursion overflow
 /*
@@ -162,10 +171,18 @@ pub struct LMul1<M>(PhantomData<M>);
 pub struct LMul2<M, N>(PhantomData<(M, N)>);
 pub struct LMul3<M, NF>(PhantomData<(M, NF)>);
 
-impl Lambda for LMul { type Output = LMul; }
-impl<M> Lambda for LMul1<M> { type Output = LMul1<M>; }
-impl<M, N> Lambda for LMul2<M, N> { type Output = LMul2<M, N>; }
-impl<M, NF> Lambda for LMul3<M, NF> { type Output = LMul3<M, NF>; }
+impl Lambda for LMul {
+    type Output = LMul;
+}
+impl<M> Lambda for LMul1<M> {
+    type Output = LMul1<M>;
+}
+impl<M, N> Lambda for LMul2<M, N> {
+    type Output = LMul2<M, N>;
+}
+impl<M, NF> Lambda for LMul3<M, NF> {
+    type Output = LMul3<M, NF>;
+}
 
 /*
 // Mul M -> Mul1<M>
@@ -215,8 +232,12 @@ where
 // --- Exp ---
 pub struct LExp;
 pub struct LExp1<M>(PhantomData<M>);
-impl Lambda for LExp { type Output = LExp; }
-impl<M> Lambda for LExp1<M> { type Output = LExp1<M>; }
+impl Lambda for LExp {
+    type Output = LExp;
+}
+impl<M> Lambda for LExp1<M> {
+    type Output = LExp1<M>;
+}
 
 /*
 // Exp M -> Exp1<M>
@@ -242,8 +263,12 @@ where
 // --- Pred ---
 pub struct LPred;
 pub struct LPredStep;
-impl Lambda for LPred { type Output = LPred; }
-impl Lambda for LPredStep { type Output = LPredStep; }
+impl Lambda for LPred {
+    type Output = LPred;
+}
+impl Lambda for LPredStep {
+    type Output = LPredStep;
+}
 
 /*
 impl<N> Lambda for LApp<LPred, N>
@@ -283,8 +308,12 @@ where
 // --- Sub ---
 pub struct LSub;
 pub struct LSub1<M>(PhantomData<M>);
-impl Lambda for LSub { type Output = LSub; }
-impl<M> Lambda for LSub1<M> { type Output = LSub1<M>; }
+impl Lambda for LSub {
+    type Output = LSub;
+}
+impl<M> Lambda for LSub1<M> {
+    type Output = LSub1<M>;
+}
 
 /*
 impl<M> Lambda for LApp<LSub, M> where M: Eval { type Output = LSub1<Evaluate<M>>; }
