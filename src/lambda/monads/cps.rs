@@ -5,7 +5,10 @@
 
 use std::marker::PhantomData;
 
-use super::{Apply, Lambda, monad::Bind};
+use crate::{
+    kernel::traits::Apply,
+    lambda::{Lambda, traits::Bind},
+};
 
 // =========================================================================
 // Cont Monad: Cont<R, A> ~ (A -> R) -> R

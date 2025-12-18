@@ -1,14 +1,19 @@
+//! Identity Monad
+//!
+//! `Id<T>` allows treating a plain value `T` as a Monad.
+
 use std::marker::PhantomData;
 
 use crate::{
     kernel::traits::Apply,
-    lambda::{Lambda, monad::Bind},
+    lambda::{Lambda, traits::Bind},
 };
 
 /// Identity Monad: Id<T>
 ///
 /// `Id<T>` allows treating a plain value `T` as a Monad.
 pub struct Id<T>(PhantomData<T>);
+
 impl<T> Lambda for Id<T> {
     type Output = Id<T>;
 }

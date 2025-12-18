@@ -1,20 +1,26 @@
+//! Either Monad
+//!
+//! `Left<L>` / `Right<R>` for error handling with short-circuit behavior.
+
 use std::marker::PhantomData;
 
 use crate::{
     kernel::traits::Apply,
-    lambda::{Lambda, monad::Bind},
+    lambda::{Lambda, traits::Bind},
 };
 
 /// Left<L>: Represents the Error case or Left side of Either.
-/// Church encoding: \l r. l L
+/// Church encoding: λl r. l L
 pub struct Left<L>(PhantomData<L>);
+
 impl<L> Lambda for Left<L> {
     type Output = Left<L>;
 }
 
 /// Right<R>: Represents the Success case or Right side of Either.
-/// Church encoding: \l r. r R
+/// Church encoding: λl r. r R
 pub struct Right<R>(PhantomData<R>);
+
 impl<R> Lambda for Right<R> {
     type Output = Right<R>;
 }

@@ -1,72 +1,30 @@
+//! Church Numerals and Arithmetic
+//!
+//! Church encoding of natural numbers and arithmetic operations:
+//! - `Zero`: λf x. x
+//! - `Succ<N>`: λn f x. f (n f x)
+
 use std::marker::PhantomData;
 
-use super::{Apply, Lambda};
-
-// =========================================================================
-// Church Booleans
-// =========================================================================
-
-/// Church True: \t f. t
-pub struct True;
-/// Church False: \t f. f
-pub struct False;
-
-impl Lambda for True {
-    type Output = True;
-}
-impl Lambda for False {
-    type Output = False;
-}
-
-// Partial Application States
-pub struct True1<T>(PhantomData<T>);
-pub struct False1<T>(PhantomData<T>);
-
-// --- True Implementation ---
-// \t f. t
-impl<T> Apply<T> for True {
-    type Output = True1<T>;
-}
-impl<T, F> Apply<F> for True1<T> {
-    type Output = T;
-}
-
-// --- False Implementation ---
-// \t f. f
-impl<T> Apply<T> for False {
-    type Output = False1<T>;
-}
-impl<T, F> Apply<F> for False1<T> {
-    type Output = F;
-}
-
-// --- If ---
-/// Pure If Alias: ((P T) E)
-pub type PureIf<P, T, E> = <<P as Apply<T>>::Output as Apply<E>>::Output;
-
-/// Church If Struct
-pub struct If<P, T, E>(PhantomData<(P, T, E)>);
-
-impl<P, T, E> Lambda for If<P, T, E>
-where
-    P: Apply<T>,
-    <P as Apply<T>>::Output: Apply<E>,
-{
-    type Output = PureIf<P, T, E>;
-}
+use super::bool::True;
+use super::pair::{Pair, SndEval};
+use crate::kernel::traits::Apply;
+use crate::lambda::Lambda;
 
 // =========================================================================
 // Church Numerals
 // =========================================================================
 
-/// Zero: \f x. x
+/// Zero: λf x. x
 pub struct Zero;
+
 impl Lambda for Zero {
     type Output = Zero;
 }
 
-/// Succ: \n f x. f (n f x)
+/// Succ: λn f x. f (n f x)
 pub struct Succ<N>(PhantomData<N>);
+
 impl<N> Lambda for Succ<N> {
     type Output = Succ<N>;
 }
@@ -95,7 +53,9 @@ where
     type Output = <F as Apply<<<N as Apply<F>>::Output as Apply<X>>::Output>>::Output;
 }
 
+/// SuccGen: Generates Succ<N> from N
 pub struct SuccGen;
+
 impl<N> Apply<N> for SuccGen {
     type Output = Succ<N>;
 }
@@ -131,6 +91,7 @@ where
 }
 
 pub struct AddPart<N>(PhantomData<N>);
+
 impl<N, X> Apply<X> for AddPart<N>
 where
     N: Apply<SuccGen>,
@@ -157,7 +118,7 @@ where
 
 // --- Pred ---
 pub type PurePred<N> =
-    PureFst<<<N as Apply<PredStep>>::Output as Apply<Pair<Zero, Zero>>>::Output>;
+    super::pair::PureFst<<<N as Apply<PredStep>>::Output as Apply<Pair<Zero, Zero>>>::Output>;
 
 pub struct Pred<N>(PhantomData<N>);
 
@@ -171,10 +132,11 @@ where
 }
 
 pub struct PredStep;
+
 impl<P> Apply<P> for PredStep
 where
-    P: Apply<False>,                             // Snd
-    <P as Apply<False>>::Output: Apply<SuccGen>, // Succ(Snd)
+    P: Apply<super::bool::False>,               // Snd
+    <P as Apply<super::bool::False>>::Output: Apply<SuccGen>, // Succ(Snd)
 {
     type Output = Pair<SndEval<P>, Succ<SndEval<P>>>;
 }
@@ -193,62 +155,14 @@ where
 }
 
 pub struct PredGen;
+
 impl<N> Apply<N> for PredGen
 where
-    // Here we use Pred structure logic, but we return a value (PurePred<N>)
-    // PredGen is used inside PureSub.
-    // PurePred<N> is a type alias, so we must satisfy its bounds.
-    // But PurePred is complex alias.
-    // Let's rely on Eval bounds for now? No, Apply is pure.
     N: Apply<PredStep>,
     <N as Apply<PredStep>>::Output: Apply<Pair<Zero, Zero>>,
     <<N as Apply<PredStep>>::Output as Apply<Pair<Zero, Zero>>>::Output: Apply<True>,
 {
     type Output = PurePred<N>;
-}
-
-// =========================================================================
-// Church Pairs
-// =========================================================================
-
-/// Pair: \x y. \f. f x y
-pub struct Pair<X, Y>(PhantomData<(X, Y)>);
-impl<X, Y> Lambda for Pair<X, Y> {
-    type Output = Pair<X, Y>;
-}
-
-/// Pure Fst/Snd Aliases
-pub type PureFst<P> = <P as Apply<True>>::Output;
-pub type PureSnd<P> = <P as Apply<False>>::Output;
-
-/// Fst Struct
-pub struct Fst<P>(PhantomData<P>);
-impl<P> Lambda for Fst<P>
-where
-    P: Apply<True>,
-{
-    type Output = PureFst<P>;
-}
-
-/// Snd Struct
-pub struct Snd<P>(PhantomData<P>);
-impl<P> Lambda for Snd<P>
-where
-    P: Apply<False>,
-{
-    type Output = PureSnd<P>;
-}
-
-// Helpers for internal use
-type SndEval<P> = <P as Apply<False>>::Output;
-
-// Pair<X, Y> f -> f X Y
-impl<X, Y, F> Apply<F> for Pair<X, Y>
-where
-    F: Apply<X>,
-    <F as Apply<X>>::Output: Apply<Y>,
-{
-    type Output = <<F as Apply<X>>::Output as Apply<Y>>::Output;
 }
 
 #[cfg(test)]
@@ -263,17 +177,6 @@ mod tests {
     // Numbers
     type One = Succ<Zero>;
     type Two = Succ<One>;
-
-    #[test]
-    fn test_church_bools_basic() {
-        struct A;
-        struct B;
-        // Using Structs
-        type TrueRes = Evaluate<If<True, A, B>>;
-        type FalseRes = Evaluate<If<False, A, B>>;
-        assert_type_eq_all!(TrueRes, A);
-        assert_type_eq_all!(FalseRes, B);
-    }
 
     #[test]
     fn test_church_numerals_basic() {
