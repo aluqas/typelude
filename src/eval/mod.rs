@@ -2,9 +2,11 @@
 //!
 //! Provides core infrastructure for type-level computation.
 
+pub mod app;
 pub mod bridge;
 mod expr;
 
+pub use app::*;
 pub use bridge::*;
 pub use expr::*;
 

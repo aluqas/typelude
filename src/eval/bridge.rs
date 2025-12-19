@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    eval::{Eval, Evaluate},
+    eval::{App, Eval, Evaluate},
     kernel::traits::Apply,
 };
 
@@ -31,21 +31,9 @@ where
 
 /// **Function Application**: `EApp<Op, Arg>`
 ///
-/// This applies `Op` to `Arg`.
-/// It expects `Op` to implement `Apply<Arg>`.
-/// The result of the application must be an expression that implements `Eval`.
-///
-/// This is primarily used when `Op` is a raw type (e.g. `OpAdd`) and `Arg` is a type.
-/// It behaves somewhat like a macro expansion: Op(Arg) -> Expr -> Value.
-pub struct EApp<Op, Arg>(PhantomData<(Op, Arg)>);
-
-impl<Op, Arg> Eval for EApp<Op, Arg>
-where
-    Op: Apply<Arg>,
-    Op::Output: Eval,
-{
-    type Output = Evaluate<Op::Output>;
-}
+/// **Deprecated**: Use `crate::eval::App` instead.
+/// This alias is kept for compatibility.
+pub type EApp<Op, Arg> = App<Op, Arg>;
 
 // =========================================================================
 // ECall: Call-by-Value Application (New, for Lambda integration)
