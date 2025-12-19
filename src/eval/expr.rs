@@ -8,21 +8,11 @@
 
 use std::marker::PhantomData;
 
-use super::{App, Eval, Evaluate};
+use super::{Eval, Evaluate};
 use crate::kernel::{
     bool::{TyFalse, TyTrue},
     traits::Apply,
 };
-
-// =========================================================================
-// Convenience Aliases for App
-// =========================================================================
-
-/// 2-argument function application alias
-pub type EApp2<Op, A, B> = App<Op, (A, B)>;
-
-/// 3-argument function application alias
-pub type EApp3<Op, A, B, C> = App<Op, (A, B, C)>;
 
 //
 // EIf: Conditional Expression
