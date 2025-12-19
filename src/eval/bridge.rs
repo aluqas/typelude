@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    eval::{App, Eval, Evaluate},
+    eval::{Eval, Evaluate},
     kernel::traits::Apply,
 };
 
@@ -24,16 +24,6 @@ where
 {
     type Output = <T as Apply<A>>::Output;
 }
-
-// =========================================================================
-// EApp: Classic Application (Compatible with existing code)
-// =========================================================================
-
-/// **Function Application**: `EApp<Op, Arg>`
-///
-/// **Deprecated**: Use `crate::eval::App` instead.
-/// This alias is kept for compatibility.
-pub type EApp<Op, Arg> = App<Op, Arg>;
 
 // =========================================================================
 // ECall: Call-by-Value Application (New, for Lambda integration)

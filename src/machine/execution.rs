@@ -8,7 +8,7 @@ use typenum::Unsigned;
 #[allow(unused_imports)]
 use crate::std::int;
 use crate::{
-    eval::{EApp, EIf, ELit, EWhile, Eval, Evaluate},
+    eval::{App, EIf, ELit, EWhile, Eval, Evaluate},
     kernel::traits::Apply,
     machine::{instruction::*, state::MachineState},
     std::{
@@ -146,9 +146,10 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpE
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::cmp::EEq<Lhs, Rhs>: Eval,
+    crate::std::cmp::OpEq: Apply<(Lhs, Rhs)>,
+    crate::eval::App<crate::std::cmp::OpEq, (Lhs, Rhs)>: Eval,
 {
-    type OutputStack = TyArray<Evaluate<crate::std::cmp::EEq<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpEq, (Lhs, Rhs)>>, RestStack>;
 }
 
 // --- OpNeq ---
@@ -156,9 +157,10 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpN
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::cmp::ENeq<Lhs, Rhs>: Eval,
+    crate::std::cmp::OpNeq: Apply<(Lhs, Rhs)>,
+    crate::eval::App<crate::std::cmp::OpNeq, (Lhs, Rhs)>: Eval,
 {
-    type OutputStack = TyArray<Evaluate<crate::std::cmp::ENeq<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpNeq, (Lhs, Rhs)>>, RestStack>;
 }
 
 // --- OpLt ---
@@ -167,9 +169,10 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpL
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::cmp::ELt<Lhs, Rhs>: Eval,
+    crate::std::cmp::OpLt: Apply<(Lhs, Rhs)>,
+    crate::eval::App<crate::std::cmp::OpLt, (Lhs, Rhs)>: Eval,
 {
-    type OutputStack = TyArray<Evaluate<crate::std::cmp::ELt<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpLt, (Lhs, Rhs)>>, RestStack>;
 }
 
 // --- OpGt ---
@@ -178,9 +181,10 @@ impl<Lhs, Rhs, RestStack> RunStep<TyArray<Rhs, TyArray<Lhs, RestStack>>> for OpG
 where
     TyArray<Rhs, TyArray<Lhs, RestStack>>: Cons,
     RestStack: Cons,
-    crate::std::cmp::EGt<Lhs, Rhs>: Eval,
+    crate::std::cmp::OpGt: Apply<(Lhs, Rhs)>,
+    crate::eval::App<crate::std::cmp::OpGt, (Lhs, Rhs)>: Eval,
 {
-    type OutputStack = TyArray<Evaluate<crate::std::cmp::EGt<Lhs, Rhs>>, RestStack>;
+    type OutputStack = TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpGt, (Lhs, Rhs)>>, RestStack>;
 }
 
 // --- OpNot ---
@@ -459,19 +463,19 @@ impl<S, L, M, C, P> Apply<MachineState<S, L, M, C, P>> for OpIsFinished
 where
     crate::std::array::EIsEmpty<ELit<P>>: Eval,
     // We need to evaluate IsEmpty(P) and then Not it.
-    // EApp<OpNot, EApp<OpIsEmpty, P>>
-    EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
+    // App<OpNot, EApp<OpIsEmpty, P>>
+    App<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
-    type Output = EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
+    type Output = App<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
 }
 
 // OpIsFinished for ELit-wrapped state (handles subsequent loop iterations)
 impl<S, L, M, C, P> Apply<ELit<MachineState<S, L, M, C, P>>> for OpIsFinished
 where
     crate::std::array::EIsEmpty<ELit<P>>: Eval,
-    EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
+    App<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
-    type Output = EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
+    type Output = App<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
 }
 
 // --- Machine Runner ---

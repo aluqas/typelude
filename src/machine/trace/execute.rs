@@ -1,7 +1,7 @@
 use typenum::Unsigned;
 
 use crate::{
-    eval::{EApp, EIf, ELit, EWhile, Eval, Evaluate},
+    eval::{App, EIf, ELit, EWhile, Eval, Evaluate},
     kernel::traits::Apply, // Explicit kernel import to be safe
     machine::{execution::RunStep, instruction::*, trace::TracedMachineState},
     std::{
@@ -395,10 +395,10 @@ pub struct OpTracedIsFinished;
 impl<S, L, M, C, P, H> Apply<TracedMachineState<S, L, M, C, P, H>> for OpTracedIsFinished
 where
     crate::std::array::EIsEmpty<ELit<P>>: Eval,
-    EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
+    App<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
     // Return Expression (Evaluation of OpNot(IsEmpty))
-    type Output = EApp<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
+    type Output = App<crate::std::bool::OpNot, crate::std::array::EIsEmpty<ELit<P>>>;
 }
 
 /// Runner for traced execution

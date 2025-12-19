@@ -4,25 +4,25 @@
 //! - `EIf`: Conditional Branch
 //! - `EWhile`: Loop
 //!
-//! Note: `ELit`, `EApp` are imported from `bridge`.
+//! Note: `ELit` is imported from `bridge`. `App` is imported from `app`.
 
 use std::marker::PhantomData;
 
-use super::{EApp, Eval, Evaluate};
+use super::{App, Eval, Evaluate};
 use crate::kernel::{
     bool::{TyFalse, TyTrue},
     traits::Apply,
 };
 
 // =========================================================================
-// Convenience Aliases for EApp (imported from bridge)
+// Convenience Aliases for App
 // =========================================================================
 
 /// 2-argument function application alias
-pub type EApp2<Op, A, B> = EApp<Op, (A, B)>;
+pub type EApp2<Op, A, B> = App<Op, (A, B)>;
 
 /// 3-argument function application alias
-pub type EApp3<Op, A, B, C> = EApp<Op, (A, B, C)>;
+pub type EApp3<Op, A, B, C> = App<Op, (A, B, C)>;
 
 //
 // EIf: Conditional Expression
