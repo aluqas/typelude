@@ -21,16 +21,28 @@ use crate::{
         bool::{TyFalse, TyTrue},
         traits::Apply,
     },
+    std::traits::TypeList,
 };
 
-// Macro tyarray! is re-exported from kernel/array.rs via crate root
-// #[macro_export]
-// macro_rules! tyarray ... (removed)
+// =============================================================================
+// Adapter Implementation: TypeList for TyArray/TyNil
+// =============================================================================
 
-// ... (Rest of file is implicitly kept but I need to handle that trailing backtick which is at line 601)
+impl TypeList for TyNil {
+    type Cons<NewHead> = TyArray<NewHead, TyNil>;
+    // Head/Tail for Nil are usually undefined or Unit/Nil
+    type Head = (); // Or a custom Error Type
+    type Tail = TyNil;
+}
+
+impl<Head, Tail: Cons> TypeList for TyArray<Head, Tail> {
+    type Cons<NewHead> = TyArray<NewHead, Self>;
+    type Head = Head;
+    type Tail = Tail;
+}
 
 // =============================================================================
-// Layer 2: Capabilities (Verbs)
+// Layer 2: Capabilities (Verbs) - Deprecated/Wrapped by TypeList, but kept for logic
 // =============================================================================
 
 /// Array length
@@ -163,7 +175,7 @@ pub struct ELen<Array>(PhantomData<Array>);
 impl<Array> Eval for ELen<Array>
 where
     Array: Eval,
-    Evaluate<Array>: Len,
+    Evaluate<Array>: Len, // Keeping Len for now as TypeList doesn't enforce "Unsigned" output for Length directly yet
 {
     type Output = <Evaluate<Array> as Len>::Output;
 }
@@ -174,9 +186,9 @@ pub struct EHead<Array>(PhantomData<Array>);
 impl<Array> Eval for EHead<Array>
 where
     Array: Eval,
-    Evaluate<Array>: Head,
+    Evaluate<Array>: TypeList,
 {
-    type Output = <Evaluate<Array> as Head>::Output;
+    type Output = <Evaluate<Array> as TypeList>::Head;
 }
 
 // --- ETail ---
@@ -185,9 +197,10 @@ pub struct ETail<Array>(PhantomData<Array>);
 impl<Array> Eval for ETail<Array>
 where
     Array: Eval,
-    Evaluate<Array>: Tail,
+    Evaluate<Array>: TypeList,
+    <Evaluate<Array> as TypeList>::Tail: Eval,
 {
-    type Output = <Evaluate<Array> as Tail>::Output;
+    type Output = <Evaluate<Array> as TypeList>::Tail;
 }
 
 // --- EIsEmpty ---
@@ -196,7 +209,7 @@ pub struct EIsEmpty<Array>(PhantomData<Array>);
 impl<Array> Eval for EIsEmpty<Array>
 where
     Array: Eval,
-    Evaluate<Array>: IsEmpty,
+    Evaluate<Array>: IsEmpty, // Keep IsEmpty trait for now as logic is specific
 {
     type Output = <Evaluate<Array> as IsEmpty>::Output;
 }
@@ -260,9 +273,9 @@ impl<Elem, Array> Eval for EPrepend<Elem, Array>
 where
     Elem: Eval,
     Array: Eval,
-    Evaluate<Array>: Cons,
+    Evaluate<Array>: TypeList, // Use TypeList::Cons
 {
-    type Output = TyArray<Evaluate<Elem>, Evaluate<Array>>;
+    type Output = <Evaluate<Array> as TypeList>::Cons<Evaluate<Elem>>;
 }
 
 // --- EContains ---
