@@ -29,21 +29,14 @@
 //! eval/       - Evaluation Infrastructure (Evaluable, ELit, EIf, EWhile, EApply)
 //! std/        - Standard Library (int, bool, array, cmp, ops)
 //! machine/    - Stack Machine Implementation
-//! prelude     - Convenient bulk imports
 //! ```
 
 // Unstable features required for type-level programming
 #![feature(specialization)]
 #![feature(generic_const_exprs)]
-#![feature(inherent_associated_types)]
+// #![feature(inherent_associated_types)]
 #![allow(incomplete_features)]
-#![recursion_limit = "2048"]
-
-// Export typenum for macros
-// Root Facade Exports
-pub use eval::{Eval, Evaluate};
-pub use kernel::traits::Apply;
-pub use typenum;
+#![recursion_limit = "1024"]
 
 pub mod eval;
 pub mod kernel;
@@ -51,3 +44,11 @@ pub mod lambda;
 pub mod machine;
 pub mod macros;
 pub mod std;
+
+// Export typenum for macros
+// Root Facade Exports
+pub use crate::{
+    eval::{Eval, Evaluate},
+    kernel::traits::Apply,
+};
+pub use typenum;
