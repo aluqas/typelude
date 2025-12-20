@@ -1,8 +1,14 @@
-warning: unused imports: `machine::execution::Execute` and `prelude::*`
+error[E0432]: unresolved import `typelude::prelude`
+ --> tests/ui/fail_pop_empty.rs:1:45
+  |
+1 | use typelude::{machine::execution::Execute, prelude::*, program};
+  |                                             ^^^^^^^ could not find `prelude` in `typelude`
+
+warning: unused import: `machine::execution::Execute`
  --> tests/ui/fail_pop_empty.rs:1:16
   |
 1 | use typelude::{machine::execution::Execute, prelude::*, program};
-  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
