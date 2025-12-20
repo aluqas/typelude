@@ -5,7 +5,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    eval::{Eval, Evaluate},
+    eval::Eval,
     lambda::{LApp, Lambda, traits::LBind},
 };
 
@@ -34,7 +34,10 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
-    use crate::lambda::church::{LSucc, LZero};
+    use crate::{
+        eval::Evaluate,
+        lambda::church::{LSucc, LZero},
+    };
 
     #[derive(Clone)]
     struct AddOne;

@@ -16,9 +16,8 @@ error[E0277]: the trait bound `EWhile<OpIsFinished, OpStep, MachineState<TyNil, 
   --> tests/ui/fail_pop_empty.rs:23:40
    |
 23 |     let _ = std::marker::PhantomData::<FinalState>;
-   |                                        ^^^^^^^^^^ unsatisfied trait bound
+   |                                        ^^^^^^^^^^ the trait `Eval` is not implemented for `EWhile<OpIsFinished, OpStep, MachineState<TyNil, TyNil, TyNil, TyNil, TyArray<OpDrop, TyNil>>>`
    |
-   = help: the trait `Eval` is not implemented for `EWhile<OpIsFinished, OpStep, MachineState<TyNil, TyNil, TyNil, TyNil, TyArray<OpDrop, TyNil>>>`
 help: the trait `Eval` is implemented for `EWhile<Pred, Step, State>`
   --> src/eval/expr.rs
    |
