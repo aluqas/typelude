@@ -149,7 +149,8 @@ where
     crate::std::cmp::OpEq: Apply<(Lhs, Rhs)>,
     crate::eval::App<crate::std::cmp::OpEq, (Lhs, Rhs)>: Eval,
 {
-    type OutputStack = TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpEq, (Lhs, Rhs)>>, RestStack>;
+    type OutputStack =
+        TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpEq, (Lhs, Rhs)>>, RestStack>;
 }
 
 // --- OpNeq ---
@@ -160,7 +161,8 @@ where
     crate::std::cmp::OpNeq: Apply<(Lhs, Rhs)>,
     crate::eval::App<crate::std::cmp::OpNeq, (Lhs, Rhs)>: Eval,
 {
-    type OutputStack = TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpNeq, (Lhs, Rhs)>>, RestStack>;
+    type OutputStack =
+        TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpNeq, (Lhs, Rhs)>>, RestStack>;
 }
 
 // --- OpLt ---
@@ -172,7 +174,8 @@ where
     crate::std::cmp::OpLt: Apply<(Lhs, Rhs)>,
     crate::eval::App<crate::std::cmp::OpLt, (Lhs, Rhs)>: Eval,
 {
-    type OutputStack = TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpLt, (Lhs, Rhs)>>, RestStack>;
+    type OutputStack =
+        TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpLt, (Lhs, Rhs)>>, RestStack>;
 }
 
 // --- OpGt ---
@@ -184,7 +187,8 @@ where
     crate::std::cmp::OpGt: Apply<(Lhs, Rhs)>,
     crate::eval::App<crate::std::cmp::OpGt, (Lhs, Rhs)>: Eval,
 {
-    type OutputStack = TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpGt, (Lhs, Rhs)>>, RestStack>;
+    type OutputStack =
+        TyArray<Evaluate<crate::eval::App<crate::std::cmp::OpGt, (Lhs, Rhs)>>, RestStack>;
 }
 
 // --- OpNot ---

@@ -2,8 +2,10 @@
 //!
 //! Integration with the `typenum` crate and integer arithmetic.
 
-use std::marker::PhantomData;
-use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::{
+    marker::PhantomData,
+    ops::{Add, Div, Mul, Rem, Sub},
+};
 
 use paste::paste;
 use typenum::{B0, B1, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};

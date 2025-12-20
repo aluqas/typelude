@@ -47,8 +47,9 @@ pub mod std;
 
 // Export typenum for macros
 // Root Facade Exports
+pub use typenum;
+
 pub use crate::{
     eval::{Eval, Evaluate},
     kernel::traits::Apply,
 };
-pub use typenum;

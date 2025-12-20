@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use super::{LApp, Lambda};
-use crate::eval::{Eval, Evaluate};
+use crate::eval::Eval;
 
 // =========================================================================
 // Fixed-Point Combinator

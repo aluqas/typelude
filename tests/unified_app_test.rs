@@ -1,8 +1,10 @@
 use static_assertions::assert_type_eq_all;
-use typelude::{Apply, Eval, Evaluate};
-use typelude::std::int::OpAdd;
-use typelude::eval::App;
-use typelude::typenum::{U1, U2, U3};
+use typelude::{
+    Apply, Eval, Evaluate,
+    eval::App,
+    std::int::OpAdd,
+    typenum::{U1, U2, U3},
+};
 
 #[test]
 fn test_unified_app() {

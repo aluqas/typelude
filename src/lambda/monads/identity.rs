@@ -5,7 +5,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    eval::{Eval, Evaluate},
+    eval::Eval,
     lambda::{LApp, Lambda, traits::LBind},
 };
 
