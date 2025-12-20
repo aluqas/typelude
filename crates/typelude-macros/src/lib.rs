@@ -1,11 +1,17 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
+use quote::{quote};
 use syn::{
     Ident, LitInt, Result, Token, Type, parenthesized,
     parse::{Parse, ParseStream},
     parse_macro_input,
 };
+
+mod dsl;
+
+use dsl::{TyDslInput, BoundDslInput};
+
+// ... existing program macro code ...
 
 enum Instruction {
     PushLiteral(LitInt),
@@ -263,4 +269,18 @@ pub fn program(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ProgramInput);
     let (output, _) = compile_block(&input.instrs, &[]);
     TokenStream::from(output)
+}
+
+#[proc_macro]
+pub fn ty(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as TyDslInput);
+    let ty = input.ty;
+    TokenStream::from(quote! { #ty })
+}
+
+#[proc_macro]
+pub fn bound(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as BoundDslInput);
+    let bounds = input.bounds;
+    TokenStream::from(quote! { #bounds })
 }
