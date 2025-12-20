@@ -228,10 +228,10 @@ impl DefOpInput {
                     // 1. Define Op marker
                     #(#doc_attrs)*
                     pub struct #op_name;
-                    impl typelude_core::eval::Sealed for #op_name {}
+                    impl crate::eval::Sealed for #op_name {}
 
                     // 2. Implement Apply with alias
-                    impl<#(#args),*> typelude_core::kernel::traits::Apply<#apply_args> for #op_name {
+                    impl<#(#args),*> crate::kernel::traits::Apply<#apply_args> for #op_name {
                         type Output = #alias_ty;
                     }
                 }
