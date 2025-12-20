@@ -2,13 +2,18 @@
 //!
 //! Integration with the `typenum` crate and integer arithmetic.
 
-use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::{
+    marker::PhantomData,
+    ops::{Add, Div, Mul, Rem, Sub},
+};
 
+use paste::paste;
 use typenum::{B0, B1, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
 
 use crate::{
     eval::{Eval, Evaluate, Sealed},
     kernel::traits::Apply,
+    std::traits::{TypeAdd, TypeDiv, TypeMul, TypeNat, TypePow, TypeRem, TypeSub},
 };
 
 //
@@ -45,13 +50,63 @@ impl Eval for B1 {
     type Output = Self;
 }
 
-//
-// Arithmetic Functions
-//
+// =============================================================================
+// Adapter Implementation: TypeNat / TypeInt for typenum
+// =============================================================================
 
-use std::marker::PhantomData;
+// Implement TypeNat for UTerm and UInt
+impl TypeNat for UTerm {}
+impl<U, B> TypeNat for UInt<U, B> {}
 
-use paste::paste;
+// Implement TypeAdd, etc. for any typenum type that implements the typenum traits
+// Note: We use blanket implementations where possible, or specific ones if needed to avoid conflict.
+// typenum implements Add for almost everything (UInt, Z0, PInt, NInt).
+
+impl<L, R> TypeAdd<R> for L
+where
+    L: Add<R>,
+{
+    type Output = <L as Add<R>>::Output;
+}
+
+impl<L, R> TypeSub<R> for L
+where
+    L: Sub<R>,
+{
+    type Output = <L as Sub<R>>::Output;
+}
+
+impl<L, R> TypeMul<R> for L
+where
+    L: Mul<R>,
+{
+    type Output = <L as Mul<R>>::Output;
+}
+
+impl<L, R> TypeDiv<R> for L
+where
+    L: Div<R>,
+{
+    type Output = <L as Div<R>>::Output;
+}
+
+impl<L, R> TypeRem<R> for L
+where
+    L: Rem<R>,
+{
+    type Output = <L as Rem<R>>::Output;
+}
+
+impl<L, R> TypePow<R> for L
+where
+    L: Pow<R>,
+{
+    type Output = <L as Pow<R>>::Output;
+}
+
+// =============================================================================
+// Arithmetic Functions (Refactored to use Type* Traits)
+// =============================================================================
 
 macro_rules! define_arith_op {
     ($op_name:ident, $trait:path, $doc:literal) => {
@@ -64,12 +119,13 @@ macro_rules! define_arith_op {
             // Expression Struct
             pub struct [<E $op_name>]<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
 
+            // Updated: Uses $trait (TypeAdd, etc.) instead of typenum traits
             impl<Lhs, Rhs> Eval for [<E $op_name>]<Lhs, Rhs>
             where
                 Lhs: Eval,
                 Rhs: Eval,
                 Evaluate<Lhs>: $trait<Evaluate<Rhs>>,
-                <Evaluate<Lhs> as $trait<Evaluate<Rhs>>>::Output: Eval, // Ensure result is well-formed (usually is)
+                <Evaluate<Lhs> as $trait<Evaluate<Rhs>>>::Output: Eval,
             {
                 type Output = <Evaluate<Lhs> as $trait<Evaluate<Rhs>>>::Output;
             }
@@ -82,12 +138,13 @@ macro_rules! define_arith_op {
     };
 }
 
-define_arith_op!(Add, Add, "Addition: A + B");
-define_arith_op!(Sub, Sub, "Subtraction: A - B");
-define_arith_op!(Mul, Mul, "Multiplication: A * B");
-define_arith_op!(Div, Div, "Division: A / B");
-define_arith_op!(Rem, Rem, "Remainder: A % B");
-define_arith_op!(Pow, Pow, "Exponentiation: A ^ B");
+// Note: Pass the *Type* trait here, not the typenum trait
+define_arith_op!(Add, TypeAdd, "Addition: A + B");
+define_arith_op!(Sub, TypeSub, "Subtraction: A - B");
+define_arith_op!(Mul, TypeMul, "Multiplication: A * B");
+define_arith_op!(Div, TypeDiv, "Division: A / B");
+define_arith_op!(Rem, TypeRem, "Remainder: A % B");
+define_arith_op!(Pow, TypePow, "Exponentiation: A ^ B");
 
 //
 // Tests

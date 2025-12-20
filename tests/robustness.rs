@@ -1,6 +1,6 @@
 #![recursion_limit = "256"]
 use seq_macro::seq;
-use typelude::{Eval, std::int::EAdd, typenum::Unsigned};
+use typelude::{eval::Eval, std::int::EAdd, typenum::Unsigned};
 
 // Helper to assert value equality at runtime for the resulting types.
 macro_rules! check_add {

@@ -10,7 +10,7 @@ use crate::{
         array::{Cons, TyArray, TyNil},
         bool::{TyFalse, TyTrue},
     },
-    std::bool::KindBool,
+    std::traits::TypeBool,
 };
 
 // ======================================================================================
@@ -154,7 +154,7 @@ impl_flat_tuple!(0 T0 V0, 1 T1 V1, 2 T2 V2, 3 T3 V3, 4 T4 V4, 5 T5 V5, 6 T6 V6, 
 
 /// Reflect a const boolean to a Type.
 pub trait ReflectBool<const B: bool> {
-    type Output: KindBool;
+    type Output: TypeBool;
 }
 impl ReflectBool<true> for () {
     type Output = TyTrue;

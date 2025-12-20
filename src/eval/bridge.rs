@@ -26,28 +26,6 @@ where
 }
 
 // =========================================================================
-// EApp: Classic Application (Compatible with existing code)
-// =========================================================================
-
-/// **Function Application**: `EApp<Op, Arg>`
-///
-/// This applies `Op` to `Arg`.
-/// It expects `Op` to implement `Apply<Arg>`.
-/// The result of the application must be an expression that implements `Eval`.
-///
-/// This is primarily used when `Op` is a raw type (e.g. `OpAdd`) and `Arg` is a type.
-/// It behaves somewhat like a macro expansion: Op(Arg) -> Expr -> Value.
-pub struct EApp<Op, Arg>(PhantomData<(Op, Arg)>);
-
-impl<Op, Arg> Eval for EApp<Op, Arg>
-where
-    Op: Apply<Arg>,
-    Op::Output: Eval,
-{
-    type Output = Evaluate<Op::Output>;
-}
-
-// =========================================================================
 // ECall: Call-by-Value Application (New, for Lambda integration)
 // =========================================================================
 
