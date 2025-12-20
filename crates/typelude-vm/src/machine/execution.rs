@@ -5,10 +5,14 @@
 #[allow(unused_imports)]
 use typelude_core::std::int;
 use typelude_core::{
-    eval::{App, EIf, ELit, EWhile, Eval, Evaluate},
-    kernel::{array::Cons, traits::Apply},
+    eval::{App, EIf, EWhile, Eval, Evaluate},
+    kernel::{
+        array::Cons,
+        bool::{TyFalse, TyTrue},
+        traits::Apply,
+    },
     std::{
-        array::{EConcat, Get, Set, TyArray, TyNil},
+        array::{Concat, EConcat, Get, Set, TyArray, TyNil},
         bool::OpNot,
     },
 };
@@ -244,49 +248,39 @@ where
 }
 
 // --- Control Flow: While ---
+// OpWhile expands to: Cond ++ [OpIf<Body ++ [OpWhile<Cond, Body>], []>] ++ RestProg
+// This transformation happens purely at the type level using Concat trait.
 impl<Cond, Body, Stack, Locals, Memory, CallStack, RestProg>
     Execute<Stack, Locals, Memory, CallStack, RestProg> for OpWhile<Cond, Body>
 where
-    EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>: Eval,
-    EConcat<
-        Cond,
-        TyArray<OpIf<Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>, TyNil>,
-    >: Eval,
-    EConcat<
-        Evaluate<
-            EConcat<
-                Cond,
-                TyArray<
-                    OpIf<Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>,
-                    TyNil,
-                >,
-            >,
-        >,
-        RestProg,
-    >: Eval,
+    RestProg: Cons,
+    // Body ++ [OpWhile<Cond, Body>]
+    Body: Concat<TyArray<OpWhile<Cond, Body>, TyNil>>,
+    <Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output: Cons,
+    // Cond ++ [OpIf<LoopBody, []>]
+    Cond: Concat<
+        TyArray<OpIf<<Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output, TyNil>, TyNil>,
+    >,
+    <Cond as Concat<
+        TyArray<OpIf<<Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output, TyNil>, TyNil>,
+    >>::Output: Cons,
+    // ExpandedWhile ++ RestProg
+    <Cond as Concat<
+        TyArray<OpIf<<Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output, TyNil>, TyNil>,
+    >>::Output: Concat<RestProg>,
 {
     type OutputState = MachineState<
         Stack,
         Locals,
         Memory,
         CallStack,
-        Evaluate<
-            EConcat<
-                Evaluate<
-                    EConcat<
-                        Cond,
-                        TyArray<
-                            OpIf<
-                                Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>,
-                                TyNil, // Else block empty
-                            >,
-                            TyNil,
-                        >,
-                    >,
-                >,
-                RestProg,
+        // Cond ++ [OpIf<Body ++ [OpWhile], []>] ++ RestProg
+        <<Cond as Concat<
+            TyArray<
+                OpIf<<Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output, TyNil>,
+                TyNil,
             >,
-        >,
+        >>::Output as Concat<RestProg>>::Output,
     >;
 }
 
@@ -300,18 +294,23 @@ where
     TyArray<Inst, RestProg>: Cons,
     RestProg: Cons,
 {
-    type Output = ELit<<Inst as Execute<Stack, Locals, Memory, CallStack, RestProg>>::OutputState>;
+    type Output = <Inst as Execute<Stack, Locals, Memory, CallStack, RestProg>>::OutputState;
 }
 
 pub struct OpIsFinished;
 
-impl<S, L, M, C, P> Apply<MachineState<S, L, M, C, P>> for OpIsFinished
+// Program is empty (TyNil) -> Finished (TyFalse = stop loop)
+impl<S, L, M, C> Apply<MachineState<S, L, M, C, TyNil>> for OpIsFinished {
+    type Output = TyFalse;
+}
+
+// Program is not empty (TyArray) -> Not finished (TyTrue = continue loop)
+impl<S, L, M, C, Inst, RestProg> Apply<MachineState<S, L, M, C, TyArray<Inst, RestProg>>>
+    for OpIsFinished
 where
-    typelude_core::std::array::EIsEmpty<ELit<P>>: Eval,
-    App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>: Eval,
+    RestProg: Cons,
 {
-    type Output =
-        App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>;
+    type Output = TyTrue;
 }
 
 pub type ERun<S> = EWhile<OpIsFinished, OpStep, S>;
