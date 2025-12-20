@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use crate::eval::{Eval, Sealed};
+use typelude_core::eval::{Eval, Sealed};
 
 /// Machine State
 /// - `Stack`: Calculation Stack (TyArray)

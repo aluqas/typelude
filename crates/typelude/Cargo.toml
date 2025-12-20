@@ -1,0 +1,19 @@
+[package]
+name = "typelude"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94.0"
+description = "Type-level programming utilities for Rust"
+license = "MIT"
+
+[dependencies]
+typelude-core = { path = "../typelude-core" }
+typelude-vm = { path = "../typelude-vm" }
+typelude-macros = { path = "../typelude-macros" }
+typenum = { version = "1.19.0", features = ["const-generics"] }
+
+[dev-dependencies]
+static_assertions = "1.1.0"
+
+[lints.rust]
+unsafe_code = "deny"
