@@ -1,37 +1,8 @@
-[package]
-name = "typelude"
-version = "0.1.0"
-edition = "2024"
-rust-version = "1.94.0"
-description = "Type-level programming utilities for Rust"
-license = "MIT"
-keywords = ["type-level", "compile-time", "type-system"]
-categories = ["rust-patterns", "no-std"]
-
-[dependencies]
-typenum = { version = "1.19.0", features = ["const-generics"] }
-hybrid-array = "0.4.5"
-const_panic = "0.2.15"
-derive_more = { version = "2.1.0", features = ["full"] }
-paste = "1.0.15"
-tstr = "0.3.0"
-
-# const_fn, const_fn, const-primes, typemap...
-
-[dev-dependencies]
-static_assertions = "1.1.0"
-trybuild = "1.0.114"
-seq-macro = "0.3.6"
-
-[lints.rust]
-unsafe_code = "deny"
-
-[lints.clippy]
-# グループは低い優先度で
-all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-# 型レベルプログラミングでは許容
-module_name_repetitions = "allow"
-must_use_candidate = "allow"
-# 日本語ドキュメントとの相性が悪い
-doc_markdown = "allow"
+[workspace]
+members = [
+    "crates/typelude",
+    "crates/typelude-core",
+    "crates/typelude-vm",
+    "crates/typelude-macros",
+]
+resolver = "2"

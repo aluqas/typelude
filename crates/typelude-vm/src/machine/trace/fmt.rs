@@ -1,6 +1,7 @@
 use paste::paste;
+use typelude_core::std::trace::Trace;
 
-use crate::{machine::instruction::*, std::trace::Trace};
+use crate::machine::instruction::*;
 
 macro_rules! impl_trace_simple {
     ( $($name:ident),* ) => {

@@ -17,7 +17,7 @@ use std::marker::PhantomData;
 use crate::{
     eval::{Eval, Evaluate},
     lambda::{
-        LApp, 
+        LApp,
         traits::{LNat, LTerm, Lambda},
     },
 };
@@ -380,15 +380,25 @@ mod tests {
 
     #[derive(Clone)]
     struct F;
-    impl Eval for F { type Output = F; }
+    impl Eval for F {
+        type Output = F;
+    }
     struct F1<T>(std::marker::PhantomData<T>);
-    impl<T> Eval for F1<T> { type Output = F1<T>; }
+    impl<T> Eval for F1<T> {
+        type Output = F1<T>;
+    }
     #[derive(Clone)]
     struct X;
-    impl Eval for X { type Output = X; }
+    impl Eval for X {
+        type Output = X;
+    }
 
-    impl<X: Eval> Eval for LApp<F, X> { type Output = F1<Evaluate<X>>; }
-    impl<X, Y: Eval> Eval for LApp<F1<X>, Y> { type Output = F1<Evaluate<Y>>; }
+    impl<X: Eval> Eval for LApp<F, X> {
+        type Output = F1<Evaluate<X>>;
+    }
+    impl<X, Y: Eval> Eval for LApp<F1<X>, Y> {
+        type Output = F1<Evaluate<Y>>;
+    }
 
     #[test]
     fn test_church_numerals_basic() {

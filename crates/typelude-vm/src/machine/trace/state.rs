@@ -1,11 +1,10 @@
 use core::marker::PhantomData;
 
-use crate::{
+use typelude_core::{
     eval::{Eval, Sealed},
     std::trace::Trace,
 };
 
-/// A wrapper around the machine state components, adding a History log.
 #[derive(Debug)]
 pub struct TracedMachineState<Stack, Locals, Memory, CallStack, Program, History>(
     PhantomData<(Stack, Locals, Memory, CallStack, Program, History)>,
