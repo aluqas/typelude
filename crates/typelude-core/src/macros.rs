@@ -63,6 +63,38 @@ macro_rules! impl_apply {
 }
 
 // =============================================================================
+// Helper Macros (DSL)
+// =============================================================================
+
+/// Helper for expressing type bounds in a concise way.
+///
+/// Syntax: `op_bound!(Lhs.Trait(Rhs))` -> `Evaluate<Lhs>: Trait<Evaluate<Rhs>>`
+/// Note: Requires `Evaluate` to be imported in scope.
+#[macro_export]
+macro_rules! op_bound {
+    // L.Trait(R)
+    ($l:ident . $t:ident ( $r:ident )) => {
+        Evaluate<$l>: $t<Evaluate<$r>>
+    };
+    // L: Eval
+    ($l:ident : Eval) => {
+        $l: Eval
+    };
+}
+
+/// Helper for expressing output types in a concise way.
+///
+/// Syntax: `op_call!(Lhs.Trait(Rhs))` -> `<Evaluate<Lhs> as Trait<Evaluate<Rhs>>>::Output`
+/// Note: Requires `Evaluate` to be imported in scope.
+#[macro_export]
+macro_rules! op_call {
+    // L.Trait(R)
+    ($l:ident . $t:ident ( $r:ident )) => {
+        <Evaluate<$l> as $t<Evaluate<$r>>>::Output
+    };
+}
+
+// =============================================================================
 // High-Level Interface
 // =============================================================================
 

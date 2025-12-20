@@ -6,6 +6,7 @@ use typenum::{IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
 use crate::{
     def_op,
+    op_bound, op_call,
     eval::{Eval, Evaluate},
     std::{
         bool::{Assert, ToTyBoolOut},
@@ -44,7 +45,7 @@ def_op! {
         where: [
             Lhs: Eval,
             Rhs: Eval,
-            Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
+            op_bound!(Lhs.IsEq(Rhs)),
             (): ReflectBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
         ],
         type Output = Evaluate<Assert<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>
@@ -60,7 +61,7 @@ def_op! {
         where: [
             Lhs: Eval,
             Rhs: Eval,
-            Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
+            op_bound!(Lhs.IsEq(Rhs)),
             (): ReflectBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
         ],
         type Output = Evaluate<Assert<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>
@@ -76,10 +77,10 @@ def_op! {
         where: [
             Lhs: Eval,
             Rhs: Eval,
-            Evaluate<Lhs>: IsLess<Evaluate<Rhs>>,
+            op_bound!(Lhs.IsLess(Rhs)),
             bool: TyFrom<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
+        type Output = ToTyBoolOut<op_call!(Lhs.IsLess(Rhs))>
     }
 }
 
@@ -92,10 +93,10 @@ def_op! {
         where: [
             Lhs: Eval,
             Rhs: Eval,
-            Evaluate<Lhs>: IsLessOrEqual<Evaluate<Rhs>>,
+            op_bound!(Lhs.IsLessOrEqual(Rhs)),
             bool: TyFrom<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
+        type Output = ToTyBoolOut<op_call!(Lhs.IsLessOrEqual(Rhs))>
     }
 }
 
@@ -108,10 +109,10 @@ def_op! {
         where: [
             Lhs: Eval,
             Rhs: Eval,
-            Evaluate<Lhs>: IsGreater<Evaluate<Rhs>>,
+            op_bound!(Lhs.IsGreater(Rhs)),
             bool: TyFrom<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
+        type Output = ToTyBoolOut<op_call!(Lhs.IsGreater(Rhs))>
     }
 }
 
@@ -124,10 +125,10 @@ def_op! {
         where: [
             Lhs: Eval,
             Rhs: Eval,
-            Evaluate<Lhs>: IsGreaterOrEqual<Evaluate<Rhs>>,
+            op_bound!(Lhs.IsGreaterOrEqual(Rhs)),
             bool: TyFrom<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
+        type Output = ToTyBoolOut<op_call!(Lhs.IsGreaterOrEqual(Rhs))>
     }
 }
 
