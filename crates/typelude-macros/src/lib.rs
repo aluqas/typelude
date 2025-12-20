@@ -9,7 +9,7 @@ use syn::{
 
 mod dsl;
 
-use dsl::{TyDslInput, BoundDslInput};
+use dsl::{TyDslInput, BoundDslInput, ImplEvalInput};
 
 // ... existing program macro code ...
 
@@ -283,4 +283,29 @@ pub fn bound(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as BoundDslInput);
     let bounds = input.bounds;
     TokenStream::from(quote! { #bounds })
+}
+
+#[proc_macro]
+pub fn impl_eval(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as ImplEvalInput);
+
+    let generics = input.generics;
+    let target_type = input.target_type;
+    let output_type = input.output_type;
+
+    let where_clause = if let Some(bounds) = input.where_clause {
+        quote! { where #bounds }
+    } else {
+        quote! {}
+    };
+
+    let expanded = quote! {
+        impl #generics typelude::core::Eval for #target_type
+        #where_clause
+        {
+            type Output = #output_type;
+        }
+    };
+
+    TokenStream::from(expanded)
 }
