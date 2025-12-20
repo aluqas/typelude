@@ -2,16 +2,14 @@
 //!
 //! Implementation of comparison operations using `typenum`.
 
-use typenum::{IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
+use typelude_macros::def_op;
+use typenum::{Bit, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
 use crate::{
-    def_op,
-    op_bound, op_call,
-    eval::{Eval, Evaluate},
+    eval::Evaluate,
     std::{
-        bool::{Assert, ToTyBoolOut},
+        bool::{ToTyBoolOut, TyFalse, TyTrue},
         into::TyFrom,
-        reify::ReflectBool,
     },
 };
 
@@ -32,8 +30,24 @@ impl<T> IsEq<T> for T {
     const EQ: bool = true;
 }
 
+/// Helper trait to convert const bool to TyBool
+pub trait ConstToTyBool<const B: bool> {
+    type Output;
+}
+
+impl ConstToTyBool<true> for () {
+    type Output = TyTrue;
+}
+
+impl ConstToTyBool<false> for () {
+    type Output = TyFalse;
+}
+
+pub type EqResult<L, R> = <() as ConstToTyBool<{ <L as IsEq<R>>::EQ }>>::Output;
+pub type NeqResult<L, R> = <() as ConstToTyBool<{ !<L as IsEq<R>>::EQ }>>::Output;
+
 // =============================================================================
-// Operators
+// Operators - Using procedural macro
 // =============================================================================
 
 // Equality: A == B
@@ -43,12 +57,10 @@ def_op! {
     args: (Lhs, Rhs),
     ast: EEq {
         where: [
-            Lhs: Eval,
-            Rhs: Eval,
-            op_bound!(Lhs.IsEq(Rhs)),
-            (): ReflectBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
+            Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
+            (): ConstToTyBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
         ],
-        type Output = Evaluate<Assert<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>
+        type Output = EqResult<Evaluate<Lhs>, Evaluate<Rhs>>
     }
 }
 
@@ -59,12 +71,10 @@ def_op! {
     args: (Lhs, Rhs),
     ast: ENeq {
         where: [
-            Lhs: Eval,
-            Rhs: Eval,
-            op_bound!(Lhs.IsEq(Rhs)),
-            (): ReflectBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
+            Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
+            (): ConstToTyBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
         ],
-        type Output = Evaluate<Assert<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>
+        type Output = NeqResult<Evaluate<Lhs>, Evaluate<Rhs>>
     }
 }
 
@@ -75,12 +85,11 @@ def_op! {
     args: (Lhs, Rhs),
     ast: ELt {
         where: [
-            Lhs: Eval,
-            Rhs: Eval,
-            op_bound!(Lhs.IsLess(Rhs)),
+            Evaluate<Lhs>: IsLess<Evaluate<Rhs>>,
+            <Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output: Bit,
             bool: TyFrom<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<op_call!(Lhs.IsLess(Rhs))>
+        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
     }
 }
 
@@ -91,12 +100,11 @@ def_op! {
     args: (Lhs, Rhs),
     ast: ELe {
         where: [
-            Lhs: Eval,
-            Rhs: Eval,
-            op_bound!(Lhs.IsLessOrEqual(Rhs)),
+            Evaluate<Lhs>: IsLessOrEqual<Evaluate<Rhs>>,
+            <Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output: Bit,
             bool: TyFrom<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<op_call!(Lhs.IsLessOrEqual(Rhs))>
+        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
     }
 }
 
@@ -107,12 +115,11 @@ def_op! {
     args: (Lhs, Rhs),
     ast: EGt {
         where: [
-            Lhs: Eval,
-            Rhs: Eval,
-            op_bound!(Lhs.IsGreater(Rhs)),
+            Evaluate<Lhs>: IsGreater<Evaluate<Rhs>>,
+            <Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output: Bit,
             bool: TyFrom<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<op_call!(Lhs.IsGreater(Rhs))>
+        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
     }
 }
 
@@ -123,12 +130,11 @@ def_op! {
     args: (Lhs, Rhs),
     ast: EGe {
         where: [
-            Lhs: Eval,
-            Rhs: Eval,
-            op_bound!(Lhs.IsGreaterOrEqual(Rhs)),
+            Evaluate<Lhs>: IsGreaterOrEqual<Evaluate<Rhs>>,
+            <Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output: Bit,
             bool: TyFrom<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<op_call!(Lhs.IsGreaterOrEqual(Rhs))>
+        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
     }
 }
 
@@ -142,11 +148,7 @@ mod tests {
     use typenum::{N1, P1, P2, U1, U2};
 
     use super::*;
-    use crate::{
-        eval::ELit,
-        std::bool::{TyFalse, TyTrue},
-        kernel::traits::Apply, // Import Apply explicitly
-    };
+    use crate::eval::bridge::ELit;
 
     #[test]
     fn test_eq_neq() {

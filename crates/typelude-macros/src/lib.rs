@@ -7,6 +7,8 @@ use syn::{
     parse_macro_input,
 };
 
+mod def_op;
+
 enum Instruction {
     PushLiteral(LitInt),
     PushType(Type),
@@ -263,4 +265,35 @@ pub fn program(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ProgramInput);
     let (output, _) = compile_block(&input.instrs, &[]);
     TokenStream::from(output)
+}
+
+/// Defines a type-level operation with automatic `Eval` bounds.
+///
+/// # Examples
+///
+/// ```ignore
+/// // AST Pattern - creates EAdd struct and OpAdd marker
+/// def_op! {
+///     /// Addition operation
+///     name: OpAdd,
+///     args: (Lhs, Rhs),
+///     ast: EAdd {
+///         where: [
+///             Evaluate<Lhs>: Add<Evaluate<Rhs>>
+///         ],
+///         type Output = <Evaluate<Lhs> as Add<Evaluate<Rhs>>>::Output
+///     }
+/// }
+///
+/// // Alias Pattern - creates OpInc that returns existing type
+/// def_op! {
+///     name: OpInc,
+///     args: (N),
+///     alias: EAdd<N, P1>
+/// }
+/// ```
+#[proc_macro]
+pub fn def_op(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as def_op::DefOpInput);
+    TokenStream::from(input.expand())
 }
