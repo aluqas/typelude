@@ -5,8 +5,8 @@
 use typenum::{IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
 use crate::{
-    eval::{Eval, Evaluate, Sealed},
-    kernel::traits::Apply,
+    def_op,
+    eval::{Eval, Evaluate},
     std::{
         bool::{Assert, ToTyBoolOut},
         into::TyFrom,
@@ -32,130 +32,103 @@ impl<T> IsEq<T> for T {
 }
 
 // =============================================================================
-// Expression Structs
+// Operators
 // =============================================================================
 
-use std::marker::PhantomData;
-
-/// Equality: A == B
-pub struct EEq<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
-
-impl<Lhs, Rhs> Eval for EEq<Lhs, Rhs>
-where
-    Lhs: Eval,
-    Rhs: Eval,
-    Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
-    (): ReflectBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>,
-{
-    type Output = Evaluate<Assert<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>;
+// Equality: A == B
+def_op! {
+    /// Equality: A == B -> TyBool
+    name: OpEq,
+    args: (Lhs, Rhs),
+    ast: EEq {
+        where: [
+            Lhs: Eval,
+            Rhs: Eval,
+            Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
+            (): ReflectBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
+        ],
+        type Output = Evaluate<Assert<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>
+    }
 }
 
-/// Inequality: A != B
-pub struct ENeq<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
-
-impl<Lhs, Rhs> Eval for ENeq<Lhs, Rhs>
-where
-    Lhs: Eval,
-    Rhs: Eval,
-    Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
-    (): ReflectBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>,
-{
-    type Output = Evaluate<Assert<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>;
+// Inequality: A != B
+def_op! {
+    /// Inequality: A != B -> TyBool
+    name: OpNeq,
+    args: (Lhs, Rhs),
+    ast: ENeq {
+        where: [
+            Lhs: Eval,
+            Rhs: Eval,
+            Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
+            (): ReflectBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
+        ],
+        type Output = Evaluate<Assert<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>>
+    }
 }
 
-/// Less than: A < B
-pub struct ELt<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
-
-impl<Lhs, Rhs> Eval for ELt<Lhs, Rhs>
-where
-    Lhs: Eval,
-    Rhs: Eval,
-    Evaluate<Lhs>: IsLess<Evaluate<Rhs>>,
-    bool: TyFrom<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>,
-{
-    type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>;
+// Less than: A < B
+def_op! {
+    /// Less than: A < B
+    name: OpLt,
+    args: (Lhs, Rhs),
+    ast: ELt {
+        where: [
+            Lhs: Eval,
+            Rhs: Eval,
+            Evaluate<Lhs>: IsLess<Evaluate<Rhs>>,
+            bool: TyFrom<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
+        ],
+        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
+    }
 }
 
-/// Less than or equal: A <= B
-pub struct ELe<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
-
-impl<Lhs, Rhs> Eval for ELe<Lhs, Rhs>
-where
-    Lhs: Eval,
-    Rhs: Eval,
-    Evaluate<Lhs>: IsLessOrEqual<Evaluate<Rhs>>,
-    bool: TyFrom<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>,
-{
-    type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>;
+// Less than or equal: A <= B
+def_op! {
+    /// Less than or equal: A <= B
+    name: OpLe,
+    args: (Lhs, Rhs),
+    ast: ELe {
+        where: [
+            Lhs: Eval,
+            Rhs: Eval,
+            Evaluate<Lhs>: IsLessOrEqual<Evaluate<Rhs>>,
+            bool: TyFrom<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
+        ],
+        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
+    }
 }
 
-/// Greater than: A > B
-pub struct EGt<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
-
-impl<Lhs, Rhs> Eval for EGt<Lhs, Rhs>
-where
-    Lhs: Eval,
-    Rhs: Eval,
-    Evaluate<Lhs>: IsGreater<Evaluate<Rhs>>,
-    bool: TyFrom<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>,
-{
-    type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>;
+// Greater than: A > B
+def_op! {
+    /// Greater than: A > B
+    name: OpGt,
+    args: (Lhs, Rhs),
+    ast: EGt {
+        where: [
+            Lhs: Eval,
+            Rhs: Eval,
+            Evaluate<Lhs>: IsGreater<Evaluate<Rhs>>,
+            bool: TyFrom<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
+        ],
+        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
+    }
 }
 
-/// Greater than or equal: A >= B
-pub struct EGe<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
-
-impl<Lhs, Rhs> Eval for EGe<Lhs, Rhs>
-where
-    Lhs: Eval,
-    Rhs: Eval,
-    Evaluate<Lhs>: IsGreaterOrEqual<Evaluate<Rhs>>,
-    bool: TyFrom<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>,
-{
-    type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>;
-}
-
-// =============================================================================
-// Operator Symbols (OpCodes)
-// =============================================================================
-
-/// Equality: A == B -> TyBool
-pub struct OpEq;
-/// Inequality: A != B -> TyBool
-pub struct OpNeq;
-/// Less than: A < B
-pub struct OpLt;
-/// Less than or equal: A <= B
-pub struct OpLe;
-/// Greater than: A > B
-pub struct OpGt;
-/// Greater than or equal: A >= B
-pub struct OpGe;
-
-impl Sealed for OpEq {}
-impl Sealed for OpNeq {}
-impl Sealed for OpLt {}
-impl Sealed for OpLe {}
-impl Sealed for OpGt {}
-impl Sealed for OpGe {}
-
-impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpEq {
-    type Output = EEq<Lhs, Rhs>;
-}
-impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpNeq {
-    type Output = ENeq<Lhs, Rhs>;
-}
-impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpLt {
-    type Output = ELt<Lhs, Rhs>;
-}
-impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpLe {
-    type Output = ELe<Lhs, Rhs>;
-}
-impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpGt {
-    type Output = EGt<Lhs, Rhs>;
-}
-impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpGe {
-    type Output = EGe<Lhs, Rhs>;
+// Greater than or equal: A >= B
+def_op! {
+    /// Greater than or equal: A >= B
+    name: OpGe,
+    args: (Lhs, Rhs),
+    ast: EGe {
+        where: [
+            Lhs: Eval,
+            Rhs: Eval,
+            Evaluate<Lhs>: IsGreaterOrEqual<Evaluate<Rhs>>,
+            bool: TyFrom<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
+        ],
+        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
+    }
 }
 
 // =============================================================================
@@ -171,6 +144,7 @@ mod tests {
     use crate::{
         eval::ELit,
         std::bool::{TyFalse, TyTrue},
+        kernel::traits::Apply, // Import Apply explicitly
     };
 
     #[test]

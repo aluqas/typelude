@@ -9,6 +9,8 @@ pub mod kernel;
 pub mod lambda;
 pub mod std;
 
+pub mod macros;
+
 // Export typenum for macros
 pub use typenum;
 
