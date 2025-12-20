@@ -1,8 +1,11 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::parse::{Parse, ParseStream};
-use syn::{parenthesized, parse_macro_input, Ident, LitInt, Result, Type, Token};
+use syn::{
+    Ident, LitInt, Result, Token, Type, parenthesized,
+    parse::{Parse, ParseStream},
+    parse_macro_input,
+};
 
 enum Instruction {
     PushLiteral(LitInt),
@@ -60,7 +63,7 @@ impl Parse for Instruction {
                 } else {
                     Ok(Instruction::PushType(content.parse()?))
                 }
-            }
+            },
             "call" => Ok(Instruction::Call(content.parse()?)),
             "get" => Ok(Instruction::Get(content.parse()?)),
             "set" => Ok(Instruction::Set(content.parse()?)),
@@ -137,12 +140,12 @@ fn compile_instructions(
                         <typelude::core::typenum::Const<#lit> as typelude::core::typenum::ToUInt>::Output
                     >
                 });
-            }
+            },
             Instruction::PushType(ty) => {
                 compiled.push(quote! {
                     typelude::vm::machine::instruction::OpPush< #ty >
                 });
-            }
+            },
             Instruction::SimpleOp(ident) => {
                 let name = ident.to_string();
                 let op_type = match name.as_str() {
@@ -159,60 +162,60 @@ fn compile_instructions(
                     "and" => quote! { typelude::vm::machine::instruction::OpAnd },
                     "or" => quote! { typelude::vm::machine::instruction::OpOr },
                     "return" => quote! { typelude::vm::machine::instruction::OpReturn },
-                     _ => {
+                    _ => {
                         let span = ident.span();
-                        return vec![quote::quote_spanned! {span=> compile_error!(concat!("Unknown instruction: ", #name)); }];
-                    }
+                        return vec![
+                            quote::quote_spanned! {span=> compile_error!(concat!("Unknown instruction: ", #name)); },
+                        ];
+                    },
                 };
                 compiled.push(op_type);
-            }
+            },
             Instruction::Call(target) => {
                 compiled.push(quote! {
                     typelude::vm::machine::instruction::OpCall< #target >
                 });
-            }
+            },
             Instruction::Let(ident) => {
                 state.push_local(ident.to_string());
                 compiled.push(quote! { typelude::vm::machine::instruction::OpLet });
                 cleanup.push(quote! { typelude::vm::machine::instruction::OpDropLocal });
-            }
-            Instruction::Get(ident) => {
-                match state.get_index(&ident.to_string()) {
-                    Some(idx) => {
-                        let uint = generate_uint(idx);
-                        compiled.push(quote! { typelude::vm::machine::instruction::OpGetLocal< #uint > });
-                    }
-                    None => {
-                         let msg = format!("Variable not found: {}", ident);
-                         compiled.push(quote! { compile_error!(#msg) });
-                    }
-                }
-            }
-            Instruction::Set(ident) => {
-                match state.get_index(&ident.to_string()) {
-                     Some(idx) => {
-                        let uint = generate_uint(idx);
-                        compiled.push(quote! { typelude::vm::machine::instruction::OpSetLocal< #uint > });
-                    }
-                    None => {
-                         let msg = format!("Variable not found: {}", ident);
-                         compiled.push(quote! { compile_error!(#msg) });
-                    }
-                }
-            }
+            },
+            Instruction::Get(ident) => match state.get_index(&ident.to_string()) {
+                Some(idx) => {
+                    let uint = generate_uint(idx);
+                    compiled
+                        .push(quote! { typelude::vm::machine::instruction::OpGetLocal< #uint > });
+                },
+                None => {
+                    let msg = format!("Variable not found: {}", ident);
+                    compiled.push(quote! { compile_error!(#msg) });
+                },
+            },
+            Instruction::Set(ident) => match state.get_index(&ident.to_string()) {
+                Some(idx) => {
+                    let uint = generate_uint(idx);
+                    compiled
+                        .push(quote! { typelude::vm::machine::instruction::OpSetLocal< #uint > });
+                },
+                None => {
+                    let msg = format!("Variable not found: {}", ident);
+                    compiled.push(quote! { compile_error!(#msg) });
+                },
+            },
             Instruction::Load(ident) => {
-                 compiled.push(quote! {
+                compiled.push(quote! {
                     typelude::vm::machine::instruction::OpPush<#ident>,
                     typelude::vm::machine::instruction::OpLoad
                 });
-            }
+            },
             Instruction::Store(ident) => {
                 compiled.push(quote! {
                     typelude::vm::machine::instruction::OpPush<#ident>,
                     typelude::vm::machine::instruction::OpSwap,
                     typelude::vm::machine::instruction::OpStore
                 });
-            }
+            },
             Instruction::If(then_block, else_block) => {
                 let (then_prog, _) = compile_block(then_block, &state.locals);
                 let (else_prog, _) = compile_block(else_block, &state.locals);
@@ -220,7 +223,7 @@ fn compile_instructions(
                 compiled.push(quote! {
                     typelude::vm::machine::instruction::OpIf< #then_prog, #else_prog >
                 });
-            }
+            },
             Instruction::While(cond_block, body_block) => {
                 let (cond_prog, _) = compile_block(cond_block, &state.locals);
                 let (body_prog, _) = compile_block(body_block, &state.locals);
@@ -228,13 +231,16 @@ fn compile_instructions(
                 compiled.push(quote! {
                     typelude::vm::machine::instruction::OpWhile< #cond_prog, #body_prog >
                 });
-            }
+            },
         }
     }
     compiled
 }
 
-fn compile_block(instrs: &[Instruction], initial_locals: &[String]) -> (TokenStream2, Vec<TokenStream2>) {
+fn compile_block(
+    instrs: &[Instruction],
+    initial_locals: &[String],
+) -> (TokenStream2, Vec<TokenStream2>) {
     let mut state = CompilerState::new(initial_locals);
     let mut cleanup = Vec::new();
     let compiled_instrs = compile_instructions(instrs, &mut state, &mut cleanup);

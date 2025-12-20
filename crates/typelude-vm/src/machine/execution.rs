@@ -2,21 +2,19 @@
 //!
 //! Implements machine instruction execution logic and main loop.
 
-use typenum::Unsigned;
-
 #[allow(unused_imports)]
 use typelude_core::std::int;
-
-use crate::machine::{instruction::*, state::MachineState};
-
 use typelude_core::{
     eval::{App, EIf, ELit, EWhile, Eval, Evaluate},
-    kernel::{traits::Apply, array::Cons},
+    kernel::{array::Cons, traits::Apply},
     std::{
         array::{EConcat, Get, Set, TyArray, TyNil},
         bool::OpNot,
     },
 };
+use typenum::Unsigned;
+
+use crate::machine::{instruction::*, state::MachineState};
 
 pub trait Execute<Stack, Locals, Memory, CallStack, RestProg> {
     type OutputState;
@@ -138,8 +136,13 @@ where
     Addr: Unsigned,
     RestStack: Cons,
 {
-    type OutputState =
-        MachineState<TyArray<<Memory as Get<Addr>>::Output, RestStack>, Locals, Memory, CallStack, RestProg>;
+    type OutputState = MachineState<
+        TyArray<<Memory as Get<Addr>>::Output, RestStack>,
+        Locals,
+        Memory,
+        CallStack,
+        RestProg,
+    >;
 }
 
 impl<Val, Addr, RestStack, Locals, Memory, CallStack, RestProg>
@@ -161,8 +164,7 @@ where
     RestStack: Cons,
     Locals: Cons,
 {
-    type OutputState =
-        MachineState<RestStack, TyArray<Val, Locals>, Memory, CallStack, RestProg>;
+    type OutputState = MachineState<RestStack, TyArray<Val, Locals>, Memory, CallStack, RestProg>;
 }
 
 impl<Stack, Head, Tail, Memory, CallStack, RestProg>
@@ -180,8 +182,13 @@ where
     Idx: Unsigned,
     Stack: Cons,
 {
-    type OutputState =
-        MachineState<TyArray<<Locals as Get<Idx>>::Output, Stack>, Locals, Memory, CallStack, RestProg>;
+    type OutputState = MachineState<
+        TyArray<<Locals as Get<Idx>>::Output, Stack>,
+        Locals,
+        Memory,
+        CallStack,
+        RestProg,
+    >;
 }
 
 impl<Idx, Val, RestStack, Locals, Memory, CallStack, RestProg>
@@ -201,13 +208,8 @@ impl<Target, Stack, Locals, Memory, CallStack, RestProg>
 where
     CallStack: Cons,
 {
-    type OutputState = MachineState<
-        Stack,
-        TyNil,
-        Memory,
-        TyArray<(RestProg, Locals), CallStack>,
-        Target,
-    >;
+    type OutputState =
+        MachineState<Stack, TyNil, Memory, TyArray<(RestProg, Locals), CallStack>, Target>;
 }
 
 impl<Stack, Locals, Memory, Continuation, CallerLocals, RestCallStack, RestProg>
@@ -216,13 +218,7 @@ impl<Stack, Locals, Memory, Continuation, CallerLocals, RestCallStack, RestProg>
 where
     RestCallStack: Cons,
 {
-    type OutputState = MachineState<
-        Stack,
-        CallerLocals,
-        Memory,
-        RestCallStack,
-        Continuation,
-    >;
+    type OutputState = MachineState<Stack, CallerLocals, Memory, RestCallStack, Continuation>;
 }
 
 // --- Control Flow: If ---
@@ -252,8 +248,22 @@ impl<Cond, Body, Stack, Locals, Memory, CallStack, RestProg>
     Execute<Stack, Locals, Memory, CallStack, RestProg> for OpWhile<Cond, Body>
 where
     EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>: Eval,
-    EConcat<Cond, TyArray<OpIf<Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>, TyNil>>: Eval,
-    EConcat<Evaluate<EConcat<Cond, TyArray<OpIf<Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>, TyNil>>>, RestProg>: Eval,
+    EConcat<
+        Cond,
+        TyArray<OpIf<Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>, TyNil>,
+    >: Eval,
+    EConcat<
+        Evaluate<
+            EConcat<
+                Cond,
+                TyArray<
+                    OpIf<Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>, TyNil>,
+                    TyNil,
+                >,
+            >,
+        >,
+        RestProg,
+    >: Eval,
 {
     type OutputState = MachineState<
         Stack,
@@ -268,18 +278,17 @@ where
                         TyArray<
                             OpIf<
                                 Evaluate<EConcat<Body, TyArray<OpWhile<Cond, Body>, TyNil>>>,
-                                TyNil // Else block empty
+                                TyNil, // Else block empty
                             >,
-                            TyNil
-                        >
-                    >
+                            TyNil,
+                        >,
+                    >,
                 >,
-                RestProg
-            >
+                RestProg,
+            >,
         >,
     >;
 }
-
 
 // --- Machine Runner ---
 pub struct OpStep;
@@ -301,7 +310,8 @@ where
     typelude_core::std::array::EIsEmpty<ELit<P>>: Eval,
     App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
-    type Output = App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>;
+    type Output =
+        App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>;
 }
 
 pub type ERun<S> = EWhile<OpIsFinished, OpStep, S>;
@@ -309,10 +319,10 @@ pub type ERun<S> = EWhile<OpIsFinished, OpStep, S>;
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
+    use typelude_core::tyarray;
     use typenum::{U1, U2, U3, U5};
 
     use super::*;
-    use typelude_core::tyarray;
 
     #[test]
     fn test_stack_ops_logic() {
@@ -353,9 +363,16 @@ mod tests {
         use typenum::{U10, U20};
         type InitialMemory = tyarray![typenum::U0];
         type Func = tyarray![
-            OpPush<typenum::U0>, OpPush<U10>, OpStore,
-            OpPush<typenum::U0>, OpLoad, OpPush<U20>, OpAdd,
-            OpPush<typenum::U0>, OpSwap, OpStore,
+            OpPush<typenum::U0>,
+            OpPush<U10>,
+            OpStore,
+            OpPush<typenum::U0>,
+            OpLoad,
+            OpPush<U20>,
+            OpAdd,
+            OpPush<typenum::U0>,
+            OpSwap,
+            OpStore,
             OpReturn
         ];
         type Main = tyarray![OpCall<Func>];

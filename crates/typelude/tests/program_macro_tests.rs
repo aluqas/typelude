@@ -1,8 +1,8 @@
 use static_assertions::assert_type_eq_all;
 use typelude::{
-    program,
     eval::Evaluate,
     machine::{execution::ERun, state::MachineState},
+    program,
     std::array::{TyArray, TyNil},
     typenum::{U0, U1, U3, U4, U10, U15, U20, U40},
 };

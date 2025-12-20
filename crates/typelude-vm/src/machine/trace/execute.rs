@@ -2,21 +2,22 @@
 //!
 //! Implements machine instruction execution logic with history tracking.
 
-use typenum::Unsigned;
-use typelude_core::std::int::{OpAdd, OpSub};
-use typelude_core::std::cmp::{OpEq, OpNeq, OpLt, OpGt};
-use typelude_core::std::bool::{OpNot, OpAnd, OpOr};
-
-use crate::machine::{instruction::*, trace::state::TracedMachineState};
-
+use typelude_core::std::{
+    bool::{OpAnd, OpNot, OpOr},
+    cmp::{OpEq, OpGt, OpLt, OpNeq},
+    int::{OpAdd, OpSub},
+};
 use typelude_core::{
     eval::{App, EIf, ELit, EWhile, Eval, Evaluate},
-    kernel::{traits::Apply, array::Cons},
+    kernel::{array::Cons, traits::Apply},
     std::{
         array::{EConcat, Get, Set, TyArray, TyNil},
         // bool::OpNot,
     },
 };
+use typenum::Unsigned;
+
+use crate::machine::{instruction::*, trace::state::TracedMachineState};
 
 /// Trait to execute an instruction with history and return a new state
 pub trait TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History> {
@@ -29,8 +30,14 @@ pub trait TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History> {
 macro_rules! impl_traced_binary_op {
     ($Op:ty, $EvalOp:ty) => {
         impl<Lhs, Rhs, RestStack, Locals, Memory, CallStack, RestProg, History>
-            TracedExecute<TyArray<Lhs, TyArray<Rhs, RestStack>>, Locals, Memory, CallStack, RestProg, History>
-            for $Op
+            TracedExecute<
+                TyArray<Lhs, TyArray<Rhs, RestStack>>,
+                Locals,
+                Memory,
+                CallStack,
+                RestProg,
+                History,
+            > for $Op
         where
             $EvalOp: Eval,
             RestStack: Cons,
@@ -42,7 +49,7 @@ macro_rules! impl_traced_binary_op {
                 Memory,
                 CallStack,
                 RestProg,
-                TyArray<$Op, History>
+                TyArray<$Op, History>,
             >;
         }
     };
@@ -57,8 +64,14 @@ impl_traced_binary_op!(OpOr, typelude_core::std::bool::EOr<Lhs, Rhs>);
 macro_rules! impl_traced_cmp_op {
     ($Op:ty, $CoreOp:ty) => {
         impl<Lhs, Rhs, RestStack, Locals, Memory, CallStack, RestProg, History>
-            TracedExecute<TyArray<Lhs, TyArray<Rhs, RestStack>>, Locals, Memory, CallStack, RestProg, History>
-            for $Op
+            TracedExecute<
+                TyArray<Lhs, TyArray<Rhs, RestStack>>,
+                Locals,
+                Memory,
+                CallStack,
+                RestProg,
+                History,
+            > for $Op
         where
             $CoreOp: Apply<(Lhs, Rhs)>,
             App<$CoreOp, (Lhs, Rhs)>: Eval,
@@ -71,7 +84,7 @@ macro_rules! impl_traced_cmp_op {
                 Memory,
                 CallStack,
                 RestProg,
-                TyArray<$Op, History>
+                TyArray<$Op, History>,
             >;
         }
     };
@@ -118,7 +131,8 @@ where
 }
 
 impl<A, B, RestStack, Locals, Memory, CallStack, RestProg, History>
-    TracedExecute<TyArray<A, TyArray<B, RestStack>>, Locals, Memory, CallStack, RestProg, History> for OpSwap
+    TracedExecute<TyArray<A, TyArray<B, RestStack>>, Locals, Memory, CallStack, RestProg, History>
+    for OpSwap
 where
     RestStack: Cons,
     History: Cons,
@@ -357,7 +371,7 @@ where
                 >,
             >,
         >,
-        RestProg
+        RestProg,
     >: Eval,
 {
     type OutputState = TracedMachineState<
@@ -372,15 +386,17 @@ where
                         CondProg,
                         TyArray<
                             OpIf<
-                                Evaluate<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>,
+                                Evaluate<
+                                    EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>,
+                                >,
                                 TyNil,
                             >,
                             TyNil,
                         >,
                     >,
                 >,
-                RestProg
-            >
+                RestProg,
+            >,
         >,
         TyArray<OpWhile<CondProg, BodyProg>, History>,
     >;
@@ -462,7 +478,8 @@ where
     typelude_core::std::array::EIsEmpty<ELit<P>>: Eval,
     App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
-    type Output = App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>;
+    type Output =
+        App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>;
 }
 
 /// Runner for traced execution
