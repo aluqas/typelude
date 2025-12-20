@@ -3,12 +3,13 @@
 //! Standard library for `typelude`.
 //! Provides data type definitions and operations (functions) for them.
 
-pub mod array;
-pub mod bool;
-pub mod cmp;
-pub mod int;
-pub mod into;
+pub mod debug;
+pub mod ops;
+pub mod primitives;
+
 pub mod reify;
-pub mod str;
-pub mod trace;
 pub mod traits;
+
+pub use debug::trace;
+pub use ops::{cmp, into};
+pub use primitives::{array, bool, int, str};

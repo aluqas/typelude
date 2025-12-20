@@ -1,3 +1,0 @@
-type Sudoku = Evaluator<
-    
->

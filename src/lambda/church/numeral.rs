@@ -17,8 +17,8 @@ use std::marker::PhantomData;
 use crate::{
     eval::{Eval, Evaluate},
     lambda::{
-        LApp,
-        traits::{LNat, LTerm},
+        LApp, 
+        traits::{LNat, LTerm, Lambda},
     },
 };
 

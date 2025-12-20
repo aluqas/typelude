@@ -4,7 +4,7 @@
 //!
 //! Example:
 //! ```rust
-//! use typelude::{prelude::*, std::str::*};
+//! use typelude::std::str::*;
 //!
 //! type Hello = TS!("Hello");
 //! ```
