@@ -1,13 +1,17 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
+use quote::{quote};
 use syn::{
     Ident, LitInt, Result, Token, Type, parenthesized,
     parse::{Parse, ParseStream},
     parse_macro_input,
 };
 
-mod def_op;
+mod dsl;
+
+use dsl::{TyDslInput, BoundDslInput, ImplEvalInput};
+
+// ... existing program macro code ...
 
 enum Instruction {
     PushLiteral(LitInt),
@@ -267,33 +271,41 @@ pub fn program(input: TokenStream) -> TokenStream {
     TokenStream::from(output)
 }
 
-/// Defines a type-level operation with automatic `Eval` bounds.
-///
-/// # Examples
-///
-/// ```ignore
-/// // AST Pattern - creates EAdd struct and OpAdd marker
-/// def_op! {
-///     /// Addition operation
-///     name: OpAdd,
-///     args: (Lhs, Rhs),
-///     ast: EAdd {
-///         where: [
-///             Evaluate<Lhs>: Add<Evaluate<Rhs>>
-///         ],
-///         type Output = <Evaluate<Lhs> as Add<Evaluate<Rhs>>>::Output
-///     }
-/// }
-///
-/// // Alias Pattern - creates OpInc that returns existing type
-/// def_op! {
-///     name: OpInc,
-///     args: (N),
-///     alias: EAdd<N, P1>
-/// }
-/// ```
 #[proc_macro]
-pub fn def_op(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as def_op::DefOpInput);
-    TokenStream::from(input.expand())
+pub fn ty(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as TyDslInput);
+    let ty = input.ty;
+    TokenStream::from(quote! { #ty })
+}
+
+#[proc_macro]
+pub fn bound(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as BoundDslInput);
+    let bounds = input.bounds;
+    TokenStream::from(quote! { #bounds })
+}
+
+#[proc_macro]
+pub fn impl_eval(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as ImplEvalInput);
+
+    let generics = input.generics;
+    let target_type = input.target_type;
+    let output_type = input.output_type;
+
+    let where_clause = if let Some(bounds) = input.where_clause {
+        quote! { where #bounds }
+    } else {
+        quote! {}
+    };
+
+    let expanded = quote! {
+        impl #generics typelude::core::Eval for #target_type
+        #where_clause
+        {
+            type Output = #output_type;
+        }
+    };
+
+    TokenStream::from(expanded)
 }
