@@ -1,15 +1,16 @@
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{
+    BinOp, Generics, Ident, Result, Token, Type,
     parse::{Parse, ParseStream},
-    Result, Token, Ident, Type, token,
     punctuated::Punctuated,
-    BinOp, Generics,
+    token,
 };
 
 /// Represents a type expression in the DSL.
 pub enum DslType {
     Base(Type),
+    Path(DslPath),
     Evaluate(Box<DslType>),
     BinaryOp(Box<DslType>, BinOp, Box<DslType>),
     MethodCall {
@@ -42,11 +43,19 @@ fn parse_unary(input: ParseStream) -> Result<DslType> {
         parse_postfix(input, inner)
     } else {
         // Parse a base type (path, identifier, etc.)
-        let ty: DslType = if input.peek(Ident) || input.peek(Token![::]) || input.peek(Token![<]) {
-             let p: syn::TypePath = input.parse()?;
-             DslType::Base(Type::Path(p))
+        let ty: DslType = if input.peek(Ident) || input.peek(Token![::]) {
+            // Priority: Parse as DslPath structure to allow DSL inside generics
+            // e.g. Vec<~T> or Result<A + B>
+            let p: DslPath = input.parse()?;
+            DslType::Path(p)
+        } else if input.peek(Token![<]) {
+            // QSelf path or other types starting with <
+            let p: syn::TypePath = input.parse()?;
+            DslType::Base(Type::Path(p))
         } else {
-            return Err(input.error("Expected type"));
+            // Other types: tuples, references, arrays, etc.
+            let t: Type = input.parse()?;
+            DslType::Base(t)
         };
 
         parse_postfix(input, ty)
@@ -62,7 +71,8 @@ fn parse_postfix(input: ParseStream, mut expr: DslType) -> Result<DslType> {
             let args = if input.peek(token::Paren) {
                 let content;
                 syn::parenthesized!(content in input);
-                let args_punctuated: Punctuated<DslType, Token![,]> = Punctuated::parse_terminated(&content)?;
+                let args_punctuated: Punctuated<DslType, Token![,]> =
+                    Punctuated::parse_terminated(&content)?;
                 args_punctuated.into_iter().collect()
             } else {
                 Vec::new()
@@ -100,11 +110,11 @@ fn parse_binary(input: ParseStream, mut lhs: DslType, min_precedence: u8) -> Res
         } else if input.peek(Token![%]) {
             BinOp::Rem(input.parse()?)
         } else if input.peek(Token![&&]) {
-             BinOp::And(input.parse()?)
+            BinOp::And(input.parse()?)
         } else if input.peek(Token![||]) {
-             BinOp::Or(input.parse()?)
+            BinOp::Or(input.parse()?)
         } else if input.peek(Token![^]) {
-             BinOp::BitXor(input.parse()?)
+            BinOp::BitXor(input.parse()?)
         } else {
             break;
         };
@@ -137,6 +147,7 @@ impl ToTokens for DslType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             DslType::Base(ty) => ty.to_tokens(tokens),
+            DslType::Path(p) => p.to_tokens(tokens),
             DslType::Evaluate(inner) => {
                 let t = inner.as_ref();
                 quote!(typelude::core::Evaluate<#t>).to_tokens(tokens);
@@ -151,25 +162,29 @@ impl ToTokens for DslType {
                     BinOp::And(_) => quote!(typelude::core::std::traits::TypeBool::And),
                     BinOp::Or(_) => quote!(typelude::core::std::traits::TypeBool::Or),
                     BinOp::BitXor(_) => quote!(typelude::core::std::traits::TypeBool::Xor),
-                     _ => quote!(UnknownOp),
+                    _ => quote!(UnknownOp),
                 };
 
                 match op {
                     BinOp::And(_) | BinOp::Or(_) | BinOp::BitXor(_) => {
-                         let assoc_name = match op {
-                             BinOp::And(_) => quote!(And),
-                             BinOp::Or(_) => quote!(Or),
-                             BinOp::BitXor(_) => quote!(Xor),
-                             _ => unreachable!(),
-                         };
-                         quote!(< #lhs as typelude::core::std::traits::TypeBool > :: #assoc_name < #rhs >).to_tokens(tokens);
+                        let assoc_name = match op {
+                            BinOp::And(_) => quote!(And),
+                            BinOp::Or(_) => quote!(Or),
+                            BinOp::BitXor(_) => quote!(Xor),
+                            _ => unreachable!(),
+                        };
+                        quote!(< #lhs as typelude::core::std::traits::TypeBool > :: #assoc_name < #rhs >).to_tokens(tokens);
                     },
                     _ => {
                         quote!(< #lhs as #trait_name < #rhs > > :: Output).to_tokens(tokens);
-                    }
+                    },
                 }
             },
-            DslType::MethodCall { receiver, method, args } => {
+            DslType::MethodCall {
+                receiver,
+                method,
+                args,
+            } => {
                 let trait_args = if args.is_empty() {
                     quote!()
                 } else if args.len() == 1 {
@@ -181,9 +196,12 @@ impl ToTokens for DslType {
 
                 quote!(< #receiver as #method #trait_args > :: Output).to_tokens(tokens);
             },
-            DslType::AssocType { receiver, ident } => {
+            DslType::AssocType {
+                receiver,
+                ident,
+            } => {
                 quote!(< #receiver > :: #ident).to_tokens(tokens);
-            }
+            },
         }
     }
 }
@@ -216,7 +234,10 @@ impl Parse for DslPath {
             None
         };
         let segments = Punctuated::parse_separated_nonempty(input)?;
-        Ok(DslPath { leading_colon, segments })
+        Ok(DslPath {
+            leading_colon,
+            segments,
+        })
     }
 }
 
@@ -224,25 +245,28 @@ impl Parse for DslPathSegment {
     fn parse(input: ParseStream) -> Result<Self> {
         let ident = input.parse()?;
         let args = if input.peek(Token![<]) {
-             input.parse::<Token![<]>()?;
-             let mut args = Punctuated::new();
-             loop {
-                 if input.peek(Token![>]) {
-                     break;
-                 }
-                 args.push_value(input.parse()?);
-                 if input.peek(Token![,]) {
-                     args.push_punct(input.parse()?);
-                 } else {
-                     break;
-                 }
-             }
-             input.parse::<Token![>]>()?;
-             DslGenericArguments::AngleBracketed(args)
+            input.parse::<Token![<]>()?;
+            let mut args = Punctuated::new();
+            loop {
+                if input.peek(Token![>]) {
+                    break;
+                }
+                args.push_value(input.parse()?);
+                if input.peek(Token![,]) {
+                    args.push_punct(input.parse()?);
+                } else {
+                    break;
+                }
+            }
+            input.parse::<Token![>]>()?;
+            DslGenericArguments::AngleBracketed(args)
         } else {
             DslGenericArguments::None
         };
-        Ok(DslPathSegment { ident, args })
+        Ok(DslPathSegment {
+            ident,
+            args,
+        })
     }
 }
 
@@ -262,7 +286,7 @@ impl ToTokens for DslPathSegment {
             DslGenericArguments::None => {},
             DslGenericArguments::AngleBracketed(args) => {
                 quote!(< #args >).to_tokens(tokens);
-            }
+            },
         }
     }
 }
@@ -301,12 +325,15 @@ impl Parse for DslBound {
 impl ToTokens for DslBound {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
-            DslBound::TraitBound { ty, trait_path } => {
+            DslBound::TraitBound {
+                ty,
+                trait_path,
+            } => {
                 quote!(#ty : #trait_path).to_tokens(tokens);
             },
             DslBound::Eval(ty) => {
                 quote!(#ty : typelude::core::Eval).to_tokens(tokens);
-            }
+            },
         }
     }
 }
@@ -317,7 +344,9 @@ pub struct TyDslInput {
 
 impl Parse for TyDslInput {
     fn parse(input: ParseStream) -> Result<Self> {
-        Ok(TyDslInput { ty: input.parse()? })
+        Ok(TyDslInput {
+            ty: input.parse()?,
+        })
     }
 }
 
