@@ -146,6 +146,7 @@ dependencies = [
  "paste",
  "static_assertions",
  "tstr",
+ "typelude-macros",
  "typenum",
 ]
 
