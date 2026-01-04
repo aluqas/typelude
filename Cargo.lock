@@ -146,7 +146,15 @@ dependencies = [
  "paste",
  "static_assertions",
  "tstr",
+ "typelude-kernel",
  "typelude-macros",
+ "typenum",
+]
+
+[[package]]
+name = "typelude-kernel"
+version = "0.1.0"
+dependencies = [
  "typenum",
 ]
 

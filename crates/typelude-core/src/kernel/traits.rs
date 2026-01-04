@@ -1,12 +1,6 @@
 //! **Kernel: Traits**
 //!
 //! Core traits for type application.
+//! Now re-exports from `typelude-kernel`.
 
-/// Trait representing a function application (High-Order Function Application).
-///
-/// Represents how a type "Operator" applies to an "Argument".
-///
-/// Formerly `TyFn`.
-pub trait Apply<Arg> {
-    type Output;
-}
+pub use typelude_kernel::traits::Apply;

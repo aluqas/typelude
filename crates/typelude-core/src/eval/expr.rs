@@ -3,44 +3,42 @@
 //! Defines the syntax for type-level expressions.
 //! - `EIf`: Conditional Branch
 //! - `EWhile`: Loop
-//!
-//! Note: `ELit` is imported from `bridge`. `App` is imported from `app`.
 
 use std::marker::PhantomData;
 
-use super::{Eval, Evaluate};
-use crate::kernel::{
-    bool::{TyFalse, TyTrue},
-    traits::Apply,
+use crate::{
+    eval::{Eval, Evaluate},
+    kernel::{
+        bool::{TyFalse, TyTrue},
+        traits::Apply,
+    },
 };
+
+// Wait, the previous `expr.rs` implemented `EIf` and `EWhile` directly.
+// The new plan says `EIf` should be generic.
+// But for now, I should restore the functionality.
+// `EIf` in `expr.rs` used `TyTrue`/`TyFalse` directly.
 
 //
 // EIf: Conditional Expression
 //
 
-/// Conditional Expression
-///
-/// # Example
-/// ```ignore
-/// type Result = Evaluator<EIf<ELit<TyTrue>, ELit<i32>, ELit<f64>>>;
-/// // Result = i32
-/// ```
 pub struct EIf<Cond, Then, Else>(PhantomData<(Cond, Then, Else)>);
 
 /// Helper implemented based on Cond result (True/False)
 #[doc(hidden)]
-pub trait IfHelper<Then, Else> {
+pub trait IfHelperLocal<Then, Else> {
     type Output;
 }
 
-impl<Then, Else> IfHelper<Then, Else> for TyTrue
+impl<Then, Else> IfHelperLocal<Then, Else> for TyTrue
 where
     Then: Eval,
 {
     type Output = Then::Output;
 }
 
-impl<Then, Else> IfHelper<Then, Else> for TyFalse
+impl<Then, Else> IfHelperLocal<Then, Else> for TyFalse
 where
     Else: Eval,
 {
@@ -50,9 +48,9 @@ where
 impl<Cond, Then, Else> Eval for EIf<Cond, Then, Else>
 where
     Cond: Eval,
-    Evaluate<Cond>: IfHelper<Then, Else>,
+    Evaluate<Cond>: IfHelperLocal<Then, Else>,
 {
-    type Output = <Evaluate<Cond> as IfHelper<Then, Else>>::Output;
+    type Output = <Evaluate<Cond> as IfHelperLocal<Then, Else>>::Output;
 }
 
 //
@@ -61,14 +59,6 @@ where
 
 type AppliedOutput<Op, A> = <Op as Apply<A>>::Output;
 
-/// Expression representing a While loop
-///
-/// - `Pred`: Condition (Val -> TyTrue/TyFalse)
-/// - `Step`: Update function (Val -> NextVal)
-/// - `State`: Initial State Expression (evaluates to Val)
-///
-/// Important: `EWhile` normalizes (evaluates) the state at each step.
-/// So `Pred` and `Step` receive the *Value*, not the *Expression*.
 pub struct EWhile<Pred, Step, State>(PhantomData<(Pred, Step, State)>);
 
 #[doc(hidden)]
@@ -84,9 +74,6 @@ where
     // Step returns an Expression (which we must evaluate for the next loop)
     Step::Output: Eval,
     // Recursive call: Next state is Evaluated Step Output
-    // Note: We pass ELit<Val> or just Val?
-    // Since EWhile now takes "State: Eval", and Step::Output is Eval,
-    // we can pass Step::Output directly as the next State.
     EWhile<Pred, Step, Step::Output>: Eval,
 {
     type Output = <EWhile<Pred, Step, Step::Output> as Eval>::Output;

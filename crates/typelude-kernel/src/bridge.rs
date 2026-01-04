@@ -1,8 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    eval::{Eval, Evaluate},
-    kernel::traits::Apply,
+    Eval, Evaluate, Apply,
 };
 
 // =========================================================================

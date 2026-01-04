@@ -9,6 +9,7 @@ use super::bool::{LFalse, LTrue};
 use crate::{
     eval::{Eval, Evaluate},
     lambda::{LApp, Lambda},
+    impl_eval_for_lambda, impl_eval_for_lambda_generic,
 };
 
 // =========================================================================
@@ -21,12 +22,14 @@ pub struct LPair;
 impl Lambda for LPair {
     type Output = LPair;
 }
+impl_eval_for_lambda!(LPair);
 
 // Pair X -> Pair1<X>
 pub struct LPair1<X>(PhantomData<X>);
 impl<X> Lambda for LPair1<X> {
     type Output = LPair1<X>;
 }
+impl_eval_for_lambda_generic!(LPair1, [X]);
 
 impl<X> Lambda for LApp<LPair, X>
 where
@@ -40,6 +43,7 @@ pub struct LPair2<X, Y>(PhantomData<(X, Y)>);
 impl<X, Y> Lambda for LPair2<X, Y> {
     type Output = LPair2<X, Y>;
 }
+impl_eval_for_lambda_generic!(LPair2, [X, Y]);
 
 impl<X, Y> Lambda for LApp<LPair1<X>, Y>
 where
@@ -49,15 +53,20 @@ where
 }
 
 // Pair2<X, Y> F -> F X Y
+// IMPORTANT: With the new Eval rules, we must ensure Eval constraints are met.
+// LApp<F, X> must be Eval.
+// Since LApp implements Eval where Self: Lambda, we just need Lambda.
 impl<X, Y, F> Lambda for LApp<LPair2<X, Y>, F>
 where
     X: Eval,
     Y: Eval,
     F: Eval,
-    LApp<F, X>: Lambda,
-    LApp<<LApp<F, X> as Lambda>::Output, Y>: Lambda,
+    // (F X)
+    LApp<F, X>: Eval,
+    // ((F X) Y)
+    LApp<Evaluate<LApp<F, X>>, Y>: Eval,
 {
-    type Output = <LApp<<LApp<F, X> as Lambda>::Output, Y> as Lambda>::Output;
+    type Output = Evaluate<LApp<Evaluate<LApp<F, X>>, Y>>;
 }
 
 // =========================================================================
@@ -69,13 +78,15 @@ pub struct LFst;
 impl Lambda for LFst {
     type Output = LFst;
 }
+impl_eval_for_lambda!(LFst);
 
 impl<P> Lambda for LApp<LFst, P>
 where
     P: Eval,
-    LApp<P, LTrue>: Lambda,
+    // P True
+    LApp<P, LTrue>: Eval,
 {
-    type Output = <LApp<P, LTrue> as Lambda>::Output;
+    type Output = Evaluate<LApp<P, LTrue>>;
 }
 
 // Snd P -> P False
@@ -83,17 +94,13 @@ pub struct LSnd;
 impl Lambda for LSnd {
     type Output = LSnd;
 }
+impl_eval_for_lambda!(LSnd);
 
 impl<P> Lambda for LApp<LSnd, P>
 where
     P: Eval,
-    LApp<P, LFalse>: Lambda,
+    // P False
+    LApp<P, LFalse>: Eval,
 {
-    type Output = <LApp<P, LFalse> as Lambda>::Output;
+    type Output = Evaluate<LApp<P, LFalse>>;
 }
-
-// Helpers for internal use (Evaluated via Lambda)
-// Note: LSndEval was used in numeral.rs, we can redefine it or just use LApp chain in numeral.rs
-// Since we are refactoring numeral.rs to use LApp, we don't strictly need this type alias if we write it out.
-// But for compatibility with partially refactored code, we'll see.
-// pub(super) type LSndEval<P> = Evaluate<LApp<LSnd, P>>;
