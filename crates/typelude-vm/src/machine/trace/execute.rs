@@ -9,10 +9,13 @@ use typelude_core::{
         array::{Cons, EConcat, Get, Set, TyArray, TyNil},
         ops::{
             EAdd, EAnd, ENot, EOr, ESub, // Expressions
-            OpAdd, OpAnd, OpEq, OpGt, OpLt, OpNeq, OpNot, OpOr, OpSub, // Operators
+            OpAdd, OpAnd, OpGt, OpLt, OpNot, OpOr, OpSub, // Operators
         },
     },
 };
+
+#[cfg(feature = "nightly")]
+use typelude_core::std::ops::{OpEq, OpNeq};
 use typenum::Unsigned;
 
 use crate::machine::{instruction::*, trace::state::TracedMachineState};
@@ -88,7 +91,9 @@ macro_rules! impl_traced_cmp_op {
     };
 }
 
+#[cfg(feature = "nightly")]
 impl_traced_cmp_op!(OpEq, OpEq);
+#[cfg(feature = "nightly")]
 impl_traced_cmp_op!(OpNeq, OpNeq);
 impl_traced_cmp_op!(OpLt, OpLt);
 impl_traced_cmp_op!(OpGt, OpGt);

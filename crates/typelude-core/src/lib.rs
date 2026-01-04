@@ -1,6 +1,6 @@
 // Unstable features required for type-level programming
-#![feature(specialization)]
-#![feature(generic_const_exprs)]
+#![cfg_attr(feature = "nightly", feature(specialization))]
+#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 #![allow(incomplete_features)]
 #![recursion_limit = "16384"]
 

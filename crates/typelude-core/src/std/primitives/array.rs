@@ -279,8 +279,10 @@ where
 }
 
 // --- EContains ---
+#[cfg(feature = "nightly")]
 pub struct EContains<Array, Elem>(PhantomData<(Array, Elem)>);
 
+#[cfg(feature = "nightly")]
 impl<Array, Elem> Eval for EContains<Array, Elem>
 where
     Array: Eval,
@@ -472,6 +474,7 @@ impl<Array, Elem> Apply<(Array, Elem)> for OpAppend {
 impl<Elem, Array> Apply<(Elem, Array)> for OpPrepend {
     type Output = EPrepend<Elem, Array>;
 }
+#[cfg(feature = "nightly")]
 impl<Array, Elem> Apply<(Array, Elem)> for OpContains {
     type Output = EContains<Array, Elem>;
 }

@@ -6,6 +6,10 @@ rust-version = "1.94.0"
 description = "Core traits and libraries for typelude"
 license = "MIT"
 
+[features]
+default = ["nightly"]
+nightly = []
+
 [dependencies]
 typenum = { version = "1.19.0", features = ["const-generics"] }
 hybrid-array = "0.4.5"

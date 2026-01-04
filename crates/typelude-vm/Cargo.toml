@@ -6,8 +6,12 @@ rust-version = "1.94.0"
 description = "Type-level stack machine for typelude"
 license = "MIT"
 
+[features]
+default = ["nightly"]
+nightly = ["typelude-core/nightly"]
+
 [dependencies]
-typelude-core = { path = "../typelude-core" }
+typelude-core = { path = "../typelude-core", default-features = false }
 typenum = { version = "1.19.0", features = ["const-generics"] }
 derive_more = { version = "2.1.0", features = ["full"] }
 paste = "1.0.15"

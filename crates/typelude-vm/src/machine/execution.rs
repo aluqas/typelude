@@ -78,7 +78,9 @@ macro_rules! impl_cmp_op {
     };
 }
 
+#[cfg(feature = "nightly")]
 impl_cmp_op!(OpEq, typelude_core::std::ops::OpEq);
+#[cfg(feature = "nightly")]
 impl_cmp_op!(OpNeq, typelude_core::std::ops::OpNeq);
 impl_cmp_op!(OpLt, typelude_core::std::ops::OpLt);
 impl_cmp_op!(OpGt, typelude_core::std::ops::OpGt);

@@ -6,9 +6,13 @@ rust-version = "1.94.0"
 description = "Type-level programming utilities for Rust"
 license = "MIT"
 
+[features]
+default = ["nightly"]
+nightly = ["typelude-core/nightly", "typelude-vm/nightly"]
+
 [dependencies]
-typelude-core = { path = "../typelude-core" }
-typelude-vm = { path = "../typelude-vm" }
+typelude-core = { path = "../typelude-core", default-features = false }
+typelude-vm = { path = "../typelude-vm", default-features = false }
 typelude-macros = { path = "../typelude-macros" }
 typenum = { version = "1.19.0", features = ["const-generics"] }
 
