@@ -17,6 +17,7 @@ pub struct LId<T>(PhantomData<T>);
 impl<T> Lambda for LId<T> {
     type Output = LId<T>;
 }
+impl<T> Eval for LId<T> { type Output = Self; }
 
 // Bind: Id<T> >>= F  ->  F T
 // F must be a function that takes T and returns Id<U>.
@@ -44,6 +45,7 @@ mod tests {
     impl Lambda for AddOne {
         type Output = AddOne;
     }
+    impl Eval for AddOne { type Output = Self; }
 
     impl<X> Lambda for LApp<AddOne, X>
     where

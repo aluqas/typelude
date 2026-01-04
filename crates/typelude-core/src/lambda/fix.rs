@@ -14,6 +14,7 @@ pub struct LFix<F>(PhantomData<F>);
 impl<F> Lambda for LFix<F> {
     type Output = LFix<F>;
 }
+impl<F> Eval for LFix<F> { type Output = Self; }
 
 // Fix<F> X -> F Fix<F> X
 impl<F, X> Lambda for LApp<LFix<F>, X>
@@ -33,6 +34,7 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use super::*;
+    use crate::eval::Evaluate; // Imported here for tests
     use crate::lambda::church::{LFalse, LTrue};
 
     // Helper alias
@@ -44,11 +46,13 @@ mod tests {
         impl<F, A> Lambda for Thunk<F, A> {
             type Output = Thunk<F, A>;
         }
+        impl<F, A> Eval for Thunk<F, A> { type Output = Self; }
 
         struct Force;
         impl Lambda for Force {
             type Output = Force;
         }
+        impl Eval for Force { type Output = Self; }
 
         // Thunk<F, A> Force -> F A
         impl<F, A> Lambda for LApp<Thunk<F, A>, Force>
@@ -65,11 +69,13 @@ mod tests {
         impl Lambda for LoopBody {
             type Output = LoopBody;
         }
+        impl Eval for LoopBody { type Output = Self; }
 
         struct LoopBody1<R>(std::marker::PhantomData<R>);
         impl<R> Lambda for LoopBody1<R> {
             type Output = LoopBody1<R>;
         }
+        impl<R> Eval for LoopBody1<R> { type Output = Self; }
 
         // LoopBody R -> LoopBody1<R>
         impl<R> Lambda for LApp<LoopBody, R>
@@ -115,23 +121,27 @@ mod tests {
         impl Lambda for Z {
             type Output = Z;
         }
+        impl Eval for Z { type Output = Self; }
 
         #[derive(Clone)]
         struct S<N>(std::marker::PhantomData<N>);
         impl<N> Lambda for S<N> {
             type Output = S<N>;
         }
+        impl<N> Eval for S<N> { type Output = Self; }
 
         #[derive(Clone)]
         struct Unroll;
         impl Lambda for Unroll {
             type Output = Unroll;
         }
+        impl Eval for Unroll { type Output = Self; }
 
         struct Unroll1<R>(std::marker::PhantomData<R>);
         impl<R> Lambda for Unroll1<R> {
             type Output = Unroll1<R>;
         }
+        impl<R> Eval for Unroll1<R> { type Output = Self; }
 
         // Unroll R -> Unroll1<R>
         impl<R> Lambda for LApp<Unroll, R>
@@ -146,6 +156,7 @@ mod tests {
         impl Lambda for Done {
             type Output = Done;
         }
+        impl Eval for Done { type Output = Self; }
 
         // Unroll1<R> Z -> Done
         impl<R> Lambda for LApp<Unroll1<R>, Z>

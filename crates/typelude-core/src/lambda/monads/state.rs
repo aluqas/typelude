@@ -9,6 +9,17 @@ use crate::{
     lambda::{LApp, Lambda, church::LPair2, traits::LBind},
 };
 
+// Macro to implement Eval for terms (they evaluate to themselves)
+macro_rules! impl_eval_term {
+    ($($t:ty),*) => {
+        $(
+            impl Eval for $t {
+                type Output = $t;
+            }
+        )*
+    };
+}
+
 /// State Monad Wrapper: State<F>
 /// F is a function S -> (A, S)
 pub struct LState<F>(PhantomData<F>);
@@ -16,6 +27,7 @@ pub struct LState<F>(PhantomData<F>);
 impl<F> Lambda for LState<F> {
     type Output = LState<F>;
 }
+impl<F> Eval for LState<F> { type Output = Self; }
 
 // State<F> s -> F s
 impl<F, S> Lambda for LApp<LState<F>, S>
@@ -40,6 +52,7 @@ pub struct LBindState<F, K>(PhantomData<(F, K)>);
 impl<F, K> Lambda for LBindState<F, K> {
     type Output = LBindState<F, K>;
 }
+impl<F, K> Eval for LBindState<F, K> { type Output = Self; }
 
 // BindState<F, K> S -> Result
 impl<F, K, S> Lambda for LApp<LBindState<F, K>, S>
@@ -94,6 +107,7 @@ pub struct LReturn<A>(PhantomData<A>);
 impl<A> Lambda for LReturn<A> {
     type Output = LReturn<A>;
 }
+impl<A> Eval for LReturn<A> { type Output = Self; }
 
 // Return<A> S -> (A, S)
 impl<A, S> Lambda for LApp<LReturn<A>, S>
@@ -126,6 +140,7 @@ pub struct LGet;
 impl Lambda for LGet {
     type Output = LGet;
 }
+impl_eval_term!(LGet);
 
 // Get S -> (S, S)
 impl<S> Lambda for LApp<LGet, S>
@@ -145,6 +160,7 @@ pub struct LBindGet<K>(PhantomData<K>);
 impl<K> Lambda for LBindGet<K> {
     type Output = LBindGet<K>;
 }
+impl<K> Eval for LBindGet<K> { type Output = Self; }
 
 impl<K, S> Lambda for LApp<LBindGet<K>, S>
 where
@@ -166,12 +182,14 @@ pub struct LPut<NewS>(PhantomData<NewS>);
 impl<NewS> Lambda for LPut<NewS> {
     type Output = LPut<NewS>;
 }
+impl<NewS> Eval for LPut<NewS> { type Output = Self; }
 
 // Helper Unit type
 pub struct Unit;
 impl Lambda for Unit {
     type Output = Unit;
 }
+impl_eval_term!(Unit);
 
 // Put<NewS> OldS -> ((), NewS)
 impl<NewS, OldS> Lambda for LApp<LPut<NewS>, OldS>
@@ -192,6 +210,7 @@ pub struct LBindPut<NewS, K>(PhantomData<(NewS, K)>);
 impl<NewS, K> Lambda for LBindPut<NewS, K> {
     type Output = LBindPut<NewS, K>;
 }
+impl<NewS, K> Eval for LBindPut<NewS, K> { type Output = Self; }
 
 impl<NewS, K, OldS> Lambda for LApp<LBindPut<NewS, K>, OldS>
 where
@@ -225,6 +244,7 @@ mod tests {
         impl Lambda for PutSucc {
             type Output = PutSucc;
         }
+        impl Eval for PutSucc { type Output = Self; }
 
         impl<X> Lambda for LApp<PutSucc, X>
         where
@@ -238,6 +258,7 @@ mod tests {
         impl Lambda for DoGet {
             type Output = DoGet;
         }
+        impl Eval for DoGet { type Output = Self; }
 
         impl<X> Lambda for LApp<DoGet, X>
         where
