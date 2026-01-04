@@ -46,7 +46,9 @@ impl<const C: char> Reify<u8> for TyChar<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{std::reify::Reify, tyarray};
+    use crate::std::reify::Reify;
+    #[cfg(feature = "nightly")]
+    use crate::tyarray;
 
     #[test]
     fn test_tychar() {
@@ -55,6 +57,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "nightly")]
     fn test_tyarray_of_char() {
         type S = tyarray![TyChar<'a'>, TyChar<'b'>, TyChar<'c'>];
         // Reify to array [char; 3]

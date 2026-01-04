@@ -156,6 +156,7 @@ mod tests {
     use crate::eval::ELit;
 
     #[test]
+    #[cfg(feature = "nightly")]
     fn test_eq_neq() {
         assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U1>>>, TyTrue);
         assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U2>>>, TyFalse);
