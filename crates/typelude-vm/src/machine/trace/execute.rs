@@ -2,20 +2,29 @@
 //!
 //! Implements machine instruction execution logic with history tracking.
 
-use typelude_core::{
-    Apply, // Root export
+use typelude_core::Apply;
+#[cfg(feature = "nightly")]
+use typelude_std::std::ops::{OpEq, OpNeq};
+use typelude_std::{
     eval::{App, EIf, ELit, EWhile, Eval, Evaluate},
     std::{
         array::{Cons, EConcat, Get, Set, TyArray, TyNil},
         ops::{
-            EAdd, EAnd, ENot, EOr, ESub, // Expressions
-            OpAdd, OpAnd, OpGt, OpLt, OpNot, OpOr, OpSub, // Operators
+            EAdd,
+            EAnd,
+            ENot,
+            EOr,
+            ESub, // Expressions
+            OpAdd,
+            OpAnd,
+            OpGt,
+            OpLt,
+            OpNot,
+            OpOr,
+            OpSub, // Operators
         },
     },
 };
-
-#[cfg(feature = "nightly")]
-use typelude_core::std::ops::{OpEq, OpNeq};
 use typenum::Unsigned;
 
 use crate::machine::{instruction::*, trace::state::TracedMachineState};
@@ -478,11 +487,10 @@ pub struct OpTracedIsFinished;
 
 impl<S, L, M, C, P, H> Apply<TracedMachineState<S, L, M, C, P, H>> for OpTracedIsFinished
 where
-    typelude_core::std::array::EIsEmpty<ELit<P>>: Eval,
-    App<OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>: Eval,
+    typelude_std::std::array::EIsEmpty<ELit<P>>: Eval,
+    App<OpNot, typelude_std::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
-    type Output =
-        App<OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>;
+    type Output = App<OpNot, typelude_std::std::array::EIsEmpty<ELit<P>>>;
 }
 
 /// Runner for traced execution

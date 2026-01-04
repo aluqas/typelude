@@ -1,21 +1,24 @@
 [package]
-name = "typelude-vm"
+name = "typelude-std"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.94.0"
-description = "Type-level stack machine for typelude"
+description = "Core traits and libraries for typelude"
 license = "MIT"
 
 [features]
 default = ["nightly"]
-nightly = ["typelude-core/nightly", "typelude-std/nightly"]
+nightly = []
 
 [dependencies]
-typelude-core = { path = "../typelude-core", default-features = false }
-typelude-std = { path = "../typelude-std", default-features = false }
 typenum = { version = "1.19.0", features = ["const-generics"] }
+hybrid-array = "0.4.5"
+const_panic = "0.2.15"
 derive_more = { version = "2.1.0", features = ["full"] }
 paste = "1.0.15"
+tstr = "0.3.0"
+typelude-macros = { path = "../typelude-macros" }
+typelude-core = { path = "../typelude-core" }
 
 [dev-dependencies]
 static_assertions = "1.1.0"

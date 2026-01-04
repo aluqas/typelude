@@ -5,11 +5,8 @@
 use typenum::{B0, B1};
 
 // Re-export kernel types
-pub use crate::kernel::bool::{Bool as TyBool, TyFalse, TyTrue};
-use crate::{
-    eval::Eval,
-    std::traits::TypeBool,
-};
+pub use crate::model::bool::{Bool as TyBool, TyFalse, TyTrue};
+use crate::{eval::Eval, std::traits::TypeBool};
 
 //
 // Adapter Implementation: TypeBool for TyTrue, TyFalse, B0, B1
@@ -87,10 +84,12 @@ pub type ToTyBoolOut<T> = <bool as TyFrom<T>>::Output;
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use crate::eval::{Evaluate, ELit};
-    use crate::std::ops::logic::*;
 
     use super::*;
+    use crate::{
+        eval::{ELit, Evaluate},
+        std::ops::logic::*,
+    };
 
     #[test]
     fn test_not() {

@@ -1,22 +1,20 @@
-// Unstable features required for type-level programming
-#![cfg_attr(feature = "nightly", feature(specialization))]
-#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
-#![allow(incomplete_features)]
-#![recursion_limit = "16384"]
+pub mod app;
+pub mod bridge;
+pub mod traits;
+pub mod impls; // Typenum support
 
-#[macro_use]
-pub mod macros;
+pub use app::*;
+pub use bridge::*;
+pub use traits::*;
 
-pub mod eval;
-mod kernel; // Private
-pub mod lambda;
-pub mod std;
+/// Sealed trait pattern
+#[doc(hidden)]
+pub trait Sealed {}
 
-// Export typenum for macros
-pub use typenum;
-pub use paste;
+/// Trait to evaluate type-level expressions
+pub trait Eval {
+    type Output;
+}
 
-pub use crate::{
-    eval::{Eval, Evaluate},
-    kernel::traits::Apply,
-};
+/// Type alias to obtain evaluation results of expressions
+pub type Evaluate<T> = <T as Eval>::Output;

@@ -209,7 +209,7 @@ impl DefOpInput {
                     impl crate::eval::Sealed for #op_name {}
 
                     // 4. Implement Apply
-                    impl<#(#args),*> crate::kernel::traits::Apply<#apply_args> for #op_name {
+                    impl<#(#args),*> crate::model::traits::Apply<#apply_args> for #op_name {
                         type Output = #ast_name<#(#args),*>;
                     }
                 }
@@ -231,7 +231,7 @@ impl DefOpInput {
                     impl crate::eval::Sealed for #op_name {}
 
                     // 2. Implement Apply with alias
-                    impl<#(#args),*> crate::kernel::traits::Apply<#apply_args> for #op_name {
+                    impl<#(#args),*> crate::model::traits::Apply<#apply_args> for #op_name {
                         type Output = #alias_ty;
                     }
                 }

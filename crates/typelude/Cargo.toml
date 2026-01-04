@@ -8,10 +8,15 @@ license = "MIT"
 
 [features]
 default = ["nightly"]
-nightly = ["typelude-core/nightly", "typelude-vm/nightly"]
+nightly = [
+    "typelude-core/nightly",
+    "typelude-std/nightly",
+    "typelude-vm/nightly",
+]
 
 [dependencies]
 typelude-core = { path = "../typelude-core", default-features = false }
+typelude-std = { path = "../typelude-std", default-features = false }
 typelude-vm = { path = "../typelude-vm", default-features = false }
 typelude-macros = { path = "../typelude-macros" }
 typenum = { version = "1.19.0", features = ["const-generics"] }

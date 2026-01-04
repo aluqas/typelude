@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use typelude_core::{
+use typelude_std::{
     eval::{Eval, Sealed},
     std::trace::Trace,
 };

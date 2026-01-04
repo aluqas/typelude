@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 
 use crate::{
     eval::{Eval, Evaluate},
-    kernel::{
+    model::{
         bool::{TyFalse, TyTrue},
         traits::Apply,
     },

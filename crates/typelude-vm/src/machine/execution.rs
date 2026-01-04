@@ -2,10 +2,10 @@
 //!
 //! Implements machine instruction execution logic and main loop.
 
+use typelude_core::Apply;
 #[allow(unused_imports)]
-use typelude_core::std::int;
-use typelude_core::{
-    Apply, // Root export
+use typelude_std::std::int;
+use typelude_std::{
     eval::{App, EIf, EWhile, Eval, Evaluate},
     std::{
         array::{Concat, Cons, EConcat, Get, Set, TyArray, TyNil}, // Cons is here
@@ -53,8 +53,8 @@ macro_rules! impl_binary_op {
     };
 }
 
-impl_binary_op!(OpAdd, typelude_core::std::ops::EAdd<Lhs, Rhs>);
-impl_binary_op!(OpSub, typelude_core::std::ops::ESub<Lhs, Rhs>);
+impl_binary_op!(OpAdd, typelude_std::std::ops::EAdd<Lhs, Rhs>);
+impl_binary_op!(OpSub, typelude_std::std::ops::ESub<Lhs, Rhs>);
 
 // --- Comparison ---
 macro_rules! impl_cmp_op {
@@ -79,21 +79,21 @@ macro_rules! impl_cmp_op {
 }
 
 #[cfg(feature = "nightly")]
-impl_cmp_op!(OpEq, typelude_core::std::ops::OpEq);
+impl_cmp_op!(OpEq, typelude_std::std::ops::OpEq);
 #[cfg(feature = "nightly")]
-impl_cmp_op!(OpNeq, typelude_core::std::ops::OpNeq);
-impl_cmp_op!(OpLt, typelude_core::std::ops::OpLt);
-impl_cmp_op!(OpGt, typelude_core::std::ops::OpGt);
+impl_cmp_op!(OpNeq, typelude_std::std::ops::OpNeq);
+impl_cmp_op!(OpLt, typelude_std::std::ops::OpLt);
+impl_cmp_op!(OpGt, typelude_std::std::ops::OpGt);
 
 // --- Boolean Logic ---
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg>
     Execute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg> for OpNot
 where
-    typelude_core::std::ops::ENot<Val>: Eval,
+    typelude_std::std::ops::ENot<Val>: Eval,
     RestStack: Cons,
 {
     type OutputState = MachineState<
-        TyArray<Evaluate<typelude_core::std::ops::ENot<Val>>, RestStack>,
+        TyArray<Evaluate<typelude_std::std::ops::ENot<Val>>, RestStack>,
         Locals,
         Memory,
         CallStack,
@@ -101,8 +101,8 @@ where
     >;
 }
 
-impl_binary_op!(OpAnd, typelude_core::std::ops::EAnd<Lhs, Rhs>);
-impl_binary_op!(OpOr, typelude_core::std::ops::EOr<Lhs, Rhs>);
+impl_binary_op!(OpAnd, typelude_std::std::ops::EAnd<Lhs, Rhs>);
+impl_binary_op!(OpOr, typelude_std::std::ops::EOr<Lhs, Rhs>);
 
 // --- Stack Manipulation ---
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg>
@@ -317,7 +317,7 @@ pub type ERun<S> = EWhile<OpIsFinished, OpStep, S>;
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::tyarray;
+    use typelude_std::tyarray;
     use typenum::{U1, U2, U3, U5};
 
     use super::*;

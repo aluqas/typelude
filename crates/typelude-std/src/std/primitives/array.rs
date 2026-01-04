@@ -14,14 +14,14 @@ use typenum::{B1, Sub1, U0, UInt, Unsigned};
 // =============================================================================
 
 // Re-export kernel types for convenience/compatibility if mostly used from here
-pub use crate::kernel::array::{Cons, TyArray, TyNil};
+pub use crate::model::array::{Cons, TyArray, TyNil};
 use crate::{
     eval::{EIf, ELit, Eval, Evaluate, Sealed},
+    model::{
+        bool::{TyFalse, TyTrue},
+        traits::Apply,
+    },
     std::traits::TypeList,
-};
-use crate::kernel::{
-    bool::{TyFalse, TyTrue},
-    traits::Apply,
 };
 
 // =============================================================================

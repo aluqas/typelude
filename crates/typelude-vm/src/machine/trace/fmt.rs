@@ -1,5 +1,5 @@
 use paste::paste;
-use typelude_core::std::trace::Trace;
+use typelude_std::std::trace::Trace;
 
 use crate::machine::instruction::*;
 
