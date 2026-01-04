@@ -11,7 +11,7 @@
 /// # Examples
 ///
 /// ```rust
-/// use typelude_core::std::{
+/// use typelude_std::std::{
 ///     bool::{TyFalse, TyTrue},
 ///     ops::{TyFrom, TyInto},
 /// };

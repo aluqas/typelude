@@ -10,7 +10,7 @@ use typenum::{U1, U2, U3, U5, U6, U12, U42};
 
 use crate::{
     eval::{Eval, Evaluate},
-    kernel::traits::Apply,
+    model::traits::Apply,
 };
 
 // =============================================================================

@@ -132,27 +132,13 @@ dependencies = [
  "static_assertions",
  "typelude-core",
  "typelude-macros",
+ "typelude-std",
  "typelude-vm",
  "typenum",
 ]
 
 [[package]]
 name = "typelude-core"
-version = "0.1.0"
-dependencies = [
- "const_panic",
- "derive_more",
- "hybrid-array",
- "paste",
- "static_assertions",
- "tstr",
- "typelude-kernel",
- "typelude-macros",
- "typenum",
-]
-
-[[package]]
-name = "typelude-kernel"
 version = "0.1.0"
 dependencies = [
  "typenum",
@@ -168,6 +154,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "typelude-std"
+version = "0.1.0"
+dependencies = [
+ "const_panic",
+ "derive_more",
+ "hybrid-array",
+ "paste",
+ "static_assertions",
+ "tstr",
+ "typelude-core",
+ "typelude-macros",
+ "typenum",
+]
+
+[[package]]
 name = "typelude-vm"
 version = "0.1.0"
 dependencies = [
@@ -175,6 +176,7 @@ dependencies = [
  "paste",
  "static_assertions",
  "typelude-core",
+ "typelude-std",
  "typenum",
 ]
 

@@ -2,7 +2,7 @@
 members = [
     "crates/typelude",
     "crates/typelude-core",
-    "crates/typelude-kernel",
+    "crates/typelude-std",
     "crates/typelude-vm",
     "crates/typelude-macros",
 ]
