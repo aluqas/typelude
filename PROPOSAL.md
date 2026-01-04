@@ -103,11 +103,59 @@ Rustのトレイトソルバは、型エイリアスや関連型を展開する�
 *   **Lambda Model**: 項書き換えが深くネストするため、再帰制限にヒットしやすい。
     *   対策: ステップ実行（`RunStep`）や、`Eval` を一度切って `App` で再構築する（トランポリンのような挙動）工夫が必要になる場合がある。
 
-## 6. 今後のロードマップ案
+---
 
-1.  **Refactoring**: `std` 内の演算定義を `define_arith_op!` 等のマクロを用いて "Op-Expr Pattern" に統一し、`TypeNat` 等のインターフェースへの依存に切り替える。
-2.  **Documentation**: 各レイヤーとパターンの役割を明記した `CONTRIBUTING.md` または `ARCHITECTURE.md` の整備。
-3.  **Expansion**: `lambda` モデルにおける `Monad` などの高レベル抽象の実装拡充。
+## 6. エラーハンドリングとデバッグ (Error Handling & Debugging Architecture)
+
+型レベルプログラミングにおけるエラー（コンパイルエラー）の制御と、デバッグ支援のための構造。
+
+### Compile-Time Assertions
+型システム上で条件を満たさない場合にコンパイルエラーを発生させる仕組み。
+*   **`Assert<const COND: bool>`**: `Eval` トレイトの実装を `where COND == true` に限定することで、偽の場合に「trait not implemented」エラーを発生させる。
+*   **エラーメッセージの改善**: `rustc_on_unimplemented` 属性を活用し、ユーザーに分かりやすいエラーメッセージを提供するよう努める。
+
+### Tracing & Reflection
+実行時（またはマクロ展開時）に型情報を可視化する仕組み。
+*   **`Trace` トレイト**: 型の名前や構造を `String` として取得する。`std::any::type_name` よりも構造化された出力を目指す。
+*   **`Trace` の位置付け**: コアロジック（`Eval`）とは分離し、デバッグビルド時や専用の検査ツールからのみ利用されるオプショナルな機能とする。
+
+---
+
+## 7. フィーチャー戦略: Nightly vs Stable (Feature Gating Strategy)
+
+`typelude` は高度な型レベル機能を提供するため、Nightly機能に依存する部分があるが、Stable Rustでの利用も可能な限りサポートする方針をとる。
+
+### Feature Flag: `nightly` (Default: on)
+*   **Enabled (Nightly)**:
+    *   `generic_const_exprs`: `Assert<CONST_BOOL>` や複雑な配列長の計算に利用。
+    *   `specialization`: 特定の型に対する最適化された `Eval` 実装（例: `OpEq` の高速化）に利用。
+*   **Disabled (Stable)**:
+    *   `typenum` ベースの演算はそのまま利用可能。
+    *   `generic_const_exprs` に依存する機能（一部の高度な `Assert` や可変長配列操作）は、代替手段（トレイトベースの制約）にフォールバックするか、制限付きで提供される。
+    *   ユーザーは `default-features = false` でStable互換モードを選択できる。
+
+---
+
+## 8. リファクタリング計画 (Refactoring Roadmap)
+
+提案されたアーキテクチャに移行するための段階的な計画。
+
+### Phase 1: Interface Definition & Validation (Current)
+*   `std/traits.rs` にある `TypeNat`, `TypeBool` 等のインターフェース定義を確定させる。
+*   これらのインターフェースが `typenum` (Direct Model) と `lambda` (Lambda Model) の両方で実装可能であることを検証するPoCを作成する。
+
+### Phase 2: Core Refactoring
+*   `std/ops` 内の既存の実装をリファクタリングし、`typenum` への直接依存を排除。代わりに `TypeNat` トレイト経由で実装するように書き換える。
+*   `def_op!` マクロを修正し、`Eval` パターンのボイラープレート生成を「Op-Expr Pattern」に準拠させる。
+
+### Phase 3: Feature Gating Implementation
+*   `lib.rs` および各モジュールに `#[cfg(feature = "nightly")]` ゲートを導入。
+*   `Assert` や特定の演算について、Stable向けのフォールバック実装（または無効化）を行う。
+*   CI環境に Stable Rust でのテストジョブを追加し、コア機能が動作することを保証する。
+
+### Phase 4: Lambda Integration
+*   `lambda` モジュールを `TypeNat`, `TypeBool` インターフェースに適合させる。
+*   これにより、`std` の数値演算関数（`Add` 等）が、`typenum` だけでなく `Church Numeral` に対しても透過的に動作することを目指す。
 
 ---
 *Proposed by Jules (AI Agent) - Session ID: [Current Session]*
