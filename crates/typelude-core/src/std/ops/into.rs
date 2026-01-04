@@ -20,6 +20,11 @@
 /// // If impl TyFrom<B1> for bool { type Output = TyTrue; }
 /// // type Res = <bool as TyFrom<B1>>::Output;
 /// ```
+#[diagnostic::on_unimplemented(
+    message = "Cannot convert `{Source}` into `{Self}` via TyFrom",
+    label = "conversion not implemented",
+    note = "ensure `{Self}` implements `TyFrom<{Source}>`"
+)]
 pub trait TyFrom<Source> {
     type Output;
 }
@@ -27,6 +32,11 @@ pub trait TyFrom<Source> {
 /// Type-level Into.
 ///
 /// Blanket implemented for any type that implements [`TyFrom`] on the target.
+#[diagnostic::on_unimplemented(
+    message = "Cannot convert `{Self}` into `{Target}` via TyInto",
+    label = "conversion not implemented",
+    note = "ensure `{Target}` implements `TyFrom<{Self}>`"
+)]
 pub trait TyInto<Target> {
     type Output;
 }

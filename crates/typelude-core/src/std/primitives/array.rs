@@ -46,6 +46,11 @@ impl<Head, Tail: Cons> TypeList for TyArray<Head, Tail> {
 // =============================================================================
 
 /// Array length
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not a type with a length",
+    label = "Len not implemented",
+    note = "ensure `{Self}` implements `Len`"
+)]
 pub trait Len {
     type Output: Unsigned;
 }
@@ -63,6 +68,11 @@ where
 }
 
 /// Head element of array
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` does not have a Head element",
+    label = "Head not implemented",
+    note = "ensure `{Self}` is a non-empty list"
+)]
 pub trait Head {
     type Output;
 }
@@ -72,6 +82,11 @@ impl<H, T: Cons> Head for TyArray<H, T> {
 }
 
 /// Tail of array (everything except head)
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` does not have a Tail",
+    label = "Tail not implemented",
+    note = "ensure `{Self}` is a non-empty list"
+)]
 pub trait Tail {
     type Output: Cons;
 }
@@ -94,6 +109,11 @@ impl<Head, Tail: Cons> IsEmpty for TyArray<Head, Tail> {
 }
 
 /// Index access
+#[diagnostic::on_unimplemented(
+    message = "Cannot access index `{Idx}` in `{Self}`",
+    label = "index access failed",
+    note = "index might be out of bounds or `{Self}` is not a list"
+)]
 pub trait Get<Idx: Unsigned> {
     type Output;
 }
@@ -112,6 +132,11 @@ where
 }
 
 /// Index update (Set)
+#[diagnostic::on_unimplemented(
+    message = "Cannot set index `{Idx}` in `{Self}` to `{Val}`",
+    label = "index update failed",
+    note = "index might be out of bounds or `{Self}` is not a list"
+)]
 pub trait Set<Idx: Unsigned, Val> {
     type Output: Cons;
 }
@@ -335,6 +360,11 @@ where
 
 /// Helper for Map
 #[doc(hidden)]
+#[diagnostic::on_unimplemented(
+    message = "Internal `MapHelper` not implemented for `{Self}`",
+    label = "Map not implemented",
+    note = "ensure `{Self}` is a Cons list and `Op` is valid"
+)]
 pub trait MapHelper<Op> {
     type Output: Cons;
 }
@@ -356,6 +386,11 @@ where
 
 /// Helper for Filter
 #[doc(hidden)]
+#[diagnostic::on_unimplemented(
+    message = "Internal `FilterHelper` not implemented for `{Self}`",
+    label = "Filter not implemented",
+    note = "ensure `{Self}` is a Cons list and `Pred` is valid"
+)]
 pub trait FilterHelper<Pred> {
     type Output: Cons;
 }
@@ -395,6 +430,11 @@ where
 
 /// Helper for Fold
 #[doc(hidden)]
+#[diagnostic::on_unimplemented(
+    message = "Internal `FoldHelper` not implemented for `{Self}`",
+    label = "Fold not implemented",
+    note = "ensure `{Self}` is a Cons list and `Op` is valid"
+)]
 pub trait FoldHelper<Op, Acc> {
     type Output;
 }

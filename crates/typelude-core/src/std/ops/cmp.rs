@@ -18,6 +18,11 @@ use crate::{
 //
 
 /// Helper for Type Equality: Returns const bool
+#[diagnostic::on_unimplemented(
+    message = "Cannot compare `{Self}` with `{Other}` for equality",
+    label = "equality check not implemented",
+    note = "IsEq is currently only implemented for types on Nightly Rust"
+)]
 pub trait IsEq<Other> {
     const EQ: bool;
 }

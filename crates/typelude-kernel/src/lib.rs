@@ -12,6 +12,11 @@ pub use traits::*;
 pub trait Sealed {}
 
 /// Trait to evaluate type-level expressions
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` cannot be evaluated",
+    label = "Eval not implemented",
+    note = "ensure `{Self}` implements `Eval` or is a valid expression"
+)]
 pub trait Eval {
     type Output;
 }

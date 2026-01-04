@@ -9,6 +9,11 @@ use crate::eval::{Eval, Sealed};
 /// **Marker Trait**
 ///
 /// Represents that a type is a Cons List (Collection).
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not a Cons List",
+    label = "not a list",
+    note = "ensure `{Self}` is either `TyNil` or `TyArray`"
+)]
 pub trait Cons: Sealed {}
 
 /// Termination of TyArray (Empty List).
