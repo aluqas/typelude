@@ -11,5 +11,5 @@ pub mod reify;
 pub mod traits;
 
 pub use debug::trace;
-pub use ops::{cmp, into};
+pub use ops::{arith, cmp, into, logic};
 pub use primitives::{array, bool, int, str};

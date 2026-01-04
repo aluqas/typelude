@@ -7,8 +7,10 @@ use syn::{
     parse_macro_input,
 };
 
+mod def_op;
 mod dsl;
 
+use def_op::DefOpInput;
 use dsl::{TyDslInput, BoundDslInput, ImplEvalInput};
 
 // ... existing program macro code ...
@@ -308,4 +310,11 @@ pub fn impl_eval(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
+}
+
+#[proc_macro]
+pub fn def_op(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DefOpInput);
+    let output = input.expand();
+    TokenStream::from(output)
 }
