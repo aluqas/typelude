@@ -17,11 +17,11 @@ use typenum::{B1, Sub1, U0, UInt, Unsigned};
 pub use crate::kernel::array::{Cons, TyArray, TyNil};
 use crate::{
     eval::{EIf, ELit, Eval, Evaluate, Sealed},
-    kernel::{
-        bool::{TyFalse, TyTrue},
-        traits::Apply,
-    },
     std::traits::TypeList,
+};
+use crate::kernel::{
+    bool::{TyFalse, TyTrue},
+    traits::Apply,
 };
 
 // =============================================================================
@@ -147,7 +147,7 @@ where
 }
 
 // NOTE: Contains depends on Equality check.
-use crate::std::cmp::IsEq;
+use crate::std::ops::IsEq;
 
 /// Check if array contains element (const version)
 pub trait Contains<Elem> {
@@ -500,7 +500,7 @@ mod tests {
         eval::ELit,
         std::{
             bool::{ToTyBoolOut, TyFalse, TyTrue},
-            into::TyFrom,
+            ops::TyFrom,
         },
         tyarray,
     };

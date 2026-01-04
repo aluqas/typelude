@@ -8,7 +8,7 @@
 pub mod macros;
 
 pub mod eval;
-pub mod kernel;
+mod kernel; // Private
 pub mod lambda;
 pub mod std;
 

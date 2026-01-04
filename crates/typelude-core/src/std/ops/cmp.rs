@@ -9,7 +9,7 @@ use crate::{
     eval::Evaluate,
     std::{
         bool::{ToTyBoolOut, TyFalse, TyTrue},
-        into::TyFrom,
+        ops::TyFrom,
     },
 };
 

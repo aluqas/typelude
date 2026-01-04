@@ -11,9 +11,6 @@ use crate::{
     std::traits::TypeBool,
 };
 
-pub use crate::std::ops::logic::{EAnd, ENand, ENot, ENor, EOr, EXnor, EXor};
-pub use crate::std::ops::logic::{OpAnd, OpNand, OpNot, OpNor, OpOr, OpXnor, OpXor};
-
 //
 // Adapter Implementation: TypeBool for TyTrue, TyFalse, B0, B1
 //
@@ -76,7 +73,7 @@ where
     type Output = <() as crate::std::reify::ReflectBool<COND>>::Output;
 }
 
-use crate::std::into::TyFrom;
+use crate::std::ops::TyFrom;
 
 impl TyFrom<B1> for bool {
     type Output = TyTrue;

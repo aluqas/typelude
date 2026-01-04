@@ -13,9 +13,6 @@ use crate::{
     std::traits::{TypeAdd, TypeDiv, TypeMul, TypeNat, TypePow, TypeRem, TypeSub},
 };
 
-pub use crate::std::ops::arith::{EAdd, EDiv, EMul, EPow, ERem, ESub};
-pub use crate::std::ops::arith::{OpAdd, OpDiv, OpMul, OpPow, OpRem, OpSub};
-
 //
 // Eval Implementation for typenum Types
 //
@@ -113,16 +110,7 @@ mod tests {
     use static_assertions::assert_type_eq_all;
     use typenum::{N2, P5, U1, U3, B0, B1};
 
-    use crate::eval::Evaluate;
-
-    // We can access EAdd from super because we re-exported it
-    use super::{EAdd, U1 as _U1};
-
-    // Actually, explicit import from ops is cleaner for tests usually,
-    // but here we want to test that super::* works or the re-export works?
-    // Let's just use explicit path to avoid confusion.
-
-    use super::*;
+    use crate::{eval::Evaluate, std::ops::EAdd};
 
     #[test]
     fn test_eval_typenum() {
