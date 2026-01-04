@@ -1,9 +1,6 @@
 //! **Lambda Traits**
 //!
 //! Traits specific to pure functional programming context.
-//!
-//! - `Lambda`: Pure lambda term trait with automatic `Eval` implementation
-//! - `Bind`: Monadic bind operation (`m >>= f`)
 
 use std::marker::PhantomData;
 
@@ -15,17 +12,34 @@ use crate::eval::Eval;
 
 /// **Pure Lambda Term Trait**
 ///
-/// Types implementing this trait represent pure lambda calculus terms
-/// or operations derived strictly from them.
-///
-/// Implementing `Lambda` automatically provides `Eval` via blanket impl.
+/// Types implementing this trait represent pure lambda calculus terms.
 pub trait Lambda {
     type Output;
 }
 
-/// Blanket impl: Lambda types automatically implement Eval
-impl<T: Lambda> Eval for T {
-    type Output = <T as Lambda>::Output;
+/// Macro to implement Eval for a Lambda type.
+/// Usage: `impl_eval_for_lambda!(MyStruct);`
+#[macro_export]
+macro_rules! impl_eval_for_lambda {
+    ($t:ty) => {
+        impl $crate::eval::Eval for $t {
+            type Output = <$t as $crate::lambda::traits::Lambda>::Output;
+        }
+    };
+}
+
+/// Macro for generic Lambda types.
+/// Usage: `impl_eval_for_lambda_generic!(MyStruct, [T, U]);`
+#[macro_export]
+macro_rules! impl_eval_for_lambda_generic {
+    ($t:ident, [$($p:ident),+]) => {
+        impl<$($p),+> $crate::eval::Eval for $t<$($p),+>
+        where
+            $t<$($p),+>: $crate::lambda::traits::Lambda,
+        {
+            type Output = <$t<$($p),+> as $crate::lambda::traits::Lambda>::Output;
+        }
+    };
 }
 
 // =========================================================================
@@ -36,27 +50,26 @@ impl<T: Lambda> Eval for T {
 ///
 /// Represents the application of function `F` to argument `A`.
 /// This struct is used with the `Eval` pattern.
-///
-/// - `F`: Function term (e.g., `S`, `K`, `S1<X>`)
-/// - `A`: Argument term
 pub struct LApp<F, A>(PhantomData<(F, A)>);
+
+// Implement Eval for LApp directly, effectively replacing the blanket impl for this specific type.
+// Assuming LApp implements Lambda (which is usually where logic lives).
+impl<F, A> Eval for LApp<F, A>
+where
+    Self: Lambda,
+{
+    type Output = <Self as Lambda>::Output;
+}
 
 // =========================================================================
 // Bind Trait (Monad)
 // =========================================================================
 
 /// Bind Trait: `m >>= f`
-///
-/// `Self` is the Monad (e.g., `Option<T>`).
-/// `F` is the Binder function (`T -> Option<U>`).
-/// `Output` is the result Monad (`Option<U>`).
 pub trait LBind<F> {
     type Output;
 }
 
-// Note: `Pure` is usually specific to the Monad type constructor itself
-// (e.g. `Id<T>`, `State<S, A>`), so we might not need a universal trait for it
-// unless we want generic code over Monads.
 // =========================================================================
 // Kind System (Marker Traits)
 // =========================================================================

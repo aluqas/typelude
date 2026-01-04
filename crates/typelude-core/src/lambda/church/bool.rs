@@ -12,6 +12,7 @@ use crate::{
         LApp, Lambda,
         traits::{LBool, LTerm},
     },
+    impl_eval_for_lambda, impl_eval_for_lambda_generic,
 };
 
 // =========================================================================
@@ -25,6 +26,7 @@ impl LBool for LTrue {}
 impl Lambda for LTrue {
     type Output = LTrue;
 }
+impl_eval_for_lambda!(LTrue);
 
 /// Church False: λt f. f
 pub struct LFalse;
@@ -33,17 +35,20 @@ impl LBool for LFalse {}
 impl Lambda for LFalse {
     type Output = LFalse;
 }
+impl_eval_for_lambda!(LFalse);
 
 // Partial Application States
 pub struct LTrue1<T>(PhantomData<T>);
 impl<T> Lambda for LTrue1<T> {
     type Output = LTrue1<T>;
 }
+impl_eval_for_lambda_generic!(LTrue1, [T]);
 
 pub struct LFalse1<T>(PhantomData<T>);
 impl<T> Lambda for LFalse1<T> {
     type Output = LFalse1<T>;
 }
+impl_eval_for_lambda_generic!(LFalse1, [T]);
 
 // --- True Implementation ---
 // True T -> True1<T>
@@ -91,12 +96,14 @@ pub struct LIf;
 impl Lambda for LIf {
     type Output = LIf;
 }
+impl_eval_for_lambda!(LIf);
 
 // If P -> If1<P>
 pub struct LIf1<P>(PhantomData<P>);
 impl<P> Lambda for LIf1<P> {
     type Output = LIf1<P>;
 }
+impl_eval_for_lambda_generic!(LIf1, [P]);
 
 impl<P> Lambda for LApp<LIf, P>
 where
@@ -110,6 +117,7 @@ pub struct LIf2<P, T>(PhantomData<(P, T)>);
 impl<P, T> Lambda for LIf2<P, T> {
     type Output = LIf2<P, T>;
 }
+impl_eval_for_lambda_generic!(LIf2, [P, T]);
 
 impl<P, T> Lambda for LApp<LIf1<P>, T>
 where
@@ -124,10 +132,12 @@ where
     P: Eval,
     T: Eval,
     E: Eval,
-    LApp<P, T>: Lambda,
-    LApp<<LApp<P, T> as Lambda>::Output, E>: Lambda,
+    // (P T)
+    LApp<P, T>: Eval,
+    // ((P T) E)
+    LApp<Evaluate<LApp<P, T>>, E>: Eval,
 {
-    type Output = <LApp<<LApp<P, T> as Lambda>::Output, E> as Lambda>::Output;
+    type Output = Evaluate<LApp<Evaluate<LApp<P, T>>, E>>;
 }
 
 #[cfg(test)]
@@ -146,11 +156,14 @@ mod tests {
         impl Lambda for A {
             type Output = A;
         }
+        impl_eval_for_lambda!(A);
+
         #[derive(Clone)]
         struct B;
         impl Lambda for B {
             type Output = B;
         }
+        impl_eval_for_lambda!(B);
 
         // True A B -> A
         type TrueRes = App<App<App<LIf, LTrue>, A>, B>;

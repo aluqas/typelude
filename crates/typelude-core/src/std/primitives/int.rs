@@ -6,54 +6,22 @@ use std::{
     ops::{Add, Div, Mul, Rem, Sub},
 };
 
-use typenum::{B0, B1, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
+use typenum::{Pow};
 
 use crate::{
-    eval::Eval,
     std::traits::{TypeAdd, TypeDiv, TypeMul, TypeNat, TypePow, TypeRem, TypeSub},
 };
 
-//
-// Eval Implementation for typenum Types
-//
-
-// --- Unsigned Integers ---
-
-impl Eval for UTerm {
-    type Output = Self;
-}
-impl<U, B> Eval for UInt<U, B> {
-    type Output = Self;
-}
-
-// --- Signed Integers ---
-
-impl Eval for Z0 {
-    type Output = Self;
-}
-impl<U: Unsigned + typenum::NonZero> Eval for PInt<U> {
-    type Output = Self;
-}
-impl<U: Unsigned + typenum::NonZero> Eval for NInt<U> {
-    type Output = Self;
-}
-
-// --- Bits ---
-
-impl Eval for B0 {
-    type Output = Self;
-}
-impl Eval for B1 {
-    type Output = Self;
-}
+// Eval implementation is now in typelude-kernel (via impls.rs)
+// We just define the Traits and Adapter Logic here.
 
 // =============================================================================
 // Adapter Implementation: TypeNat / TypeInt for typenum
 // =============================================================================
 
 // Implement TypeNat for UTerm and UInt
-impl TypeNat for UTerm {}
-impl<U, B> TypeNat for UInt<U, B> {}
+impl TypeNat for typenum::UTerm {}
+impl<U, B> TypeNat for typenum::UInt<U, B> {}
 
 // Implement TypeAdd, etc. for any typenum type that implements the typenum traits
 // Note: We use blanket implementations where possible, or specific ones if needed to avoid conflict.
@@ -110,10 +78,11 @@ mod tests {
     use static_assertions::assert_type_eq_all;
     use typenum::{N2, P5, U1, U3, B0, B1};
 
-    use crate::{eval::Evaluate, std::ops::EAdd};
+    use crate::{eval::{Evaluate, ELit}, std::ops::EAdd};
 
     #[test]
     fn test_eval_typenum() {
+        // Since typenum types are implemented in kernel, they should evaluate to themselves.
         assert_type_eq_all!(Evaluate<U1>, U1);
         assert_type_eq_all!(Evaluate<P5>, P5);
         assert_type_eq_all!(Evaluate<N2>, N2);
@@ -123,6 +92,11 @@ mod tests {
 
     #[test]
     fn test_add() {
+        // EAdd uses TypeAdd, which is implemented for U1.
+        // EAdd requires arguments to be Eval. U1 is Eval.
+        // So this should work.
+        assert_type_eq_all!(Evaluate<EAdd<ELit<U1>, ELit<typenum::U2>>>, U3);
+        // Also direct if U1 is Eval?
         assert_type_eq_all!(Evaluate<EAdd<U1, typenum::U2>>, U3);
     }
 }

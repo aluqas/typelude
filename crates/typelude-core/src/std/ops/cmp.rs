@@ -153,7 +153,7 @@ mod tests {
     use typenum::{N1, P1, P2, U1, U2};
 
     use super::*;
-    use crate::eval::bridge::ELit;
+    use crate::eval::ELit;
 
     #[test]
     fn test_eq_neq() {

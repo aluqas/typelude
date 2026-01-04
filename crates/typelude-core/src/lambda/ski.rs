@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use super::{LApp, Lambda};
-use crate::eval::{Eval, Evaluate};
+use crate::{eval::{Eval, Evaluate}, impl_eval_for_lambda, impl_eval_for_lambda_generic};
 
 // =========================================================================
 // The Fundamental Combinators
@@ -14,6 +14,7 @@ pub struct I;
 impl Lambda for I {
     type Output = I;
 }
+impl_eval_for_lambda!(I);
 
 /// The Constant Combinator `K`
 /// Term: \x y. x
@@ -22,6 +23,7 @@ pub struct K;
 impl Lambda for K {
     type Output = K;
 }
+impl_eval_for_lambda!(K);
 
 /// The Substitution Combinator `S`
 /// Term: \x y z. (x z) (y z)
@@ -30,6 +32,7 @@ pub struct S;
 impl Lambda for S {
     type Output = S;
 }
+impl_eval_for_lambda!(S);
 
 // =========================================================================
 // Partial Application States (The "Pending" Computation)
@@ -40,18 +43,21 @@ pub struct K1<X>(PhantomData<X>);
 impl<X> Lambda for K1<X> {
     type Output = K1<X>;
 }
+impl_eval_for_lambda_generic!(K1, [X]);
 
 /// S applied to one argument: `S x`
 pub struct S1<X>(PhantomData<X>);
 impl<X> Lambda for S1<X> {
     type Output = S1<X>;
 }
+impl_eval_for_lambda_generic!(S1, [X]);
 
 /// S applied to two arguments: `S x y`
 pub struct S2<X, Y>(PhantomData<(X, Y)>);
 impl<X, Y> Lambda for S2<X, Y> {
     type Output = S2<X, Y>;
 }
+impl_eval_for_lambda_generic!(S2, [X, Y]);
 
 // =========================================================================
 // Reduction Rules (The "Logic") - Lambda Pattern
@@ -136,6 +142,7 @@ mod tests {
         impl Lambda for X {
             type Output = X;
         }
+        impl_eval_for_lambda!(X);
 
         assert_type_eq_all!(App<I, X>, X);
     }
@@ -147,11 +154,13 @@ mod tests {
         impl Lambda for X {
             type Output = X;
         }
+        impl_eval_for_lambda!(X);
         #[derive(Clone)]
         struct Y;
         impl Lambda for Y {
             type Output = Y;
         }
+        impl_eval_for_lambda!(Y);
 
         // K X -> K1<X>
         // (K X) Y -> X
@@ -165,6 +174,7 @@ mod tests {
         impl Lambda for X {
             type Output = X;
         }
+        impl_eval_for_lambda!(X);
 
         // SKK X -> (K X) (K X) -> X
         type SKK = App<App<S, K>, K>;
@@ -178,11 +188,14 @@ mod tests {
         impl Lambda for A {
             type Output = A;
         }
+        impl_eval_for_lambda!(A);
+
         #[derive(Clone)]
         struct B;
         impl Lambda for B {
             type Output = B;
         }
+        impl_eval_for_lambda!(B);
 
         type True = K;
         type False = App<K, I>; // K I -> K1<I>
@@ -200,24 +213,31 @@ mod tests {
         impl Lambda for F {
             type Output = F;
         }
+        impl_eval_for_lambda!(F);
+
         struct A;
         impl Lambda for A {
             type Output = A;
         }
+        impl_eval_for_lambda!(A);
+
         struct B;
         impl Lambda for B {
             type Output = B;
         }
+        impl_eval_for_lambda!(B);
 
         struct F1<X>(std::marker::PhantomData<X>);
         impl<X> Lambda for F1<X> {
             type Output = F1<X>;
         }
+        impl_eval_for_lambda_generic!(F1, [X]);
 
         struct F2<X, Y>(std::marker::PhantomData<(X, Y)>);
         impl<X, Y> Lambda for F2<X, Y> {
             type Output = F2<X, Y>;
         }
+        impl_eval_for_lambda_generic!(F2, [X, Y]);
 
         // Define behavior for F
         impl<X: Eval> Lambda for LApp<F, X> {
