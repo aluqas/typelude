@@ -31,6 +31,7 @@ pub trait TyFn<Arg> {
 }
 
 // Automatically unwrap ELit
+#[diagnostic::do_not_recommend]
 impl<F, Arg> TyFn<ELit<Arg>> for F
 where
     F: TyFn<Arg>,

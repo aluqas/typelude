@@ -7,6 +7,11 @@ use typenum::{B0, B1, Integer, NInt, PInt, UInt, UTerm, Unsigned, Z0};
 use crate::std::array::{Cons, TyArray, TyNil};
 
 /// A trait for types that can be traced at runtime.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` does not implement Trace",
+    label = "Trace not implemented",
+    note = "implement `Trace` for `{Self}` to enable runtime debugging string generation"
+)]
 pub trait Trace {
     fn fmt() -> String;
 }

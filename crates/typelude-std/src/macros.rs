@@ -86,3 +86,35 @@ macro_rules! define_unary_logic_op {
         }
     };
 }
+
+/// Assert that a type-level boolean is true at compile time.
+///
+/// If the condition evaluates to `TyFalse` (or isn't `TyTrue`), this will trigger a compilation error.
+/// The `Condition` must implement `Reify<bool>` (usually via `Eval` -> `TyTrue/TyFalse`).
+///
+/// # Example
+///
+/// ```rust,compile_fail
+/// use typelude_core::{static_assert_true, std::bool::TyFalse};
+///
+/// static_assert_true!(TyFalse, "This should fail");
+/// ```
+#[macro_export]
+macro_rules! static_assert_true {
+    ($Condition:ty, $Message:literal) => {
+        const _: () = {
+            // Reify the type to a boolean value
+            // We use fully qualified path to ensure we use the correct trait
+            use $crate::std::reify::Reify;
+            use $crate::eval::Evaluate;
+
+            // Note: $Condition might be an expression needing evaluation
+            type Evaluated = Evaluate<$Condition>;
+
+            // Assert const condition
+            if !<Evaluated as Reify<bool>>::REIFIED {
+                panic!($Message); // This becomes a compile_error in const context
+            }
+        };
+    };
+}
