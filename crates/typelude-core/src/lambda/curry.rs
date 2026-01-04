@@ -20,6 +20,7 @@ pub struct LCurry<F>(PhantomData<F>);
 impl<F> Lambda for LCurry<F> {
     type Output = LCurry<F>;
 }
+impl<F> Eval for LCurry<F> { type Output = Self; }
 
 /// Partially applied Curry: waiting for second argument.
 pub struct LCurry1<F, A>(PhantomData<(F, A)>);
@@ -27,6 +28,7 @@ pub struct LCurry1<F, A>(PhantomData<(F, A)>);
 impl<F, A> Lambda for LCurry1<F, A> {
     type Output = LCurry1<F, A>;
 }
+impl<F, A> Eval for LCurry1<F, A> { type Output = Self; }
 
 // Curry<F> A -> Curry1<F, A>
 impl<F, A> Lambda for LApp<LCurry<F>, A>
@@ -60,6 +62,7 @@ pub struct LUncurry<F>(PhantomData<F>);
 impl<F> Lambda for LUncurry<F> {
     type Output = LUncurry<F>;
 }
+impl<F> Eval for LUncurry<F> { type Output = Self; }
 
 // Uncurry<F> (Pair A B) -> (F A) B
 // We assume the argument is a LPair2<A, B>.
@@ -90,9 +93,12 @@ mod tests {
     impl Lambda for TupleAdd {
         type Output = TupleAdd;
     }
+    impl Eval for TupleAdd { type Output = Self; }
+
     impl<A, B> Lambda for TupleResult<A, B> {
         type Output = TupleResult<A, B>;
     }
+    impl<A, B> Eval for TupleResult<A, B> { type Output = Self; }
 
     impl<A, B> Lambda for LApp<TupleAdd, LPair2<A, B>>
     where
@@ -109,12 +115,15 @@ mod tests {
     impl Lambda for CurriedAdd {
         type Output = CurriedAdd;
     }
+    impl Eval for CurriedAdd { type Output = Self; }
     impl<A> Lambda for CurriedAdd1<A> {
         type Output = CurriedAdd1<A>;
     }
+    impl<A> Eval for CurriedAdd1<A> { type Output = Self; }
     impl<A, B> Lambda for CurriedResult<A, B> {
         type Output = CurriedResult<A, B>;
     }
+    impl<A, B> Eval for CurriedResult<A, B> { type Output = Self; }
 
     impl<A> Lambda for LApp<CurriedAdd, A>
     where
@@ -135,11 +144,13 @@ mod tests {
     impl Lambda for X {
         type Output = X;
     }
+    impl Eval for X { type Output = Self; }
     #[derive(Clone)]
     struct Y;
     impl Lambda for Y {
         type Output = Y;
     }
+    impl Eval for Y { type Output = Self; }
 
     #[test]
     fn test_curry() {

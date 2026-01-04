@@ -9,6 +9,7 @@ mod primitives; // Hidden
 
 pub mod reify;
 pub mod traits;
+pub mod testing; // New testing module
 
 pub use debug::trace;
 // Flatten primitives

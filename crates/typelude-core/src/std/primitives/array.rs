@@ -558,6 +558,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "nightly")]
     fn test_econtains() {
         type ListExpr = ELit<tyarray![i32, f64, bool, char]>;
 

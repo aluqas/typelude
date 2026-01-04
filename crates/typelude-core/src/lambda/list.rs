@@ -17,6 +17,17 @@ use crate::eval::{Eval, Evaluate};
 // Cons h t = \c n. c h t
 // =========================================================================
 
+// Macro to implement Eval for terms (they evaluate to themselves)
+macro_rules! impl_eval_term {
+    ($($t:ty),*) => {
+        $(
+            impl Eval for $t {
+                type Output = $t;
+            }
+        )*
+    };
+}
+
 /// Nil: \c n. n
 pub struct LNil;
 impl Lambda for LNil {
@@ -24,18 +35,21 @@ impl Lambda for LNil {
 }
 impl LTerm for LNil {}
 impl LList for LNil {}
+impl_eval_term!(LNil);
 
 /// Cons: \h t. \c n. c h t
 pub struct LCons;
 impl Lambda for LCons {
     type Output = LCons;
 }
+impl_eval_term!(LCons);
 
 // Cons H -> Cons1<H>
 pub struct LCons1<H>(PhantomData<H>);
 impl<H> Lambda for LCons1<H> {
     type Output = LCons1<H>;
 }
+impl<H> Eval for LCons1<H> { type Output = Self; }
 
 impl<H> Lambda for LApp<LCons, H>
 where
@@ -51,6 +65,7 @@ impl<H, T> Lambda for LCons2<H, T> {
 }
 impl<H, T> LTerm for LCons2<H, T> {}
 impl<H, T> LList for LCons2<H, T> {} // Only if T is list? Not necessarily for encoding, but good for marking.
+impl<H, T> Eval for LCons2<H, T> { type Output = Self; }
 
 impl<H, T> Lambda for LApp<LCons1<H>, T>
 where
@@ -71,6 +86,7 @@ pub struct Nil1<C>(PhantomData<C>);
 impl<C> Lambda for Nil1<C> {
     type Output = Nil1<C>;
 }
+impl<C> Eval for Nil1<C> { type Output = Self; }
 
 // Nil1<c> n -> n
 impl<C, N> Lambda for LApp<Nil1<C>, N>
@@ -95,6 +111,7 @@ pub struct ConsApply1<H, T, C>(PhantomData<(H, T, C)>);
 impl<H, T, C> Lambda for ConsApply1<H, T, C> {
     type Output = ConsApply1<H, T, C>;
 }
+impl<H, T, C> Eval for ConsApply1<H, T, C> { type Output = Self; }
 
 // ConsApply1<H, T, C> N -> C H T
 impl<H, T, C, N> Lambda for LApp<ConsApply1<H, T, C>, N>
@@ -122,6 +139,8 @@ pub struct K;
 impl Lambda for K {
     type Output = K;
 }
+impl_eval_term!(K);
+
 impl<X> Lambda for LApp<K, X>
 where
     X: Eval,
@@ -132,6 +151,8 @@ pub struct K1<X>(PhantomData<X>);
 impl<X> Lambda for K1<X> {
     type Output = K1<X>;
 }
+impl<X> Eval for K1<X> { type Output = Self; }
+
 impl<X, Y> Lambda for LApp<K1<X>, Y>
 where
     Y: Eval,
@@ -150,6 +171,7 @@ pub struct LHeadOr;
 impl Lambda for LHeadOr {
     type Output = LHeadOr;
 }
+impl_eval_term!(LHeadOr);
 
 impl<L> Lambda for LApp<LHeadOr, L>
 where
@@ -161,6 +183,7 @@ pub struct LHeadOr1<L>(PhantomData<L>);
 impl<L> Lambda for LHeadOr1<L> {
     type Output = LHeadOr1<L>;
 }
+impl<L> Eval for LHeadOr1<L> { type Output = Self; }
 
 impl<L, D> Lambda for LApp<LHeadOr1<L>, D>
 where
@@ -177,6 +200,7 @@ pub struct LTailOr;
 impl Lambda for LTailOr {
     type Output = LTailOr;
 }
+impl_eval_term!(LTailOr);
 
 impl<L> Lambda for LApp<LTailOr, L>
 where
@@ -188,6 +212,7 @@ pub struct LTailOr1<L>(PhantomData<L>);
 impl<L> Lambda for LTailOr1<L> {
     type Output = LTailOr1<L>;
 }
+impl<L> Eval for LTailOr1<L> { type Output = Self; }
 
 impl<L, D> Lambda for LApp<LTailOr1<L>, D>
 where
@@ -208,6 +233,7 @@ pub struct LIsEmpty;
 impl Lambda for LIsEmpty {
     type Output = LIsEmpty;
 }
+impl_eval_term!(LIsEmpty);
 
 impl<L> Lambda for LApp<LIsEmpty, L>
 where
@@ -222,6 +248,7 @@ pub struct LConstFalse;
 impl Lambda for LConstFalse {
     type Output = LConstFalse;
 }
+impl_eval_term!(LConstFalse);
 
 impl<X> Lambda for LApp<LConstFalse, X>
 where
@@ -233,6 +260,7 @@ pub struct LConstFalse1;
 impl Lambda for LConstFalse1 {
     type Output = LConstFalse1;
 }
+impl_eval_term!(LConstFalse1);
 
 impl<Y> Lambda for LApp<LConstFalse1, Y>
 where
@@ -250,6 +278,7 @@ pub struct LFoldr;
 impl Lambda for LFoldr {
     type Output = LFoldr;
 }
+impl_eval_term!(LFoldr);
 
 // Foldr F -> Foldr1<F>
 impl<F> Lambda for LApp<LFoldr, F>
@@ -262,6 +291,7 @@ pub struct LFoldr1<F>(PhantomData<F>);
 impl<F> Lambda for LFoldr1<F> {
     type Output = LFoldr1<F>;
 }
+impl<F> Eval for LFoldr1<F> { type Output = Self; }
 
 // Foldr1<F> Z -> Foldr2<F, Z>
 impl<F, Z> Lambda for LApp<LFoldr1<F>, Z>
@@ -274,6 +304,7 @@ pub struct LFoldr2<F, Z>(PhantomData<(F, Z)>);
 impl<F, Z> Lambda for LFoldr2<F, Z> {
     type Output = LFoldr2<F, Z>;
 }
+impl<F, Z> Eval for LFoldr2<F, Z> { type Output = Self; }
 
 // Foldr2<F, Z> L -> Result
 impl<F, Z, L> Lambda for LApp<LFoldr2<F, Z>, L>
@@ -294,6 +325,7 @@ pub struct LFoldrConsBuilder<F, Z>(PhantomData<(F, Z)>);
 impl<F, Z> Lambda for LFoldrConsBuilder<F, Z> {
     type Output = LFoldrConsBuilder<F, Z>;
 }
+impl<F, Z> Eval for LFoldrConsBuilder<F, Z> { type Output = Self; }
 
 // Builder<F, Z> H -> Builder1<F, Z, H>
 impl<F, Z, H> Lambda for LApp<LFoldrConsBuilder<F, Z>, H>
@@ -309,6 +341,7 @@ pub struct LFoldrConsBuilder1<F, Z, H>(PhantomData<(F, Z, H)>);
 impl<F, Z, H> Lambda for LFoldrConsBuilder1<F, Z, H> {
     type Output = LFoldrConsBuilder1<F, Z, H>;
 }
+impl<F, Z, H> Eval for LFoldrConsBuilder1<F, Z, H> { type Output = Self; }
 
 // Builder1<F, Z, H> T -> F H (Foldr F Z T)
 impl<F, Z, H, T> Lambda for LApp<LFoldrConsBuilder1<F, Z, H>, T>
@@ -345,16 +378,19 @@ mod tests {
     impl Lambda for E1 {
         type Output = E1;
     }
+    impl Eval for E1 { type Output = Self; }
     #[derive(Clone)]
     struct E2;
     impl Lambda for E2 {
         type Output = E2;
     }
+    impl Eval for E2 { type Output = Self; }
     #[derive(Clone)]
     struct DefaultVal;
     impl Lambda for DefaultVal {
         type Output = DefaultVal;
     }
+    impl Eval for DefaultVal { type Output = Self; }
 
     #[test]
     fn test_list_construction_and_destructuring() {
