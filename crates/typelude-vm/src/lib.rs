@@ -1,6 +1,6 @@
-#![feature(generic_const_exprs)]
+#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 #![allow(incomplete_features)]
-#![recursion_limit = "16384"]
+#![recursion_limit = "65536"]
 
 pub mod machine;
 

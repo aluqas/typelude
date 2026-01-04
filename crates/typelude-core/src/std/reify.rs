@@ -102,6 +102,7 @@ impl<T> Reify<[T; 0]> for TyNil {
 
 // ... Array ...
 #[allow(unsafe_code)]
+#[cfg(feature = "nightly")]
 impl<Head, Tail, Val, const N: usize> Reify<[Val; N]> for TyArray<Head, Tail>
 where
     Tail: Cons,

@@ -5,11 +5,11 @@
 
 pub mod debug;
 pub mod ops;
-pub mod primitives;
+mod primitives; // Hidden
 
 pub mod reify;
 pub mod traits;
 
 pub use debug::trace;
-pub use ops::{cmp, into};
+// Flatten primitives
 pub use primitives::{array, bool, int, str};

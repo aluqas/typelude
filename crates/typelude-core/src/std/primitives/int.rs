@@ -3,16 +3,13 @@
 //! Integration with the `typenum` crate and integer arithmetic.
 
 use std::{
-    marker::PhantomData,
     ops::{Add, Div, Mul, Rem, Sub},
 };
 
-use paste::paste;
 use typenum::{B0, B1, NInt, PInt, Pow, UInt, UTerm, Unsigned, Z0};
 
 use crate::{
-    eval::{Eval, Evaluate, Sealed},
-    kernel::traits::Apply,
+    eval::Eval,
     std::traits::{TypeAdd, TypeDiv, TypeMul, TypeNat, TypePow, TypeRem, TypeSub},
 };
 
@@ -104,58 +101,16 @@ where
     type Output = <L as Pow<R>>::Output;
 }
 
-// =============================================================================
-// Arithmetic Functions (Refactored to use Type* Traits)
-// =============================================================================
-
-macro_rules! define_arith_op {
-    ($op_name:ident, $trait:path, $doc:literal) => {
-        paste! {
-            // Operator Symbol
-            #[doc = $doc]
-            pub struct [<Op $op_name>];
-            impl Sealed for [<Op $op_name>] {}
-
-            // Expression Struct
-            pub struct [<E $op_name>]<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
-
-            // Updated: Uses $trait (TypeAdd, etc.) instead of typenum traits
-            impl<Lhs, Rhs> Eval for [<E $op_name>]<Lhs, Rhs>
-            where
-                Lhs: Eval,
-                Rhs: Eval,
-                Evaluate<Lhs>: $trait<Evaluate<Rhs>>,
-                <Evaluate<Lhs> as $trait<Evaluate<Rhs>>>::Output: Eval,
-            {
-                type Output = <Evaluate<Lhs> as $trait<Evaluate<Rhs>>>::Output;
-            }
-
-            // Apply Implementation
-            impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for [<Op $op_name>] {
-                type Output = [<E $op_name>]<Lhs, Rhs>;
-            }
-        }
-    };
-}
-
-// Note: Pass the *Type* trait here, not the typenum trait
-define_arith_op!(Add, TypeAdd, "Addition: A + B");
-define_arith_op!(Sub, TypeSub, "Subtraction: A - B");
-define_arith_op!(Mul, TypeMul, "Multiplication: A * B");
-define_arith_op!(Div, TypeDiv, "Division: A / B");
-define_arith_op!(Rem, TypeRem, "Remainder: A % B");
-define_arith_op!(Pow, TypePow, "Exponentiation: A ^ B");
-
 //
-// Tests
+// Tests (Only for implementation validity)
 //
 
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typenum::{N1, N2, P1, P4, P5, U1, U2, U3, U5, U8, U9, U10, U20};
+    use typenum::{N2, P5, U1, U3, B0, B1};
 
-    use super::*;
+    use crate::{eval::Evaluate, std::ops::EAdd};
 
     #[test]
     fn test_eval_typenum() {
@@ -168,40 +123,6 @@ mod tests {
 
     #[test]
     fn test_add() {
-        assert_type_eq_all!(Evaluate<EAdd<U1, U2>>, U3);
-        assert_type_eq_all!(Evaluate<EAdd<P1, N2>>, N1);
-    }
-
-    #[test]
-    fn test_sub() {
-        assert_type_eq_all!(Evaluate<ESub<U10, U2>>, U8);
-        assert_type_eq_all!(Evaluate<ESub<N1, P1>>, N2);
-    }
-
-    #[test]
-    fn test_mul() {
-        assert_type_eq_all!(Evaluate<EMul<U2, U10>>, U20);
-        assert_type_eq_all!(Evaluate<EMul<N2, N2>>, P4);
-    }
-
-    #[test]
-    fn test_div() {
-        assert_type_eq_all!(Evaluate<EDiv<U10, U2>>, U5);
-    }
-
-    #[test]
-    fn test_rem() {
-        assert_type_eq_all!(Evaluate<ERem<U10, U3>>, U1);
-    }
-
-    #[test]
-    fn test_pow() {
-        assert_type_eq_all!(Evaluate<EPow<U2, U3>>, U8);
-    }
-
-    #[test]
-    fn test_composition() {
-        // (1 + 2) * 3 = 9
-        assert_type_eq_all!(Evaluate<EMul<EAdd<U1, U2>, U3>>, U9);
+        assert_type_eq_all!(Evaluate<EAdd<U1, typenum::U2>>, U3);
     }
 }

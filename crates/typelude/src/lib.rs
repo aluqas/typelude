@@ -6,8 +6,7 @@
 pub use core::{
     eval,
     eval::{Eval, Evaluate},
-    kernel,
-    kernel::traits::Apply,
+    Apply,
     lambda, std, tyarray,
 };
 

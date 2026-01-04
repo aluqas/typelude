@@ -2,19 +2,20 @@
 //!
 //! Implements machine instruction execution logic with history tracking.
 
-use typelude_core::std::{
-    bool::{OpAnd, OpNot, OpOr},
-    cmp::{OpEq, OpGt, OpLt, OpNeq},
-    int::{OpAdd, OpSub},
-};
 use typelude_core::{
+    Apply, // Root export
     eval::{App, EIf, ELit, EWhile, Eval, Evaluate},
-    kernel::{array::Cons, traits::Apply},
     std::{
-        array::{EConcat, Get, Set, TyArray, TyNil},
-        // bool::OpNot,
+        array::{Cons, EConcat, Get, Set, TyArray, TyNil},
+        ops::{
+            EAdd, EAnd, ENot, EOr, ESub, // Expressions
+            OpAdd, OpAnd, OpGt, OpLt, OpNot, OpOr, OpSub, // Operators
+        },
     },
 };
+
+#[cfg(feature = "nightly")]
+use typelude_core::std::ops::{OpEq, OpNeq};
 use typenum::Unsigned;
 
 use crate::machine::{instruction::*, trace::state::TracedMachineState};
@@ -55,10 +56,10 @@ macro_rules! impl_traced_binary_op {
     };
 }
 
-impl_traced_binary_op!(OpAdd, typelude_core::std::int::EAdd<Lhs, Rhs>);
-impl_traced_binary_op!(OpSub, typelude_core::std::int::ESub<Lhs, Rhs>);
-impl_traced_binary_op!(OpAnd, typelude_core::std::bool::EAnd<Lhs, Rhs>);
-impl_traced_binary_op!(OpOr, typelude_core::std::bool::EOr<Lhs, Rhs>);
+impl_traced_binary_op!(OpAdd, EAdd<Lhs, Rhs>);
+impl_traced_binary_op!(OpSub, ESub<Lhs, Rhs>);
+impl_traced_binary_op!(OpAnd, EAnd<Lhs, Rhs>);
+impl_traced_binary_op!(OpOr, EOr<Lhs, Rhs>);
 
 // --- Comparison Ops ---
 macro_rules! impl_traced_cmp_op {
@@ -90,21 +91,23 @@ macro_rules! impl_traced_cmp_op {
     };
 }
 
-impl_traced_cmp_op!(OpEq, typelude_core::std::cmp::OpEq);
-impl_traced_cmp_op!(OpNeq, typelude_core::std::cmp::OpNeq);
-impl_traced_cmp_op!(OpLt, typelude_core::std::cmp::OpLt);
-impl_traced_cmp_op!(OpGt, typelude_core::std::cmp::OpGt);
+#[cfg(feature = "nightly")]
+impl_traced_cmp_op!(OpEq, OpEq);
+#[cfg(feature = "nightly")]
+impl_traced_cmp_op!(OpNeq, OpNeq);
+impl_traced_cmp_op!(OpLt, OpLt);
+impl_traced_cmp_op!(OpGt, OpGt);
 
 // --- Unary Ops ---
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg, History>
     TracedExecute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpNot
 where
-    typelude_core::std::bool::ENot<Val>: Eval,
+    ENot<Val>: Eval,
     RestStack: Cons,
     History: Cons,
 {
     type OutputState = TracedMachineState<
-        TyArray<Evaluate<typelude_core::std::bool::ENot<Val>>, RestStack>,
+        TyArray<Evaluate<ENot<Val>>, RestStack>,
         Locals,
         Memory,
         CallStack,
@@ -476,10 +479,10 @@ pub struct OpTracedIsFinished;
 impl<S, L, M, C, P, H> Apply<TracedMachineState<S, L, M, C, P, H>> for OpTracedIsFinished
 where
     typelude_core::std::array::EIsEmpty<ELit<P>>: Eval,
-    App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>: Eval,
+    App<OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
     type Output =
-        App<typelude_core::std::bool::OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>;
+        App<OpNot, typelude_core::std::array::EIsEmpty<ELit<P>>>;
 }
 
 /// Runner for traced execution

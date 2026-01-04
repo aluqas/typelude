@@ -9,7 +9,7 @@ use crate::{
     eval::Evaluate,
     std::{
         bool::{ToTyBoolOut, TyFalse, TyTrue},
-        into::TyFrom,
+        ops::TyFrom,
     },
 };
 
@@ -22,6 +22,7 @@ pub trait IsEq<Other> {
     const EQ: bool;
 }
 
+#[cfg(feature = "nightly")]
 impl<T, U> IsEq<U> for T {
     default const EQ: bool = false;
 }
@@ -43,7 +44,9 @@ impl ConstToTyBool<false> for () {
     type Output = TyFalse;
 }
 
+#[cfg(feature = "nightly")]
 pub type EqResult<L, R> = <() as ConstToTyBool<{ <L as IsEq<R>>::EQ }>>::Output;
+#[cfg(feature = "nightly")]
 pub type NeqResult<L, R> = <() as ConstToTyBool<{ !<L as IsEq<R>>::EQ }>>::Output;
 
 // =============================================================================
@@ -51,6 +54,7 @@ pub type NeqResult<L, R> = <() as ConstToTyBool<{ !<L as IsEq<R>>::EQ }>>::Outpu
 // =============================================================================
 
 // Equality: A == B
+#[cfg(feature = "nightly")]
 def_op! {
     /// Equality: A == B -> TyBool
     name: OpEq,
@@ -65,6 +69,7 @@ def_op! {
 }
 
 // Inequality: A != B
+#[cfg(feature = "nightly")]
 def_op! {
     /// Inequality: A != B -> TyBool
     name: OpNeq,
