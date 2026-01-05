@@ -1,12 +1,12 @@
 mod private {
-    pub(crate) trait Sealed {}
+    pub(crate) 
 }
 
-trait IsBit: private::Sealed {}
+trait IsBit: private: {}
 
 /// ビットを表す構造体: 0
 struct B0;
-impl private::Sealed for B0 {}
+impl private: for B0 {}
 impl IsBit for B0 {}
 
 trait IsZero: IsBit {}
@@ -14,7 +14,7 @@ impl IsZero for B0 {}
 
 /// ビットを表す構造体: 1
 struct B1;
-impl private::Sealed for B1 {}
+impl private: for B1 {}
 impl IsBit for B1 {}
 trait IsOne: IsBit {}
 impl IsOne for B1 {}
@@ -23,7 +23,7 @@ impl IsOne for B1 {}
 
 struct LogicTarget;
 
-impl private::Sealed for LogicTarget {}
+impl private: for LogicTarget {}
 
 trait Nand<A: IsBit, B: IsBit> { type Output: IsBit; }
 impl Nand<B0, B0> for LogicTarget { type Output = B1; }

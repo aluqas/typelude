@@ -5,7 +5,7 @@ use typelude::{
     eval::Evaluate,
     machine::{execution::ERun, state::MachineState},
     program,
-    std::array::{TyArray, TyNil},
+    std::array::{Array, Nil},
 };
 use typenum::{U21, U55};
 
@@ -51,13 +51,13 @@ fn test_fibonacci_iterative() {
         (get a) // Result
     };
 
-    type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
+    type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
     type FinalState = Evaluate<ERun<InitialState>>;
     type FinalStack = <FinalState as GetStack>::Output;
 
     // The 10th fibonacci number (starting 0, 1, 1, 2...)
     // F0=0, F1=1, F2=1, F3=2, F4=3, F5=5, F6=8, F7=13, F8=21, F9=34, F10=55
-    assert_type_eq_all!(FinalStack, TyArray<U55, TyNil>);
+    assert_type_eq_all!(FinalStack, Array<U55, Nil>);
 }
 
 #[test]
@@ -73,9 +73,9 @@ fn test_sum_list() {
         ))
         (get sum)
     };
-    type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
+    type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
     type FinalState = Evaluate<ERun<InitialState>>;
     type FinalStack = <FinalState as GetStack>::Output;
 
-    assert_type_eq_all!(FinalStack, TyArray<U21, TyNil>);
+    assert_type_eq_all!(FinalStack, Array<U21, Nil>);
 }

@@ -15,13 +15,13 @@ pub use tstr::{TS, ts};
 pub use crate::data::primitives::str::Char;
 pub use crate::std::prim::option::{None, Some};
 
-// Convert TyArray of TyChar to &str?
+// Convert Array of TyChar to &str?
 // Requires const concatenation which is complex.
 // We can use a recursive approach with a const block.
 
 /*
 // This would be ideal but requires advanced const generic expressions
-impl<H, T> Reify<&'static str> for TyArray<H, T>
+impl<H, T> Reify<&'static str> for Array<H, T>
 where
     H: Reify<char>,
     T: Reify<&'static str>
@@ -30,8 +30,8 @@ where
 }
 */
 
-// For now, we rely on tstr for static strings, and TyArray<TyChar> for manipulation.
-// We can provide conversion from TyArray<TyChar> to runtime string via Reify<[char; N]>.
+// For now, we rely on tstr for static strings, and Array<TyChar> for manipulation.
+// We can provide conversion from Array<TyChar> to runtime string via Reify<[char; N]>.
 
 // The Reify<u8> for Char is now handled in `crate::data::primitives::str::Char`
 

@@ -3,7 +3,7 @@ use typelude::{
     eval::{ELit, Evaluate},
     machine::trace::{ETracedRun, TracedMachineState},
     program,
-    std::{array::TyNil, trace::Trace},
+    std::{array::Nil, trace::Trace},
 };
 
 #[test]
@@ -16,9 +16,9 @@ fn test_trace_output() {
         (add)
     };
 
-    // Use TracedMachineState instead of MachineState. It requires 6th param History (default TyNil if we set it, but we can just pass TyNil)
+    // Use TracedMachineState instead of MachineState. It requires 6th param History (default Nil if we set it, but we can just pass Nil)
     // Actually in trace.rs, TracedMachineState has NO default for History.
-    type InitialState = TracedMachineState<TyNil, TyNil, TyNil, TyNil, Prog, TyNil>;
+    type InitialState = TracedMachineState<Nil, Nil, Nil, Nil, Prog, Nil>;
     type FinalState = Evaluate<ETracedRun<ELit<InitialState>>>;
 
     let trace_output = FinalState::fmt();
@@ -35,7 +35,7 @@ fn test_trace_output() {
 
     // Check History content
     // Note: My Trace implementation for list uses `[A, B, C]`.
-    // History is constructed by appending: `TyArray<Inst, History>`.
+    // History is constructed by appending: `Array<Inst, History>`.
     // Initial history is `[]`.
     // 1. Push(3) -> `[Push(3)]`
     // 2. Push(5) -> `[Push(5), Push(3)]`
