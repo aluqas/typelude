@@ -4,6 +4,7 @@
 
 use typelude_core::Evaluate;
 use typelude_macros::def_op;
+use typenum::{B0, B1, Bit, IsEqual};
 
 /// Marker trait for type-level maps
 pub use crate::data::col::map::IsMap as TypeMap;
@@ -16,7 +17,7 @@ use crate::{
 
 /// Get a value by key, returns Some<V> or None.
 ///
-/// Uses type identity (same type = found).
+/// Uses type equality comparison to traverse the map.
 ///
 /// # Examples
 ///
@@ -31,14 +32,34 @@ impl<K> MapGet<K> for Nil {
     type Output = None;
 }
 
-// Key matches exactly (same type)
-impl<K, V, T: TypeMap> MapGet<K> for Map<K, V, T> {
-    type Output = Some<V>;
+/// Helper for MapGet dispatch based on key equality
+#[doc(hidden)]
+pub trait MapGetHelper<Key, NodeKey, NodeValue, Tail, IsEq> {
+    type Output;
 }
 
-// Key doesn't match, continue search in tail
-// This uses nightly specialization or manual impl for specific types
-// For stable Rust, we rely on the fact that only exact type matches work
+// Key == NodeKey: Found
+impl<Key, NodeKey, NodeValue, Tail: TypeMap> MapGetHelper<Key, NodeKey, NodeValue, Tail, B1>
+    for ()
+{
+    type Output = Some<NodeValue>;
+}
+
+// Key != NodeKey: Recurse into Tail
+impl<Key, NodeKey, NodeValue, Tail: TypeMap + MapGet<Key>>
+    MapGetHelper<Key, NodeKey, NodeValue, Tail, B0> for ()
+{
+    type Output = <Tail as MapGet<Key>>::Output;
+}
+
+impl<K, NK, V, T: TypeMap> MapGet<K> for Map<NK, V, T>
+where
+    K: IsEqual<NK>,
+    <K as IsEqual<NK>>::Output: Bit,
+    (): MapGetHelper<K, NK, V, T, <K as IsEqual<NK>>::Output>,
+{
+    type Output = <() as MapGetHelper<K, NK, V, T, <K as IsEqual<NK>>::Output>>::Output;
+}
 
 /// Insert a key-value pair (prepend, allows shadowing).
 ///
@@ -70,9 +91,31 @@ impl<K> MapContains<K> for Nil {
     type Output = False;
 }
 
-// Key matches exactly
-impl<K, V, T: TypeMap> MapContains<K> for Map<K, V, T> {
+/// Helper for MapContains dispatch based on key equality
+#[doc(hidden)]
+pub trait MapContainsHelper<Key, NodeKey, Tail, IsEq> {
+    type Output;
+}
+
+// Key == NodeKey: Found
+impl<Key, NodeKey, Tail: TypeMap> MapContainsHelper<Key, NodeKey, Tail, B1> for () {
     type Output = True;
+}
+
+// Key != NodeKey: Recurse into Tail
+impl<Key, NodeKey, Tail: TypeMap + MapContains<Key>> MapContainsHelper<Key, NodeKey, Tail, B0>
+    for ()
+{
+    type Output = <Tail as MapContains<Key>>::Output;
+}
+
+impl<K, NK, V, T: TypeMap> MapContains<K> for Map<NK, V, T>
+where
+    K: IsEqual<NK>,
+    <K as IsEqual<NK>>::Output: Bit,
+    (): MapContainsHelper<K, NK, T, <K as IsEqual<NK>>::Output>,
+{
+    type Output = <() as MapContainsHelper<K, NK, T, <K as IsEqual<NK>>::Output>>::Output;
 }
 
 /// Extract all keys as an Array
@@ -193,10 +236,13 @@ macro_rules! tymap {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typenum::{U1, U2};
+    use typenum::{U1, U2, U3};
 
     use super::*;
-    use crate::data::col::array::{Array, Nil as NilArray};
+    use crate::{
+        data::col::array::{Array, Nil as NilArray},
+        std::prim::option::{None, Some},
+    };
 
     #[test]
     fn test_map_insert_keys_values() {
@@ -228,5 +274,53 @@ mod tests {
         type Keys = <Map3 as MapKeys>::Output;
         // Insert prepends, so order is U2, U1
         assert_type_eq_all!(Keys, Array<U2, Array<U1, NilArray>>);
+    }
+
+    #[test]
+    fn test_map_get_recursion() {
+        // Map layout: U2 -> f64, U1 -> i32 (U2 is head, U1 is in tail)
+        type TestMap = super::Map<U2, f64, super::Map<U1, i32, Nil>>;
+
+        // Get head key (U2)
+        type Res1 = <TestMap as MapGet<U2>>::Output;
+        assert_type_eq_all!(Res1, Some<f64>);
+
+        // Get tail key (U1) - THIS is what was broken before
+        type Res2 = <TestMap as MapGet<U1>>::Output;
+        assert_type_eq_all!(Res2, Some<i32>);
+
+        // Get non-existent key (U3)
+        type Res3 = <TestMap as MapGet<U3>>::Output;
+        assert_type_eq_all!(Res3, None);
+    }
+
+    #[test]
+    fn test_map_contains_recursion() {
+        // Map layout: U2 -> f64, U1 -> i32
+        type TestMap = super::Map<U2, f64, super::Map<U1, i32, Nil>>;
+
+        // Contains head key (U2)
+        type Has2 = <TestMap as MapContains<U2>>::Output;
+        assert_type_eq_all!(Has2, True);
+
+        // Contains tail key (U1) - THIS is what was broken before
+        type Has1 = <TestMap as MapContains<U1>>::Output;
+        assert_type_eq_all!(Has1, True);
+
+        // Contains non-existent key (U3)
+        type Has3 = <TestMap as MapContains<U3>>::Output;
+        assert_type_eq_all!(Has3, False);
+    }
+
+    #[test]
+    fn test_map_get_empty() {
+        type Res = <Nil as MapGet<U1>>::Output;
+        assert_type_eq_all!(Res, None);
+    }
+
+    #[test]
+    fn test_map_contains_empty() {
+        type Res = <Nil as MapContains<U1>>::Output;
+        assert_type_eq_all!(Res, False);
     }
 }

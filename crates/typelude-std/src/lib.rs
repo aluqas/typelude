@@ -2,7 +2,7 @@
 #![cfg_attr(feature = "nightly", feature(specialization))]
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 #![allow(incomplete_features)]
-#![recursion_limit = "16384"]
+#![recursion_limit = "256"]
 
 #[macro_use]
 pub mod macros;
