@@ -133,3 +133,48 @@ impl<T: Trace> Trace for typelude_core::ELit<T> {
         T::fmt()
     }
 }
+
+// Trace implementations for std::ops operators
+use crate::std::ops::{OpAdd, OpAnd, OpGt, OpLt, OpNot, OpOr, OpSub};
+
+impl Trace for OpAdd {
+    fn fmt() -> String {
+        "Add".to_string()
+    }
+}
+
+impl Trace for OpSub {
+    fn fmt() -> String {
+        "Sub".to_string()
+    }
+}
+
+impl Trace for OpAnd {
+    fn fmt() -> String {
+        "And".to_string()
+    }
+}
+
+impl Trace for OpOr {
+    fn fmt() -> String {
+        "Or".to_string()
+    }
+}
+
+impl Trace for OpNot {
+    fn fmt() -> String {
+        "Not".to_string()
+    }
+}
+
+impl Trace for OpLt {
+    fn fmt() -> String {
+        "Lt".to_string()
+    }
+}
+
+impl Trace for OpGt {
+    fn fmt() -> String {
+        "Gt".to_string()
+    }
+}

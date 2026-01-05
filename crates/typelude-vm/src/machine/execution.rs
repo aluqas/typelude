@@ -441,6 +441,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(unused)]
     fn test_while_loop_countdown() {
         use typenum::{U0, U1, U3};
         // OpLt for < (0 < 3 -> True)
