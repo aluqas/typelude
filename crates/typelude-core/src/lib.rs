@@ -1,17 +1,18 @@
 pub mod app;
 pub mod bridge;
-pub mod impls;
-pub mod traits; // Typenum support
+
+pub mod apply; // Typenum support
 
 pub use app::*;
+pub use apply::*;
 pub use bridge::*;
-pub use traits::*;
 
 /// Sealed trait pattern
 #[doc(hidden)]
 pub trait Sealed {}
 
-/// Trait to evaluate type-level expressions
+pub mod impls;
+
 #[diagnostic::on_unimplemented(
     message = "`{Self}` cannot be evaluated",
     label = "Eval not implemented",
@@ -23,3 +24,13 @@ pub trait Eval {
 
 /// Type alias to obtain evaluation results of expressions
 pub type Evaluate<T> = <T as Eval>::Output;
+
+/// Evaluation Barrier for Literals
+///
+/// Wraps a type `T` to prevent further evaluation or to simply treat it as a value.
+/// `ELit<T>` evaluates to `T`.
+pub struct ELit<T>(pub std::marker::PhantomData<T>);
+
+impl<T> Eval for ELit<T> {
+    type Output = T;
+}

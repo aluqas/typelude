@@ -2,11 +2,13 @@
 //!
 //! Type-level booleans (`TyTrue`, `TyFalse`) and logical operations.
 
+use typelude_core::Eval;
 use typenum::{B0, B1};
 
 // Re-export kernel types
-pub use crate::model::bool::{Bool as TyBool, TyFalse, TyTrue};
-use crate::{eval::Eval, std::traits::TypeBool};
+// Re-export kernel types
+pub use crate::data::primitives::bool::{Bool as TyBool, TyFalse, TyTrue};
+use crate::std::traits::TypeBool;
 
 //
 // Adapter Implementation: TypeBool for TyTrue, TyFalse, B0, B1
@@ -84,12 +86,10 @@ pub type ToTyBoolOut<T> = <bool as TyFrom<T>>::Output;
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
+    use typelude_core::{ELit, Evaluate};
 
     use super::*;
-    use crate::{
-        eval::{ELit, Evaluate},
-        std::ops::logic::*,
-    };
+    use crate::std::ops::logic::*;
 
     #[test]
     fn test_not() {

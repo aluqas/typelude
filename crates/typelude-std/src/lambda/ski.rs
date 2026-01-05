@@ -1,7 +1,9 @@
 use std::marker::PhantomData;
 
+use typelude_core::{Eval, Evaluate};
+
 use super::{LApp, Lambda};
-use crate::{eval::{Eval, Evaluate}, impl_eval_for_lambda, impl_eval_for_lambda_generic};
+use crate::{impl_eval_for_lambda, impl_eval_for_lambda_generic};
 
 // =========================================================================
 // The Fundamental Combinators

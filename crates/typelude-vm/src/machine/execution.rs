@@ -2,11 +2,11 @@
 //!
 //! Implements machine instruction execution logic and main loop.
 
-use typelude_core::Apply;
+use typelude_core::{App, Apply, Eval, Evaluate};
 #[allow(unused_imports)]
 use typelude_std::std::int;
 use typelude_std::{
-    eval::{App, EIf, EWhile, Eval, Evaluate},
+    expr::{EIf, EWhile},
     std::{
         array::{Concat, Cons, EConcat, Get, Set, TyArray, TyNil}, // Cons is here
         bool::{TyFalse, TyTrue},

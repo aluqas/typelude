@@ -10,10 +10,9 @@
 
 use std::marker::PhantomData;
 
-use crate::{
-    eval::Eval,
-    lambda::{LApp, Lambda},
-};
+use typelude_core::Eval;
+
+use crate::lambda::{LApp, Lambda};
 
 // =========================================================================
 // Thunk
@@ -27,7 +26,9 @@ pub struct LThunk<F, Arg>(PhantomData<(F, Arg)>);
 impl<F, Arg> Lambda for LThunk<F, Arg> {
     type Output = LThunk<F, Arg>;
 }
-impl<F, Arg> Eval for LThunk<F, Arg> { type Output = Self; }
+impl<F, Arg> Eval for LThunk<F, Arg> {
+    type Output = Self;
+}
 
 // =========================================================================
 // Force
@@ -38,7 +39,9 @@ pub struct LForce;
 impl Lambda for LForce {
     type Output = LForce;
 }
-impl Eval for LForce { type Output = Self; }
+impl Eval for LForce {
+    type Output = Self;
+}
 
 // Thunk<F, Arg> Force -> F Arg
 impl<F, Arg> Lambda for LApp<LThunk<F, Arg>, LForce>
@@ -53,9 +56,9 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
+    use typelude_core::Evaluate;
 
-    use super::*;
-    use crate::eval::Evaluate; // Imported here for tests
+    use super::*; // Imported here for tests
 
     type App<F, A> = Evaluate<LApp<F, A>>;
 
@@ -64,21 +67,27 @@ mod tests {
     impl Lambda for AddOne {
         type Output = AddOne;
     }
-    impl Eval for AddOne { type Output = Self; }
+    impl Eval for AddOne {
+        type Output = Self;
+    }
 
     #[derive(Clone)]
     struct Zero;
     impl Lambda for Zero {
         type Output = Zero;
     }
-    impl Eval for Zero { type Output = Self; }
+    impl Eval for Zero {
+        type Output = Self;
+    }
 
     #[derive(Clone)]
     struct One;
     impl Lambda for One {
         type Output = One;
     }
-    impl Eval for One { type Output = Self; }
+    impl Eval for One {
+        type Output = Self;
+    }
 
     impl Lambda for LApp<AddOne, Zero> {
         type Output = One;

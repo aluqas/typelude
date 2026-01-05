@@ -7,13 +7,13 @@
 #[macro_use]
 pub mod macros;
 
-pub mod eval;
+pub mod data;
+pub mod expr;
 pub mod lambda;
-pub mod model;
 pub mod std;
+pub mod traits;
 
 // Export typenum for macros
 pub use paste;
+pub use typelude_core::{self, Eval, Evaluate};
 pub use typenum;
-
-pub use crate::eval::{Eval, Evaluate};

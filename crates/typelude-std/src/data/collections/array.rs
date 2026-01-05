@@ -1,10 +1,10 @@
-//! **Kernel: Array Types**
+//! **Type-Level Array Data**
 //!
 //! Pure data structures for type-level arrays (Cons Lists).
 
 use std::marker::PhantomData;
 
-use crate::eval::{Eval, Sealed};
+use typelude_core::{Eval, Sealed};
 
 /// **Marker Trait**
 ///
@@ -40,14 +40,12 @@ impl<Head, Tail: Cons> Eval for TyArray<Head, Tail> {
 }
 
 /// Macro for easily creating type lists
-///
-/// Uses public API paths (`std::array`) to ensure usability outside the crate.
 #[macro_export]
 macro_rules! tyarray {
     // Empty list
-    () => { $crate::std::array::TyNil };
+    () => { $crate::data::collections::array::TyNil };
     // List with length 1 (with optional trailing comma)
-    ($n:ty $(,)?) => { $crate::std::array::TyArray<$n, $crate::std::array::TyNil> };
+    ($n:ty $(,)?) => { $crate::data::collections::array::TyArray<$n, $crate::data::collections::array::TyNil> };
     // List with length 2 or more (with optional trailing comma)
-    ($n:ty, $($tail:ty),+ $(,)?) => { $crate::std::array::TyArray<$n, $crate::tyarray![$($tail),+]> };
+    ($n:ty, $($tail:ty),+ $(,)?) => { $crate::data::collections::array::TyArray<$n, $crate::tyarray![$($tail),+]> };
 }

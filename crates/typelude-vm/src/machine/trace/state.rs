@@ -1,9 +1,7 @@
 use core::marker::PhantomData;
 
-use typelude_std::{
-    eval::{Eval, Sealed},
-    std::trace::Trace,
-};
+use typelude_core::{Eval, Sealed};
+use typelude_std::std::trace::Trace;
 
 #[derive(Debug)]
 pub struct TracedMachineState<Stack, Locals, Memory, CallStack, Program, History>(

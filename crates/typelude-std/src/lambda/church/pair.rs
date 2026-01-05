@@ -5,11 +5,12 @@
 
 use std::marker::PhantomData;
 
+use typelude_core::{Eval, Evaluate};
+
 use super::bool::{LFalse, LTrue};
 use crate::{
-    eval::{Eval, Evaluate},
-    lambda::{LApp, Lambda},
     impl_eval_for_lambda, impl_eval_for_lambda_generic,
+    lambda::{LApp, Lambda},
 };
 
 // =========================================================================

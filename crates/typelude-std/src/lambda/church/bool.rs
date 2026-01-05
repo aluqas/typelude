@@ -6,13 +6,14 @@
 
 use std::marker::PhantomData;
 
+use typelude_core::{Eval, Evaluate};
+
 use crate::{
-    eval::{Eval, Evaluate},
+    impl_eval_for_lambda, impl_eval_for_lambda_generic,
     lambda::{
         LApp, Lambda,
         traits::{LBool, LTerm},
     },
-    impl_eval_for_lambda, impl_eval_for_lambda_generic,
 };
 
 // =========================================================================

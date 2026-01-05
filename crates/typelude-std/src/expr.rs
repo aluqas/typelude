@@ -6,12 +6,11 @@
 
 use std::marker::PhantomData;
 
+use typelude_core::{Eval, Evaluate};
+
 use crate::{
-    eval::{Eval, Evaluate},
-    model::{
-        bool::{TyFalse, TyTrue},
-        traits::Apply,
-    },
+    data::primitives::bool::{TyFalse, TyTrue},
+    traits::Apply,
 };
 
 // Wait, the previous `expr.rs` implemented `EIf` and `EWhile` directly.

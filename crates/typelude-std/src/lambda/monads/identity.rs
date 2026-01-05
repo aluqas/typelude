@@ -4,10 +4,9 @@
 
 use std::marker::PhantomData;
 
-use crate::{
-    eval::Eval,
-    lambda::{LApp, Lambda, traits::LBind},
-};
+use typelude_core::Eval;
+
+use crate::lambda::{LApp, Lambda, traits::LBind};
 
 /// Identity Monad: Id<T>
 ///
@@ -17,7 +16,9 @@ pub struct LId<T>(PhantomData<T>);
 impl<T> Lambda for LId<T> {
     type Output = LId<T>;
 }
-impl<T> Eval for LId<T> { type Output = Self; }
+impl<T> Eval for LId<T> {
+    type Output = Self;
+}
 
 // Bind: Id<T> >>= F  ->  F T
 // F must be a function that takes T and returns Id<U>.
@@ -33,19 +34,19 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
+    use typelude_core::Evaluate;
 
     use super::*;
-    use crate::{
-        eval::Evaluate,
-        lambda::church::{LSucc, LZero},
-    };
+    use crate::lambda::church::{LSucc, LZero};
 
     #[derive(Clone)]
     struct AddOne;
     impl Lambda for AddOne {
         type Output = AddOne;
     }
-    impl Eval for AddOne { type Output = Self; }
+    impl Eval for AddOne {
+        type Output = Self;
+    }
 
     impl<X> Lambda for LApp<AddOne, X>
     where

@@ -6,11 +6,11 @@
 use typenum::{Bit, Integer, UInt, UTerm, Unsigned};
 
 #[cfg(feature = "nightly")]
-use crate::model::array::{Cons, TyArray};
+use crate::data::collections::array::{Cons, TyArray};
 use crate::{
-    model::{
-        array::TyNil,
-        bool::{TyFalse, TyTrue},
+    data::{
+        collections::array::TyNil,
+        primitives::bool::{TyFalse, TyTrue},
     },
     std::traits::TypeBool,
 };
@@ -129,8 +129,8 @@ where
 
 // ... Tuple ...
 macro_rules! define_tylist {
-    ($head:ident) => { crate::model::array::TyArray<$head, TyNil> };
-    ($head:ident, $($tail:ident),+) => { crate::model::array::TyArray<$head, define_tylist!($($tail),+)> };
+    ($head:ident) => { crate::data::collections::array::TyArray<$head, TyNil> };
+    ($head:ident, $($tail:ident),+) => { crate::data::collections::array::TyArray<$head, define_tylist!($($tail),+)> };
 }
 macro_rules! impl_flat_tuple {
     ($($n:tt $T:ident $V:ident),+) => {

@@ -169,7 +169,7 @@ impl DefOpInput {
                 let eval_bounds: Vec<_> = args
                     .iter()
                     .map(|arg| {
-                        quote! { #arg: crate::eval::Eval }
+                        quote! { #arg: typelude_core::Eval }
                     })
                     .collect();
 
@@ -195,7 +195,7 @@ impl DefOpInput {
                     pub struct #ast_name<#(#args),*>(::std::marker::PhantomData<#phantom_args>);
 
                     // 2. Implement Eval for AST
-                    impl<#(#args),*> crate::eval::Eval for #ast_name<#(#args),*>
+                    impl<#(#args),*> typelude_core::Eval for #ast_name<#(#args),*>
                     where
                         #(#eval_bounds,)*
                         #(#user_bounds,)*
@@ -206,10 +206,10 @@ impl DefOpInput {
                     // 3. Define Op marker
                     #(#doc_attrs)*
                     pub struct #op_name;
-                    impl crate::eval::Sealed for #op_name {}
+                    impl typelude_core::Sealed for #op_name {}
 
                     // 4. Implement Apply
-                    impl<#(#args),*> crate::model::traits::Apply<#apply_args> for #op_name {
+                    impl<#(#args),*> crate::traits::Apply<#apply_args> for #op_name {
                         type Output = #ast_name<#(#args),*>;
                     }
                 }
@@ -228,10 +228,10 @@ impl DefOpInput {
                     // 1. Define Op marker
                     #(#doc_attrs)*
                     pub struct #op_name;
-                    impl crate::eval::Sealed for #op_name {}
+                    impl typelude_core::Sealed for #op_name {}
 
                     // 2. Implement Apply with alias
-                    impl<#(#args),*> crate::model::traits::Apply<#apply_args> for #op_name {
+                    impl<#(#args),*> crate::traits::Apply<#apply_args> for #op_name {
                         type Output = #alias_ty;
                     }
                 }

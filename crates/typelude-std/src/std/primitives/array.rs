@@ -7,6 +7,7 @@ use std::{
     ops::{Add, Sub},
 };
 
+use typelude_core::{ELit, Eval, Evaluate, Sealed};
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
 // =============================================================================
@@ -14,14 +15,12 @@ use typenum::{B1, Sub1, U0, UInt, Unsigned};
 // =============================================================================
 
 // Re-export kernel types for convenience/compatibility if mostly used from here
-pub use crate::model::array::{Cons, TyArray, TyNil};
+pub use crate::data::collections::array::{Cons, TyArray, TyNil};
 use crate::{
-    eval::{EIf, ELit, Eval, Evaluate, Sealed},
-    model::{
-        bool::{TyFalse, TyTrue},
-        traits::Apply,
-    },
+    data::primitives::bool::{TyFalse, TyTrue},
+    expr::EIf,
     std::traits::TypeList,
+    traits::Apply,
 };
 
 // =============================================================================
@@ -536,11 +535,11 @@ impl<Op, Init, List> Apply<(Op, Init, List)> for OpFold {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
+    use typelude_core::ELit;
     use typenum::{U0, U1, U2, U10, U12};
 
     use super::*;
     use crate::{
-        eval::ELit,
         std::{
             bool::{ToTyBoolOut, TyFalse, TyTrue},
             ops::TyFrom,

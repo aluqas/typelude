@@ -5,13 +5,11 @@
 use std::ops::Add;
 
 use static_assertions::assert_type_eq_all;
+use typelude_core::{Eval, Evaluate};
 use typelude_macros::def_op;
 use typenum::{U1, U2, U3, U5, U6, U12, U42};
 
-use crate::{
-    eval::{Eval, Evaluate},
-    model::traits::Apply,
-};
+use crate::traits::Apply;
 
 // =============================================================================
 // Test: AST Pattern - Basic Binary Operation

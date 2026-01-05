@@ -1,8 +1,8 @@
-//! **Kernel: Boolean Types**
+//! **Type-Level Boolean Data**
 //!
 //! Pure data structures for type-level booleans.
 
-use crate::eval::{Eval, Sealed};
+use typelude_core::{Eval, Sealed};
 
 /// **Marker Trait**
 ///

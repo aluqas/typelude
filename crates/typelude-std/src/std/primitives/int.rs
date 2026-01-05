@@ -2,15 +2,11 @@
 //!
 //! Integration with the `typenum` crate and integer arithmetic.
 
-use std::{
-    ops::{Add, Div, Mul, Rem, Sub},
-};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
-use typenum::{Pow};
+use typenum::Pow;
 
-use crate::{
-    std::traits::{TypeAdd, TypeDiv, TypeMul, TypeNat, TypePow, TypeRem, TypeSub},
-};
+use crate::std::traits::{TypeAdd, TypeDiv, TypeMul, TypeNat, TypePow, TypeRem, TypeSub};
 
 // Eval implementation is now in typelude-kernel (via impls.rs)
 // We just define the Traits and Adapter Logic here.
@@ -76,9 +72,10 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typenum::{N2, P5, U1, U3, B0, B1};
+    use typelude_core::{ELit, Evaluate};
+    use typenum::{B0, B1, N2, P5, U1, U3};
 
-    use crate::{eval::{Evaluate, ELit}, std::ops::EAdd};
+    use crate::std::ops::EAdd;
 
     #[test]
     fn test_eval_typenum() {

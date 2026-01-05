@@ -1,6 +1,6 @@
 use static_assertions::assert_type_eq_all;
 use typelude::{
-    eval::Evaluate,
+    Evaluate,
     machine::{execution::ERun, state::MachineState},
     program,
     std::array::{TyArray, TyNil},

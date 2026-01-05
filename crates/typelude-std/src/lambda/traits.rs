@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use crate::eval::Eval;
+use typelude_core::Eval;
 
 // =========================================================================
 // Lambda Trait
@@ -22,7 +22,7 @@ pub trait Lambda {
 #[macro_export]
 macro_rules! impl_eval_for_lambda {
     ($t:ty) => {
-        impl $crate::eval::Eval for $t {
+        impl $crate::typelude_core::Eval for $t {
             type Output = <$t as $crate::lambda::traits::Lambda>::Output;
         }
     };
@@ -33,7 +33,7 @@ macro_rules! impl_eval_for_lambda {
 #[macro_export]
 macro_rules! impl_eval_for_lambda_generic {
     ($t:ident, [$($p:ident),+]) => {
-        impl<$($p),+> $crate::eval::Eval for $t<$($p),+>
+        impl<$($p),+> $crate::typelude_core::Eval for $t<$($p),+>
         where
             $t<$($p),+>: $crate::lambda::traits::Lambda,
         {

@@ -5,24 +5,24 @@ macro_rules! define_arith_op {
             // Operator Symbol
             #[doc = $doc]
             pub struct [<Op $op_name>];
-            impl $crate::eval::Sealed for [<Op $op_name>] {}
+            impl $crate::typelude_core::Sealed for [<Op $op_name>] {}
 
             // Expression Struct
             pub struct [<E $op_name>]<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
 
             // Updated: Uses $trait (TypeAdd, etc.) instead of typenum traits
-            impl<Lhs, Rhs> $crate::eval::Eval for [<E $op_name>]<Lhs, Rhs>
+            impl<Lhs, Rhs> $crate::typelude_core::Eval for [<E $op_name>]<Lhs, Rhs>
             where
-                Lhs: $crate::eval::Eval,
-                Rhs: $crate::eval::Eval,
-                $crate::eval::Evaluate<Lhs>: $trait<$crate::eval::Evaluate<Rhs>>,
-                <$crate::eval::Evaluate<Lhs> as $trait<$crate::eval::Evaluate<Rhs>>>::Output: $crate::eval::Eval,
+                Lhs: $crate::typelude_core::Eval,
+                Rhs: $crate::typelude_core::Eval,
+                $crate::typelude_core::Evaluate<Lhs>: $trait<$crate::typelude_core::Evaluate<Rhs>>,
+                <$crate::typelude_core::Evaluate<Lhs> as $trait<$crate::typelude_core::Evaluate<Rhs>>>::Output: $crate::typelude_core::Eval,
             {
-                type Output = <$crate::eval::Evaluate<Lhs> as $trait<$crate::eval::Evaluate<Rhs>>>::Output;
+                type Output = <$crate::typelude_core::Evaluate<Lhs> as $trait<$crate::typelude_core::Evaluate<Rhs>>>::Output;
             }
 
             // Apply Implementation
-            impl<Lhs, Rhs> $crate::model::traits::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
+            impl<Lhs, Rhs> $crate::traits::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
                 type Output = [<E $op_name>]<Lhs, Rhs>;
             }
         }
@@ -36,23 +36,23 @@ macro_rules! define_logic_op {
             // Operator Symbol
             #[doc = $doc]
             pub struct [<Op $op_name>];
-            impl $crate::eval::Sealed for [<Op $op_name>] {}
+            impl $crate::typelude_core::Sealed for [<Op $op_name>] {}
 
             // Expression Struct
             pub struct [<E $op_name>]<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
 
-            impl<Lhs, Rhs> $crate::eval::Eval for [<E $op_name>]<Lhs, Rhs>
+            impl<Lhs, Rhs> $crate::typelude_core::Eval for [<E $op_name>]<Lhs, Rhs>
             where
-                Lhs: $crate::eval::Eval,
-                Rhs: $crate::eval::Eval,
-                $crate::eval::Evaluate<Lhs>: $trait,
-                $crate::eval::Evaluate<Rhs>: $trait,
+                Lhs: $crate::typelude_core::Eval,
+                Rhs: $crate::typelude_core::Eval,
+                $crate::typelude_core::Evaluate<Lhs>: $trait,
+                $crate::typelude_core::Evaluate<Rhs>: $trait,
             {
-                type Output = <$crate::eval::Evaluate<Lhs> as $trait>::$method<$crate::eval::Evaluate<Rhs>>;
+                type Output = <$crate::typelude_core::Evaluate<Lhs> as $trait>::$method<$crate::typelude_core::Evaluate<Rhs>>;
             }
 
             // Apply Implementation
-            impl<Lhs, Rhs> $crate::model::traits::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
+            impl<Lhs, Rhs> $crate::traits::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
                 type Output = [<E $op_name>]<Lhs, Rhs>;
             }
         }
@@ -66,21 +66,21 @@ macro_rules! define_unary_logic_op {
             // Operator Symbol
             #[doc = $doc]
             pub struct [<Op $op_name>];
-            impl $crate::eval::Sealed for [<Op $op_name>] {}
+            impl $crate::typelude_core::Sealed for [<Op $op_name>] {}
 
             // Expression Struct
             pub struct [<E $op_name>]<Val>(std::marker::PhantomData<Val>);
 
-            impl<Val> $crate::eval::Eval for [<E $op_name>]<Val>
+            impl<Val> $crate::typelude_core::Eval for [<E $op_name>]<Val>
             where
-                Val: $crate::eval::Eval,
-                $crate::eval::Evaluate<Val>: $trait,
+                Val: $crate::typelude_core::Eval,
+                $crate::typelude_core::Evaluate<Val>: $trait,
             {
-                type Output = <$crate::eval::Evaluate<Val> as $trait>::$method;
+                type Output = <$crate::typelude_core::Evaluate<Val> as $trait>::$method;
             }
 
             // Apply Implementation
-            impl<Val> $crate::model::traits::Apply<Val> for [<Op $op_name>] {
+            impl<Val> $crate::traits::Apply<Val> for [<Op $op_name>] {
                 type Output = [<E $op_name>]<Val>;
             }
         }
@@ -105,8 +105,7 @@ macro_rules! static_assert_true {
         const _: () = {
             // Reify the type to a boolean value
             // We use fully qualified path to ensure we use the correct trait
-            use $crate::std::reify::Reify;
-            use $crate::eval::Evaluate;
+            use $crate::{eval::Evaluate, std::reify::Reify};
 
             // Note: $Condition might be an expression needing evaluation
             type Evaluated = Evaluate<$Condition>;

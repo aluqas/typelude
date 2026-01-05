@@ -2,15 +2,13 @@
 //!
 //! Implementation of comparison operations using `typenum`.
 
+use typelude_core::{Eval, Evaluate};
 use typelude_macros::def_op;
 use typenum::{Bit, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
-use crate::{
-    eval::Evaluate,
-    std::{
-        bool::{ToTyBoolOut, TyFalse, TyTrue},
-        ops::TyFrom,
-    },
+use crate::std::{
+    bool::{ToTyBoolOut, TyFalse, TyTrue},
+    ops::TyFrom,
 };
 
 //
@@ -155,10 +153,10 @@ def_op! {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
+    use typelude_core::ELit;
     use typenum::{N1, P1, P2, U1, U2};
 
     use super::*;
-    use crate::eval::ELit;
 
     #[test]
     #[cfg(feature = "nightly")]

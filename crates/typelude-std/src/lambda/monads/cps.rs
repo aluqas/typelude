@@ -5,10 +5,9 @@
 
 use std::marker::PhantomData;
 
-use crate::{
-    eval::Eval,
-    lambda::{LApp, Lambda, traits::LBind},
-};
+use typelude_core::Eval;
+
+use crate::lambda::{LApp, Lambda, traits::LBind};
 
 // =========================================================================
 // Cont Monad: Cont<R, A> ~ (A -> R) -> R
@@ -23,7 +22,9 @@ pub struct LCont<F>(PhantomData<F>);
 impl<F> Lambda for LCont<F> {
     type Output = LCont<F>;
 }
-impl<F> Eval for LCont<F> { type Output = Self; }
+impl<F> Eval for LCont<F> {
+    type Output = Self;
+}
 
 /// Run a continuation with a given continuation function.
 ///
@@ -52,7 +53,9 @@ pub struct LContPure<A>(PhantomData<A>);
 impl<A> Lambda for LContPure<A> {
     type Output = LContPure<A>;
 }
-impl<A> Eval for LContPure<A> { type Output = Self; }
+impl<A> Eval for LContPure<A> {
+    type Output = Self;
+}
 
 // ContPure<A> is Cont where F = PureF<A>
 // PureF<A> K -> K A
@@ -60,7 +63,9 @@ pub struct LPureF<A>(PhantomData<A>);
 impl<A> Lambda for LPureF<A> {
     type Output = LPureF<A>;
 }
-impl<A> Eval for LPureF<A> { type Output = Self; }
+impl<A> Eval for LPureF<A> {
+    type Output = Self;
+}
 
 impl<A, K> Lambda for LApp<LPureF<A>, K>
 where
@@ -87,7 +92,9 @@ pub struct LBindF<F, G>(PhantomData<(F, G)>);
 impl<F, G> Lambda for LBindF<F, G> {
     type Output = LBindF<F, G>;
 }
-impl<F, G> Eval for LBindF<F, G> { type Output = Self; }
+impl<F, G> Eval for LBindF<F, G> {
+    type Output = Self;
+}
 
 impl<F, G, K> Lambda for LApp<LBindF<F, G>, K>
 where
@@ -105,7 +112,9 @@ pub struct LBindK<G, K>(PhantomData<(G, K)>);
 impl<G, K> Lambda for LBindK<G, K> {
     type Output = LBindK<G, K>;
 }
-impl<G, K> Eval for LBindK<G, K> { type Output = Self; }
+impl<G, K> Eval for LBindK<G, K> {
+    type Output = Self;
+}
 
 impl<G, K, A> Lambda for LApp<LBindK<G, K>, A>
 where
@@ -143,9 +152,9 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
+    use typelude_core::Evaluate;
 
-    use super::*;
-    use crate::eval::Evaluate; // Imported here for tests
+    use super::*; // Imported here for tests
 
     // Helper alias
     type App<F, A> = Evaluate<LApp<F, A>>;
@@ -155,13 +164,17 @@ mod tests {
     impl Lambda for A {
         type Output = A;
     }
-    impl Eval for A { type Output = Self; }
+    impl Eval for A {
+        type Output = Self;
+    }
     #[derive(Clone)]
     struct B;
     impl Lambda for B {
         type Output = B;
     }
-    impl Eval for B { type Output = Self; }
+    impl Eval for B {
+        type Output = Self;
+    }
 
     // Identity continuation: K A -> A
     #[derive(Clone)]
@@ -169,7 +182,9 @@ mod tests {
     impl Lambda for IdK {
         type Output = IdK;
     }
-    impl Eval for IdK { type Output = Self; }
+    impl Eval for IdK {
+        type Output = Self;
+    }
 
     impl<X> Lambda for LApp<IdK, X>
     where
@@ -194,7 +209,9 @@ mod tests {
         impl Lambda for Transform {
             type Output = Transform;
         }
-        impl Eval for Transform { type Output = Self; }
+        impl Eval for Transform {
+            type Output = Self;
+        }
 
         impl<X> Lambda for LApp<Transform, X>
         where

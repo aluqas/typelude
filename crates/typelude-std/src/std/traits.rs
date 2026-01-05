@@ -16,7 +16,7 @@
 //!
 //! This "Adapter Pattern" allows the core logic to remain agnostic of the underlying concrete types.
 
-use crate::eval::{ELit, Eval};
+use typelude_core::{ELit, Eval};
 
 /// Trait representing a function
 ///
