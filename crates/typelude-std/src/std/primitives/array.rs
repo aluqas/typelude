@@ -7,7 +7,7 @@ use std::{
     ops::{Add, Sub},
 };
 
-use typelude_core::{ELit, Eval, Evaluate, Sealed};
+use typelude_core::{ELit, Eval, Evaluate};
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
 // =============================================================================
@@ -190,134 +190,130 @@ where
 }
 
 // =============================================================================
-// Layer 3: Expression Structs (Direct Style)
+// Layer 3 & 5: Operations via def_op! Macro
 // =============================================================================
 
-// --- ELen ---
-pub struct ELen<Array>(PhantomData<Array>);
+use typelude_macros::def_op;
 
-impl<Array> Eval for ELen<Array>
-where
-    Array: Eval,
-    Evaluate<Array>: Len, // Keeping Len for now as TypeList doesn't enforce "Unsigned" output for Length directly yet
-{
-    type Output = <Evaluate<Array> as Len>::Output;
+// --- Basic Array Operations ---
+
+def_op! {
+    /// Get the length of an array
+    name: OpLen,
+    args: (Array),
+    ast: ELen {
+        where: [
+            Evaluate<Array>: Len
+        ],
+        type Output = <Evaluate<Array> as Len>::Output
+    }
 }
 
-// --- EHead ---
-pub struct EHead<Array>(PhantomData<Array>);
-
-impl<Array> Eval for EHead<Array>
-where
-    Array: Eval,
-    Evaluate<Array>: TypeList,
-{
-    type Output = <Evaluate<Array> as TypeList>::Head;
+def_op! {
+    /// Get the head (first element) of an array
+    name: OpHead,
+    args: (Array),
+    ast: EHead {
+        where: [
+            Evaluate<Array>: TypeList
+        ],
+        type Output = <Evaluate<Array> as TypeList>::Head
+    }
 }
 
-// --- ETail ---
-pub struct ETail<Array>(PhantomData<Array>);
-
-impl<Array> Eval for ETail<Array>
-where
-    Array: Eval,
-    Evaluate<Array>: TypeList,
-    <Evaluate<Array> as TypeList>::Tail: Eval,
-{
-    type Output = <Evaluate<Array> as TypeList>::Tail;
+def_op! {
+    /// Get the tail (all but first) of an array
+    name: OpTail,
+    args: (Array),
+    ast: ETail {
+        where: [
+            Evaluate<Array>: TypeList,
+            <Evaluate<Array> as TypeList>::Tail: Eval
+        ],
+        type Output = <Evaluate<Array> as TypeList>::Tail
+    }
 }
 
-// --- EIsEmpty ---
-pub struct EIsEmpty<Array>(PhantomData<Array>);
-
-impl<Array> Eval for EIsEmpty<Array>
-where
-    Array: Eval,
-    Evaluate<Array>: IsEmpty, // Keep IsEmpty trait for now as logic is specific
-{
-    type Output = <Evaluate<Array> as IsEmpty>::Output;
+def_op! {
+    /// Check if an array is empty
+    name: OpIsEmpty,
+    args: (Array),
+    ast: EIsEmpty {
+        where: [
+            Evaluate<Array>: IsEmpty
+        ],
+        type Output = <Evaluate<Array> as IsEmpty>::Output
+    }
 }
 
-// --- EGet ---
-pub struct EGet<Array, Idx>(PhantomData<(Array, Idx)>);
+// --- Index Operations ---
 
-impl<Array, Idx> Eval for EGet<Array, Idx>
-where
-    Array: Eval,
-    Idx: Eval,
-    Evaluate<Idx>: Unsigned,
-    Evaluate<Array>: Get<Evaluate<Idx>>,
-{
-    type Output = <Evaluate<Array> as Get<Evaluate<Idx>>>::Output;
+def_op! {
+    /// Get element at index
+    name: OpGet,
+    args: (Array, Idx),
+    ast: EGet {
+        where: [
+            Evaluate<Idx>: Unsigned,
+            Evaluate<Array>: Get<Evaluate<Idx>>
+        ],
+        type Output = <Evaluate<Array> as Get<Evaluate<Idx>>>::Output
+    }
 }
 
-// --- ESet ---
-pub struct ESet<Array, Idx, Val>(PhantomData<(Array, Idx, Val)>);
-
-impl<Array, Idx, Val> Eval for ESet<Array, Idx, Val>
-where
-    Array: Eval,
-    Idx: Eval,
-    Val: Eval,
-    Evaluate<Idx>: Unsigned,
-    Evaluate<Array>: Set<Evaluate<Idx>, Evaluate<Val>>,
-{
-    type Output = <Evaluate<Array> as Set<Evaluate<Idx>, Evaluate<Val>>>::Output;
+def_op! {
+    /// Set element at index
+    name: OpSet,
+    args: (Array, Idx, Val),
+    ast: ESet {
+        where: [
+            Evaluate<Idx>: Unsigned,
+            Evaluate<Array>: Set<Evaluate<Idx>, Evaluate<Val>>
+        ],
+        type Output = <Evaluate<Array> as Set<Evaluate<Idx>, Evaluate<Val>>>::Output
+    }
 }
 
-// --- EConcat ---
-pub struct EConcat<Lhs, Rhs>(PhantomData<(Lhs, Rhs)>);
+// --- Concatenation Operations ---
 
-impl<Lhs, Rhs> Eval for EConcat<Lhs, Rhs>
-where
-    Lhs: Eval,
-    Rhs: Eval,
-    Evaluate<Rhs>: Cons,
-    Evaluate<Lhs>: Concat<Evaluate<Rhs>>,
-{
-    type Output = <Evaluate<Lhs> as Concat<Evaluate<Rhs>>>::Output;
+def_op! {
+    /// Concatenate two arrays
+    name: OpConcat,
+    args: (Lhs, Rhs),
+    ast: EConcat {
+        where: [
+            Evaluate<Rhs>: Cons,
+            Evaluate<Lhs>: Concat<Evaluate<Rhs>>
+        ],
+        type Output = <Evaluate<Lhs> as Concat<Evaluate<Rhs>>>::Output
+    }
 }
 
-// --- EAppend ---
-pub struct EAppend<Array, Elem>(PhantomData<(Array, Elem)>);
-
-impl<Array, Elem> Eval for EAppend<Array, Elem>
-where
-    Array: Eval,
-    Elem: Eval,
-    Evaluate<Array>: Concat<TyArray<Evaluate<Elem>, TyNil>>,
-{
-    type Output = <Evaluate<Array> as Concat<TyArray<Evaluate<Elem>, TyNil>>>::Output;
+def_op! {
+    /// Append element to end of array
+    name: OpAppend,
+    args: (Array, Elem),
+    ast: EAppend {
+        where: [
+            Evaluate<Array>: Concat<TyArray<Evaluate<Elem>, TyNil>>
+        ],
+        type Output = <Evaluate<Array> as Concat<TyArray<Evaluate<Elem>, TyNil>>>::Output
+    }
 }
 
-// --- EPrepend ---
-pub struct EPrepend<Elem, Array>(PhantomData<(Elem, Array)>);
-
-impl<Elem, Array> Eval for EPrepend<Elem, Array>
-where
-    Elem: Eval,
-    Array: Eval,
-    Evaluate<Array>: TypeList, // Use TypeList::Cons
-{
-    type Output = <Evaluate<Array> as TypeList>::Cons<Evaluate<Elem>>;
+def_op! {
+    /// Prepend element to start of array
+    name: OpPrepend,
+    args: (Elem, Array),
+    ast: EPrepend {
+        where: [
+            Evaluate<Array>: TypeList
+        ],
+        type Output = <Evaluate<Array> as TypeList>::Cons<Evaluate<Elem>>
+    }
 }
 
-// --- EContains ---
-#[cfg(feature = "nightly")]
-pub struct EContains<Array, Elem>(PhantomData<(Array, Elem)>);
-
-#[cfg(feature = "nightly")]
-impl<Array, Elem> Eval for EContains<Array, Elem>
-where
-    Array: Eval,
-    Elem: Eval,
-    Evaluate<Array>: Contains<Evaluate<Elem>>,
-    (): crate::std::reify::ReflectBool<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>,
-{
-    type Output = Evaluate<
-        crate::std::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>,
-    >;
-}
+// --- Higher-Order Operations (defined separately due to complex bounds) ---
 
 // --- EMap ---
 pub struct EMap<Op, List>(PhantomData<(Op, List)>);
@@ -351,6 +347,54 @@ where
     Evaluate<List>: FoldHelper<Op, Evaluate<Init>>,
 {
     type Output = <Evaluate<List> as FoldHelper<Op, Evaluate<Init>>>::Output;
+}
+
+// --- EContains ---
+#[cfg(feature = "nightly")]
+pub struct EContains<Array, Elem>(PhantomData<(Array, Elem)>);
+
+#[cfg(feature = "nightly")]
+impl<Array, Elem> Eval for EContains<Array, Elem>
+where
+    Array: Eval,
+    Elem: Eval,
+    Evaluate<Array>: Contains<Evaluate<Elem>>,
+    (): crate::std::reify::ReflectBool<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>,
+{
+    type Output = Evaluate<
+        crate::std::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>,
+    >;
+}
+
+// --- Operator Symbols for Higher-Order Operations ---
+
+def_op! {
+    /// Map a function over an array
+    name: OpMap,
+    args: (Op, List),
+    alias: EMap<Op, List>
+}
+
+def_op! {
+    /// Filter array elements by predicate
+    name: OpFilter,
+    args: (Pred, List),
+    alias: EFilter<Pred, List>
+}
+
+def_op! {
+    /// Fold/reduce an array
+    name: OpFold,
+    args: (Op, Init, List),
+    alias: EFold<Op, Init, List>
+}
+
+// OpContains is nightly-only
+#[cfg(feature = "nightly")]
+pub struct OpContains;
+#[cfg(feature = "nightly")]
+impl<Array, Elem> Apply<(Array, Elem)> for OpContains {
+    type Output = EContains<Array, Elem>;
 }
 
 // =============================================================================
@@ -453,79 +497,324 @@ where
 }
 
 // =============================================================================
-// Layer 5: Operator Symbols (Apply Impls)
+// RFC-0001 Phase 1: New Array Operations
 // =============================================================================
 
-pub struct OpLen;
-pub struct OpHead;
-pub struct OpTail;
-pub struct OpIsEmpty;
-pub struct OpGet;
-pub struct OpSet;
-pub struct OpConcat;
-pub struct OpAppend;
-pub struct OpPrepend;
-pub struct OpContains;
-pub struct OpMap;
-pub struct OpFilter;
-pub struct OpFold;
+use crate::std::primitives::option::{TyNone, TySome};
 
-impl Sealed for OpLen {}
-impl Sealed for OpHead {}
-impl Sealed for OpTail {}
-impl Sealed for OpIsEmpty {}
-impl Sealed for OpGet {}
-impl Sealed for OpSet {}
-impl Sealed for OpConcat {}
-impl Sealed for OpAppend {}
-impl Sealed for OpPrepend {}
-impl Sealed for OpContains {}
-impl Sealed for OpMap {}
-impl Sealed for OpFilter {}
-impl Sealed for OpFold {}
+// --- Reverse ---
 
-impl<Array> Apply<Array> for OpLen {
-    type Output = ELen<Array>;
-}
-impl<Array> Apply<Array> for OpHead {
-    type Output = EHead<Array>;
-}
-impl<Array> Apply<Array> for OpTail {
-    type Output = ETail<Array>;
-}
-impl<Array> Apply<Array> for OpIsEmpty {
-    type Output = EIsEmpty<Array>;
+/// Reverse trait: reverses the order of elements
+pub trait Reverse {
+    type Output;
 }
 
-impl<Array, Idx> Apply<(Array, Idx)> for OpGet {
-    type Output = EGet<Array, Idx>;
-}
-impl<Array, Idx, Val> Apply<(Array, Idx, Val)> for OpSet {
-    type Output = ESet<Array, Idx, Val>;
+impl Reverse for TyNil {
+    type Output = TyNil;
 }
 
-impl<Lhs, Rhs> Apply<(Lhs, Rhs)> for OpConcat {
-    type Output = EConcat<Lhs, Rhs>;
-}
-impl<Array, Elem> Apply<(Array, Elem)> for OpAppend {
-    type Output = EAppend<Array, Elem>;
-}
-impl<Elem, Array> Apply<(Elem, Array)> for OpPrepend {
-    type Output = EPrepend<Elem, Array>;
-}
-#[cfg(feature = "nightly")]
-impl<Array, Elem> Apply<(Array, Elem)> for OpContains {
-    type Output = EContains<Array, Elem>;
+impl<Head, Tail: Cons> Reverse for TyArray<Head, Tail>
+where
+    Tail: Reverse,
+    <Tail as Reverse>::Output: Concat<TyArray<Head, TyNil>>,
+{
+    type Output = <<Tail as Reverse>::Output as Concat<TyArray<Head, TyNil>>>::Output;
 }
 
-impl<Op, List> Apply<(Op, List)> for OpMap {
-    type Output = EMap<Op, List>;
+// --- Take<N> ---
+
+/// Take trait: take first N elements
+pub trait Take<N> {
+    type Output;
 }
-impl<Pred, List> Apply<(Pred, List)> for OpFilter {
-    type Output = EFilter<Pred, List>;
+
+impl<N> Take<N> for TyNil {
+    type Output = TyNil;
 }
-impl<Op, Init, List> Apply<(Op, Init, List)> for OpFold {
-    type Output = EFold<Op, Init, List>;
+
+impl<Head, Tail: Cons> Take<U0> for TyArray<Head, Tail> {
+    type Output = TyNil;
+}
+
+impl<Head, Tail: Cons, N: Unsigned, B: typenum::Bit> Take<UInt<N, B>> for TyArray<Head, Tail>
+where
+    UInt<N, B>: Sub<B1>,
+    Sub1<UInt<N, B>>: Unsigned,
+    Tail: Take<Sub1<UInt<N, B>>>,
+    <Tail as Take<Sub1<UInt<N, B>>>>::Output: Cons,
+{
+    type Output = TyArray<Head, <Tail as Take<Sub1<UInt<N, B>>>>::Output>;
+}
+
+// --- Drop<N> ---
+
+/// Drop trait: skip first N elements
+pub trait Drop<N> {
+    type Output;
+}
+
+impl<N> Drop<N> for TyNil {
+    type Output = TyNil;
+}
+
+impl<Head, Tail: Cons> Drop<U0> for TyArray<Head, Tail> {
+    type Output = TyArray<Head, Tail>;
+}
+
+impl<Head, Tail: Cons, N: Unsigned, B: typenum::Bit> Drop<UInt<N, B>> for TyArray<Head, Tail>
+where
+    UInt<N, B>: Sub<B1>,
+    Sub1<UInt<N, B>>: Unsigned,
+    Tail: Drop<Sub1<UInt<N, B>>>,
+{
+    type Output = <Tail as Drop<Sub1<UInt<N, B>>>>::Output;
+}
+
+// --- Last ---
+
+/// Last trait: get the last element
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` does not have a Last element",
+    label = "Last not implemented",
+    note = "ensure `{Self}` is a non-empty list"
+)]
+pub trait Last {
+    type Output;
+}
+
+impl<T> Last for TyArray<T, TyNil> {
+    type Output = T;
+}
+
+impl<Head, T, Rest: Cons> Last for TyArray<Head, TyArray<T, Rest>>
+where
+    TyArray<T, Rest>: Last,
+{
+    type Output = <TyArray<T, Rest> as Last>::Output;
+}
+
+// --- Zip ---
+
+/// Zip trait: combine two lists pairwise
+pub trait Zip<Other> {
+    type Output;
+}
+
+impl<Other> Zip<Other> for TyNil {
+    type Output = TyNil;
+}
+
+impl<H, T: Cons> Zip<TyNil> for TyArray<H, T> {
+    type Output = TyNil;
+}
+
+impl<H1, T1: Cons, H2, T2: Cons> Zip<TyArray<H2, T2>> for TyArray<H1, T1>
+where
+    T1: Zip<T2>,
+    <T1 as Zip<T2>>::Output: Cons,
+{
+    type Output = TyArray<(H1, H2), <T1 as Zip<T2>>::Output>;
+}
+
+// --- Find<Pred> ---
+
+/// Find trait: find first element matching predicate, returns TySome/TyNone
+pub trait Find<Pred> {
+    type Output; // TySome<T> or TyNone
+}
+
+impl<Pred> Find<Pred> for TyNil {
+    type Output = TyNone;
+}
+
+/// Helper for Find dispatch
+#[doc(hidden)]
+pub trait FindHelper<Pred, Head, Tail> {
+    type Output;
+}
+
+impl<Pred, Head, Tail: Cons> FindHelper<Pred, Head, Tail> for TyTrue {
+    type Output = TySome<Head>;
+}
+
+impl<Pred, Head, Tail: Cons + Find<Pred>> FindHelper<Pred, Head, Tail> for TyFalse {
+    type Output = <Tail as Find<Pred>>::Output;
+}
+
+impl<Pred, Head, Tail: Cons> Find<Pred> for TyArray<Head, Tail>
+where
+    Pred: Apply<Head>,
+    <Pred as Apply<Head>>::Output: Eval,
+    Evaluate<<Pred as Apply<Head>>::Output>: FindHelper<Pred, Head, Tail>,
+{
+    type Output =
+        <Evaluate<<Pred as Apply<Head>>::Output> as FindHelper<Pred, Head, Tail>>::Output;
+}
+
+// --- Any<Pred> ---
+
+/// Any trait: true if any element satisfies predicate
+pub trait Any<Pred> {
+    type Output; // TyTrue or TyFalse
+}
+
+impl<Pred> Any<Pred> for TyNil {
+    type Output = TyFalse;
+}
+
+/// Helper for Any dispatch
+#[doc(hidden)]
+pub trait AnyHelper<Pred, Tail> {
+    type Output;
+}
+
+impl<Pred, Tail: Cons> AnyHelper<Pred, Tail> for TyTrue {
+    type Output = TyTrue;
+}
+
+impl<Pred, Tail: Cons + Any<Pred>> AnyHelper<Pred, Tail> for TyFalse {
+    type Output = <Tail as Any<Pred>>::Output;
+}
+
+impl<Pred, Head, Tail: Cons> Any<Pred> for TyArray<Head, Tail>
+where
+    Pred: Apply<Head>,
+    <Pred as Apply<Head>>::Output: Eval,
+    Evaluate<<Pred as Apply<Head>>::Output>: AnyHelper<Pred, Tail>,
+{
+    type Output = <Evaluate<<Pred as Apply<Head>>::Output> as AnyHelper<Pred, Tail>>::Output;
+}
+
+// --- All<Pred> ---
+
+/// All trait: true if all elements satisfy predicate
+pub trait All<Pred> {
+    type Output; // TyTrue or TyFalse
+}
+
+impl<Pred> All<Pred> for TyNil {
+    type Output = TyTrue;
+}
+
+/// Helper for All dispatch
+#[doc(hidden)]
+pub trait AllHelper<Pred, Tail> {
+    type Output;
+}
+
+impl<Pred, Tail: Cons + All<Pred>> AllHelper<Pred, Tail> for TyTrue {
+    type Output = <Tail as All<Pred>>::Output;
+}
+
+impl<Pred, Tail: Cons> AllHelper<Pred, Tail> for TyFalse {
+    type Output = TyFalse;
+}
+
+impl<Pred, Head, Tail: Cons> All<Pred> for TyArray<Head, Tail>
+where
+    Pred: Apply<Head>,
+    <Pred as Apply<Head>>::Output: Eval,
+    Evaluate<<Pred as Apply<Head>>::Output>: AllHelper<Pred, Tail>,
+{
+    type Output = <Evaluate<<Pred as Apply<Head>>::Output> as AllHelper<Pred, Tail>>::Output;
+}
+
+// --- RFC-0001 Phase 1: Expression + Op definitions via def_op! ---
+
+def_op! {
+    /// Reverse a list
+    name: OpReverse,
+    args: (List),
+    ast: EReverse {
+        where: [
+            Evaluate<List>: Reverse
+        ],
+        type Output = <Evaluate<List> as Reverse>::Output
+    }
+}
+
+def_op! {
+    /// Take first N elements from a list
+    name: OpTake,
+    args: (N, List),
+    ast: ETake {
+        where: [
+            Evaluate<List>: Take<Evaluate<N>>
+        ],
+        type Output = <Evaluate<List> as Take<Evaluate<N>>>::Output
+    }
+}
+
+def_op! {
+    /// Drop first N elements from a list
+    name: OpDrop,
+    args: (N, List),
+    ast: EDrop {
+        where: [
+            Evaluate<List>: Drop<Evaluate<N>>
+        ],
+        type Output = <Evaluate<List> as Drop<Evaluate<N>>>::Output
+    }
+}
+
+def_op! {
+    /// Get the last element of a list
+    name: OpLast,
+    args: (List),
+    ast: ELast {
+        where: [
+            Evaluate<List>: Last
+        ],
+        type Output = <Evaluate<List> as Last>::Output
+    }
+}
+
+def_op! {
+    /// Zip two lists together pairwise
+    name: OpZip,
+    args: (L1, L2),
+    ast: EZip {
+        where: [
+            Evaluate<L1>: Zip<Evaluate<L2>>
+        ],
+        type Output = <Evaluate<L1> as Zip<Evaluate<L2>>>::Output
+    }
+}
+
+def_op! {
+    /// Find first element matching predicate
+    name: OpFind,
+    args: (Pred, List),
+    ast: EFind {
+        where: [
+            Evaluate<List>: Find<Evaluate<Pred>>
+        ],
+        type Output = <Evaluate<List> as Find<Evaluate<Pred>>>::Output
+    }
+}
+
+def_op! {
+    /// True if any element matches predicate
+    name: OpAny,
+    args: (Pred, List),
+    ast: EAny {
+        where: [
+            Evaluate<List>: Any<Evaluate<Pred>>
+        ],
+        type Output = <Evaluate<List> as Any<Evaluate<Pred>>>::Output
+    }
+}
+
+def_op! {
+    /// True if all elements match predicate
+    name: OpAll,
+    args: (Pred, List),
+    ast: EAll {
+        where: [
+            Evaluate<List>: All<Evaluate<Pred>>
+        ],
+        type Output = <Evaluate<List> as All<Evaluate<Pred>>>::Output
+    }
 }
 
 // =============================================================================
@@ -672,5 +961,75 @@ mod tests {
         type Summed = EFold<OpSum, ELit<U0>, ELit<List>>;
 
         assert_type_eq_all!(Evaluate<Summed>, U6);
+    }
+
+    // ==========================================================================
+    // RFC-0001 Phase 1: New Operations Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_reverse() {
+        use typenum::{U1, U2, U3};
+
+        type List = tyarray![U1, U2, U3];
+        type Reversed = <List as Reverse>::Output;
+        assert_type_eq_all!(Reversed, tyarray![U3, U2, U1]);
+
+        // Empty list
+        type EmptyReversed = <TyNil as Reverse>::Output;
+        assert_type_eq_all!(EmptyReversed, TyNil);
+    }
+
+    #[test]
+    fn test_take_drop() {
+        use typenum::{U1, U2, U3, U4};
+
+        type List = tyarray![U1, U2, U3, U4];
+
+        // Take<2> -> [1, 2]
+        type Taken = <List as Take<U2>>::Output;
+        assert_type_eq_all!(Taken, tyarray![U1, U2]);
+
+        // Drop<2> -> [3, 4]
+        type Dropped = <List as Drop<U2>>::Output;
+        assert_type_eq_all!(Dropped, tyarray![U3, U4]);
+
+        // Take<0> -> []
+        type TakeZero = <List as Take<U0>>::Output;
+        assert_type_eq_all!(TakeZero, TyNil);
+
+        // Drop<0> -> [1, 2, 3, 4]
+        type DropZero = <List as Drop<U0>>::Output;
+        assert_type_eq_all!(DropZero, List);
+    }
+
+    #[test]
+    fn test_last() {
+        use typenum::{U1, U2, U3};
+
+        type List = tyarray![U1, U2, U3];
+        type LastElem = <List as Last>::Output;
+        assert_type_eq_all!(LastElem, U3);
+
+        // Single element
+        type Single = tyarray![U1];
+        type SingleLast = <Single as Last>::Output;
+        assert_type_eq_all!(SingleLast, U1);
+    }
+
+    #[test]
+    fn test_zip() {
+        use typenum::{U1, U2, U3};
+
+        type ListA = tyarray![U1, U2, U3];
+        type ListB = tyarray![i32, f64, bool];
+        type Zipped = <ListA as Zip<ListB>>::Output;
+
+        assert_type_eq_all!(Zipped, tyarray![(U1, i32), (U2, f64), (U3, bool)]);
+
+        // Different lengths - shorter wins
+        type Short = tyarray![U1];
+        type ZipShort = <ListA as Zip<Short>>::Output;
+        assert_type_eq_all!(ZipShort, tyarray![(U1, U1)]);
     }
 }
