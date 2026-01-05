@@ -42,7 +42,6 @@ where
 // Re-export Apply from core to ensure compatibility with LApp and other core constructs
 pub use typelude_core::Apply;
 
-
 /// Marker trait for Natural Numbers (Unsigned Integers).
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a valid Type-Level Natural Number",
@@ -93,7 +92,6 @@ pub trait TPow<Rhs> {
     type Output;
 }
 
-
 /// Type-level Boolean Logic.
 ///
 /// Implementors: `True`, `False`, `B0`, `B1`.
@@ -118,7 +116,6 @@ pub trait Bool: Eval {
     /// Result of `!(Self ^ Rhs)`
     type Xnor<Rhs: Bool>;
 }
-
 
 /// Type-level List (Cons List).
 #[diagnostic::on_unimplemented(

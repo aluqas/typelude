@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{quote};
+use quote::quote;
 use syn::{
     Ident, LitInt, Result, Token, Type, parenthesized,
     parse::{Parse, ParseStream},
@@ -11,7 +11,7 @@ mod def_op;
 mod dsl;
 
 use def_op::DefOpInput;
-use dsl::{TyDslInput, BoundDslInput, ImplEvalInput};
+use dsl::{BoundDslInput, ImplEvalInput, TyDslInput};
 
 // ... existing program macro code ...
 
