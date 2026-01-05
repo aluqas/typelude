@@ -7,3 +7,13 @@ members = [
     "crates/typelude-macros",
 ]
 resolver = "2"
+
+[workspace.lints.rust]
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+todo = "warn"
+print_stdout = "warn"
+# pedantic = "warn" # Uncomment iteratively to avoid overwhelming errors initially

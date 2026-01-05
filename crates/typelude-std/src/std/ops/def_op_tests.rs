@@ -5,16 +5,11 @@
 use std::ops::Add;
 
 use static_assertions::assert_type_eq_all;
-use typelude_core::{Eval, Evaluate};
+use typelude_core::{ECons, ENil, Eval, Evaluate};
 use typelude_macros::def_op;
 use typenum::{U1, U2, U3, U5, U6, U12, U42};
 
 use crate::traits::Apply;
-
-// =============================================================================
-// Test: AST Pattern - Basic Binary Operation
-// =============================================================================
-
 def_op! {
     /// Test: Addition operation
     name: TestOpAdd,
@@ -30,18 +25,13 @@ def_op! {
 #[test]
 fn test_ast_pattern_add() {
     // Apply returns AST
-    type Ast = <TestOpAdd as Apply<(U1, U2)>>::Output;
+    type Ast = <TestOpAdd as Apply<ECons<U1, ECons<U2, ENil>>>>::Output;
     assert_type_eq_all!(Ast, TestEAdd<U1, U2>);
 
     // Evaluate computes result
     type Result = Evaluate<TestEAdd<U1, U2>>;
     assert_type_eq_all!(Result, U3);
 }
-
-// =============================================================================
-// Test: AST Pattern - Unary Operation
-// =============================================================================
-
 def_op! {
     /// Test: Identity operation (unary)
     name: TestOpId,
@@ -60,11 +50,6 @@ fn test_ast_pattern_unary() {
     type Result = Evaluate<TestEId<U42>>;
     assert_type_eq_all!(Result, U42);
 }
-
-// =============================================================================
-// Test: Alias Pattern - Simple Alias
-// =============================================================================
-
 /// A simple wrapper AST for testing
 pub struct TestWrap<T>(std::marker::PhantomData<T>);
 impl<T: Eval> Eval for TestWrap<T> {
@@ -88,11 +73,6 @@ fn test_alias_pattern() {
     type Result = Evaluate<TestWrap<U1>>;
     assert_type_eq_all!(Result, U1);
 }
-
-// =============================================================================
-// Test: Alias Pattern - Binary Alias
-// =============================================================================
-
 def_op! {
     /// Test: Add alias redirecting to TestEAdd
     name: TestOpAddAlias,
@@ -102,17 +82,12 @@ def_op! {
 
 #[test]
 fn test_alias_pattern_binary() {
-    type Ast = <TestOpAddAlias as Apply<(U5, U1)>>::Output;
+    type Ast = <TestOpAddAlias as Apply<ECons<U5, ECons<U1, ENil>>>>::Output;
     assert_type_eq_all!(Ast, TestEAdd<U5, U1>);
 
     type Result = Evaluate<Ast>;
     assert_type_eq_all!(Result, U6);
 }
-
-// =============================================================================
-// Test: Complex Where Bounds
-// =============================================================================
-
 /// Custom Multiply trait for testing
 pub trait TestMul<Rhs> {
     type Output;
@@ -146,11 +121,6 @@ fn test_complex_bounds() {
     type R2 = Evaluate<TestEMul<typenum::U4, U3>>;
     assert_type_eq_all!(R2, U12);
 }
-
-// =============================================================================
-// Test: Nested Evaluation
-// =============================================================================
-
 #[test]
 fn test_nested_evaluation() {
     // (1 + 2) + 3 = 6

@@ -7,17 +7,6 @@ use super::{
     church::{LFalse, LTrue},
     traits::{LList, LTerm},
 };
-
-// =========================================================================
-// Scott Encoded List
-//
-// Scott encoding allows for O(1) head/tail access.
-//
-// Definition:
-// Nil = \c n. n
-// Cons h t = \c n. c h t
-// =========================================================================
-
 // Macro to implement Eval for terms (they evaluate to themselves)
 macro_rules! impl_eval_term {
     ($($t:ty),*) => {
@@ -134,11 +123,6 @@ where
 {
     type Output = <LApp<<LApp<C, H> as Lambda>::Output, T> as Lambda>::Output;
 }
-
-// =========================================================================
-// Basic Accessors
-// =========================================================================
-
 /// Uncons l on_cons on_nil
 // LApp<LApp<L, OnCons>, OnNil>
 pub type LPureUncons<L, OnCons, OnNil> = Evaluate<LApp<LApp<L, OnCons>, OnNil>>;
@@ -238,11 +222,6 @@ where
 {
     type Output = <LApp<<LApp<L, LFalse> as Lambda>::Output, D> as Lambda>::Output;
 }
-
-// =========================================================================
-// IsEmpty
-// =========================================================================
-
 /// IsEmpty: \l. l (\h t. False) True
 pub struct LIsEmpty;
 impl Lambda for LIsEmpty {
@@ -283,11 +262,6 @@ where
 {
     type Output = LFalse;
 }
-
-// =========================================================================
-// Foldr (Right Fold)
-// =========================================================================
-
 /// Foldr f z l
 pub struct LFoldr;
 impl Lambda for LFoldr {

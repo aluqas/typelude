@@ -5,22 +5,12 @@
 use std::marker::PhantomData;
 
 use super::Lambda;
-
-// =========================================================================
-// Reflexivity: Proof that A == A
-// =========================================================================
-
 /// Reflexivity witness: `Refl<A>` proves that `A` equals itself.
 pub struct LRefl<A>(PhantomData<A>);
 
 impl<A> Lambda for LRefl<A> {
     type Output = LRefl<A>;
 }
-
-// =========================================================================
-// Type Equality
-// =========================================================================
-
 /// Marker trait asserting that two types are equal.
 /// If `A: TypeEq<B>`, then `A` and `B` are the same type.
 pub trait LTypeEq<B> {
@@ -31,33 +21,18 @@ pub trait LTypeEq<B> {
 impl<A> LTypeEq<A> for A {
     type Proof = LRefl<A>;
 }
-
-// =========================================================================
-// Symmetry: If A == B then B == A
-// =========================================================================
-
 /// Symmetry witness: transforms `Proof<A, B>` into `Proof<B, A>`.
 pub struct LSym<Proof>(PhantomData<Proof>);
 
 impl<A> Lambda for LSym<LRefl<A>> {
     type Output = LRefl<A>;
 }
-
-// =========================================================================
-// Transitivity: If A == B and B == C then A == C
-// =========================================================================
-
 /// Transitivity witness: combines two proofs.
 pub struct LTrans<Proof1, Proof2>(PhantomData<(Proof1, Proof2)>);
 
 impl<A> Lambda for LTrans<LRefl<A>, LRefl<A>> {
     type Output = LRefl<A>;
 }
-
-// =========================================================================
-// Congruence: If A == B then F<A> == F<B>
-// =========================================================================
-
 /// Congruence witness: lifts equality through a type constructor.
 pub struct LCong<F, Proof>(PhantomData<(F, Proof)>);
 

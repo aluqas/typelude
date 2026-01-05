@@ -11,10 +11,6 @@ use typelude_core::{ELit, Eval, Evaluate};
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
 pub use crate::data::collections::array::IsList;
-// =============================================================================
-// Layer 1: Values (Data Structure)
-// =============================================================================
-
 // Re-export kernel types for convenience/compatibility if mostly used from here
 pub use crate::data::collections::array::{Array, Nil};
 /// Re-export List trait for public use
@@ -24,11 +20,6 @@ use crate::{
     expr::EIf,
     traits::Apply,
 };
-
-// =============================================================================
-// Adapter Implementation: List for Array/Nil
-// =============================================================================
-
 impl List for Nil {
     type Cons<NewHead> = Array<NewHead, Nil>;
     // Head/Tail for Nil are usually undefined or Unit/Nil
@@ -41,11 +32,6 @@ impl<Head, Tail: IsList> List for Array<Head, Tail> {
     type Head = Head;
     type Tail = Tail;
 }
-
-// =============================================================================
-// Layer 2: Capabilities (Verbs) - Deprecated/Wrapped by List, but kept for logic
-// =============================================================================
-
 /// Array length
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a type with a length",
@@ -190,11 +176,6 @@ where
 {
     const VALUE: bool = <Head as IsEq<Elem>>::EQ || <Tail as Contains<Elem>>::VALUE;
 }
-
-// =============================================================================
-// Layer 3 & 5: Operations via def_op! Macro
-// =============================================================================
-
 use typelude_macros::def_op;
 
 // --- Basic Array Operations ---
@@ -398,11 +379,6 @@ pub struct OpContains;
 impl<Array, Elem> Apply<(Array, Elem)> for OpContains {
     type Output = EContains<Array, Elem>;
 }
-
-// =============================================================================
-// Layer 4: Backends (Helpers)
-// =============================================================================
-
 /// Helper for Map
 #[doc(hidden)]
 #[diagnostic::on_unimplemented(
@@ -497,11 +473,6 @@ where
     // Strict Fold
     type Output = <Tail as FoldHelper<Op, Evaluate<Op::Output>>>::Output;
 }
-
-// =============================================================================
-// RFC-0001 Phase 1: New Array Operations
-// =============================================================================
-
 use crate::std::prim::option::{None, Some};
 
 // --- Reverse ---
@@ -818,11 +789,6 @@ def_op! {
         type Output = <Evaluate<List> as All<Evaluate<Pred>>>::Output
     }
 }
-
-// =============================================================================
-// Tests
-// =============================================================================
-
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
@@ -963,11 +929,6 @@ mod tests {
 
         assert_type_eq_all!(Evaluate<Summed>, U6);
     }
-
-    // ==========================================================================
-    // RFC-0001 Phase 1: New Operations Tests
-    // ==========================================================================
-
     #[test]
     fn test_reverse() {
         use typenum::{U1, U2, U3};

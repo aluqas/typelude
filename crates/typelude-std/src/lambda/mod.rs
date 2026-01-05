@@ -8,11 +8,6 @@ pub mod proof;
 pub mod ski;
 pub mod thunk;
 pub mod traits;
-
-// =========================================================================
-// Facade Exports
-// =========================================================================
-
 // 1. Core Traits
 // 2. Church Encodings (Terms)
 pub use church::*;

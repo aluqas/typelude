@@ -5,11 +5,6 @@
 use std::marker::PhantomData;
 
 use typelude_core::Eval;
-
-// =========================================================================
-// Lambda Trait
-// =========================================================================
-
 /// **Pure Lambda Term Trait**
 ///
 /// Types implementing this trait represent pure lambda calculus terms.
@@ -41,11 +36,6 @@ macro_rules! impl_eval_for_lambda_generic {
         }
     };
 }
-
-// =========================================================================
-// Application Struct (Eval Pattern)
-// =========================================================================
-
 /// **Lambda Application**: `LApp<F, A>`
 ///
 /// Represents the application of function `F` to argument `A`.
@@ -60,20 +50,10 @@ where
 {
     type Output = <Self as Lambda>::Output;
 }
-
-// =========================================================================
-// Bind Trait (Monad)
-// =========================================================================
-
 /// Bind Trait: `m >>= f`
 pub trait LBind<F> {
     type Output;
 }
-
-// =========================================================================
-// Kind System (Marker Traits)
-// =========================================================================
-
 /// Base trait for all Lambda Terms.
 pub trait LTerm {}
 

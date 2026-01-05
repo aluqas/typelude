@@ -29,11 +29,6 @@ impl<R> Lambda for LRight<R> {
 impl<R> Eval for LRight<R> {
     type Output = Self;
 }
-
-// =========================================================================
-// Bind Implementation for Monad
-// =========================================================================
-
 // Left<L> >>= k  -->  Left<L> (Short-circuit error)
 impl<L, K> LBind<K> for LLeft<L> {
     type Output = LLeft<L>;
@@ -48,11 +43,6 @@ where
 {
     type Output = <LApp<K, R> as Lambda>::Output;
 }
-
-// =========================================================================
-// Church Encoding Apply Implementation (Eval Pattern)
-// =========================================================================
-
 // Left<L> HandlL -> Left1<L, HandlL>
 impl<L, HandlL> Lambda for LApp<LLeft<L>, HandlL>
 where

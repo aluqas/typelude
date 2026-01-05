@@ -6,10 +6,6 @@
 use typelude_core::Evaluate;
 use typelude_macros::def_op;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
-
-// =============================================================================
-// Data Structure
-// =============================================================================
 /// Marker trait for type-level trees
 pub use crate::data::collections::tree::IsTree as TypeTree;
 // Re-export kernel types for convenience/compatibility if mostly used from here
@@ -18,11 +14,6 @@ use crate::{
     data::primitives::bool::{False, True},
     std::prim::option::{None, Some},
 };
-
-// =============================================================================
-// Core Operations
-// =============================================================================
-
 /// Insert a value into the tree
 /// Uses typenum comparison: values that compare less go left, greater go right
 pub trait TreeInsert<V> {
@@ -208,11 +199,6 @@ where
 {
     type Output = <<<L as TreeHeight>::Output as typenum::Max<<R as TreeHeight>::Output>>::Output as std::ops::Add<typenum::B1>>::Output;
 }
-
-// =============================================================================
-// Expression Wrappers via def_op!
-// =============================================================================
-
 def_op! {
     /// Insert value into tree
     name: OpTreeInsert,
@@ -260,11 +246,6 @@ def_op! {
         type Output = <Evaluate<Tree> as TreeToList>::Output
     }
 }
-
-// =============================================================================
-// Tests
-// =============================================================================
-
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;

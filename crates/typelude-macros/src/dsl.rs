@@ -186,12 +186,16 @@ impl ToTokens for DslType {
                 args,
             } => {
                 let trait_args = if args.is_empty() {
-                    quote!()
+                    quote!(<typelude::core::ENil>)
                 } else if args.len() == 1 {
                     let arg = &args[0];
                     quote!(<#arg>)
                 } else {
-                    quote!(<(#(#args),*)>)
+                    let mut stream = quote!(typelude::core::ENil);
+                    for arg in args.iter().rev() {
+                        stream = quote!(typelude::core::ECons<#arg, #stream>);
+                    }
+                    quote!(<#stream>)
                 };
 
                 quote!(< #receiver as #method #trait_args > :: Output).to_tokens(tokens);
@@ -205,11 +209,6 @@ impl ToTokens for DslType {
         }
     }
 }
-
-// =========================================================================
-// DSL Path (for Traits in Bounds)
-// =========================================================================
-
 pub struct DslPath {
     pub leading_colon: Option<Token![::]>,
     pub segments: Punctuated<DslPathSegment, Token![::]>,
@@ -290,11 +289,6 @@ impl ToTokens for DslPathSegment {
         }
     }
 }
-
-// =========================================================================
-// Bound DSL
-// =========================================================================
-
 pub enum DslBound {
     // T: Trait
     TraitBound {
@@ -361,11 +355,6 @@ impl Parse for BoundDslInput {
         })
     }
 }
-
-// =========================================================================
-// Impl Eval DSL
-// =========================================================================
-
 pub struct ImplEvalInput {
     pub generics: Generics,
     pub target_type: Type,

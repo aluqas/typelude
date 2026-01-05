@@ -61,12 +61,27 @@ macro_rules! impl_cmp_op {
         impl<Lhs, Rhs, RestStack, Locals, Memory, CallStack, RestProg>
             Execute<Array<Lhs, Array<Rhs, RestStack>>, Locals, Memory, CallStack, RestProg> for $Op
         where
-            $CoreOp: Apply<(Lhs, Rhs)>,
-            App<$CoreOp, (Lhs, Rhs)>: Eval,
+            $CoreOp:
+                Apply<typelude_core::ECons<Lhs, typelude_core::ECons<Rhs, typelude_core::ENil>>>,
+            App<
+                $CoreOp,
+                typelude_core::ECons<Lhs, typelude_core::ECons<Rhs, typelude_core::ENil>>,
+            >: Eval,
             RestStack: IsList,
         {
             type OutputState = MachineState<
-                Array<Evaluate<App<$CoreOp, (Lhs, Rhs)>>, RestStack>,
+                Array<
+                    Evaluate<
+                        App<
+                            $CoreOp,
+                            typelude_core::ECons<
+                                Lhs,
+                                typelude_core::ECons<Rhs, typelude_core::ENil>,
+                            >,
+                        >,
+                    >,
+                    RestStack,
+                >,
                 Locals,
                 Memory,
                 CallStack,
@@ -335,11 +350,6 @@ where
 {
     type Output = True;
 }
-
-// -------------------------------------------------------------------------------------------------
-// Eval Implementations for Ops
-// -------------------------------------------------------------------------------------------------
-
 // OpIsFinished must be Evaluatable to be used in EWhile
 impl Eval for OpIsFinished {
     type Output = Self;

@@ -16,11 +16,6 @@ use crate::{
     impl_eval_for_lambda, impl_eval_for_lambda_generic,
     lambda::{LApp, Lambda},
 };
-
-// =============================================================================
-// LWhile: Pure While Combinator
-// =============================================================================
-
 /// Pure While combinator (curried).
 ///
 /// Semantics: `while pred body state = if (pred state) then while pred body (body state) else state`
@@ -62,11 +57,6 @@ where
 {
     type Output = LWhile2<Pred, Evaluate<Body>>;
 }
-
-// =============================================================================
-// LWhile2<Pred, Body> State -> Result (main evaluation)
-// =============================================================================
-
 /// Helper trait for while loop dispatch based on condition result.
 pub trait LWhileHelper<Pred, Body, State> {
     type Output;
@@ -99,11 +89,6 @@ where
     type Output =
         <<LApp<Pred, State> as Lambda>::Output as LWhileHelper<Pred, Body, State>>::Output;
 }
-
-// =============================================================================
-// LFor: Pure Iteration Combinator (placeholder)
-// =============================================================================
-
 /// Pure For combinator: iterate over Church list, applying function to each element.
 ///
 /// Semantics: `for f list = foldr (\x acc -> f x >> acc) () list`

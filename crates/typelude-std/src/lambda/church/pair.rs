@@ -12,11 +12,6 @@ use crate::{
     impl_eval_for_lambda, impl_eval_for_lambda_generic,
     lambda::{LApp, Lambda},
 };
-
-// =========================================================================
-// Church Pairs
-// =========================================================================
-
 /// Pair: λx y. λf. f x y
 pub struct LPair;
 
@@ -69,11 +64,6 @@ where
 {
     type Output = Evaluate<LApp<Evaluate<LApp<F, X>>, Y>>;
 }
-
-// =========================================================================
-// Projections (Fst, Snd)
-// =========================================================================
-
 // Fst P -> P True
 pub struct LFst;
 impl Lambda for LFst {

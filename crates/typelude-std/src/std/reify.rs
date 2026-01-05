@@ -14,11 +14,6 @@ use crate::{
     },
     std::traits::Bool,
 };
-
-// ======================================================================================
-// Reify: Type -> Value
-// ======================================================================================
-
 /// Type to runtime value reification.
 pub trait Reify<T> {
     const REIFIED: T;
@@ -150,11 +145,6 @@ impl_flat_tuple!(0 T0 V0, 1 T1 V1, 2 T2 V2, 3 T3 V3, 4 T4 V4);
 impl_flat_tuple!(0 T0 V0, 1 T1 V1, 2 T2 V2, 3 T3 V3, 4 T4 V4, 5 T5 V5);
 impl_flat_tuple!(0 T0 V0, 1 T1 V1, 2 T2 V2, 3 T3 V3, 4 T4 V4, 5 T5 V5, 6 T6 V6);
 impl_flat_tuple!(0 T0 V0, 1 T1 V1, 2 T2 V2, 3 T3 V3, 4 T4 V4, 5 T5 V5, 6 T6 V6, 7 T7 V7);
-
-// ======================================================================================
-// Reflect: Value -> Type
-// ======================================================================================
-
 /// Reflect a const boolean to a Type.
 pub trait ReflectBool<const B: bool> {
     type Output: Bool;

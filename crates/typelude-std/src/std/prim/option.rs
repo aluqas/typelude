@@ -7,21 +7,11 @@ use std::marker::PhantomData;
 use typelude_core::{Eval, Evaluate};
 
 use crate::std::prim::bool::{False, True};
-
-// =============================================================================
-// Data Structures
-// =============================================================================
-
 /// Type-level `Some<T>` — wraps a value
 pub struct Some<T>(PhantomData<T>);
 
 /// Type-level `None` — absence of value
 pub struct None;
-
-// =============================================================================
-// Option Trait
-// =============================================================================
-
 /// Trait for type-level Option operations
 pub trait Option {
     /// Is this a Some variant?
@@ -39,11 +29,6 @@ impl Option for None {
     type IsSome = False;
     type IsNone = True;
 }
-
-// =============================================================================
-// Unwrap Operations
-// =============================================================================
-
 /// Unwrap a Some, compile error on None
 #[diagnostic::on_unimplemented(
     message = "`{Self}` cannot be unwrapped (it is None)",
@@ -72,11 +57,6 @@ impl<T, D> UnwrapOr<D> for Some<T> {
 impl<D> UnwrapOr<D> for None {
     type Output = D;
 }
-
-// =============================================================================
-// Map Operation
-// =============================================================================
-
 /// Map a function over an Option
 pub trait OptionMap<Op> {
     type Output;
@@ -93,11 +73,6 @@ where
 impl<Op> OptionMap<Op> for None {
     type Output = None;
 }
-
-// =============================================================================
-// Expression Wrappers
-// =============================================================================
-
 /// Expression: Unwrap an option
 pub struct EUnwrap<Opt>(PhantomData<Opt>);
 
@@ -120,11 +95,6 @@ where
 {
     type Output = <Evaluate<Opt> as UnwrapOr<Evaluate<Default>>>::Output;
 }
-
-// =============================================================================
-// Tests
-// =============================================================================
-
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;

@@ -13,11 +13,6 @@ use crate::{
         traits::{LNat, LTerm, Lambda},
     },
 };
-
-// =========================================================================
-// Church Numerals (Value Types)
-// =========================================================================
-
 /// Zero: λf x. x
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct LZero;
@@ -56,11 +51,6 @@ impl<N, F> Lambda for LSucc1<N, F> {
     type Output = LSucc1<N, F>;
 }
 impl_eval_for_lambda_generic!(LSucc1, [N, F]);
-
-// =========================================================================
-// Lambda implementations for LApp
-// =========================================================================
-
 // --- Zero ---
 // Zero F -> Zero1<F>
 impl<F> Lambda for LApp<LZero, F> {
@@ -107,11 +97,6 @@ impl_eval_for_lambda!(LSuccGen);
 impl<N> Lambda for LApp<LSuccGen, N> {
     type Output = LSucc<N>;
 }
-
-// =========================================================================
-// Arithmetic Operations
-// =========================================================================
-
 // --- Add: λm n f x. m f (n f x) ---
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -290,11 +275,6 @@ where
 {
     type Output = Evaluate<LApp<Evaluate<LApp<Evaluate<LApp<N, M>>, F>>, X>>;
 }
-
-// =========================================================================
-// Predecessor and Subtraction
-// =========================================================================
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct LPred;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -377,11 +357,6 @@ where
 {
     type Output = Evaluate<LApp<Evaluate<LApp<N, LPred>>, M>>;
 }
-
-// =========================================================================
-// Tests
-// =========================================================================
-
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;

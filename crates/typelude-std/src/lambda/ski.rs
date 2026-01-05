@@ -4,11 +4,6 @@ use typelude_core::{Eval, Evaluate};
 
 use super::{LApp, Lambda};
 use crate::{impl_eval_for_lambda, impl_eval_for_lambda_generic};
-
-// =========================================================================
-// The Fundamental Combinators
-// =========================================================================
-
 /// The Identity Combinator `I`
 /// Term: \x. x
 /// Rule: I x -> x
@@ -35,11 +30,6 @@ impl Lambda for S {
     type Output = S;
 }
 impl_eval_for_lambda!(S);
-
-// =========================================================================
-// Partial Application States (The "Pending" Computation)
-// =========================================================================
-
 /// K applied to one argument: `K x`
 pub struct K1<X>(PhantomData<X>);
 impl<X> Lambda for K1<X> {
@@ -60,11 +50,6 @@ impl<X, Y> Lambda for S2<X, Y> {
     type Output = S2<X, Y>;
 }
 impl_eval_for_lambda_generic!(S2, [X, Y]);
-
-// =========================================================================
-// Reduction Rules (The "Logic") - Lambda Pattern
-// =========================================================================
-
 // Note: We use strict Call-by-Value strategy for arguments.
 // Arguments X, Y, Z are typically expected to be evaluated before being stored in state structs,
 // but the Lambda impl for LApp<Combinator, Arg> enforces this by calling Evaluate<Arg>.

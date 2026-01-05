@@ -1,11 +1,6 @@
 use std::marker::PhantomData;
 
 use crate::{Apply, Eval, Evaluate};
-
-// =========================================================================
-// Bridges: Connecting Apply (Pure) and Eval (System)
-// =========================================================================
-
 /// **Identity Evaluator**: Lifts a value `T` into an expression `ELit<T>`.
 /// Evaluation just returns `T`.
 pub struct ELit<T>(PhantomData<T>);
@@ -21,11 +16,6 @@ where
 {
     type Output = <T as Apply<A>>::Output;
 }
-
-// =========================================================================
-// EApp: Call-by-Value Application (New, for Lambda integration)
-// =========================================================================
-
 /// **Call-by-Value Application**: `EApp<Ef, Ea>`
 ///
 /// 1. Evaluate `Ef` -> `F_val`
@@ -52,11 +42,6 @@ where
 {
     type Output = <Evaluate<EApp<Ef, Ea>> as Apply<A>>::Output;
 }
-
-// =========================================================================
-// ELazyApp: Call-by-Name Application
-// =========================================================================
-
 /// **Call-by-Name Application**: `ELazyApp<Ef, Ea>`
 ///
 /// 1. Evaluate `Ef` -> `F_val`
@@ -70,11 +55,6 @@ where
 {
     type Output = <Evaluate<Ef> as Apply<Ea>>::Output;
 }
-
-// =========================================================================
-// EPureApp: Strict Application (No Eval)
-// =========================================================================
-
 /// **Pure Application Wrapper**: `EPureApp<F, A>`
 ///
 /// Simply runs `Apply`. Result is NOT re-evaluated.

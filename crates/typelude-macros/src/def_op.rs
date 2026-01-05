@@ -183,11 +183,22 @@ impl DefOpInput {
                     quote! { (#(#args),*) }
                 };
 
-                let apply_args = if args.len() == 1 {
-                    let arg = &args[0];
-                    quote! { #arg }
+                // Generate Apply argument type
+                // 1 Arg -> A
+                // N Args -> ECons<A, ECons<B, ...>>
+                let apply_args = if args.len() <= 1 {
+                    if args.is_empty() {
+                        quote! { typelude_core::ENil }
+                    } else {
+                        let arg = &args[0];
+                        quote! { #arg }
+                    }
                 } else {
-                    quote! { (#(#args),*) }
+                    let mut stream = quote! { typelude_core::ENil };
+                    for arg in args.iter().rev() {
+                        stream = quote! { typelude_core::ECons<#arg, #stream> };
+                    }
+                    stream
                 };
 
                 quote! {
@@ -208,7 +219,7 @@ impl DefOpInput {
                     pub struct #op_name;
 
                     // 4. Implement Apply
-                    impl<#(#args),*> crate::traits::Apply<#apply_args> for #op_name {
+                    impl<#(#args),*> typelude_core::Apply<#apply_args> for #op_name {
                         type Output = #ast_name<#(#args),*>;
                     }
                 }
@@ -216,11 +227,19 @@ impl DefOpInput {
             DefOpBody::Alias {
                 alias_ty,
             } => {
-                let apply_args = if args.len() == 1 {
-                    let arg = &args[0];
-                    quote! { #arg }
+                let apply_args = if args.len() <= 1 {
+                    if args.is_empty() {
+                        quote! { typelude_core::ENil }
+                    } else {
+                        let arg = &args[0];
+                        quote! { #arg }
+                    }
                 } else {
-                    quote! { (#(#args),*) }
+                    let mut stream = quote! { typelude_core::ENil };
+                    for arg in args.iter().rev() {
+                        stream = quote! { typelude_core::ECons<#arg, #stream> };
+                    }
+                    stream
                 };
 
                 quote! {
@@ -229,7 +248,7 @@ impl DefOpInput {
                     pub struct #op_name;
 
                     // 2. Implement Apply with alias
-                    impl<#(#args),*> crate::traits::Apply<#apply_args> for #op_name {
+                    impl<#(#args),*> typelude_core::Apply<#apply_args> for #op_name {
                         type Output = #alias_ty;
                     }
                 }

@@ -25,3 +25,4 @@ hex_literal_case = "Upper"
 match_block_trailing_comma = true
 # error_on_line_overflow = false # Optional: avoid failure on massive lines
 format_code_in_doc_comments = true
+wrap_comments = true

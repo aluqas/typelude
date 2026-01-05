@@ -25,11 +25,6 @@ use crate::{
         church::{LFalse, LTrue, LWhile2},
     },
 };
-
-// =============================================================================
-// ToChurch: Bool → Church Boolean
-// =============================================================================
-
 /// Convert type-level booleans to Church booleans.
 ///
 /// This adapter bridges the gap between practical boolean types
@@ -45,11 +40,6 @@ impl ToChurch for True {
 impl ToChurch for False {
     type Church = LFalse;
 }
-
-// =============================================================================
-// EIf: Practical Conditional Expression
-// =============================================================================
-
 /// Practical If expression.
 ///
 /// Evaluates `Cond`, converts to Church boolean via `ToChurch`,
@@ -98,11 +88,6 @@ pub struct OpIf;
 impl<Cond, Then, Else> Apply<(Cond, Then, Else)> for OpIf {
     type Output = EIf<Cond, Then, Else>;
 }
-
-// =============================================================================
-// EWhile: Practical Loop Expression
-// =============================================================================
-
 /// Practical While expression.
 ///
 /// Wraps the pure `LWhile` combinator with `ToChurch` conversion.

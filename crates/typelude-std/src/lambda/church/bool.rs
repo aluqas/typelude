@@ -15,11 +15,6 @@ use crate::{
         traits::{LBool, LTerm},
     },
 };
-
-// =========================================================================
-// Church Booleans
-// =========================================================================
-
 /// Church True: λt f. t
 pub struct LTrue;
 impl LTerm for LTrue {}
@@ -84,11 +79,6 @@ where
 {
     type Output = Evaluate<F>;
 }
-
-// =========================================================================
-// If Expression
-// =========================================================================
-
 /// Pure If Alias: ((P T) E)
 pub type LPureIf<P, T, E> = Evaluate<LApp<LApp<LApp<LIf, P>, T>, E>>;
 

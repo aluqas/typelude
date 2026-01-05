@@ -3,11 +3,6 @@ use std::marker::PhantomData;
 use typelude_core::Eval;
 
 use super::{LApp, Lambda};
-
-// =========================================================================
-// Fixed-Point Combinator
-// =========================================================================
-
 /// The Fixed-Point Combinator `Fix`
 ///
 /// Rule: Fix<F> x = (F Fix<F>) x

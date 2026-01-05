@@ -1,6 +1,8 @@
 pub mod expr;
+pub mod list;
 
 pub use expr::*;
+pub use list::*;
 
 #[diagnostic::on_unimplemented(
     message = "`{Self}` cannot be applied to argument `{Arg}`",
@@ -25,11 +27,6 @@ pub trait Eval {
 
 /// Type alias to obtain evaluation results of expressions
 pub type Evaluate<T> = <T as Eval>::Output;
-
-// =============================================================================
-// Typenum Integration
-// =============================================================================
-
 mod typenum_impls {
     use typenum::{B0, B1, NInt, PInt, UInt, UTerm, Z0};
 

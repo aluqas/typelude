@@ -39,12 +39,6 @@ where
 {
     type Output = <LApp<F, S> as Lambda>::Output;
 }
-
-// -------------------------------------------------------------------------
-// Bind: m >>= k
-// \s. let (a, s') = m s in k a s'
-// -------------------------------------------------------------------------
-
 impl<F, K> LBind<K> for LState<F> {
     type Output = LState<LBindState<F, K>>;
 }
@@ -101,11 +95,6 @@ where
         <LApp<crate::lambda::church::LSnd, <LApp<F, S> as Lambda>::Output> as Lambda>::Output,
     > as Lambda>::Output;
 }
-
-// -------------------------------------------------------------------------
-// Return / Pure: return x = \s. (x, s)
-// -------------------------------------------------------------------------
-
 pub struct LReturn<A>(PhantomData<A>);
 impl<A> Lambda for LReturn<A> {
     type Output = LReturn<A>;
@@ -136,11 +125,6 @@ where
 {
     type Output = <LApp<K, A> as Lambda>::Output;
 }
-
-// -------------------------------------------------------------------------
-// Get: get = \s. (s, s)
-// -------------------------------------------------------------------------
-
 pub struct LGet;
 impl Lambda for LGet {
     type Output = LGet;
@@ -180,11 +164,6 @@ where
 {
     type Output = <LApp<<LApp<K, S> as Lambda>::Output, S> as Lambda>::Output;
 }
-
-// -------------------------------------------------------------------------
-// Put: put s = \_old. ((), s)
-// -------------------------------------------------------------------------
-
 pub struct LPut<NewS>(PhantomData<NewS>);
 impl<NewS> Lambda for LPut<NewS> {
     type Output = LPut<NewS>;

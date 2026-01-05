@@ -51,11 +51,6 @@ impl ConstToBool<false> for () {
 pub type EqResult<L, R> = <() as ConstToBool<{ <L as IsEq<R>>::EQ }>>::Output;
 #[cfg(feature = "nightly")]
 pub type NeqResult<L, R> = <() as ConstToBool<{ !<L as IsEq<R>>::EQ }>>::Output;
-
-// =============================================================================
-// Operators - Using procedural macro
-// =============================================================================
-
 // Equality: A == B
 #[cfg(feature = "nightly")]
 def_op! {
@@ -145,11 +140,6 @@ def_op! {
         type Output = ToBoolOut<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
     }
 }
-
-// =============================================================================
-// Tests
-// =============================================================================
-
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;

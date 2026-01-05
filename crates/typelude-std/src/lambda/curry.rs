@@ -8,11 +8,6 @@ use std::marker::PhantomData;
 use typelude_core::{Eval, Evaluate};
 
 use super::{LApp, Lambda, church::LPair2};
-
-// =========================================================================
-// Curry: ((A, B) -> C) -> A -> B -> C
-// =========================================================================
-
 /// Curry a function that takes a tuple into a curried function.
 ///
 /// `Curry<F>` transforms `F: Apply<Pair<A, B>>` into a two-argument curried form.
@@ -54,11 +49,6 @@ where
 {
     type Output = <LApp<F, LPair2<A, Evaluate<B>>> as Lambda>::Output;
 }
-
-// =========================================================================
-// Uncurry: (A -> B -> C) -> (A, B) -> C
-// =========================================================================
-
 /// Uncurry a curried function into one that takes a tuple (Church Pair).
 ///
 /// `Uncurry<F>` transforms `F: A -> B -> C` into `F (Pair A B)`.

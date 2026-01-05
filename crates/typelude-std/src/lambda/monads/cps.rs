@@ -8,11 +8,6 @@ use std::marker::PhantomData;
 use typelude_core::Eval;
 
 use crate::lambda::{LApp, Lambda, traits::LBind};
-
-// =========================================================================
-// Cont Monad: Cont<R, A> ~ (A -> R) -> R
-// =========================================================================
-
 /// Continuation Monad.
 ///
 /// `Cont<R, A>` wraps a computation that takes a continuation and produces `R`.
@@ -40,11 +35,6 @@ where
 {
     type Output = <LApp<F, K> as Lambda>::Output;
 }
-
-// =========================================================================
-// Pure / Return: a -> Cont<R, A>
-// =========================================================================
-
 /// Pure/Return for Cont: wraps a value in a continuation.
 ///
 /// `ContPure<A>` represents `\k. k a`.
@@ -75,11 +65,6 @@ where
 {
     type Output = <LApp<K, A> as Lambda>::Output;
 }
-
-// =========================================================================
-// Bind: Cont<R, A> >>= (A -> Cont<R, B>) -> Cont<R, B>
-// =========================================================================
-
 /// Bind implementation for Cont.
 ///
 /// `m >>= f` becomes `\k. runCont m (\a. runCont (f a) k)`

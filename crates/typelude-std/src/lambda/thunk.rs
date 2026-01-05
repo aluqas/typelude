@@ -13,11 +13,6 @@ use std::marker::PhantomData;
 use typelude_core::Eval;
 
 use crate::lambda::{LApp, Lambda};
-
-// =========================================================================
-// Thunk
-// =========================================================================
-
 /// Thunk: Represents a delayed application of `F` to `Arg`.
 ///
 /// It is a passive value until `Force` is applied.
@@ -29,11 +24,6 @@ impl<F, Arg> Lambda for LThunk<F, Arg> {
 impl<F, Arg> Eval for LThunk<F, Arg> {
     type Output = Self;
 }
-
-// =========================================================================
-// Force
-// =========================================================================
-
 /// Force: Trigger evaluation of a Thunk.
 pub struct LForce;
 impl Lambda for LForce {
