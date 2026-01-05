@@ -10,38 +10,40 @@ use std::{
 use typelude_core::{ELit, Eval, Evaluate};
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
+pub use crate::data::collections::array::IsList;
 // =============================================================================
 // Layer 1: Values (Data Structure)
 // =============================================================================
 
 // Re-export kernel types for convenience/compatibility if mostly used from here
-pub use crate::data::collections::array::{Cons, TyArray, TyNil};
+pub use crate::data::collections::array::{Array, Nil};
+/// Re-export List trait for public use
+pub use crate::std::traits::List;
 use crate::{
-    data::primitives::bool::{TyFalse, TyTrue},
+    data::primitives::bool::{False, True},
     expr::EIf,
-    std::traits::TypeList,
     traits::Apply,
 };
 
 // =============================================================================
-// Adapter Implementation: TypeList for TyArray/TyNil
+// Adapter Implementation: List for Array/Nil
 // =============================================================================
 
-impl TypeList for TyNil {
-    type Cons<NewHead> = TyArray<NewHead, TyNil>;
+impl List for Nil {
+    type Cons<NewHead> = Array<NewHead, Nil>;
     // Head/Tail for Nil are usually undefined or Unit/Nil
     type Head = (); // Or a custom Error Type
-    type Tail = TyNil;
+    type Tail = Nil;
 }
 
-impl<Head, Tail: Cons> TypeList for TyArray<Head, Tail> {
-    type Cons<NewHead> = TyArray<NewHead, Self>;
+impl<Head, Tail: IsList> List for Array<Head, Tail> {
+    type Cons<NewHead> = Array<NewHead, Self>;
     type Head = Head;
     type Tail = Tail;
 }
 
 // =============================================================================
-// Layer 2: Capabilities (Verbs) - Deprecated/Wrapped by TypeList, but kept for logic
+// Layer 2: Capabilities (Verbs) - Deprecated/Wrapped by List, but kept for logic
 // =============================================================================
 
 /// Array length
@@ -54,11 +56,11 @@ pub trait Len {
     type Output: Unsigned;
 }
 
-impl Len for TyNil {
+impl Len for Nil {
     type Output = U0;
 }
 
-impl<Head, Tail: Cons + Len> Len for TyArray<Head, Tail>
+impl<Head, Tail: IsList + Len> Len for Array<Head, Tail>
 where
     <Tail as Len>::Output: Add<B1>,
     <<Tail as Len>::Output as Add<B1>>::Output: Unsigned,
@@ -76,7 +78,7 @@ pub trait Head {
     type Output;
 }
 
-impl<H, T: Cons> Head for TyArray<H, T> {
+impl<H, T: IsList> Head for Array<H, T> {
     type Output = H;
 }
 
@@ -87,10 +89,10 @@ impl<H, T: Cons> Head for TyArray<H, T> {
     note = "ensure `{Self}` is a non-empty list"
 )]
 pub trait Tail {
-    type Output: Cons;
+    type Output: IsList;
 }
 
-impl<H, T: Cons> Tail for TyArray<H, T> {
+impl<H, T: IsList> Tail for Array<H, T> {
     type Output = T;
 }
 
@@ -99,12 +101,12 @@ pub trait IsEmpty {
     type Output;
 }
 
-impl IsEmpty for TyNil {
-    type Output = TyTrue;
+impl IsEmpty for Nil {
+    type Output = True;
 }
 
-impl<Head, Tail: Cons> IsEmpty for TyArray<Head, Tail> {
-    type Output = TyFalse;
+impl<Head, Tail: IsList> IsEmpty for Array<Head, Tail> {
+    type Output = False;
 }
 
 /// Index access
@@ -117,11 +119,11 @@ pub trait Get<Idx: Unsigned> {
     type Output;
 }
 
-impl<Head, Tail: Cons> Get<U0> for TyArray<Head, Tail> {
+impl<Head, Tail: IsList> Get<U0> for Array<Head, Tail> {
     type Output = Head;
 }
 
-impl<Head, Tail: Cons, N: Unsigned, B: typenum::Bit> Get<UInt<N, B>> for TyArray<Head, Tail>
+impl<Head, Tail: IsList, N: Unsigned, B: typenum::Bit> Get<UInt<N, B>> for Array<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
@@ -137,37 +139,37 @@ where
     note = "index might be out of bounds or `{Self}` is not a list"
 )]
 pub trait Set<Idx: Unsigned, Val> {
-    type Output: Cons;
+    type Output: IsList;
 }
 
-impl<Head, Tail: Cons, Val> Set<U0, Val> for TyArray<Head, Tail> {
-    type Output = TyArray<Val, Tail>;
+impl<Head, Tail: IsList, Val> Set<U0, Val> for Array<Head, Tail> {
+    type Output = Array<Val, Tail>;
 }
 
-impl<Head, Tail: Cons, N: Unsigned, B: typenum::Bit, Val> Set<UInt<N, B>, Val>
-    for TyArray<Head, Tail>
+impl<Head, Tail: IsList, N: Unsigned, B: typenum::Bit, Val> Set<UInt<N, B>, Val>
+    for Array<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
     Tail: Set<Sub1<UInt<N, B>>, Val>,
 {
-    type Output = TyArray<Head, <Tail as Set<Sub1<UInt<N, B>>, Val>>::Output>;
+    type Output = Array<Head, <Tail as Set<Sub1<UInt<N, B>>, Val>>::Output>;
 }
 
 /// Array concatenation
-pub trait Concat<Other: Cons> {
-    type Output: Cons;
+pub trait Concat<Other: IsList> {
+    type Output: IsList;
 }
 
-impl<Other: Cons> Concat<Other> for TyNil {
+impl<Other: IsList> Concat<Other> for Nil {
     type Output = Other;
 }
 
-impl<Head, Tail: Cons, Other: Cons> Concat<Other> for TyArray<Head, Tail>
+impl<Head, Tail: IsList, Other: IsList> Concat<Other> for Array<Head, Tail>
 where
     Tail: Concat<Other>,
 {
-    type Output = TyArray<Head, <Tail as Concat<Other>>::Output>;
+    type Output = Array<Head, <Tail as Concat<Other>>::Output>;
 }
 
 // NOTE: Contains depends on Equality check.
@@ -178,11 +180,11 @@ pub trait Contains<Elem> {
     const VALUE: bool;
 }
 
-impl<Elem> Contains<Elem> for TyNil {
+impl<Elem> Contains<Elem> for Nil {
     const VALUE: bool = false;
 }
 
-impl<Head, Tail: Cons + Contains<Elem>, Elem> Contains<Elem> for TyArray<Head, Tail>
+impl<Head, Tail: IsList + Contains<Elem>, Elem> Contains<Elem> for Array<Head, Tail>
 where
     Head: IsEq<Elem>,
 {
@@ -200,49 +202,49 @@ use typelude_macros::def_op;
 def_op! {
     /// Get the length of an array
     name: OpLen,
-    args: (Array),
+    args: (Arr),
     ast: ELen {
         where: [
-            Evaluate<Array>: Len
+            Evaluate<Arr>: Len
         ],
-        type Output = <Evaluate<Array> as Len>::Output
+        type Output = <Evaluate<Arr> as Len>::Output
     }
 }
 
 def_op! {
     /// Get the head (first element) of an array
     name: OpHead,
-    args: (Array),
+    args: (Arr),
     ast: EHead {
         where: [
-            Evaluate<Array>: TypeList
+            Evaluate<Arr>: List
         ],
-        type Output = <Evaluate<Array> as TypeList>::Head
+        type Output = <Evaluate<Arr> as List>::Head
     }
 }
 
 def_op! {
     /// Get the tail (all but first) of an array
     name: OpTail,
-    args: (Array),
+    args: (Arr),
     ast: ETail {
         where: [
-            Evaluate<Array>: TypeList,
-            <Evaluate<Array> as TypeList>::Tail: Eval
+            Evaluate<Arr>: List,
+            <Evaluate<Arr> as List>::Tail: Eval
         ],
-        type Output = <Evaluate<Array> as TypeList>::Tail
+        type Output = <Evaluate<Arr> as List>::Tail
     }
 }
 
 def_op! {
     /// Check if an array is empty
     name: OpIsEmpty,
-    args: (Array),
+    args: (Arr),
     ast: EIsEmpty {
         where: [
-            Evaluate<Array>: IsEmpty
+            Evaluate<Arr>: IsEmpty
         ],
-        type Output = <Evaluate<Array> as IsEmpty>::Output
+        type Output = <Evaluate<Arr> as IsEmpty>::Output
     }
 }
 
@@ -251,26 +253,26 @@ def_op! {
 def_op! {
     /// Get element at index
     name: OpGet,
-    args: (Array, Idx),
+    args: (Arr, Idx),
     ast: EGet {
         where: [
             Evaluate<Idx>: Unsigned,
-            Evaluate<Array>: Get<Evaluate<Idx>>
+            Evaluate<Arr>: Get<Evaluate<Idx>>
         ],
-        type Output = <Evaluate<Array> as Get<Evaluate<Idx>>>::Output
+        type Output = <Evaluate<Arr> as Get<Evaluate<Idx>>>::Output
     }
 }
 
 def_op! {
     /// Set element at index
     name: OpSet,
-    args: (Array, Idx, Val),
+    args: (Arr, Idx, Val),
     ast: ESet {
         where: [
             Evaluate<Idx>: Unsigned,
-            Evaluate<Array>: Set<Evaluate<Idx>, Evaluate<Val>>
+            Evaluate<Arr>: Set<Evaluate<Idx>, Evaluate<Val>>
         ],
-        type Output = <Evaluate<Array> as Set<Evaluate<Idx>, Evaluate<Val>>>::Output
+        type Output = <Evaluate<Arr> as Set<Evaluate<Idx>, Evaluate<Val>>>::Output
     }
 }
 
@@ -282,7 +284,7 @@ def_op! {
     args: (Lhs, Rhs),
     ast: EConcat {
         where: [
-            Evaluate<Rhs>: Cons,
+            Evaluate<Rhs>: IsList,
             Evaluate<Lhs>: Concat<Evaluate<Rhs>>
         ],
         type Output = <Evaluate<Lhs> as Concat<Evaluate<Rhs>>>::Output
@@ -292,24 +294,24 @@ def_op! {
 def_op! {
     /// Append element to end of array
     name: OpAppend,
-    args: (Array, Elem),
+    args: (Arr, Elem),
     ast: EAppend {
         where: [
-            Evaluate<Array>: Concat<TyArray<Evaluate<Elem>, TyNil>>
+            Evaluate<Arr>: Concat<Array<Evaluate<Elem>, Nil>>
         ],
-        type Output = <Evaluate<Array> as Concat<TyArray<Evaluate<Elem>, TyNil>>>::Output
+        type Output = <Evaluate<Arr> as Concat<Array<Evaluate<Elem>, Nil>>>::Output
     }
 }
 
 def_op! {
     /// Prepend element to start of array
     name: OpPrepend,
-    args: (Elem, Array),
+    args: (Elem, Arr),
     ast: EPrepend {
         where: [
-            Evaluate<Array>: TypeList
+            Evaluate<Arr>: List
         ],
-        type Output = <Evaluate<Array> as TypeList>::Cons<Evaluate<Elem>>
+        type Output = <Evaluate<Arr> as List>::Cons<Evaluate<Elem>>
     }
 }
 
@@ -406,25 +408,25 @@ impl<Array, Elem> Apply<(Array, Elem)> for OpContains {
 #[diagnostic::on_unimplemented(
     message = "Internal `MapHelper` not implemented for `{Self}`",
     label = "Map not implemented",
-    note = "ensure `{Self}` is a Cons list and `Op` is valid"
+    note = "ensure `{Self}` is a List and `Op` is valid"
 )]
 pub trait MapHelper<Op> {
-    type Output: Cons;
+    type Output: IsList;
 }
 
-impl<Op> MapHelper<Op> for TyNil {
-    type Output = TyNil;
+impl<Op> MapHelper<Op> for Nil {
+    type Output = Nil;
 }
 
-impl<Op, Head, Tail> MapHelper<Op> for TyArray<Head, Tail>
+impl<Op, Head, Tail> MapHelper<Op> for Array<Head, Tail>
 where
     Op: Apply<Head>,
     Op::Output: Eval, // Evaluate the result of application
-    Tail: Cons + MapHelper<Op>,
-    <Tail as MapHelper<Op>>::Output: Cons,
+    Tail: IsList + MapHelper<Op>,
+    <Tail as MapHelper<Op>>::Output: IsList,
 {
     // Evaluate application result for strict map
-    type Output = TyArray<Evaluate<Op::Output>, <Tail as MapHelper<Op>>::Output>;
+    type Output = Array<Evaluate<Op::Output>, <Tail as MapHelper<Op>>::Output>;
 }
 
 /// Helper for Filter
@@ -432,40 +434,40 @@ where
 #[diagnostic::on_unimplemented(
     message = "Internal `FilterHelper` not implemented for `{Self}`",
     label = "Filter not implemented",
-    note = "ensure `{Self}` is a Cons list and `Pred` is valid"
+    note = "ensure `{Self}` is a List and `Pred` is valid"
 )]
 pub trait FilterHelper<Pred> {
-    type Output: Cons;
+    type Output: IsList;
 }
 
-impl<P> FilterHelper<P> for TyNil {
-    type Output = TyNil;
+impl<P> FilterHelper<P> for Nil {
+    type Output = Nil;
 }
 
-impl<P, Head, Tail> FilterHelper<P> for TyArray<Head, Tail>
+impl<P, Head, Tail> FilterHelper<P> for Array<Head, Tail>
 where
     P: Apply<Head>,
     P::Output: Eval,
-    Tail: Cons + FilterHelper<P>,
-    <Tail as FilterHelper<P>>::Output: Cons,
-    // EIf<Pred(Head), Cons<Head, Filter(Tail)>, Filter(Tail)>
+    Tail: IsList + FilterHelper<P>,
+    <Tail as FilterHelper<P>>::Output: IsList,
+    // EIf<Pred(Head), Array<Head, Filter(Tail)>, Filter(Tail)>
     EIf<
         P::Output, // Predicate Result Expr
-        ELit<TyArray<Head, <Tail as FilterHelper<P>>::Output>>,
+        ELit<Array<Head, <Tail as FilterHelper<P>>::Output>>,
         ELit<<Tail as FilterHelper<P>>::Output>,
     >: Eval,
     Evaluate<
         EIf<
             P::Output,
-            ELit<TyArray<Head, <Tail as FilterHelper<P>>::Output>>,
+            ELit<Array<Head, <Tail as FilterHelper<P>>::Output>>,
             ELit<<Tail as FilterHelper<P>>::Output>,
         >,
-    >: Cons,
+    >: IsList,
 {
     type Output = Evaluate<
         EIf<
             P::Output,
-            ELit<TyArray<Head, <Tail as FilterHelper<P>>::Output>>,
+            ELit<Array<Head, <Tail as FilterHelper<P>>::Output>>,
             ELit<<Tail as FilterHelper<P>>::Output>,
         >,
     >;
@@ -482,15 +484,15 @@ pub trait FoldHelper<Op, Acc> {
     type Output;
 }
 
-impl<Op, Acc> FoldHelper<Op, Acc> for TyNil {
+impl<Op, Acc> FoldHelper<Op, Acc> for Nil {
     type Output = Acc;
 }
 
-impl<Op, Acc, Head, Tail> FoldHelper<Op, Acc> for TyArray<Head, Tail>
+impl<Op, Acc, Head, Tail> FoldHelper<Op, Acc> for Array<Head, Tail>
 where
     Op: Apply<(Acc, Head)>,
     Op::Output: Eval, // Evaluate acc+head
-    Tail: Cons + FoldHelper<Op, Evaluate<Op::Output>>,
+    Tail: IsList + FoldHelper<Op, Evaluate<Op::Output>>,
 {
     // Strict Fold
     type Output = <Tail as FoldHelper<Op, Evaluate<Op::Output>>>::Output;
@@ -500,7 +502,7 @@ where
 // RFC-0001 Phase 1: New Array Operations
 // =============================================================================
 
-use crate::std::primitives::option::{TyNone, TySome};
+use crate::std::prim::option::{None, Some};
 
 // --- Reverse ---
 
@@ -509,16 +511,16 @@ pub trait Reverse {
     type Output;
 }
 
-impl Reverse for TyNil {
-    type Output = TyNil;
+impl Reverse for Nil {
+    type Output = Nil;
 }
 
-impl<Head, Tail: Cons> Reverse for TyArray<Head, Tail>
+impl<Head, Tail: IsList> Reverse for Array<Head, Tail>
 where
     Tail: Reverse,
-    <Tail as Reverse>::Output: Concat<TyArray<Head, TyNil>>,
+    <Tail as Reverse>::Output: Concat<Array<Head, Nil>>,
 {
-    type Output = <<Tail as Reverse>::Output as Concat<TyArray<Head, TyNil>>>::Output;
+    type Output = <<Tail as Reverse>::Output as Concat<Array<Head, Nil>>>::Output;
 }
 
 // --- Take<N> ---
@@ -528,22 +530,22 @@ pub trait Take<N> {
     type Output;
 }
 
-impl<N> Take<N> for TyNil {
-    type Output = TyNil;
+impl<N> Take<N> for Nil {
+    type Output = Nil;
 }
 
-impl<Head, Tail: Cons> Take<U0> for TyArray<Head, Tail> {
-    type Output = TyNil;
+impl<Head, Tail: IsList> Take<U0> for Array<Head, Tail> {
+    type Output = Nil;
 }
 
-impl<Head, Tail: Cons, N: Unsigned, B: typenum::Bit> Take<UInt<N, B>> for TyArray<Head, Tail>
+impl<Head, Tail: IsList, N: Unsigned, B: typenum::Bit> Take<UInt<N, B>> for Array<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
     Tail: Take<Sub1<UInt<N, B>>>,
-    <Tail as Take<Sub1<UInt<N, B>>>>::Output: Cons,
+    <Tail as Take<Sub1<UInt<N, B>>>>::Output: IsList,
 {
-    type Output = TyArray<Head, <Tail as Take<Sub1<UInt<N, B>>>>::Output>;
+    type Output = Array<Head, <Tail as Take<Sub1<UInt<N, B>>>>::Output>;
 }
 
 // --- Drop<N> ---
@@ -553,15 +555,15 @@ pub trait Drop<N> {
     type Output;
 }
 
-impl<N> Drop<N> for TyNil {
-    type Output = TyNil;
+impl<N> Drop<N> for Nil {
+    type Output = Nil;
 }
 
-impl<Head, Tail: Cons> Drop<U0> for TyArray<Head, Tail> {
-    type Output = TyArray<Head, Tail>;
+impl<Head, Tail: IsList> Drop<U0> for Array<Head, Tail> {
+    type Output = Array<Head, Tail>;
 }
 
-impl<Head, Tail: Cons, N: Unsigned, B: typenum::Bit> Drop<UInt<N, B>> for TyArray<Head, Tail>
+impl<Head, Tail: IsList, N: Unsigned, B: typenum::Bit> Drop<UInt<N, B>> for Array<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
@@ -582,15 +584,15 @@ pub trait Last {
     type Output;
 }
 
-impl<T> Last for TyArray<T, TyNil> {
+impl<T> Last for Array<T, Nil> {
     type Output = T;
 }
 
-impl<Head, T, Rest: Cons> Last for TyArray<Head, TyArray<T, Rest>>
+impl<Head, T, Rest: IsList> Last for Array<Head, Array<T, Rest>>
 where
-    TyArray<T, Rest>: Last,
+    Array<T, Rest>: Last,
 {
-    type Output = <TyArray<T, Rest> as Last>::Output;
+    type Output = <Array<T, Rest> as Last>::Output;
 }
 
 // --- Zip ---
@@ -600,31 +602,31 @@ pub trait Zip<Other> {
     type Output;
 }
 
-impl<Other> Zip<Other> for TyNil {
-    type Output = TyNil;
+impl<Other> Zip<Other> for Nil {
+    type Output = Nil;
 }
 
-impl<H, T: Cons> Zip<TyNil> for TyArray<H, T> {
-    type Output = TyNil;
+impl<H, T: IsList> Zip<Nil> for Array<H, T> {
+    type Output = Nil;
 }
 
-impl<H1, T1: Cons, H2, T2: Cons> Zip<TyArray<H2, T2>> for TyArray<H1, T1>
+impl<H1, T1: IsList, H2, T2: IsList> Zip<Array<H2, T2>> for Array<H1, T1>
 where
     T1: Zip<T2>,
-    <T1 as Zip<T2>>::Output: Cons,
+    <T1 as Zip<T2>>::Output: IsList,
 {
-    type Output = TyArray<(H1, H2), <T1 as Zip<T2>>::Output>;
+    type Output = Array<(H1, H2), <T1 as Zip<T2>>::Output>;
 }
 
 // --- Find<Pred> ---
 
-/// Find trait: find first element matching predicate, returns TySome/TyNone
+/// Find trait: find first element matching predicate, returns Some/None
 pub trait Find<Pred> {
-    type Output; // TySome<T> or TyNone
+    type Output; // Some<T> or None
 }
 
-impl<Pred> Find<Pred> for TyNil {
-    type Output = TyNone;
+impl<Pred> Find<Pred> for Nil {
+    type Output = None;
 }
 
 /// Helper for Find dispatch
@@ -633,15 +635,15 @@ pub trait FindHelper<Pred, Head, Tail> {
     type Output;
 }
 
-impl<Pred, Head, Tail: Cons> FindHelper<Pred, Head, Tail> for TyTrue {
-    type Output = TySome<Head>;
+impl<Pred, Head, Tail: IsList> FindHelper<Pred, Head, Tail> for True {
+    type Output = Some<Head>;
 }
 
-impl<Pred, Head, Tail: Cons + Find<Pred>> FindHelper<Pred, Head, Tail> for TyFalse {
+impl<Pred, Head, Tail: IsList + Find<Pred>> FindHelper<Pred, Head, Tail> for False {
     type Output = <Tail as Find<Pred>>::Output;
 }
 
-impl<Pred, Head, Tail: Cons> Find<Pred> for TyArray<Head, Tail>
+impl<Pred, Head, Tail: IsList> Find<Pred> for Array<Head, Tail>
 where
     Pred: Apply<Head>,
     <Pred as Apply<Head>>::Output: Eval,
@@ -655,11 +657,11 @@ where
 
 /// Any trait: true if any element satisfies predicate
 pub trait Any<Pred> {
-    type Output; // TyTrue or TyFalse
+    type Output; // True or False
 }
 
-impl<Pred> Any<Pred> for TyNil {
-    type Output = TyFalse;
+impl<Pred> Any<Pred> for Nil {
+    type Output = False;
 }
 
 /// Helper for Any dispatch
@@ -668,15 +670,15 @@ pub trait AnyHelper<Pred, Tail> {
     type Output;
 }
 
-impl<Pred, Tail: Cons> AnyHelper<Pred, Tail> for TyTrue {
-    type Output = TyTrue;
+impl<Pred, Tail: IsList> AnyHelper<Pred, Tail> for True {
+    type Output = True;
 }
 
-impl<Pred, Tail: Cons + Any<Pred>> AnyHelper<Pred, Tail> for TyFalse {
+impl<Pred, Tail: IsList + Any<Pred>> AnyHelper<Pred, Tail> for False {
     type Output = <Tail as Any<Pred>>::Output;
 }
 
-impl<Pred, Head, Tail: Cons> Any<Pred> for TyArray<Head, Tail>
+impl<Pred, Head, Tail: IsList> Any<Pred> for Array<Head, Tail>
 where
     Pred: Apply<Head>,
     <Pred as Apply<Head>>::Output: Eval,
@@ -689,11 +691,11 @@ where
 
 /// All trait: true if all elements satisfy predicate
 pub trait All<Pred> {
-    type Output; // TyTrue or TyFalse
+    type Output; // True or False
 }
 
-impl<Pred> All<Pred> for TyNil {
-    type Output = TyTrue;
+impl<Pred> All<Pred> for Nil {
+    type Output = True;
 }
 
 /// Helper for All dispatch
@@ -702,15 +704,15 @@ pub trait AllHelper<Pred, Tail> {
     type Output;
 }
 
-impl<Pred, Tail: Cons + All<Pred>> AllHelper<Pred, Tail> for TyTrue {
+impl<Pred, Tail: IsList + All<Pred>> AllHelper<Pred, Tail> for True {
     type Output = <Tail as All<Pred>>::Output;
 }
 
-impl<Pred, Tail: Cons> AllHelper<Pred, Tail> for TyFalse {
-    type Output = TyFalse;
+impl<Pred, Tail: IsList> AllHelper<Pred, Tail> for False {
+    type Output = False;
 }
 
-impl<Pred, Head, Tail: Cons> All<Pred> for TyArray<Head, Tail>
+impl<Pred, Head, Tail: IsList> All<Pred> for Array<Head, Tail>
 where
     Pred: Apply<Head>,
     <Pred as Apply<Head>>::Output: Eval,
@@ -825,26 +827,25 @@ def_op! {
 mod tests {
     use static_assertions::assert_type_eq_all;
     use typelude_core::ELit;
-    use typenum::{U0, U1, U2, U10, U12};
+    use typenum::{U0, U1, U2, U4, U10, U12};
 
     use super::*;
     use crate::{
         std::{
-            bool::{ToTyBoolOut, TyFalse, TyTrue},
-            control::EIf, // Updated from expr::EIf
-            ops::TyFrom,
+            ops::From,
+            prim::bool::{False, ToBoolOut, True},
         },
         tyarray,
     };
 
     type MyList =
-        tyarray![i32, String, bool, f64, char, (), (), (), (), (), (usize, usize), [TyTrue; 100]];
+        tyarray![i32, String, bool, f64, char, (), (), (), (), (), (usize, usize), [True; 100]];
     type MyListExpr = ELit<MyList>;
 
     #[test]
     fn test_simple_evals() {
         // ELen
-        assert_type_eq_all!(Evaluate<ELen<ELit<TyNil>>>, U0);
+        assert_type_eq_all!(Evaluate<ELen<ELit<Nil>>>, U0);
         assert_type_eq_all!(Evaluate<ELen<MyListExpr>>, U12);
 
         // EHead/ETail
@@ -853,8 +854,8 @@ mod tests {
         assert_type_eq_all!(Evaluate<ETail<List3Expr>>, tyarray![f64, bool]);
 
         // EIsEmpty
-        assert_type_eq_all!(Evaluate<EIsEmpty<ELit<TyNil>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<EIsEmpty<ELit<tyarray![i32]>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EIsEmpty<ELit<Nil>>>, True);
+        assert_type_eq_all!(Evaluate<EIsEmpty<ELit<tyarray![i32]>>>, False);
 
         // EGet
         assert_type_eq_all!(Evaluate<EGet<MyListExpr, ELit<U0>>>, i32);
@@ -872,7 +873,7 @@ mod tests {
         assert_type_eq_all!(Evaluate<Concatenated>, tyarray![i32, f64, bool, char]);
 
         // ELen<EConcat<...>>
-        assert_type_eq_all!(Evaluate<ELen<Concatenated>>, typenum::U4);
+        assert_type_eq_all!(Evaluate<ELen<Concatenated>>, U4);
 
         // EAppend
         type Appended = EAppend<ELit<ListA>, ELit<bool>>;
@@ -891,18 +892,18 @@ mod tests {
     fn test_econtains() {
         type ListExpr = ELit<tyarray![i32, f64, bool, char]>;
 
-        // 含まれる場合 → TyTrue
-        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<i32>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<char>>>, TyTrue);
+        // 含まれる場合 → True
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<i32>>>, True);
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<char>>>, True);
 
-        // 含まれない場合 → TyFalse
-        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<String>>>, TyFalse);
-        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<()>>>, TyFalse);
+        // 含まれない場合 → False
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<String>>>, False);
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<()>>>, False);
 
         // 合成したリストでテスト - 式のネスト！
         type Concatenated = EConcat<ELit<tyarray![i32]>, ELit<tyarray![f64]>>;
-        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<f64>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<bool>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<f64>>>, True);
+        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<bool>>>, False);
     }
 
     #[test]
@@ -931,9 +932,9 @@ mod tests {
         impl<T> Apply<T> for OpLessThan3
         where
             T: IsLess<U3>,
-            bool: TyFrom<<T as IsLess<U3>>::Output>,
+            bool: From<<T as IsLess<U3>>::Output>,
         {
-            type Output = ELit<ToTyBoolOut<<T as IsLess<U3>>::Output>>;
+            type Output = ELit<ToBoolOut<<T as IsLess<U3>>::Output>>;
         }
 
         type List = tyarray![U1, U5, U2, U4, U3]; // [1, 5, 2, 4, 3]
@@ -976,8 +977,8 @@ mod tests {
         assert_type_eq_all!(Reversed, tyarray![U3, U2, U1]);
 
         // Empty list
-        type EmptyReversed = <TyNil as Reverse>::Output;
-        assert_type_eq_all!(EmptyReversed, TyNil);
+        type EmptyReversed = <Nil as Reverse>::Output;
+        assert_type_eq_all!(EmptyReversed, Nil);
     }
 
     #[test]
@@ -996,7 +997,7 @@ mod tests {
 
         // Take<0> -> []
         type TakeZero = <List as Take<U0>>::Output;
-        assert_type_eq_all!(TakeZero, TyNil);
+        assert_type_eq_all!(TakeZero, Nil);
 
         // Drop<0> -> [1, 2, 3, 4]
         type DropZero = <List as Drop<U0>>::Output;

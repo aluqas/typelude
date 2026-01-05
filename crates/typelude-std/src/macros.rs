@@ -5,7 +5,6 @@ macro_rules! define_arith_op {
             // Operator Symbol
             #[doc = $doc]
             pub struct [<Op $op_name>];
-            impl $crate::typelude_core::Sealed for [<Op $op_name>] {}
 
             // Expression Struct
             pub struct [<E $op_name>]<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
@@ -36,7 +35,6 @@ macro_rules! define_logic_op {
             // Operator Symbol
             #[doc = $doc]
             pub struct [<Op $op_name>];
-            impl $crate::typelude_core::Sealed for [<Op $op_name>] {}
 
             // Expression Struct
             pub struct [<E $op_name>]<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
@@ -66,7 +64,6 @@ macro_rules! define_unary_logic_op {
             // Operator Symbol
             #[doc = $doc]
             pub struct [<Op $op_name>];
-            impl $crate::typelude_core::Sealed for [<Op $op_name>] {}
 
             // Expression Struct
             pub struct [<E $op_name>]<Val>(std::marker::PhantomData<Val>);

@@ -3,35 +3,21 @@
 //! Type-level binary search tree (BST) with insert, contains, min, max, and traversal operations.
 //! This is an unbalanced BST; for truly balanced trees, AVL rotations would be needed.
 
-use std::marker::PhantomData;
-
 use typelude_core::Evaluate;
 use typelude_macros::def_op;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
 
-use crate::{
-    data::primitives::bool::{TyFalse, TyTrue},
-    std::primitives::{
-        array::{Concat, Cons, TyArray, TyNil},
-        option::{TyNone, TySome},
-    },
-};
-
 // =============================================================================
 // Data Structure
 // =============================================================================
-
-/// Empty tree (leaf)
-pub struct TyLeaf;
-
-/// Non-empty tree node with value, left subtree, and right subtree
-pub struct TyNode<Value, Left, Right>(PhantomData<(Value, Left, Right)>);
-
 /// Marker trait for type-level trees
-pub trait TypeTree {}
-
-impl TypeTree for TyLeaf {}
-impl<V, L: TypeTree, R: TypeTree> TypeTree for TyNode<V, L, R> {}
+pub use crate::data::collections::tree::IsTree as TypeTree;
+// Re-export kernel types for convenience/compatibility if mostly used from here
+pub use crate::data::collections::tree::{Nil, Tree};
+use crate::{
+    data::primitives::bool::{False, True},
+    std::prim::option::{None, Some},
+};
 
 // =============================================================================
 // Core Operations
@@ -44,8 +30,8 @@ pub trait TreeInsert<V> {
 }
 
 // Insert into empty tree
-impl<V> TreeInsert<V> for TyLeaf {
-    type Output = TyNode<V, TyLeaf, TyLeaf>;
+impl<V> TreeInsert<V> for Nil {
+    type Output = Tree<V, Nil, Nil>;
 }
 
 /// Helper for insert dispatch based on comparison
@@ -60,7 +46,7 @@ impl<V, Value, Left: TypeTree + TreeInsert<V>, Right: TypeTree>
 where
     <Left as TreeInsert<V>>::Output: TypeTree,
 {
-    type Output = TyNode<Value, <Left as TreeInsert<V>>::Output, Right>;
+    type Output = Tree<Value, <Left as TreeInsert<V>>::Output, Right>;
 }
 
 // V >= Value: go right
@@ -69,10 +55,10 @@ impl<V, Value, Left: TypeTree, Right: TypeTree + TreeInsert<V>>
 where
     <Right as TreeInsert<V>>::Output: TypeTree,
 {
-    type Output = TyNode<Value, Left, <Right as TreeInsert<V>>::Output>;
+    type Output = Tree<Value, Left, <Right as TreeInsert<V>>::Output>;
 }
 
-impl<V, Value, Left: TypeTree, Right: TypeTree> TreeInsert<V> for TyNode<Value, Left, Right>
+impl<V, Value, Left: TypeTree, Right: TypeTree> TreeInsert<V> for Tree<Value, Left, Right>
 where
     V: IsLess<Value>,
     <V as IsLess<Value>>::Output: Bit,
@@ -84,11 +70,11 @@ where
 
 /// Check if the tree contains a value
 pub trait TreeContains<V> {
-    type Output; // TyTrue or TyFalse
+    type Output; // True or False
 }
 
-impl<V> TreeContains<V> for TyLeaf {
-    type Output = TyFalse;
+impl<V> TreeContains<V> for Nil {
+    type Output = False;
 }
 
 /// Helper for contains dispatch
@@ -101,7 +87,7 @@ pub trait TreeContainsHelper<V, Value, Left, Right, IsEq, IsLessResult> {
 impl<V, Value, Left: TypeTree, Right: TypeTree, IsLessResult>
     TreeContainsHelper<V, Value, Left, Right, B1, IsLessResult> for ()
 {
-    type Output = TyTrue;
+    type Output = True;
 }
 
 // V < Value: search left
@@ -118,7 +104,7 @@ impl<V, Value, Left: TypeTree, Right: TypeTree + TreeContains<V>>
     type Output = <Right as TreeContains<V>>::Output;
 }
 
-impl<V, Value, Left: TypeTree, Right: TypeTree> TreeContains<V> for TyNode<Value, Left, Right>
+impl<V, Value, Left: TypeTree, Right: TypeTree> TreeContains<V> for Tree<Value, Left, Right>
 where
     V: IsEqual<Value> + IsLess<Value>,
     <V as IsEqual<Value>>::Output: Bit,
@@ -144,61 +130,65 @@ where
 
 /// Get the minimum value (leftmost)
 pub trait TreeMin {
-    type Output; // TySome<V> or TyNone
+    type Output; // Some<V> or None
 }
 
-impl TreeMin for TyLeaf {
-    type Output = TyNone;
+impl TreeMin for Nil {
+    type Output = None;
 }
 
-impl<V, R: TypeTree> TreeMin for TyNode<V, TyLeaf, R> {
-    type Output = TySome<V>;
+impl<V, R: TypeTree> TreeMin for Tree<V, Nil, R> {
+    type Output = Some<V>;
 }
 
-impl<V, LV, LL: TypeTree, LR: TypeTree, R: TypeTree> TreeMin for TyNode<V, TyNode<LV, LL, LR>, R>
+impl<V, LV, LL: TypeTree, LR: TypeTree, R: TypeTree> TreeMin for Tree<V, Tree<LV, LL, LR>, R>
 where
-    TyNode<LV, LL, LR>: TreeMin,
+    Tree<LV, LL, LR>: TreeMin,
 {
-    type Output = <TyNode<LV, LL, LR> as TreeMin>::Output;
+    type Output = <Tree<LV, LL, LR> as TreeMin>::Output;
 }
 
 /// Get the maximum value (rightmost)
 pub trait TreeMax {
-    type Output; // TySome<V> or TyNone
+    type Output; // Some<V> or None
 }
 
-impl TreeMax for TyLeaf {
-    type Output = TyNone;
+impl TreeMax for Nil {
+    type Output = None;
 }
 
-impl<V, L: TypeTree> TreeMax for TyNode<V, L, TyLeaf> {
-    type Output = TySome<V>;
+impl<V, L: TypeTree> TreeMax for Tree<V, L, Nil> {
+    type Output = Some<V>;
 }
 
-impl<V, L: TypeTree, RV, RL: TypeTree, RR: TypeTree> TreeMax for TyNode<V, L, TyNode<RV, RL, RR>>
+impl<V, L: TypeTree, RV, RL: TypeTree, RR: TypeTree> TreeMax for Tree<V, L, Tree<RV, RL, RR>>
 where
-    TyNode<RV, RL, RR>: TreeMax,
+    Tree<RV, RL, RR>: TreeMax,
 {
-    type Output = <TyNode<RV, RL, RR> as TreeMax>::Output;
+    type Output = <Tree<RV, RL, RR> as TreeMax>::Output;
 }
 
 /// Convert tree to sorted list (in-order traversal)
 pub trait TreeToList {
-    type Output: Cons;
+    type Output: crate::data::collections::array::IsList;
 }
 
-impl TreeToList for TyLeaf {
-    type Output = TyNil;
+impl TreeToList for Nil {
+    type Output = crate::data::collections::array::Nil;
 }
 
-impl<V, L: TypeTree + TreeToList, R: TypeTree + TreeToList> TreeToList for TyNode<V, L, R>
+impl<V, L: TypeTree + TreeToList, R: TypeTree + TreeToList> TreeToList for Tree<V, L, R>
 where
-    <L as TreeToList>::Output: Cons + Concat<TyArray<V, <R as TreeToList>::Output>>,
-    <R as TreeToList>::Output: Cons,
+    <L as TreeToList>::Output: crate::data::collections::array::IsList
+        + crate::std::col::array::Concat<
+            crate::data::collections::array::Array<V, <R as TreeToList>::Output>,
+        >,
+    <R as TreeToList>::Output: crate::data::collections::array::IsList,
 {
     // In-order: left ++ [value] ++ right
-    type Output =
-        <<L as TreeToList>::Output as Concat<TyArray<V, <R as TreeToList>::Output>>>::Output;
+    type Output = <<L as TreeToList>::Output as crate::std::col::array::Concat<
+        crate::data::collections::array::Array<V, <R as TreeToList>::Output>,
+    >>::Output;
 }
 
 /// Get the height/depth of the tree
@@ -206,11 +196,11 @@ pub trait TreeHeight {
     type Output;
 }
 
-impl TreeHeight for TyLeaf {
+impl TreeHeight for Nil {
     type Output = typenum::U0;
 }
 
-impl<V, L: TypeTree + TreeHeight, R: TypeTree + TreeHeight> TreeHeight for TyNode<V, L, R>
+impl<V, L: TypeTree + TreeHeight, R: TypeTree + TreeHeight> TreeHeight for Tree<V, L, R>
 where
     <L as TreeHeight>::Output: typenum::Max<<R as TreeHeight>::Output>,
     <<L as TreeHeight>::Output as typenum::Max<<R as TreeHeight>::Output>>::Output:
@@ -281,42 +271,43 @@ mod tests {
     use typenum::{U1, U2, U3, U4, U5};
 
     use super::*;
+    use crate::data::collections::array::{Array as ArrayData, Nil as NilArray};
 
     #[test]
     fn test_tree_insert() {
         // Insert into empty tree
-        type T1 = <TyLeaf as TreeInsert<U2>>::Output;
-        assert_type_eq_all!(T1, TyNode<U2, TyLeaf, TyLeaf>);
+        type T1 = <Nil as TreeInsert<U2>>::Output;
+        assert_type_eq_all!(T1, Tree<U2, Nil, Nil>);
     }
 
     #[test]
     fn test_tree_min_max() {
         // Single node tree
-        type Tree1 = TyNode<U3, TyLeaf, TyLeaf>;
-        assert_type_eq_all!(<Tree1 as TreeMin>::Output, TySome<U3>);
-        assert_type_eq_all!(<Tree1 as TreeMax>::Output, TySome<U3>);
+        type Tree1 = Tree<U3, Nil, Nil>;
+        assert_type_eq_all!(<Tree1 as TreeMin>::Output, Some<U3>);
+        assert_type_eq_all!(<Tree1 as TreeMax>::Output, Some<U3>);
 
         // Tree with left child (min is in left)
-        type Tree2 = TyNode<U3, TyNode<U1, TyLeaf, TyLeaf>, TyLeaf>;
-        assert_type_eq_all!(<Tree2 as TreeMin>::Output, TySome<U1>);
-        assert_type_eq_all!(<Tree2 as TreeMax>::Output, TySome<U3>);
+        type Tree2 = Tree<U3, Tree<U1, Nil, Nil>, Nil>;
+        assert_type_eq_all!(<Tree2 as TreeMin>::Output, Some<U1>);
+        assert_type_eq_all!(<Tree2 as TreeMax>::Output, Some<U3>);
 
         // Tree with right child (max is in right)
-        type Tree3 = TyNode<U3, TyLeaf, TyNode<U5, TyLeaf, TyLeaf>>;
-        assert_type_eq_all!(<Tree3 as TreeMin>::Output, TySome<U3>);
-        assert_type_eq_all!(<Tree3 as TreeMax>::Output, TySome<U5>);
+        type Tree3 = Tree<U3, Nil, Tree<U5, Nil, Nil>>;
+        assert_type_eq_all!(<Tree3 as TreeMin>::Output, Some<U3>);
+        assert_type_eq_all!(<Tree3 as TreeMax>::Output, Some<U5>);
     }
 
     #[test]
     fn test_tree_to_list() {
         // Single node
-        type Tree1 = TyNode<U3, TyLeaf, TyLeaf>;
+        type Tree1 = Tree<U3, Nil, Nil>;
         type List1 = <Tree1 as TreeToList>::Output;
-        assert_type_eq_all!(List1, TyArray<U3, TyNil>);
+        assert_type_eq_all!(List1, ArrayData<U3, NilArray>);
 
         // Tree: 2 with left=1
-        type Tree2 = TyNode<U2, TyNode<U1, TyLeaf, TyLeaf>, TyLeaf>;
+        type Tree2 = Tree<U2, Tree<U1, Nil, Nil>, Nil>;
         type List2 = <Tree2 as TreeToList>::Output;
-        assert_type_eq_all!(List2, TyArray<U1, TyArray<U2, TyNil>>);
+        assert_type_eq_all!(List2, ArrayData<U1, ArrayData<U2, NilArray>>);
     }
 }

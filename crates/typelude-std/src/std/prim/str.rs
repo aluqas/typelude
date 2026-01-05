@@ -11,15 +11,9 @@
 
 pub use tstr::{TS, ts};
 
-use crate::std::reify::Reify;
-
-/// Type-level Character
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TyChar<const C: char>;
-
-impl<const C: char> Reify<char> for TyChar<C> {
-    const REIFIED: char = C;
-}
+// Re-export kernel types
+pub use crate::data::primitives::str::Char;
+pub use crate::std::prim::option::{None, Some};
 
 // Convert TyArray of TyChar to &str?
 // Requires const concatenation which is complex.
@@ -39,9 +33,7 @@ where
 // For now, we rely on tstr for static strings, and TyArray<TyChar> for manipulation.
 // We can provide conversion from TyArray<TyChar> to runtime string via Reify<[char; N]>.
 
-impl<const C: char> Reify<u8> for TyChar<C> {
-    const REIFIED: u8 = C as u8; // Only for ASCII?
-}
+// The Reify<u8> for Char is now handled in `crate::data::primitives::str::Char`
 
 #[cfg(test)]
 mod tests {
@@ -51,15 +43,15 @@ mod tests {
     use crate::tyarray;
 
     #[test]
-    fn test_tychar() {
-        type A = TyChar<'a'>;
+    fn test_char() {
+        type A = Char<'a'>;
         assert_eq!(<A as Reify<char>>::REIFIED, 'a');
     }
 
     #[test]
     #[cfg(feature = "nightly")]
-    fn test_tyarray_of_char() {
-        type S = tyarray![TyChar<'a'>, TyChar<'b'>, TyChar<'c'>];
+    fn test_array_of_char() {
+        type S = tyarray![Char<'a'>, Char<'b'>, Char<'c'>];
         // Reify to array [char; 3]
         let chars = <S as Reify<[char; 3]>>::REIFIED;
         assert_eq!(chars, ['a', 'b', 'c']);

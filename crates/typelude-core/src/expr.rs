@@ -1,8 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{
-    Eval, Evaluate, Apply,
-};
+use crate::{Apply, Eval, Evaluate};
 
 // =========================================================================
 // Bridges: Connecting Apply (Pure) and Eval (System)
@@ -25,19 +23,19 @@ where
 }
 
 // =========================================================================
-// ECall: Call-by-Value Application (New, for Lambda integration)
+// EApp: Call-by-Value Application (New, for Lambda integration)
 // =========================================================================
 
-/// **Call-by-Value Application**: `ECall<Ef, Ea>`
+/// **Call-by-Value Application**: `EApp<Ef, Ea>`
 ///
 /// 1. Evaluate `Ef` -> `F_val`
 /// 2. Evaluate `Ea` -> `A_val`
 /// 3. Apply `F_val` to `A_val` -> `Result`
 ///
 /// This is safer for higher-order programming where functions are expressions.
-pub struct ECall<Ef, Ea>(PhantomData<(Ef, Ea)>);
+pub struct EApp<Ef, Ea>(PhantomData<(Ef, Ea)>);
 
-impl<Ef, Ea> Eval for ECall<Ef, Ea>
+impl<Ef, Ea> Eval for EApp<Ef, Ea>
 where
     Ef: Eval,
     Ea: Eval,
@@ -46,26 +44,26 @@ where
     type Output = <Evaluate<Ef> as Apply<Evaluate<Ea>>>::Output;
 }
 
-// Allow ECall<Ef, Ea> to act as a function if it evaluates to one.
-impl<Ef, Ea, A> Apply<A> for ECall<Ef, Ea>
+// Allow EApp<Ef, Ea> to act as a function if it evaluates to one.
+impl<Ef, Ea, A> Apply<A> for EApp<Ef, Ea>
 where
-    ECall<Ef, Ea>: Eval,
-    Evaluate<ECall<Ef, Ea>>: Apply<A>,
+    EApp<Ef, Ea>: Eval,
+    Evaluate<EApp<Ef, Ea>>: Apply<A>,
 {
-    type Output = <Evaluate<ECall<Ef, Ea>> as Apply<A>>::Output;
+    type Output = <Evaluate<EApp<Ef, Ea>> as Apply<A>>::Output;
 }
 
 // =========================================================================
-// ELazyCall: Call-by-Name Application
+// ELazyApp: Call-by-Name Application
 // =========================================================================
 
-/// **Call-by-Name Application**: `ELazyCall<Ef, Ea>`
+/// **Call-by-Name Application**: `ELazyApp<Ef, Ea>`
 ///
 /// 1. Evaluate `Ef` -> `F_val`
 /// 2. Apply `F_val` to `Ea` (unevaluated) -> `Result`
-pub struct ELazyCall<Ef, Ea>(PhantomData<(Ef, Ea)>);
+pub struct ELazyApp<Ef, Ea>(PhantomData<(Ef, Ea)>);
 
-impl<Ef, Ea> Eval for ELazyCall<Ef, Ea>
+impl<Ef, Ea> Eval for ELazyApp<Ef, Ea>
 where
     Ef: Eval,
     Evaluate<Ef>: Apply<Ea>,

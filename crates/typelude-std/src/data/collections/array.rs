@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Sealed};
+use typelude_core::Eval;
 
 /// **Marker Trait**
 ///
@@ -12,30 +12,28 @@ use typelude_core::{Eval, Sealed};
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a Cons List",
     label = "not a list",
-    note = "ensure `{Self}` is either `TyNil` or `TyArray`"
+    note = "ensure `{Self}` is either `Nil` or `Array`"
 )]
-pub trait Cons: Sealed {}
+pub trait IsList {}
 
-/// Termination of TyArray (Empty List).
+/// Termination of Array (Empty List).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
-pub struct TyNil;
+pub struct Nil;
 
 /// Type-level array (Cons Cell)
 ///
 /// - `Head`: Any type
-/// - `Tail`: Rest part (recursive `TyArray`, `TyNil` is termination)
+/// - `Tail`: Rest part (recursive `Array`, `Nil` is termination)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
-pub struct TyArray<Head, Tail: Cons>(pub PhantomData<(Head, Tail)>);
+pub struct Array<Head, Tail: IsList>(pub PhantomData<(Head, Tail)>);
 
-impl Sealed for TyNil {}
-impl Cons for TyNil {}
-impl Eval for TyNil {
+impl IsList for Nil {}
+impl Eval for Nil {
     type Output = Self;
 }
 
-impl<Head, Tail: Cons> Sealed for TyArray<Head, Tail> {}
-impl<Head, Tail: Cons> Cons for TyArray<Head, Tail> {}
-impl<Head, Tail: Cons> Eval for TyArray<Head, Tail> {
+impl<Head, Tail: IsList> IsList for Array<Head, Tail> {}
+impl<Head, Tail: IsList> Eval for Array<Head, Tail> {
     type Output = Self;
 }
 
@@ -43,9 +41,9 @@ impl<Head, Tail: Cons> Eval for TyArray<Head, Tail> {
 #[macro_export]
 macro_rules! tyarray {
     // Empty list
-    () => { $crate::data::collections::array::TyNil };
+    () => { $crate::data::collections::array::Nil };
     // List with length 1 (with optional trailing comma)
-    ($n:ty $(,)?) => { $crate::data::collections::array::TyArray<$n, $crate::data::collections::array::TyNil> };
+    ($n:ty $(,)?) => { $crate::data::collections::array::Array<$n, $crate::data::collections::array::Nil> };
     // List with length 2 or more (with optional trailing comma)
-    ($n:ty, $($tail:ty),+ $(,)?) => { $crate::data::collections::array::TyArray<$n, $crate::tyarray![$($tail),+]> };
+    ($n:ty, $($tail:ty),+ $(,)?) => { $crate::data::collections::array::Array<$n, $crate::tyarray![$($tail),+]> };
 }

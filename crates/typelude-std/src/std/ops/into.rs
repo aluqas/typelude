@@ -1,7 +1,7 @@
 //! Conversion Traits (Type -> Type).
 //!
-//! - TyFrom: Type-level From
-//! - TyInto: Type-level Into
+//! - From: Type-level From
+//! - Into: Type-level Into
 
 /// Type-level From.
 ///
@@ -12,40 +12,40 @@
 ///
 /// ```rust
 /// use typelude_std::std::{
-///     bool::{TyFalse, TyTrue},
-///     ops::{TyFrom, TyInto},
+///     ops::{From, Into},
+///     prim::bool::{False, True},
 /// };
 /// use typenum::{B0, B1};
 ///
-/// // If impl TyFrom<B1> for bool { type Output = TyTrue; }
-/// // type Res = <bool as TyFrom<B1>>::Output;
+/// // If impl From<B1> for bool { type Output = True; }
+/// // type Res = <bool as From<B1>>::Output;
 /// ```
 #[diagnostic::on_unimplemented(
-    message = "Cannot convert `{Source}` into `{Self}` via TyFrom",
+    message = "Cannot convert `{Source}` into `{Self}` via From",
     label = "conversion not implemented",
-    note = "ensure `{Self}` implements `TyFrom<{Source}>`"
+    note = "ensure `{Self}` implements `From<{Source}>`"
 )]
-pub trait TyFrom<Source> {
+pub trait From<Source> {
     type Output;
 }
 
 /// Type-level Into.
 ///
-/// Blanket implemented for any type that implements [`TyFrom`] on the target.
+/// Blanket implemented for any type that implements [`From`] on the target.
 #[diagnostic::on_unimplemented(
-    message = "Cannot convert `{Self}` into `{Target}` via TyInto",
+    message = "Cannot convert `{Self}` into `{Target}` via Into",
     label = "conversion not implemented",
-    note = "ensure `{Target}` implements `TyFrom<{Self}>`"
+    note = "ensure `{Target}` implements `From<{Self}>`"
 )]
-pub trait TyInto<Target> {
+pub trait Into<Target> {
     type Output;
 }
 
-impl<T, Target> TyInto<Target> for T
+impl<T, Target> Into<Target> for T
 where
-    Target: TyFrom<T>,
+    Target: From<T>,
 {
-    type Output = <Target as TyFrom<T>>::Output;
+    type Output = <Target as From<T>>::Output;
 }
 
 // -----------------------------------------------------------------------------
@@ -57,15 +57,15 @@ mod tests {
     use typenum::{B0, B1};
 
     use super::*;
-    use crate::std::bool::{TyFalse, TyTrue};
+    use crate::std::prim::bool::{False, True};
 
     // Implementations for bool are now in std::bool.rs
-    // checking they work via TyInto
+    // checking they work via Into
 
     #[test]
-    fn test_ty_into() {
+    fn test_into() {
         use static_assertions::assert_type_eq_all;
-        assert_type_eq_all!(<B1 as TyInto<bool>>::Output, TyTrue);
-        assert_type_eq_all!(<B0 as TyInto<bool>>::Output, TyFalse);
+        assert_type_eq_all!(<B1 as Into<bool>>::Output, True);
+        assert_type_eq_all!(<B0 as Into<bool>>::Output, False);
     }
 }

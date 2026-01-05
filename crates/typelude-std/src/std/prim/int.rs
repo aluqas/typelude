@@ -6,68 +6,61 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use typenum::Pow;
 
-use crate::std::traits::{TypeAdd, TypeDiv, TypeMul, TypeNat, TypePow, TypeRem, TypeSub};
+pub use crate::data::primitives::int::*;
+use crate::std::traits::{Nat, TAdd, TDiv, TMul, TPow, TRem, TSub};
 
 // Eval implementation is now in typelude-kernel (via impls.rs)
 // We just define the Traits and Adapter Logic here.
 
-// =============================================================================
-// Adapter Implementation: TypeNat / TypeInt for typenum
-// =============================================================================
+// Implement Nat for UTerm and UInt
+impl Nat for typenum::UTerm {}
+impl<U, B> Nat for typenum::UInt<U, B> {}
 
-// Implement TypeNat for UTerm and UInt
-impl TypeNat for typenum::UTerm {}
-impl<U, B> TypeNat for typenum::UInt<U, B> {}
-
-// Implement TypeAdd, etc. for any typenum type that implements the typenum traits
+// Implement TAdd, etc. for any typenum type that implements the typenum traits
 // Note: We use blanket implementations where possible, or specific ones if needed to avoid conflict.
 // typenum implements Add for almost everything (UInt, Z0, PInt, NInt).
 
-impl<L, R> TypeAdd<R> for L
+impl<L, R> TAdd<R> for L
 where
     L: Add<R>,
 {
     type Output = <L as Add<R>>::Output;
 }
 
-impl<L, R> TypeSub<R> for L
+impl<L, R> TSub<R> for L
 where
     L: Sub<R>,
 {
     type Output = <L as Sub<R>>::Output;
 }
 
-impl<L, R> TypeMul<R> for L
+impl<L, R> TMul<R> for L
 where
     L: Mul<R>,
 {
     type Output = <L as Mul<R>>::Output;
 }
 
-impl<L, R> TypeDiv<R> for L
+impl<L, R> TDiv<R> for L
 where
     L: Div<R>,
 {
     type Output = <L as Div<R>>::Output;
 }
 
-impl<L, R> TypeRem<R> for L
+impl<L, R> TRem<R> for L
 where
     L: Rem<R>,
 {
     type Output = <L as Rem<R>>::Output;
 }
 
-impl<L, R> TypePow<R> for L
+impl<L, R> TPow<R> for L
 where
     L: Pow<R>,
 {
     type Output = <L as Pow<R>>::Output;
 }
-
-//
-// Tests (Only for implementation validity)
-//
 
 #[cfg(test)]
 mod tests {

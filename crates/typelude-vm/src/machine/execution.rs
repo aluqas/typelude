@@ -8,8 +8,8 @@ use typelude_std::std::int;
 use typelude_std::{
     expr::{EIf, EWhile},
     std::{
-        array::{Concat, Cons, EConcat, Get, Set, TyArray, TyNil}, // Cons is here
-        bool::{TyFalse, TyTrue},
+        array::{Array, Concat, EConcat, Get, IsList, Nil, Set},
+        bool::{False, True},
         ops::OpNot,
     },
 };
@@ -27,23 +27,22 @@ pub trait Execute<Stack, Locals, Memory, CallStack, RestProg> {
 impl<Stack, Locals, Memory, CallStack, Val, RestProg>
     Execute<Stack, Locals, Memory, CallStack, RestProg> for OpPush<Val>
 where
-    Stack: Cons,
+    Stack: IsList,
 {
-    type OutputState = MachineState<TyArray<Val, Stack>, Locals, Memory, CallStack, RestProg>;
+    type OutputState = MachineState<Array<Val, Stack>, Locals, Memory, CallStack, RestProg>;
 }
 
-// --- Arithmetic ---
+// --- Binary Ops ---
 macro_rules! impl_binary_op {
-    ($Op:ty, $EvalOp:ty) => {
+    ($Op:ident, $EvalOp:ty) => {
         impl<Lhs, Rhs, RestStack, Locals, Memory, CallStack, RestProg>
-            Execute<TyArray<Lhs, TyArray<Rhs, RestStack>>, Locals, Memory, CallStack, RestProg>
-            for $Op
+            Execute<Array<Lhs, Array<Rhs, RestStack>>, Locals, Memory, CallStack, RestProg> for $Op
         where
             $EvalOp: Eval,
-            RestStack: Cons,
+            RestStack: IsList,
         {
             type OutputState = MachineState<
-                TyArray<Evaluate<$EvalOp>, RestStack>,
+                Array<Evaluate<$EvalOp>, RestStack>,
                 Locals,
                 Memory,
                 CallStack,
@@ -56,19 +55,18 @@ macro_rules! impl_binary_op {
 impl_binary_op!(OpAdd, typelude_std::std::ops::EAdd<Lhs, Rhs>);
 impl_binary_op!(OpSub, typelude_std::std::ops::ESub<Lhs, Rhs>);
 
-// --- Comparison ---
+// --- Comparison Ops ---
 macro_rules! impl_cmp_op {
-    ($Op:ty, $CoreOp:ty) => {
+    ($Op:ident, $CoreOp:ty) => {
         impl<Lhs, Rhs, RestStack, Locals, Memory, CallStack, RestProg>
-            Execute<TyArray<Lhs, TyArray<Rhs, RestStack>>, Locals, Memory, CallStack, RestProg>
-            for $Op
+            Execute<Array<Lhs, Array<Rhs, RestStack>>, Locals, Memory, CallStack, RestProg> for $Op
         where
             $CoreOp: Apply<(Lhs, Rhs)>,
             App<$CoreOp, (Lhs, Rhs)>: Eval,
-            RestStack: Cons,
+            RestStack: IsList,
         {
             type OutputState = MachineState<
-                TyArray<Evaluate<App<$CoreOp, (Lhs, Rhs)>>, RestStack>,
+                Array<Evaluate<App<$CoreOp, (Lhs, Rhs)>>, RestStack>,
                 Locals,
                 Memory,
                 CallStack,
@@ -85,15 +83,15 @@ impl_cmp_op!(OpNeq, typelude_std::std::ops::OpNeq);
 impl_cmp_op!(OpLt, typelude_std::std::ops::OpLt);
 impl_cmp_op!(OpGt, typelude_std::std::ops::OpGt);
 
-// --- Boolean Logic ---
+// --- Unary Ops ---
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg> for OpNot
+    Execute<Array<Val, RestStack>, Locals, Memory, CallStack, RestProg> for OpNot
 where
     typelude_std::std::ops::ENot<Val>: Eval,
-    RestStack: Cons,
+    RestStack: IsList,
 {
     type OutputState = MachineState<
-        TyArray<Evaluate<typelude_std::std::ops::ENot<Val>>, RestStack>,
+        Array<Evaluate<typelude_std::std::ops::ENot<Val>>, RestStack>,
         Locals,
         Memory,
         CallStack,
@@ -104,43 +102,43 @@ where
 impl_binary_op!(OpAnd, typelude_std::std::ops::EAnd<Lhs, Rhs>);
 impl_binary_op!(OpOr, typelude_std::std::ops::EOr<Lhs, Rhs>);
 
-// --- Stack Manipulation ---
+// --- Stack Ops ---
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg> for OpDup
+    Execute<Array<Val, RestStack>, Locals, Memory, CallStack, RestProg> for OpDup
 where
-    RestStack: Cons,
+    RestStack: IsList,
 {
     type OutputState =
-        MachineState<TyArray<Val, TyArray<Val, RestStack>>, Locals, Memory, CallStack, RestProg>;
+        MachineState<Array<Val, Array<Val, RestStack>>, Locals, Memory, CallStack, RestProg>;
 }
 
 impl<A, B, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<A, TyArray<B, RestStack>>, Locals, Memory, CallStack, RestProg> for OpSwap
+    Execute<Array<A, Array<B, RestStack>>, Locals, Memory, CallStack, RestProg> for OpSwap
 where
-    RestStack: Cons,
+    RestStack: IsList,
 {
     type OutputState =
-        MachineState<TyArray<B, TyArray<A, RestStack>>, Locals, Memory, CallStack, RestProg>;
+        MachineState<Array<B, Array<A, RestStack>>, Locals, Memory, CallStack, RestProg>;
 }
 
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg> for OpDrop
+    Execute<Array<Val, RestStack>, Locals, Memory, CallStack, RestProg> for OpDrop
 where
-    RestStack: Cons,
+    RestStack: IsList,
 {
     type OutputState = MachineState<RestStack, Locals, Memory, CallStack, RestProg>;
 }
 
 // --- Memory Access ---
 impl<Addr, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<Addr, RestStack>, Locals, Memory, CallStack, RestProg> for OpLoad
+    Execute<Array<Addr, RestStack>, Locals, Memory, CallStack, RestProg> for OpLoad
 where
     Memory: Get<Addr>,
     Addr: Unsigned,
-    RestStack: Cons,
+    RestStack: IsList,
 {
     type OutputState = MachineState<
-        TyArray<<Memory as Get<Addr>>::Output, RestStack>,
+        Array<<Memory as Get<Addr>>::Output, RestStack>,
         Locals,
         Memory,
         CallStack,
@@ -148,45 +146,44 @@ where
     >;
 }
 
-impl<Val, Addr, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<Val, TyArray<Addr, RestStack>>, Locals, Memory, CallStack, RestProg>
-    for OpStore
+impl<Value, Addr, RestStack, Locals, Memory, CallStack, RestProg>
+    Execute<Array<Value, Array<Addr, RestStack>>, Locals, Memory, CallStack, RestProg> for OpStore
 where
-    Memory: Set<Addr, Val>,
+    Memory: Set<Addr, Value>,
     Addr: Unsigned,
-    RestStack: Cons,
+    RestStack: IsList,
 {
     type OutputState =
-        MachineState<RestStack, Locals, <Memory as Set<Addr, Val>>::Output, CallStack, RestProg>;
+        MachineState<RestStack, Locals, <Memory as Set<Addr, Value>>::Output, CallStack, RestProg>;
 }
 
 // --- Local Variables ---
-impl<Val, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg> for OpLet
+impl<Value, RestStack, Locals, Memory, CallStack, RestProg>
+    Execute<Array<Value, RestStack>, Locals, Memory, CallStack, RestProg> for OpLet
 where
-    RestStack: Cons,
-    Locals: Cons,
+    RestStack: IsList,
+    Locals: IsList,
 {
-    type OutputState = MachineState<RestStack, TyArray<Val, Locals>, Memory, CallStack, RestProg>;
+    type OutputState = MachineState<RestStack, Array<Value, Locals>, Memory, CallStack, RestProg>;
 }
 
 impl<Stack, Head, Tail, Memory, CallStack, RestProg>
-    Execute<Stack, TyArray<Head, Tail>, Memory, CallStack, RestProg> for OpDropLocal
+    Execute<Stack, Array<Head, Tail>, Memory, CallStack, RestProg> for OpDropLocal
 where
-    Tail: Cons,
+    Tail: IsList,
 {
     type OutputState = MachineState<Stack, Tail, Memory, CallStack, RestProg>;
 }
 
-impl<Idx, Stack, Locals, Memory, CallStack, RestProg>
-    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpGetLocal<Idx>
+impl<Index, Stack, Locals, Memory, CallStack, RestProg>
+    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpGetLocal<Index>
 where
-    Locals: Get<Idx>,
-    Idx: Unsigned,
-    Stack: Cons,
+    Locals: Get<Index>,
+    Index: Unsigned,
+    Stack: IsList,
 {
     type OutputState = MachineState<
-        TyArray<<Locals as Get<Idx>>::Output, Stack>,
+        Array<<Locals as Get<Index>>::Output, Stack>,
         Locals,
         Memory,
         CallStack,
@@ -194,78 +191,105 @@ where
     >;
 }
 
-impl<Idx, Val, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg> for OpSetLocal<Idx>
+impl<Index, Value, RestStack, Locals, Memory, CallStack, RestProg>
+    Execute<Array<Value, RestStack>, Locals, Memory, CallStack, RestProg> for OpSetLocal<Index>
 where
-    Locals: Set<Idx, Val>,
-    Idx: Unsigned,
-    RestStack: Cons,
+    Locals: Set<Index, Value>,
+    Index: Unsigned,
+    RestStack: IsList,
 {
-    type OutputState =
-        MachineState<RestStack, <Locals as Set<Idx, Val>>::Output, Memory, CallStack, RestProg>;
+    type OutputState = MachineState<
+        RestStack,
+        <Locals as Set<Index, Value>>::Output,
+        Memory,
+        CallStack,
+        RestProg,
+    >;
 }
 
-// --- Control Flow: Call/Return ---
-impl<Target, Stack, Locals, Memory, CallStack, RestProg>
-    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpCall<Target>
+// --- Control Flow ---
+impl<TargetProg, Stack, Locals, Memory, CallStack, RestProg>
+    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpCall<TargetProg>
 where
-    CallStack: Cons,
+    CallStack: IsList,
 {
     type OutputState =
-        MachineState<Stack, TyNil, Memory, TyArray<(RestProg, Locals), CallStack>, Target>;
+        MachineState<Stack, Nil, Memory, Array<(RestProg, Locals), CallStack>, TargetProg>;
 }
 
 impl<Stack, Locals, Memory, Continuation, CallerLocals, RestCallStack, RestProg>
-    Execute<Stack, Locals, Memory, TyArray<(Continuation, CallerLocals), RestCallStack>, RestProg>
+    Execute<Stack, Locals, Memory, Array<(Continuation, CallerLocals), RestCallStack>, RestProg>
     for OpReturn
 where
-    RestCallStack: Cons,
+    RestCallStack: IsList,
 {
     type OutputState = MachineState<Stack, CallerLocals, Memory, RestCallStack, Continuation>;
 }
 
 // --- Control Flow: If ---
-impl<Cond, Then, Else, RestStack, Locals, Memory, CallStack, RestProg>
-    Execute<TyArray<Cond, RestStack>, Locals, Memory, CallStack, RestProg> for OpIf<Then, Else>
+impl<CondVal, ThenProg, ElseProg, RestStack, Locals, Memory, CallStack, RestProg>
+    Execute<Array<CondVal, RestStack>, Locals, Memory, CallStack, RestProg>
+    for OpIf<ThenProg, ElseProg>
 where
-    RestStack: Cons,
-    EConcat<Then, RestProg>: Eval,
-    EConcat<Else, RestProg>: Eval,
+    RestStack: IsList,
+    EConcat<ThenProg, RestProg>: Eval,
+    EConcat<ElseProg, RestProg>: Eval,
     EIf<
-        Cond,
-        MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<Then, RestProg>>>,
-        MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<Else, RestProg>>>,
+        CondVal,
+        MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<ThenProg, RestProg>>>,
+        MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<ElseProg, RestProg>>>,
     >: Eval,
 {
     type OutputState = Evaluate<
         EIf<
-            Cond,
-            MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<Then, RestProg>>>,
-            MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<Else, RestProg>>>,
+            CondVal,
+            MachineState<
+                RestStack,
+                Locals,
+                Memory,
+                CallStack,
+                Evaluate<EConcat<ThenProg, RestProg>>,
+            >,
+            MachineState<
+                RestStack,
+                Locals,
+                Memory,
+                CallStack,
+                Evaluate<EConcat<ElseProg, RestProg>>,
+            >,
         >,
     >;
 }
 
 // --- Control Flow: While ---
-// OpWhile expands to: Cond ++ [OpIf<Body ++ [OpWhile<Cond, Body>], []>] ++ RestProg
+// OpWhile expands to: CondProg ++ [OpIf<BodyProg ++ [OpWhile<CondProg, BodyProg>], []>] ++ RestProg
 // This transformation happens purely at the type level using Concat trait.
-impl<Cond, Body, Stack, Locals, Memory, CallStack, RestProg>
-    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpWhile<Cond, Body>
+impl<CondProg, BodyProg, Stack, Locals, Memory, CallStack, RestProg>
+    Execute<Stack, Locals, Memory, CallStack, RestProg> for OpWhile<CondProg, BodyProg>
 where
-    RestProg: Cons,
-    // Body ++ [OpWhile<Cond, Body>]
-    Body: Concat<TyArray<OpWhile<Cond, Body>, TyNil>>,
-    <Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output: Cons,
-    // Cond ++ [OpIf<LoopBody, []>]
-    Cond: Concat<
-        TyArray<OpIf<<Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output, TyNil>, TyNil>,
+    RestProg: IsList,
+    // BodyProg ++ [OpWhile<CondProg, BodyProg>]
+    BodyProg: Concat<Array<OpWhile<CondProg, BodyProg>, Nil>>,
+    <BodyProg as Concat<Array<OpWhile<CondProg, BodyProg>, Nil>>>::Output: IsList,
+    // CondProg ++ [OpIf<LoopBody, []>]
+    CondProg: Concat<
+        Array<
+            OpIf<<BodyProg as Concat<Array<OpWhile<CondProg, BodyProg>, Nil>>>::Output, Nil>,
+            Nil,
+        >,
     >,
-    <Cond as Concat<
-        TyArray<OpIf<<Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output, TyNil>, TyNil>,
-    >>::Output: Cons,
+    <CondProg as Concat<
+        Array<
+            OpIf<<BodyProg as Concat<Array<OpWhile<CondProg, BodyProg>, Nil>>>::Output, Nil>,
+            Nil,
+        >,
+    >>::Output: IsList,
     // ExpandedWhile ++ RestProg
-    <Cond as Concat<
-        TyArray<OpIf<<Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output, TyNil>, TyNil>,
+    <CondProg as Concat<
+        Array<
+            OpIf<<BodyProg as Concat<Array<OpWhile<CondProg, BodyProg>, Nil>>>::Output, Nil>,
+            Nil,
+        >,
     >>::Output: Concat<RestProg>,
 {
     type OutputState = MachineState<
@@ -273,11 +297,11 @@ where
         Locals,
         Memory,
         CallStack,
-        // Cond ++ [OpIf<Body ++ [OpWhile], []>] ++ RestProg
-        <<Cond as Concat<
-            TyArray<
-                OpIf<<Body as Concat<TyArray<OpWhile<Cond, Body>, TyNil>>>::Output, TyNil>,
-                TyNil,
+        // CondProg ++ [OpIf<BodyProg ++ [OpWhile], []>] ++ RestProg
+        <<CondProg as Concat<
+            Array<
+                OpIf<<BodyProg as Concat<Array<OpWhile<CondProg, BodyProg>, Nil>>>::Output, Nil>,
+                Nil,
             >,
         >>::Output as Concat<RestProg>>::Output,
     >;
@@ -287,29 +311,29 @@ where
 pub struct OpStep;
 
 impl<Stack, Locals, Memory, CallStack, Inst, RestProg>
-    Apply<MachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>>> for OpStep
+    Apply<MachineState<Stack, Locals, Memory, CallStack, Array<Inst, RestProg>>> for OpStep
 where
     Inst: Execute<Stack, Locals, Memory, CallStack, RestProg>,
-    TyArray<Inst, RestProg>: Cons,
-    RestProg: Cons,
+    Array<Inst, RestProg>: IsList,
+    RestProg: IsList,
 {
     type Output = <Inst as Execute<Stack, Locals, Memory, CallStack, RestProg>>::OutputState;
 }
 
 pub struct OpIsFinished;
 
-// Program is empty (TyNil) -> Finished (TyFalse = stop loop)
-impl<S, L, M, C> Apply<MachineState<S, L, M, C, TyNil>> for OpIsFinished {
-    type Output = TyFalse;
+// Program is empty (Nil) -> Finished (False = stop loop)
+impl<S, L, M, C> Apply<MachineState<S, L, M, C, Nil>> for OpIsFinished {
+    type Output = False;
 }
 
-// Program is not empty (TyArray) -> Not finished (TyTrue = continue loop)
-impl<S, L, M, C, Inst, RestProg> Apply<MachineState<S, L, M, C, TyArray<Inst, RestProg>>>
+// Program is not empty (Array) -> Not finished (True = continue loop)
+impl<S, L, M, C, Inst, RestProg> Apply<MachineState<S, L, M, C, Array<Inst, RestProg>>>
     for OpIsFinished
 where
-    RestProg: Cons,
+    RestProg: IsList,
 {
-    type Output = TyTrue;
+    type Output = True;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -338,20 +362,20 @@ mod tests {
 
     #[test]
     fn test_stack_ops_logic() {
-        type S0 = TyNil;
-        type S1 = <OpPush<U1> as Execute<S0, TyNil, TyNil, TyNil, TyNil>>::OutputState;
-        type ExpectedState = MachineState<tyarray![U1], TyNil, TyNil, TyNil, TyNil>;
+        type S0 = Nil;
+        type S1 = <OpPush<U1> as Execute<S0, Nil, Nil, Nil, Nil>>::OutputState;
+        type ExpectedState = MachineState<tyarray![U1], Nil, Nil, Nil, Nil>;
         assert_type_eq_all!(S1, ExpectedState);
     }
 
     #[test]
     fn test_machine_run() {
         type Prog = tyarray![OpPush<U2>, OpPush<U3>, OpAdd, OpPush<U5>, OpSub];
-        type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
+        type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
         type FinalState = Evaluate<ERun<InitialState>>;
 
         type ExpectedStack = tyarray![typenum::U0];
-        type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
+        type ExpectedState = MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
 
         assert_type_eq_all!(FinalState, ExpectedState);
     }
@@ -361,11 +385,11 @@ mod tests {
         type SubRoutine = tyarray![OpPush<U5>, OpReturn];
         type MainProg = tyarray![OpPush<U3>, OpCall<SubRoutine>, OpAdd];
 
-        type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, MainProg>;
+        type InitialState = MachineState<Nil, Nil, Nil, Nil, MainProg>;
         type FinalState = Evaluate<ERun<InitialState>>;
 
         type ExpectedStack = tyarray![typenum::U8];
-        type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
+        type ExpectedState = MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
 
         assert_type_eq_all!(FinalState, ExpectedState);
     }
@@ -388,10 +412,10 @@ mod tests {
             OpReturn
         ];
         type Main = tyarray![OpCall<Func>];
-        type InitialState = MachineState<TyNil, TyNil, InitialMemory, TyNil, Main>;
+        type InitialState = MachineState<Nil, Nil, InitialMemory, Nil, Main>;
         type FinalState = Evaluate<ERun<InitialState>>;
         type ExpectedMemory = tyarray![typenum::U30];
-        type ExpectedState = MachineState<TyNil, TyNil, ExpectedMemory, TyNil, TyNil>;
+        type ExpectedState = MachineState<Nil, Nil, ExpectedMemory, Nil, Nil>;
         assert_type_eq_all!(FinalState, ExpectedState);
     }
 
@@ -402,11 +426,11 @@ mod tests {
         type CondProg = tyarray![OpDup, OpPush<U0>, OpLt];
         type BodyProg = tyarray![OpPush<U1>, OpSub];
         type Prog = tyarray![OpPush<U3>, OpWhile<CondProg, BodyProg>];
-        type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
+        type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
         // FIXME: Recursive eval limit or trait resolution failure in test environment
         // type FinalState = Evaluate<ERun<InitialState>>;
         // type ExpectedStack = tyarray![U0];
-        // type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
+        // type ExpectedState = MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
         // assert_type_eq_all!(FinalState, ExpectedState);
     }
 
@@ -426,10 +450,10 @@ mod tests {
                 tyarray![]
             >
         ];
-        type InitialState = MachineState<TyNil, TyNil, InitialMemory, TyNil, SortProg>;
+        type InitialState = MachineState<Nil, Nil, InitialMemory, Nil, SortProg>;
         type FinalState = Evaluate<ERun<InitialState>>;
         type ExpectedMemory = tyarray![U1, U3];
-        type ExpectedState = MachineState<TyNil, TyNil, ExpectedMemory, TyNil, TyNil>;
+        type ExpectedState = MachineState<Nil, Nil, ExpectedMemory, Nil, Nil>;
         assert_type_eq_all!(FinalState, ExpectedState);
     }
 
@@ -439,10 +463,10 @@ mod tests {
         type FuncB = tyarray![OpPush<U20>, OpLet, OpReturn];
         type FuncA = tyarray![OpPush<U10>, OpLet, OpCall<FuncB>, OpGetLocal<U0>, OpReturn];
         type Main = tyarray![OpCall<FuncA>];
-        type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Main>;
+        type InitialState = MachineState<Nil, Nil, Nil, Nil, Main>;
         type FinalState = Evaluate<ERun<InitialState>>;
         type ExpectedStack = tyarray![U10];
-        type ExpectedState = MachineState<ExpectedStack, TyNil, TyNil, TyNil, TyNil>;
+        type ExpectedState = MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
         assert_type_eq_all!(FinalState, ExpectedState);
     }
 }

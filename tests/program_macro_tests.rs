@@ -3,7 +3,7 @@ use typelude::{
     Evaluate,
     machine::{execution::ERun, state::MachineState},
     program,
-    std::array::{TyArray, TyNil},
+    std::array::{Array, Nil},
     typenum::{U4, U10, U15, U20, U40},
 };
 
@@ -21,11 +21,11 @@ fn test_simple_program() {
         (push 1)
         (add)
     };
-    type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
+    type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
     type FinalState = Evaluate<ERun<InitialState>>;
     type FinalStack = <FinalState as GetStack>::Output;
 
-    assert_type_eq_all!(FinalStack, TyArray<U4, TyNil>);
+    assert_type_eq_all!(FinalStack, Array<U4, Nil>);
 }
 
 #[test]
@@ -39,11 +39,11 @@ fn test_control_flow() {
         (lt)
         (if ((push 10)) ((push 20)))
     };
-    type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
+    type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
     type FinalState = Evaluate<ERun<InitialState>>;
     type FinalStack = <FinalState as GetStack>::Output;
 
-    assert_type_eq_all!(FinalStack, TyArray<U10, TyNil>);
+    assert_type_eq_all!(FinalStack, Array<U10, Nil>);
 }
 
 // TODO: Fix OpWhile execution - currently blocking compilation
@@ -56,11 +56,11 @@ fn test_control_flow() {
 //         (push 3)
 //         (while ((dup) (push 0) (lt)) ((push 1) (sub)))
 //     };
-//     type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
+//     type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
 //     type FinalState = Evaluate<ERun<InitialState>>;
 //     type FinalStack = <FinalState as GetStack>::Output;
 //
-//     assert_type_eq_all!(FinalStack, TyArray<U0, TyNil>);
+//     assert_type_eq_all!(FinalStack, Array<U0, Nil>);
 // }
 
 #[test]
@@ -74,10 +74,10 @@ fn test_local_vars() {
         (get y)
         (add)
     };
-    type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
+    type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
     type FinalState = Evaluate<ERun<InitialState>>;
     type FinalStack = <FinalState as GetStack>::Output;
-    assert_type_eq_all!(FinalStack, TyArray<U15, TyNil>);
+    assert_type_eq_all!(FinalStack, Array<U15, Nil>);
 }
 
 #[test]
@@ -96,11 +96,11 @@ fn test_local_vars_scoping() {
         (add)
     };
 
-    type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog2>;
+    type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog2>;
     type FinalState = Evaluate<ERun<InitialState>>;
     type FinalStack = <FinalState as GetStack>::Output;
 
-    assert_type_eq_all!(FinalStack, TyArray<U40, TyNil>);
+    assert_type_eq_all!(FinalStack, Array<U40, Nil>);
 }
 
 #[test]
@@ -112,9 +112,9 @@ fn test_shadowing() {
         (let x)
         (get x) // 20
     };
-    type InitialState = MachineState<TyNil, TyNil, TyNil, TyNil, Prog>;
+    type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
     type FinalState = Evaluate<ERun<InitialState>>;
     type FinalStack = <FinalState as GetStack>::Output;
 
-    assert_type_eq_all!(FinalStack, TyArray<U20, TyNil>);
+    assert_type_eq_all!(FinalStack, Array<U20, Nil>);
 }

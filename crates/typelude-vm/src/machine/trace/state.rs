@@ -1,14 +1,12 @@
 use core::marker::PhantomData;
 
-use typelude_core::{Eval, Sealed};
+use typelude_core::Eval;
 use typelude_std::std::trace::Trace;
 
 #[derive(Debug)]
 pub struct TracedMachineState<Stack, Locals, Memory, CallStack, Program, History>(
-    PhantomData<(Stack, Locals, Memory, CallStack, Program, History)>,
+    pub PhantomData<(Stack, Locals, Memory, CallStack, Program, History)>,
 );
-
-impl<S, L, M, C, P, H> Sealed for TracedMachineState<S, L, M, C, P, H> {}
 
 impl<S, L, M, C, P, H> Eval for TracedMachineState<S, L, M, C, P, H> {
     type Output = TracedMachineState<S, L, M, C, P, H>;

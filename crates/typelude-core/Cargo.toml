@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-typenum = "1.17.0"
+typenum = "1.17"
 
 [features]
 nightly = []

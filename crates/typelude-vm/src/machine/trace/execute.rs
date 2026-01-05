@@ -8,7 +8,7 @@ use typelude_std::std::ops::{OpEq, OpNeq};
 use typelude_std::{
     expr::{EIf, EWhile},
     std::{
-        array::{Cons, EConcat, Get, Set, TyArray, TyNil},
+        array::{Array, EConcat, Get, IsList, Nil, Set},
         ops::{
             EAdd,
             EAnd,
@@ -34,14 +34,11 @@ pub trait TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History> {
     type OutputState;
 }
 
-// ... Implementations ...
-
-// --- Simple Binary Ops ---
 macro_rules! impl_traced_binary_op {
     ($Op:ty, $EvalOp:ty) => {
         impl<Lhs, Rhs, RestStack, Locals, Memory, CallStack, RestProg, History>
             TracedExecute<
-                TyArray<Lhs, TyArray<Rhs, RestStack>>,
+                Array<Lhs, Array<Rhs, RestStack>>,
                 Locals,
                 Memory,
                 CallStack,
@@ -50,16 +47,16 @@ macro_rules! impl_traced_binary_op {
             > for $Op
         where
             $EvalOp: Eval,
-            RestStack: Cons,
-            History: Cons,
+            RestStack: IsList,
+            History: IsList,
         {
             type OutputState = TracedMachineState<
-                TyArray<Evaluate<$EvalOp>, RestStack>,
+                Array<Evaluate<$EvalOp>, RestStack>,
                 Locals,
                 Memory,
                 CallStack,
                 RestProg,
-                TyArray<$Op, History>,
+                Array<$Op, History>,
             >;
         }
     };
@@ -70,12 +67,11 @@ impl_traced_binary_op!(OpSub, ESub<Lhs, Rhs>);
 impl_traced_binary_op!(OpAnd, EAnd<Lhs, Rhs>);
 impl_traced_binary_op!(OpOr, EOr<Lhs, Rhs>);
 
-// --- Comparison Ops ---
 macro_rules! impl_traced_cmp_op {
     ($Op:ty, $CoreOp:ty) => {
         impl<Lhs, Rhs, RestStack, Locals, Memory, CallStack, RestProg, History>
             TracedExecute<
-                TyArray<Lhs, TyArray<Rhs, RestStack>>,
+                Array<Lhs, Array<Rhs, RestStack>>,
                 Locals,
                 Memory,
                 CallStack,
@@ -85,16 +81,16 @@ macro_rules! impl_traced_cmp_op {
         where
             $CoreOp: Apply<(Lhs, Rhs)>,
             App<$CoreOp, (Lhs, Rhs)>: Eval,
-            RestStack: Cons,
-            History: Cons,
+            RestStack: IsList,
+            History: IsList,
         {
             type OutputState = TracedMachineState<
-                TyArray<Evaluate<App<$CoreOp, (Lhs, Rhs)>>, RestStack>,
+                Array<Evaluate<App<$CoreOp, (Lhs, Rhs)>>, RestStack>,
                 Locals,
                 Memory,
                 CallStack,
                 RestProg,
-                TyArray<$Op, History>,
+                Array<$Op, History>,
             >;
         }
     };
@@ -109,86 +105,80 @@ impl_traced_cmp_op!(OpGt, OpGt);
 
 // --- Unary Ops ---
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg, History>
-    TracedExecute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpNot
+    TracedExecute<Array<Val, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpNot
 where
     ENot<Val>: Eval,
-    RestStack: Cons,
-    History: Cons,
+    RestStack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
-        TyArray<Evaluate<ENot<Val>>, RestStack>,
+        Array<Evaluate<ENot<Val>>, RestStack>,
         Locals,
         Memory,
         CallStack,
         RestProg,
-        TyArray<OpNot, History>,
+        Array<OpNot, History>,
     >;
 }
 
 // --- Stack Ops ---
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg, History>
-    TracedExecute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpDup
+    TracedExecute<Array<Val, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpDup
 where
-    RestStack: Cons,
-    History: Cons,
+    RestStack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
-        TyArray<Val, TyArray<Val, RestStack>>,
+        Array<Val, Array<Val, RestStack>>,
         Locals,
         Memory,
         CallStack,
         RestProg,
-        TyArray<OpDup, History>,
+        Array<OpDup, History>,
     >;
 }
 
 impl<A, B, RestStack, Locals, Memory, CallStack, RestProg, History>
-    TracedExecute<TyArray<A, TyArray<B, RestStack>>, Locals, Memory, CallStack, RestProg, History>
+    TracedExecute<Array<A, Array<B, RestStack>>, Locals, Memory, CallStack, RestProg, History>
     for OpSwap
 where
-    RestStack: Cons,
-    History: Cons,
+    RestStack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
-        TyArray<B, TyArray<A, RestStack>>,
+        Array<B, Array<A, RestStack>>,
         Locals,
         Memory,
         CallStack,
         RestProg,
-        TyArray<OpSwap, History>,
+        Array<OpSwap, History>,
     >;
 }
 
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg, History>
-    TracedExecute<TyArray<Val, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpDrop
+    TracedExecute<Array<Val, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpDrop
 where
-    RestStack: Cons,
-    History: Cons,
+    RestStack: IsList,
+    History: IsList,
 {
-    type OutputState = TracedMachineState<
-        RestStack,
-        Locals,
-        Memory,
-        CallStack,
-        RestProg,
-        TyArray<OpDrop, History>,
-    >;
+    type OutputState =
+        TracedMachineState<RestStack, Locals, Memory, CallStack, RestProg, Array<OpDrop, History>>;
 }
 
 // --- Push ---
 impl<Val, Stack, Locals, Memory, CallStack, RestProg, History>
     TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History> for OpPush<Val>
 where
-    Stack: Cons,
-    History: Cons,
+    Stack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
-        TyArray<Val, Stack>,
+        Array<Val, Stack>,
         Locals,
         Memory,
         CallStack,
         RestProg,
-        TyArray<OpPush<Val>, History>,
+        Array<OpPush<Val>, History>,
     >;
 }
 
@@ -196,28 +186,27 @@ where
 
 // OpLoad
 impl<Addr, RestStack, Locals, Memory, CallStack, RestProg, History>
-    TracedExecute<TyArray<Addr, RestStack>, Locals, Memory, CallStack, RestProg, History>
-    for OpLoad
+    TracedExecute<Array<Addr, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpLoad
 where
     Memory: Get<Addr>,
     Addr: Unsigned,
-    RestStack: Cons,
-    History: Cons,
+    RestStack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
-        TyArray<<Memory as Get<Addr>>::Output, RestStack>,
+        Array<<Memory as Get<Addr>>::Output, RestStack>,
         Locals,
         Memory,
         CallStack,
         RestProg,
-        TyArray<OpLoad, History>,
+        Array<OpLoad, History>,
     >;
 }
 
 // OpStore
 impl<Value, Addr, RestStack, Locals, Memory, CallStack, RestProg, History>
     TracedExecute<
-        TyArray<Value, TyArray<Addr, RestStack>>,
+        Array<Value, Array<Addr, RestStack>>,
         Locals,
         Memory,
         CallStack,
@@ -227,8 +216,8 @@ impl<Value, Addr, RestStack, Locals, Memory, CallStack, RestProg, History>
 where
     Memory: Set<Addr, Value>,
     Addr: Unsigned,
-    RestStack: Cons,
-    History: Cons,
+    RestStack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
         RestStack,
@@ -236,7 +225,7 @@ where
         <Memory as Set<Addr, Value>>::Output,
         CallStack,
         RestProg,
-        TyArray<OpStore, History>,
+        Array<OpStore, History>,
     >;
 }
 
@@ -246,28 +235,28 @@ impl<Index, Stack, Locals, Memory, CallStack, RestProg, History>
 where
     Locals: Get<Index>,
     Index: Unsigned,
-    Stack: Cons,
-    History: Cons,
+    Stack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
-        TyArray<<Locals as Get<Index>>::Output, Stack>,
+        Array<<Locals as Get<Index>>::Output, Stack>,
         Locals,
         Memory,
         CallStack,
         RestProg,
-        TyArray<OpGetLocal<Index>, History>,
+        Array<OpGetLocal<Index>, History>,
     >;
 }
 
 // OpSetLocal
 impl<Index, Value, RestStack, Locals, Memory, CallStack, RestProg, History>
-    TracedExecute<TyArray<Value, RestStack>, Locals, Memory, CallStack, RestProg, History>
+    TracedExecute<Array<Value, RestStack>, Locals, Memory, CallStack, RestProg, History>
     for OpSetLocal<Index>
 where
     Locals: Set<Index, Value>,
     Index: Unsigned,
-    RestStack: Cons,
-    History: Cons,
+    RestStack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
         RestStack,
@@ -275,60 +264,53 @@ where
         Memory,
         CallStack,
         RestProg,
-        TyArray<OpSetLocal<Index>, History>,
+        Array<OpSetLocal<Index>, History>,
     >;
 }
 
 // OpLet
 impl<Value, RestStack, Locals, Memory, CallStack, RestProg, History>
-    TracedExecute<TyArray<Value, RestStack>, Locals, Memory, CallStack, RestProg, History>
-    for OpLet
+    TracedExecute<Array<Value, RestStack>, Locals, Memory, CallStack, RestProg, History> for OpLet
 where
-    RestStack: Cons,
-    Locals: Cons,
-    History: Cons,
+    RestStack: IsList,
+    Locals: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
         RestStack,
-        TyArray<Value, Locals>,
+        Array<Value, Locals>,
         Memory,
         CallStack,
         RestProg,
-        TyArray<OpLet, History>,
+        Array<OpLet, History>,
     >;
 }
 
 // OpDropLocal
 impl<Stack, Head, Tail, Memory, CallStack, RestProg, History>
-    TracedExecute<Stack, TyArray<Head, Tail>, Memory, CallStack, RestProg, History> for OpDropLocal
+    TracedExecute<Stack, Array<Head, Tail>, Memory, CallStack, RestProg, History> for OpDropLocal
 where
-    Tail: Cons,
-    History: Cons,
+    Tail: IsList,
+    History: IsList,
 {
-    type OutputState = TracedMachineState<
-        Stack,
-        Tail,
-        Memory,
-        CallStack,
-        RestProg,
-        TyArray<OpDropLocal, History>,
-    >;
+    type OutputState =
+        TracedMachineState<Stack, Tail, Memory, CallStack, RestProg, Array<OpDropLocal, History>>;
 }
 
 // OpCall
 impl<TargetProg, Stack, Locals, Memory, CallStack, RestProg, History>
     TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History> for OpCall<TargetProg>
 where
-    CallStack: Cons,
-    History: Cons,
+    CallStack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
         Stack,
-        TyNil,
+        Nil,
         Memory,
-        TyArray<(RestProg, Locals), CallStack>,
+        Array<(RestProg, Locals), CallStack>,
         TargetProg,
-        TyArray<OpCall<TargetProg>, History>,
+        Array<OpCall<TargetProg>, History>,
     >;
 }
 
@@ -338,13 +320,13 @@ impl<Stack, Locals, Memory, Continuation, CallerLocals, RestCallStack, RestProg,
         Stack,
         Locals,
         Memory,
-        TyArray<(Continuation, CallerLocals), RestCallStack>,
+        Array<(Continuation, CallerLocals), RestCallStack>,
         RestProg,
         History,
     > for OpReturn
 where
-    RestCallStack: Cons,
-    History: Cons,
+    RestCallStack: IsList,
+    History: IsList,
 {
     type OutputState = TracedMachineState<
         Stack,
@@ -352,7 +334,7 @@ where
         Memory,
         RestCallStack,
         Continuation,
-        TyArray<OpReturn, History>,
+        Array<OpReturn, History>,
     >;
 }
 
@@ -361,25 +343,25 @@ impl<CondProg, BodyProg, Stack, Locals, Memory, CallStack, RestProg, History>
     TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>
     for OpWhile<CondProg, BodyProg>
 where
-    History: Cons,
-    EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>: Eval,
+    History: IsList,
+    EConcat<BodyProg, Array<OpWhile<CondProg, BodyProg>, Nil>>: Eval,
     EConcat<
         CondProg,
-        TyArray<
-            OpIf<Evaluate<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>, TyNil>,
-            TyNil,
+        Array<
+            OpIf<Evaluate<EConcat<BodyProg, Array<OpWhile<CondProg, BodyProg>, Nil>>>, Nil>,
+            Nil,
         >,
     >: Eval,
     EConcat<
         Evaluate<
             EConcat<
                 CondProg,
-                TyArray<
+                Array<
                     OpIf<
-                        Evaluate<EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>>,
-                        TyNil,
+                        Evaluate<EConcat<BodyProg, Array<OpWhile<CondProg, BodyProg>, Nil>>>,
+                        Nil,
                     >,
-                    TyNil,
+                    Nil,
                 >,
             >,
         >,
@@ -396,31 +378,31 @@ where
                 Evaluate<
                     EConcat<
                         CondProg,
-                        TyArray<
+                        Array<
                             OpIf<
                                 Evaluate<
-                                    EConcat<BodyProg, TyArray<OpWhile<CondProg, BodyProg>, TyNil>>,
+                                    EConcat<BodyProg, Array<OpWhile<CondProg, BodyProg>, Nil>>,
                                 >,
-                                TyNil,
+                                Nil,
                             >,
-                            TyNil,
+                            Nil,
                         >,
                     >,
                 >,
                 RestProg,
             >,
         >,
-        TyArray<OpWhile<CondProg, BodyProg>, History>,
+        Array<OpWhile<CondProg, BodyProg>, History>,
     >;
 }
 
 // OpIf
 impl<Cond, RestStack, Locals, Memory, CallStack, Then, Else, RestProg, History>
-    TracedExecute<TyArray<Cond, RestStack>, Locals, Memory, CallStack, RestProg, History>
+    TracedExecute<Array<Cond, RestStack>, Locals, Memory, CallStack, RestProg, History>
     for OpIf<Then, Else>
 where
-    RestStack: Cons,
-    History: Cons,
+    RestStack: IsList,
+    History: IsList,
     EConcat<Then, RestProg>: Eval,
     EConcat<Else, RestProg>: Eval,
     EIf<
@@ -431,7 +413,7 @@ where
             Memory,
             CallStack,
             Evaluate<EConcat<Then, RestProg>>,
-            TyArray<OpIf<Then, Else>, History>,
+            Array<OpIf<Then, Else>, History>,
         >,
         TracedMachineState<
             RestStack,
@@ -439,7 +421,7 @@ where
             Memory,
             CallStack,
             Evaluate<EConcat<Else, RestProg>>,
-            TyArray<OpIf<Then, Else>, History>,
+            Array<OpIf<Then, Else>, History>,
         >,
     >: Eval,
 {
@@ -452,7 +434,7 @@ where
                 Memory,
                 CallStack,
                 Evaluate<EConcat<Then, RestProg>>,
-                TyArray<OpIf<Then, Else>, History>,
+                Array<OpIf<Then, Else>, History>,
             >,
             TracedMachineState<
                 RestStack,
@@ -460,7 +442,7 @@ where
                 Memory,
                 CallStack,
                 Evaluate<EConcat<Else, RestProg>>,
-                TyArray<OpIf<Then, Else>, History>,
+                Array<OpIf<Then, Else>, History>,
             >,
         >,
     >;
@@ -470,13 +452,13 @@ where
 pub struct OpTracedStep;
 
 impl<Stack, Locals, Memory, CallStack, Inst, RestProg, History>
-    Apply<TracedMachineState<Stack, Locals, Memory, CallStack, TyArray<Inst, RestProg>, History>>
+    Apply<TracedMachineState<Stack, Locals, Memory, CallStack, Array<Inst, RestProg>, History>>
     for OpTracedStep
 where
     Inst: TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>,
-    TyArray<Inst, RestProg>: Cons,
-    RestProg: Cons,
-    History: Cons,
+    Array<Inst, RestProg>: IsList,
+    RestProg: IsList,
+    History: IsList,
 {
     type Output = ELit<
         <Inst as TracedExecute<Stack, Locals, Memory, CallStack, RestProg, History>>::OutputState,

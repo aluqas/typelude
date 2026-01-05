@@ -7,8 +7,8 @@ use typelude_macros::def_op;
 use typenum::{Bit, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
 use crate::std::{
-    bool::{ToTyBoolOut, TyFalse, TyTrue},
-    ops::TyFrom,
+    ops::From,
+    prim::bool::{False, ToBoolOut, True},
 };
 
 //
@@ -34,23 +34,23 @@ impl<T> IsEq<T> for T {
     const EQ: bool = true;
 }
 
-/// Helper trait to convert const bool to TyBool
-pub trait ConstToTyBool<const B: bool> {
+/// Helper trait to convert const bool to Bool
+pub trait ConstToBool<const B: bool> {
     type Output;
 }
 
-impl ConstToTyBool<true> for () {
-    type Output = TyTrue;
+impl ConstToBool<true> for () {
+    type Output = True;
 }
 
-impl ConstToTyBool<false> for () {
-    type Output = TyFalse;
+impl ConstToBool<false> for () {
+    type Output = False;
 }
 
 #[cfg(feature = "nightly")]
-pub type EqResult<L, R> = <() as ConstToTyBool<{ <L as IsEq<R>>::EQ }>>::Output;
+pub type EqResult<L, R> = <() as ConstToBool<{ <L as IsEq<R>>::EQ }>>::Output;
 #[cfg(feature = "nightly")]
-pub type NeqResult<L, R> = <() as ConstToTyBool<{ !<L as IsEq<R>>::EQ }>>::Output;
+pub type NeqResult<L, R> = <() as ConstToBool<{ !<L as IsEq<R>>::EQ }>>::Output;
 
 // =============================================================================
 // Operators - Using procedural macro
@@ -59,13 +59,13 @@ pub type NeqResult<L, R> = <() as ConstToTyBool<{ !<L as IsEq<R>>::EQ }>>::Outpu
 // Equality: A == B
 #[cfg(feature = "nightly")]
 def_op! {
-    /// Equality: A == B -> TyBool
+    /// Equality: A == B -> Bool
     name: OpEq,
     args: (Lhs, Rhs),
     ast: EEq {
         where: [
             Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
-            (): ConstToTyBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
+            (): ConstToBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
         ],
         type Output = EqResult<Evaluate<Lhs>, Evaluate<Rhs>>
     }
@@ -74,13 +74,13 @@ def_op! {
 // Inequality: A != B
 #[cfg(feature = "nightly")]
 def_op! {
-    /// Inequality: A != B -> TyBool
+    /// Inequality: A != B -> Bool
     name: OpNeq,
     args: (Lhs, Rhs),
     ast: ENeq {
         where: [
             Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
-            (): ConstToTyBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
+            (): ConstToBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
         ],
         type Output = NeqResult<Evaluate<Lhs>, Evaluate<Rhs>>
     }
@@ -95,9 +95,9 @@ def_op! {
         where: [
             Evaluate<Lhs>: IsLess<Evaluate<Rhs>>,
             <Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output: Bit,
-            bool: TyFrom<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
+            bool: From<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
+        type Output = ToBoolOut<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
     }
 }
 
@@ -110,9 +110,9 @@ def_op! {
         where: [
             Evaluate<Lhs>: IsLessOrEqual<Evaluate<Rhs>>,
             <Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output: Bit,
-            bool: TyFrom<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
+            bool: From<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
+        type Output = ToBoolOut<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
     }
 }
 
@@ -125,9 +125,9 @@ def_op! {
         where: [
             Evaluate<Lhs>: IsGreater<Evaluate<Rhs>>,
             <Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output: Bit,
-            bool: TyFrom<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
+            bool: From<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
+        type Output = ToBoolOut<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
     }
 }
 
@@ -140,9 +140,9 @@ def_op! {
         where: [
             Evaluate<Lhs>: IsGreaterOrEqual<Evaluate<Rhs>>,
             <Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output: Bit,
-            bool: TyFrom<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
+            bool: From<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
         ],
-        type Output = ToTyBoolOut<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
+        type Output = ToBoolOut<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
     }
 }
 
@@ -161,38 +161,38 @@ mod tests {
     #[test]
     #[cfg(feature = "nightly")]
     fn test_eq_neq() {
-        assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U1>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U2>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U1>>>, True);
+        assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U2>>>, False);
 
-        assert_type_eq_all!(Evaluate<ENeq<ELit<U1>, ELit<U1>>>, TyFalse);
-        assert_type_eq_all!(Evaluate<ENeq<ELit<U1>, ELit<U2>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ENeq<ELit<U1>, ELit<U1>>>, False);
+        assert_type_eq_all!(Evaluate<ENeq<ELit<U1>, ELit<U2>>>, True);
     }
 
     #[test]
     fn test_lt() {
-        assert_type_eq_all!(Evaluate<ELt<ELit<U1>, ELit<U2>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<ELt<ELit<U2>, ELit<U1>>>, TyFalse);
-        assert_type_eq_all!(Evaluate<ELt<ELit<N1>, ELit<P1>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<ELt<ELit<U1>, ELit<U2>>>, True);
+        assert_type_eq_all!(Evaluate<ELt<ELit<U2>, ELit<U1>>>, False);
+        assert_type_eq_all!(Evaluate<ELt<ELit<N1>, ELit<P1>>>, True);
     }
 
     #[test]
     fn test_le() {
-        assert_type_eq_all!(Evaluate<ELe<ELit<U1>, ELit<U1>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<ELe<ELit<U1>, ELit<U2>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<ELe<ELit<U2>, ELit<U1>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<ELe<ELit<U1>, ELit<U1>>>, True);
+        assert_type_eq_all!(Evaluate<ELe<ELit<U1>, ELit<U2>>>, True);
+        assert_type_eq_all!(Evaluate<ELe<ELit<U2>, ELit<U1>>>, False);
     }
 
     #[test]
     fn test_gt() {
-        assert_type_eq_all!(Evaluate<EGt<ELit<U2>, ELit<U1>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<EGt<ELit<U1>, ELit<U2>>>, TyFalse);
-        assert_type_eq_all!(Evaluate<EGt<ELit<P2>, ELit<N1>>>, TyTrue);
+        assert_type_eq_all!(Evaluate<EGt<ELit<U2>, ELit<U1>>>, True);
+        assert_type_eq_all!(Evaluate<EGt<ELit<U1>, ELit<U2>>>, False);
+        assert_type_eq_all!(Evaluate<EGt<ELit<P2>, ELit<N1>>>, True);
     }
 
     #[test]
     fn test_ge() {
-        assert_type_eq_all!(Evaluate<EGe<ELit<U2>, ELit<U2>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<EGe<ELit<U2>, ELit<U1>>>, TyTrue);
-        assert_type_eq_all!(Evaluate<EGe<ELit<U1>, ELit<U2>>>, TyFalse);
+        assert_type_eq_all!(Evaluate<EGe<ELit<U2>, ELit<U2>>>, True);
+        assert_type_eq_all!(Evaluate<EGe<ELit<U2>, ELit<U1>>>, True);
+        assert_type_eq_all!(Evaluate<EGe<ELit<U1>, ELit<U2>>>, False);
     }
 }

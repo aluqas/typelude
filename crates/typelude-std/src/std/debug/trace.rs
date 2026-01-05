@@ -4,7 +4,10 @@
 
 use typenum::{B0, B1, Integer, NInt, PInt, UInt, UTerm, Unsigned, Z0};
 
-use crate::std::array::{Cons, TyArray, TyNil};
+use crate::{
+    data::collections::array::IsList,
+    std::col::array::{Array, Nil},
+};
 
 /// A trait for types that can be traced at runtime.
 #[diagnostic::on_unimplemented(
@@ -67,7 +70,7 @@ impl Trace for B1 {
     }
 }
 
-impl Trace for TyNil {
+impl Trace for Nil {
     fn fmt() -> String {
         "[]".to_string()
     }
@@ -78,16 +81,16 @@ trait TraceList {
     fn fmt_list() -> String;
 }
 
-impl TraceList for TyNil {
+impl TraceList for Nil {
     fn fmt_list() -> String {
         "".to_string()
     }
 }
 
-impl<Head, Tail> TraceList for TyArray<Head, Tail>
+impl<Head, Tail> TraceList for Array<Head, Tail>
 where
     Head: Trace,
-    Tail: TraceList + Cons,
+    Tail: TraceList + IsList,
 {
     fn fmt_list() -> String {
         let head = Head::fmt();
@@ -100,10 +103,10 @@ where
     }
 }
 
-impl<Head, Tail> Trace for TyArray<Head, Tail>
+impl<Head, Tail> Trace for Array<Head, Tail>
 where
     Head: Trace,
-    Tail: TraceList + Cons,
+    Tail: TraceList + IsList,
 {
     fn fmt() -> String {
         format!("[{}]", <Self as TraceList>::fmt_list())

@@ -6,70 +6,70 @@ use std::marker::PhantomData;
 
 use typelude_core::{Eval, Evaluate};
 
-use crate::data::primitives::bool::{TyFalse, TyTrue};
+use crate::std::prim::bool::{False, True};
 
 // =============================================================================
 // Data Structures
 // =============================================================================
 
 /// Type-level `Some<T>` — wraps a value
-pub struct TySome<T>(PhantomData<T>);
+pub struct Some<T>(PhantomData<T>);
 
 /// Type-level `None` — absence of value
-pub struct TyNone;
+pub struct None;
 
 // =============================================================================
-// TyOption Trait
+// Option Trait
 // =============================================================================
 
 /// Trait for type-level Option operations
-pub trait TyOption {
+pub trait Option {
     /// Is this a Some variant?
     type IsSome;
     /// Is this a None variant?
     type IsNone;
 }
 
-impl<T> TyOption for TySome<T> {
-    type IsSome = TyTrue;
-    type IsNone = TyFalse;
+impl<T> Option for Some<T> {
+    type IsSome = True;
+    type IsNone = False;
 }
 
-impl TyOption for TyNone {
-    type IsSome = TyFalse;
-    type IsNone = TyTrue;
+impl Option for None {
+    type IsSome = False;
+    type IsNone = True;
 }
 
 // =============================================================================
 // Unwrap Operations
 // =============================================================================
 
-/// Unwrap a TySome, compile error on TyNone
+/// Unwrap a Some, compile error on None
 #[diagnostic::on_unimplemented(
-    message = "`{Self}` cannot be unwrapped (it is TyNone)",
+    message = "`{Self}` cannot be unwrapped (it is None)",
     label = "Unwrap failed",
-    note = "ensure `{Self}` is `TySome<T>`, not `TyNone`"
+    note = "ensure `{Self}` is `Some<T>`, not `None`"
 )]
 pub trait Unwrap {
     type Output;
 }
 
-impl<T> Unwrap for TySome<T> {
+impl<T> Unwrap for Some<T> {
     type Output = T;
 }
 
-// Note: TyNone does NOT implement Unwrap — attempting to unwrap TyNone is a compile error
+// Note: None does NOT implement Unwrap — attempting to unwrap None is a compile error
 
 /// Unwrap with a default value
 pub trait UnwrapOr<Default> {
     type Output;
 }
 
-impl<T, D> UnwrapOr<D> for TySome<T> {
+impl<T, D> UnwrapOr<D> for Some<T> {
     type Output = T;
 }
 
-impl<D> UnwrapOr<D> for TyNone {
+impl<D> UnwrapOr<D> for None {
     type Output = D;
 }
 
@@ -82,16 +82,16 @@ pub trait OptionMap<Op> {
     type Output;
 }
 
-impl<T, Op> OptionMap<Op> for TySome<T>
+impl<T, Op> OptionMap<Op> for Some<T>
 where
     Op: Eval,
     Evaluate<Op>: crate::traits::Apply<T>,
 {
-    type Output = TySome<<Evaluate<Op> as crate::traits::Apply<T>>::Output>;
+    type Output = Some<<Evaluate<Op> as crate::traits::Apply<T>>::Output>;
 }
 
-impl<Op> OptionMap<Op> for TyNone {
-    type Output = TyNone;
+impl<Op> OptionMap<Op> for None {
+    type Output = None;
 }
 
 // =============================================================================
@@ -134,25 +134,25 @@ mod tests {
 
     #[test]
     fn test_some_unwrap() {
-        type Result = <TySome<U42> as Unwrap>::Output;
+        type Result = <Some<U42> as Unwrap>::Output;
         assert_type_eq_all!(Result, U42);
     }
 
     #[test]
     fn test_unwrap_or_some() {
-        type Result = <TySome<U42> as UnwrapOr<typenum::U0>>::Output;
+        type Result = <Some<U42> as UnwrapOr<typenum::U0>>::Output;
         assert_type_eq_all!(Result, U42);
     }
 
     #[test]
     fn test_unwrap_or_none() {
-        type Result = <TyNone as UnwrapOr<U42>>::Output;
+        type Result = <None as UnwrapOr<U42>>::Output;
         assert_type_eq_all!(Result, U42);
     }
 
     #[test]
     fn test_is_some() {
-        assert_type_eq_all!(<TySome<U42> as TyOption>::IsSome, TyTrue);
-        assert_type_eq_all!(<TyNone as TyOption>::IsSome, TyFalse);
+        assert_type_eq_all!(<Some<U42> as Option>::IsSome, True);
+        assert_type_eq_all!(<None as Option>::IsSome, False);
     }
 }

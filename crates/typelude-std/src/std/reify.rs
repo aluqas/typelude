@@ -6,13 +6,13 @@
 use typenum::{Bit, Integer, UInt, UTerm, Unsigned};
 
 #[cfg(feature = "nightly")]
-use crate::data::collections::array::{Cons, TyArray};
+use crate::data::collections::array::{Array, IsList};
 use crate::{
     data::{
-        collections::array::TyNil,
-        primitives::bool::{TyFalse, TyTrue},
+        collections::array::Nil,
+        primitives::bool::{False, True},
     },
-    std::traits::TypeBool,
+    std::traits::Bool,
 };
 
 // ======================================================================================
@@ -29,10 +29,10 @@ pub trait Reify<T> {
 }
 
 // ... Boolean ...
-impl Reify<bool> for TyTrue {
+impl Reify<bool> for True {
     const REIFIED: bool = true;
 }
-impl Reify<bool> for TyFalse {
+impl Reify<bool> for False {
     const REIFIED: bool = false;
 }
 
@@ -95,19 +95,19 @@ impl<const N: usize> Reify<usize> for typenum::Const<N> {
 }
 
 // ... Unit ...
-impl Reify<()> for TyNil {
+impl Reify<()> for Nil {
     const REIFIED: () = ();
 }
-impl<T> Reify<[T; 0]> for TyNil {
+impl<T> Reify<[T; 0]> for Nil {
     const REIFIED: [T; 0] = [];
 }
 
 // ... Array ...
 #[allow(unsafe_code)]
 #[cfg(feature = "nightly")]
-impl<Head, Tail, Val, const N: usize> Reify<[Val; N]> for TyArray<Head, Tail>
+impl<Head, Tail, Val, const N: usize> Reify<[Val; N]> for Array<Head, Tail>
 where
-    Tail: Cons,
+    Tail: IsList,
     Head: Reify<Val>,
     Tail: Reify<[Val; N - 1]>,
 {
@@ -129,8 +129,8 @@ where
 
 // ... Tuple ...
 macro_rules! define_tylist {
-    ($head:ident) => { crate::data::collections::array::TyArray<$head, TyNil> };
-    ($head:ident, $($tail:ident),+) => { crate::data::collections::array::TyArray<$head, define_tylist!($($tail),+)> };
+    ($head:ident) => { crate::data::collections::array::Array<$head, Nil> };
+    ($head:ident, $($tail:ident),+) => { crate::data::collections::array::Array<$head, define_tylist!($($tail),+)> };
 }
 macro_rules! impl_flat_tuple {
     ($($n:tt $T:ident $V:ident),+) => {
@@ -157,13 +157,13 @@ impl_flat_tuple!(0 T0 V0, 1 T1 V1, 2 T2 V2, 3 T3 V3, 4 T4 V4, 5 T5 V5, 6 T6 V6, 
 
 /// Reflect a const boolean to a Type.
 pub trait ReflectBool<const B: bool> {
-    type Output: TypeBool;
+    type Output: Bool;
 }
 impl ReflectBool<true> for () {
-    type Output = TyTrue;
+    type Output = True;
 }
 impl ReflectBool<false> for () {
-    type Output = TyFalse;
+    type Output = False;
 }
 
 /// Reflect a const usize to a Type.

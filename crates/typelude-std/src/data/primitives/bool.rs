@@ -2,29 +2,27 @@
 //!
 //! Pure data structures for type-level booleans.
 
-use typelude_core::{Eval, Sealed};
+use typelude_core::Eval;
 
 /// **Marker Trait**
 ///
 /// Represents that a type is a Boolean.
-pub trait Bool: Sealed {}
+pub trait IsBool {}
 
 /// Type-level `true`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
-pub struct TyTrue;
+pub struct True;
 
 /// Type-level `false`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
-pub struct TyFalse;
+pub struct False;
 
-impl Sealed for TyTrue {}
-impl Bool for TyTrue {}
-impl Eval for TyTrue {
+impl IsBool for True {}
+impl Eval for True {
     type Output = Self;
 }
 
-impl Sealed for TyFalse {}
-impl Bool for TyFalse {}
-impl Eval for TyFalse {
+impl IsBool for False {}
+impl Eval for False {
     type Output = Self;
 }

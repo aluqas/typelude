@@ -16,10 +16,10 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate, Apply};
+use typelude_core::{Apply, Eval, Evaluate};
 
 use crate::{
-    data::primitives::bool::{TyFalse, TyTrue},
+    data::primitives::bool::{False, True},
     lambda::{
         LApp, Lambda,
         church::{LFalse, LTrue, LWhile2},
@@ -27,22 +27,22 @@ use crate::{
 };
 
 // =============================================================================
-// ToChurch: TyBool → Church Boolean
+// ToChurch: Bool → Church Boolean
 // =============================================================================
 
 /// Convert type-level booleans to Church booleans.
 ///
 /// This adapter bridges the gap between practical boolean types
-/// (`TyTrue`/`TyFalse`) and pure lambda calculus (`LTrue`/`LFalse`).
+/// (`True`/`False`) and pure lambda calculus (`LTrue`/`LFalse`).
 pub trait ToChurch {
     type Church: Lambda;
 }
 
-impl ToChurch for TyTrue {
+impl ToChurch for True {
     type Church = LTrue;
 }
 
-impl ToChurch for TyFalse {
+impl ToChurch for False {
     type Church = LFalse;
 }
 
@@ -58,7 +58,7 @@ impl ToChurch for TyFalse {
 /// # Example
 ///
 /// ```ignore
-/// type Result = Evaluate<EIf<TyTrue, U1, U0>>; // = U1
+/// type Result = Evaluate<EIf<True, U1, U0>>; // = U1
 /// ```
 pub struct EIf<Cond, Then, Else>(PhantomData<(Cond, Then, Else)>);
 
@@ -107,19 +107,19 @@ impl<Cond, Then, Else> Apply<(Cond, Then, Else)> for OpIf {
 ///
 /// Wraps the pure `LWhile` combinator with `ToChurch` conversion.
 ///
-/// `Pred` is a predicate that returns `TyTrue`/`TyFalse`.
+/// `Pred` is a predicate that returns `True`/`False`.
 /// `Step` is a function that transforms the state.
 /// `State` is the initial/current state.
 ///
 /// # Semantics
 ///
 /// ```text
-/// while (pred state == TyTrue) { state = step(state) }
+/// while (pred state == True) { state = step(state) }
 /// return state
 /// ```
 pub struct EWhile<Pred, Step, State>(PhantomData<(Pred, Step, State)>);
 
-/// Adapter to convert TyBool predicate output to Church boolean.
+/// Adapter to convert Bool predicate output to Church boolean.
 pub struct ChurchifyPred<Pred>(PhantomData<Pred>);
 
 impl<Pred> Lambda for ChurchifyPred<Pred> {
@@ -137,7 +137,7 @@ where
     S: Eval,
     // Pred applied to S
     Pred: Apply<Evaluate<S>>,
-    // Pred(S) returns TyBool
+    // Pred(S) returns Bool
     <Pred as Apply<Evaluate<S>>>::Output: Eval,
     Evaluate<<Pred as Apply<Evaluate<S>>>::Output>: ToChurch,
 {
@@ -195,13 +195,13 @@ mod tests {
 
     #[test]
     fn test_eif_true() {
-        type Result = Evaluate<EIf<TyTrue, U1, U0>>;
+        type Result = Evaluate<EIf<True, U1, U0>>;
         assert_type_eq_all!(Result, U1);
     }
 
     #[test]
     fn test_eif_false() {
-        type Result = Evaluate<EIf<TyFalse, U1, U0>>;
+        type Result = Evaluate<EIf<False, U1, U0>>;
         assert_type_eq_all!(Result, U0);
     }
 

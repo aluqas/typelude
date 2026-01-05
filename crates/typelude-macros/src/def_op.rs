@@ -206,7 +206,6 @@ impl DefOpInput {
                     // 3. Define Op marker
                     #(#doc_attrs)*
                     pub struct #op_name;
-                    impl typelude_core::Sealed for #op_name {}
 
                     // 4. Implement Apply
                     impl<#(#args),*> crate::traits::Apply<#apply_args> for #op_name {
@@ -228,7 +227,6 @@ impl DefOpInput {
                     // 1. Define Op marker
                     #(#doc_attrs)*
                     pub struct #op_name;
-                    impl typelude_core::Sealed for #op_name {}
 
                     // 2. Implement Apply with alias
                     impl<#(#args),*> crate::traits::Apply<#apply_args> for #op_name {
