@@ -30,8 +30,9 @@ where
 }
 */
 
-// For now, we rely on tstr for static strings, and Array<TyChar> for manipulation.
-// We can provide conversion from Array<TyChar> to runtime string via Reify<[char; N]>.
+// For now, we rely on tstr for static strings, and Array<TyChar> for
+// manipulation. We can provide conversion from Array<TyChar> to runtime string
+// via Reify<[char; N]>.
 
 // The Reify<u8> for Char is now handled in `crate::data::primitives::str::Char`
 

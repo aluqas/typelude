@@ -332,7 +332,13 @@ where
     type Output = <Evaluate<List> as FoldHelper<Op, Evaluate<Init>>>::Output;
 }
 
-// --- EContains ---
+/// Expression to check if an array contains an element.
+///
+/// # Examples
+///
+/// ```ignore
+/// type Res = Evaluate<EContains<ELit<tyarray![U1, U2]>, ELit<U1>>>; // True
+/// ```
 #[cfg(feature = "nightly")]
 pub struct EContains<Array, Elem>(PhantomData<(Array, Elem)>);
 
@@ -376,7 +382,10 @@ def_op! {
 #[cfg(feature = "nightly")]
 pub struct OpContains;
 #[cfg(feature = "nightly")]
-impl<Array, Elem> Apply<(Array, Elem)> for OpContains {
+impl<Array, Elem>
+    Apply<typelude_core::ECons<Array, typelude_core::ECons<Elem, typelude_core::ENil>>>
+    for OpContains
+{
     type Output = EContains<Array, Elem>;
 }
 /// Helper for Map
@@ -466,7 +475,7 @@ impl<Op, Acc> FoldHelper<Op, Acc> for Nil {
 
 impl<Op, Acc, Head, Tail> FoldHelper<Op, Acc> for Array<Head, Tail>
 where
-    Op: Apply<(Acc, Head)>,
+    Op: Apply<typelude_core::ECons<Acc, typelude_core::ECons<Head, typelude_core::ENil>>>,
     Op::Output: Eval, // Evaluate acc+head
     Tail: IsList + FoldHelper<Op, Evaluate<Op::Output>>,
 {
@@ -916,7 +925,9 @@ mod tests {
 
         // Sum: (Acc, Elem) -> Acc + Elem
         struct OpSum;
-        impl<Acc, Elem> Apply<(Acc, Elem)> for OpSum
+        impl<Acc, Elem>
+            Apply<typelude_core::ECons<Acc, typelude_core::ECons<Elem, typelude_core::ENil>>>
+            for OpSum
         where
             Acc: std::ops::Add<Elem>,
         {

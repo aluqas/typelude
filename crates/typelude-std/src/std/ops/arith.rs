@@ -1,6 +1,7 @@
 //! **Arithmetic Operations**
 //!
-//! Generic arithmetic operations (Add, Sub, etc.) defined via `define_arith_op!`.
+//! Generic arithmetic operations (Add, Sub, etc.) defined via
+//! `define_arith_op!`.
 
 use crate::std::traits::{TAdd, TDiv, TMul, TPow, TRem, TSub};
 

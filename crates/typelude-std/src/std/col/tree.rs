@@ -1,11 +1,13 @@
 //! **Type-Level Binary Search Tree**
 //!
-//! Type-level binary search tree (BST) with insert, contains, min, max, and traversal operations.
-//! This is an unbalanced BST; for truly balanced trees, AVL rotations would be needed.
+//! Type-level binary search tree (BST) with insert, contains, min, max, and
+//! traversal operations. This is an unbalanced BST; for truly balanced trees,
+//! AVL rotations would be needed.
 
 use typelude_core::Evaluate;
 use typelude_macros::def_op;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
+
 /// Marker trait for type-level trees
 pub use crate::data::collections::tree::IsTree as TypeTree;
 // Re-export kernel types for convenience/compatibility if mostly used from here
@@ -14,8 +16,15 @@ use crate::{
     data::primitives::bool::{False, True},
     std::prim::option::{None, Some},
 };
-/// Insert a value into the tree
-/// Uses typenum comparison: values that compare less go left, greater go right
+/// Insert a value into the tree.
+///
+/// Uses typenum comparison: values that compare less go left, greater go right.
+///
+/// # Examples
+///
+/// ```ignore
+/// type NewTree = <Nil as TreeInsert<U2>>::Output; // Tree<U2, Nil, Nil>
+/// ```
 pub trait TreeInsert<V> {
     type Output: TypeTree;
 }
@@ -59,7 +68,13 @@ where
         <() as TreeInsertHelper<V, Value, Left, Right, <V as IsLess<Value>>::Output>>::Output;
 }
 
-/// Check if the tree contains a value
+/// Check if the tree contains a value.
+///
+/// # Examples
+///
+/// ```ignore
+/// type Found = <Tree<U2, Nil, Nil> as TreeContains<U2>>::Output; // True
+/// ```
 pub trait TreeContains<V> {
     type Output; // True or False
 }
@@ -159,7 +174,13 @@ where
     type Output = <Tree<RV, RL, RR> as TreeMax>::Output;
 }
 
-/// Convert tree to sorted list (in-order traversal)
+/// Convert tree to sorted list (in-order traversal).
+///
+/// # Examples
+///
+/// ```ignore
+/// type List = <Tree<U2, Tree<U1, Nil, Nil>, Nil> as TreeToList>::Output; // [U1, U2]
+/// ```
 pub trait TreeToList {
     type Output: crate::data::collections::array::IsList;
 }

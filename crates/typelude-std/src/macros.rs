@@ -86,8 +86,9 @@ macro_rules! define_unary_logic_op {
 
 /// Assert that a type-level boolean is true at compile time.
 ///
-/// If the condition evaluates to `TyFalse` (or isn't `TyTrue`), this will trigger a compilation error.
-/// The `Condition` must implement `Reify<bool>` (usually via `Eval` -> `TyTrue/TyFalse`).
+/// If the condition evaluates to `TyFalse` (or isn't `TyTrue`), this will
+/// trigger a compilation error. The `Condition` must implement `Reify<bool>`
+/// (usually via `Eval` -> `TyTrue/TyFalse`).
 ///
 /// # Example
 ///

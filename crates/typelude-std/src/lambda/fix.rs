@@ -107,11 +107,13 @@ mod tests {
 
         type F = LFix<LoopBody>;
 
-        // F True -> LoopBody F True -> LoopBody1<F> True -> True True (Thunk F True) -> True
+        // F True -> LoopBody F True -> LoopBody1<F> True -> True True (Thunk F True) ->
+        // True
         type Res1 = App<F, LTrue>;
         assert_type_eq_all!(Res1, LTrue);
 
-        // F False -> LoopBody F False -> LoopBody1<F> False -> False True (Thunk F True) -> Thunk F True
+        // F False -> LoopBody F False -> LoopBody1<F> False -> False True (Thunk F
+        // True) -> Thunk F True
         type Res2 = App<F, LFalse>;
         assert_type_eq_all!(Res2, Thunk<F, LTrue>);
 
@@ -197,7 +199,8 @@ mod tests {
         // RecFunc Z -> Unroll RecFunc Z -> Unroll1<RecFunc> Z -> Done
         assert_type_eq_all!(App<RecFunc, Z>, Done);
 
-        // RecFunc S<Z> -> Unroll RecFunc S<Z> -> Unroll1<RecFunc> S<Z> -> RecFunc Z -> Done
+        // RecFunc S<Z> -> Unroll RecFunc S<Z> -> Unroll1<RecFunc> S<Z> -> RecFunc Z ->
+        // Done
         assert_type_eq_all!(App<RecFunc, S<Z>>, Done);
 
         // RecFunc S<S<Z>> -> ... -> Done

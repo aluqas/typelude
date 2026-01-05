@@ -51,8 +51,9 @@ impl<X, Y> Lambda for S2<X, Y> {
 }
 impl_eval_for_lambda_generic!(S2, [X, Y]);
 // Note: We use strict Call-by-Value strategy for arguments.
-// Arguments X, Y, Z are typically expected to be evaluated before being stored in state structs,
-// but the Lambda impl for LApp<Combinator, Arg> enforces this by calling Evaluate<Arg>.
+// Arguments X, Y, Z are typically expected to be evaluated before being stored
+// in state structs, but the Lambda impl for LApp<Combinator, Arg> enforces this
+// by calling Evaluate<Arg>.
 
 // --- I Combinator ---
 // I x -> x

@@ -18,7 +18,8 @@ use crate::{
 };
 /// Pure While combinator (curried).
 ///
-/// Semantics: `while pred body state = if (pred state) then while pred body (body state) else state`
+/// Semantics: `while pred body state = if (pred state) then while pred body
+/// (body state) else state`
 ///
 /// Usage: `LApp<LApp<LApp<LWhile, Pred>, Body>, State>`
 pub struct LWhile;
@@ -79,7 +80,8 @@ impl<Pred, Body, State> LWhileHelper<Pred, Body, State> for LFalse {
     type Output = State;
 }
 
-// Full application: LWhile2<Pred, Body> State -> if (pred state) recurse else state
+// Full application: LWhile2<Pred, Body> State -> if (pred state) recurse else
+// state
 impl<Pred, Body, State> Lambda for LApp<LWhile2<Pred, Body>, State>
 where
     // pred(state) -> LTrue/LFalse
@@ -89,7 +91,8 @@ where
     type Output =
         <<LApp<Pred, State> as Lambda>::Output as LWhileHelper<Pred, Body, State>>::Output;
 }
-/// Pure For combinator: iterate over Church list, applying function to each element.
+/// Pure For combinator: iterate over Church list, applying function to each
+/// element.
 ///
 /// Semantics: `for f list = foldr (\x acc -> f x >> acc) () list`
 ///

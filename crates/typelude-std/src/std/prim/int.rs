@@ -17,8 +17,9 @@ impl Nat for typenum::UTerm {}
 impl<U, B> Nat for typenum::UInt<U, B> {}
 
 // Implement TAdd, etc. for any typenum type that implements the typenum traits
-// Note: We use blanket implementations where possible, or specific ones if needed to avoid conflict.
-// typenum implements Add for almost everything (UInt, Z0, PInt, NInt).
+// Note: We use blanket implementations where possible, or specific ones if
+// needed to avoid conflict. typenum implements Add for almost everything (UInt,
+// Z0, PInt, NInt).
 
 impl<L, R> TAdd<R> for L
 where
@@ -72,7 +73,8 @@ mod tests {
 
     #[test]
     fn test_eval_typenum() {
-        // Since typenum types are implemented in kernel, they should evaluate to themselves.
+        // Since typenum types are implemented in kernel, they should evaluate to
+        // themselves.
         assert_type_eq_all!(Evaluate<U1>, U1);
         assert_type_eq_all!(Evaluate<P5>, P5);
         assert_type_eq_all!(Evaluate<N2>, N2);

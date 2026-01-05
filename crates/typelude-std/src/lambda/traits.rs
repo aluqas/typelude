@@ -42,8 +42,9 @@ macro_rules! impl_eval_for_lambda_generic {
 /// This struct is used with the `Eval` pattern.
 pub struct LApp<F, A>(PhantomData<(F, A)>);
 
-// Implement Eval for LApp directly, effectively replacing the blanket impl for this specific type.
-// Assuming LApp implements Lambda (which is usually where logic lives).
+// Implement Eval for LApp directly, effectively replacing the blanket impl for
+// this specific type. Assuming LApp implements Lambda (which is usually where
+// logic lives).
 impl<F, A> Eval for LApp<F, A>
 where
     Self: Lambda,

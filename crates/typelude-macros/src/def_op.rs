@@ -1,6 +1,7 @@
 //! **def_op! Procedural Macro**
 //!
-//! Defines type-level operations with automatic `Eval` bounds and `Evaluate<>` wrapping.
+//! Defines type-level operations with automatic `Eval` bounds and `Evaluate<>`
+//! wrapping.
 
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -13,7 +14,8 @@ use syn::{
 /// Input for the def_op! macro
 ///
 /// Supports two patterns:
-/// 1. AST Pattern: `def_op! { name: OpAdd, args: (Lhs, Rhs), ast: EAdd { ... } }`
+/// 1. AST Pattern: `def_op! { name: OpAdd, args: (Lhs, Rhs), ast: EAdd { ... }
+///    }`
 /// 2. Alias Pattern: `def_op! { name: OpInc, args: (N), alias: EAdd<N, P1> }`
 pub struct DefOpInput {
     pub doc_attrs: Vec<syn::Attribute>,

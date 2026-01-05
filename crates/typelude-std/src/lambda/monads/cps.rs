@@ -1,7 +1,7 @@
 //! Continuation-Passing Style (CPS) Monad
 //!
-//! `Cont<R, A>` represents a computation that, when given a continuation `(A -> R)`,
-//! produces a result of type `R`.
+//! `Cont<R, A>` represents a computation that, when given a continuation `(A ->
+//! R)`, produces a result of type `R`.
 
 use std::marker::PhantomData;
 

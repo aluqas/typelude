@@ -277,8 +277,9 @@ where
 }
 
 // --- Control Flow: While ---
-// OpWhile expands to: CondProg ++ [OpIf<BodyProg ++ [OpWhile<CondProg, BodyProg>], []>] ++ RestProg
-// This transformation happens purely at the type level using Concat trait.
+// OpWhile expands to: CondProg ++ [OpIf<BodyProg ++ [OpWhile<CondProg,
+// BodyProg>], []>] ++ RestProg This transformation happens purely at the type
+// level using Concat trait.
 impl<CondProg, BodyProg, Stack, Locals, Memory, CallStack, RestProg>
     Execute<Stack, Locals, Memory, CallStack, RestProg> for OpWhile<CondProg, BodyProg>
 where
@@ -437,8 +438,8 @@ mod tests {
         type BodyProg = tyarray![OpPush<U1>, OpSub];
         type Prog = tyarray![OpPush<U3>, OpWhile<CondProg, BodyProg>];
         type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
-        // FIXME: Recursive eval limit or trait resolution failure in test environment
-        // type FinalState = Evaluate<ERun<InitialState>>;
+        // FIXME: Recursive eval limit or trait resolution failure in test
+        // environment type FinalState = Evaluate<ERun<InitialState>>;
         // type ExpectedStack = tyarray![U0];
         // type ExpectedState = MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
         // assert_type_eq_all!(FinalState, ExpectedState);

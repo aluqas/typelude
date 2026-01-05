@@ -11,7 +11,8 @@ use typelude_core::Eval;
 /// - `Locals`: Local Variables (Array)
 /// - `Memory`: Linear Memory (Array)
 /// - `CallStack`: Call Stack (Array of Frames)
-/// - `Program`: Currently executing instruction sequence (Array of Instructions)
+/// - `Program`: Currently executing instruction sequence (Array of
+///   Instructions)
 #[derive(Debug)]
 pub struct MachineState<Stack, Locals, Memory, CallStack, Program>(
     pub PhantomData<(Stack, Locals, Memory, CallStack, Program)>,

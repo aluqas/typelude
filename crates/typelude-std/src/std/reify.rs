@@ -1,7 +1,12 @@
-//! Reification (Type -> Value) and Reflection (Value -> Type)
+//! **Reification and Reflection**
 //!
-//! - Reify: Type -> Value
-//! - Reflect*: Value -> Type
+//! Provides traits to bridge the gap between type-level data and runtime
+//! values.
+//!
+//! - **Reification**: Converts Type-level data to Runtime values (Type ->
+//!   Value).
+//! - **Reflection**: Converts Runtime constants to Type-level data (Value ->
+//!   Type).
 
 use typenum::{Bit, Integer, UInt, UTerm, Unsigned};
 
@@ -15,6 +20,13 @@ use crate::{
     std::traits::Bool,
 };
 /// Type to runtime value reification.
+///
+/// # Examples
+///
+/// ```ignore
+/// assert_eq!(True::reify(), true);
+/// assert_eq!(U1::reify(), 1usize);
+/// ```
 pub trait Reify<T> {
     const REIFIED: T;
 
@@ -165,9 +177,10 @@ pub trait ReflectInt<const N: isize> {
     type Output;
 }
 
-// Note: Implementation for integers typically requires macros or specific values if we want typenum U*
-// For now, we can reflect to Const<N> or leave generic implementation for specialized crates to fill,
-// or use typenum::Const as the output for generic integers.
+// Note: Implementation for integers typically requires macros or specific
+// values if we want typenum U* For now, we can reflect to Const<N> or leave
+// generic implementation for specialized crates to fill, or use typenum::Const
+// as the output for generic integers.
 
 impl<const N: usize> ReflectUsize<N> for () {
     type Output = typenum::Const<N>;

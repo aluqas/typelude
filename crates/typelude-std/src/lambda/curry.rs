@@ -10,7 +10,8 @@ use typelude_core::{Eval, Evaluate};
 use super::{LApp, Lambda, church::LPair2};
 /// Curry a function that takes a tuple into a curried function.
 ///
-/// `Curry<F>` transforms `F: Apply<Pair<A, B>>` into a two-argument curried form.
+/// `Curry<F>` transforms `F: Apply<Pair<A, B>>` into a two-argument curried
+/// form.
 pub struct LCurry<F>(PhantomData<F>);
 
 impl<F> Lambda for LCurry<F> {

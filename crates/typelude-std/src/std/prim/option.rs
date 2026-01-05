@@ -43,7 +43,8 @@ impl<T> Unwrap for Some<T> {
     type Output = T;
 }
 
-// Note: None does NOT implement Unwrap — attempting to unwrap None is a compile error
+// Note: None does NOT implement Unwrap — attempting to unwrap None is a compile
+// error
 
 /// Unwrap with a default value
 pub trait UnwrapOr<Default> {

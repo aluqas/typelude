@@ -1,6 +1,7 @@
 //! **Control Flow Adapters**
 //!
-//! Bridge layer between pure lambda calculus combinators and practical Rust types.
+//! Bridge layer between pure lambda calculus combinators and practical Rust
+//! types.
 //!
 //! - `ToChurch`: Convert `TyTrue`/`TyFalse` to `LTrue`/`LFalse`
 //! - `EIf`: Practical conditional using `ToChurch` adapter
@@ -85,7 +86,14 @@ where
 // Op wrapper for Apply pattern
 pub struct OpIf;
 
-impl<Cond, Then, Else> Apply<(Cond, Then, Else)> for OpIf {
+impl<Cond, Then, Else>
+    Apply<
+        typelude_core::ECons<
+            Cond,
+            typelude_core::ECons<Then, typelude_core::ECons<Else, typelude_core::ENil>>,
+        >,
+    > for OpIf
+{
     type Output = EIf<Cond, Then, Else>;
 }
 /// Practical While expression.
@@ -166,17 +174,24 @@ where
 // Op wrapper
 pub struct OpWhile;
 
-impl<Pred, Step, State> Apply<(Pred, Step, State)> for OpWhile {
+impl<Pred, Step, State>
+    Apply<
+        typelude_core::ECons<
+            Pred,
+            typelude_core::ECons<Step, typelude_core::ECons<State, typelude_core::ENil>>,
+        >,
+    > for OpWhile
+{
     type Output = EWhile<Pred, Step, State>;
 }
 
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typenum::{U0, U1, U2, U3};
+    use typelude_core::{ECons, ENil};
+    use typenum::{U0, U1};
 
     use super::*;
-    use crate::std::ops::{ELt, ESub};
 
     #[test]
     fn test_eif_true() {
@@ -190,6 +205,11 @@ mod tests {
         assert_type_eq_all!(Result, U0);
     }
 
-    // Note: EWhile tests require Apply-compatible predicates/steps
-    // which need more infrastructure. Basic EIf tests validate ToChurch bridge.
+    // Verify Op wrappers use EList correctly
+    #[test]
+    fn test_op_if_apply() {
+        type Args = ECons<True, ECons<U1, ECons<U0, ENil>>>;
+        type Result = <OpIf as Apply<Args>>::Output;
+        assert_type_eq_all!(Result, EIf<True, U1, U0>);
+    }
 }

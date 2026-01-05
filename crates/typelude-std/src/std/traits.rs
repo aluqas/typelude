@@ -2,19 +2,23 @@
 //!
 //! Core trait definitions for `typelude`.
 //!
-//! This module defines the "Type Classes" that abstraction layers (like `std`) use.
-//! Implementations are provided in their respective modules (`int`, `bool`, `array`).
+//! This module defines the "Type Classes" that abstraction layers (like `std`)
+//! use. Implementations are provided in their respective modules (`int`,
+//! `bool`, `array`).
 //!
 //! ## Interoperability Pattern
 //!
-//! To use external types (like `typenum` integers or custom structs) with `typelude` operations,
-//! you must implement the relevant "Type Class" traits for them.
+//! To use external types (like `typenum` integers or custom structs) with
+//! `typelude` operations, you must implement the relevant "Type Class" traits
+//! for them.
 //!
-//! For example, to use a custom boolean type `MyBool` with `OpAnd`, `OpIf`, etc.:
+//! For example, to use a custom boolean type `MyBool` with `OpAnd`, `OpIf`,
+//! etc.:
 //! 1. Implement `Eval` for `MyBool` (usually identity).
 //! 2. Implement `TypeBool` for `MyBool`.
 //!
-//! This "Adapter Pattern" allows the core logic to remain agnostic of the underlying concrete types.
+//! This "Adapter Pattern" allows the core logic to remain agnostic of the
+//! underlying concrete types.
 
 use typelude_core::{ELit, Eval};
 
@@ -39,7 +43,8 @@ where
     type Output = <F as TyFn<Arg>>::Output;
 }
 
-// Re-export Apply from core to ensure compatibility with LApp and other core constructs
+// Re-export Apply from core to ensure compatibility with LApp and other core
+// constructs
 pub use typelude_core::Apply;
 
 /// Marker trait for Natural Numbers (Unsigned Integers).

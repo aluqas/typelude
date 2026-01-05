@@ -158,8 +158,8 @@ where
 
 // Helper K_I: \x y. y (False)
 // Use LFalse from bool.rs?
-// But list.rs shouldn't depend on bool.rs details ideally, but standard combinators are standard.
-// Let's reuse LFalse.
+// But list.rs shouldn't depend on bool.rs details ideally, but standard
+// combinators are standard. Let's reuse LFalse.
 
 /// HeadOr: \l d. l K d
 pub struct LHeadOr;

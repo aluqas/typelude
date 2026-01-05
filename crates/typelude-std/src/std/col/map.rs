@@ -14,8 +14,15 @@ use crate::{
     std::prim::option::{None, Some},
 };
 
-/// Get a value by key, returns Some<V> or None
-/// Uses type identity (same type = found)
+/// Get a value by key, returns Some<V> or None.
+///
+/// Uses type identity (same type = found).
+///
+/// # Examples
+///
+/// ```ignore
+/// type Res = <Map<U1, i32, Nil> as MapGet<U1>>::Output; // Some<i32>
+/// ```
 pub trait MapGet<Key> {
     type Output; // Some<V> or None
 }
@@ -33,7 +40,13 @@ impl<K, V, T: TypeMap> MapGet<K> for Map<K, V, T> {
 // This uses nightly specialization or manual impl for specific types
 // For stable Rust, we rely on the fact that only exact type matches work
 
-/// Insert a key-value pair (prepend, allows shadowing)
+/// Insert a key-value pair (prepend, allows shadowing).
+///
+/// # Examples
+///
+/// ```ignore
+/// type NewMap = <Nil as MapInsert<U1, i32>>::Output;
+/// ```
 pub trait MapInsert<Key, Value> {
     type Output: TypeMap;
 }
@@ -42,7 +55,13 @@ impl<K, V, M: TypeMap> MapInsert<K, V> for M {
     type Output = Map<K, V, M>;
 }
 
-/// Check if map contains a key
+/// Check if map contains a key.
+///
+/// # Examples
+///
+/// ```ignore
+/// type HasKey = <Map<U1, i32, Nil> as MapContains<U1>>::Output; // True
+/// ```
 pub trait MapContains<Key> {
     type Output; // True or False
 }

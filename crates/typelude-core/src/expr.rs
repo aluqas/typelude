@@ -1,8 +1,19 @@
+//! **Core Expression AST Nodes**
+//!
+//! Defines the foundational types for type-level evaluation and application.
+
 use std::marker::PhantomData;
 
 use crate::{Apply, Eval, Evaluate};
 /// **Identity Evaluator**: Lifts a value `T` into an expression `ELit<T>`.
+///
 /// Evaluation just returns `T`.
+///
+/// # Examples
+///
+/// ```ignore
+/// type Res = Evaluate<ELit<i32>>; // i32
+/// ```
 pub struct ELit<T>(PhantomData<T>);
 
 impl<T> Eval for ELit<T> {
@@ -23,6 +34,12 @@ where
 /// 3. Apply `F_val` to `A_val` -> `Result`
 ///
 /// This is safer for higher-order programming where functions are expressions.
+///
+/// # Examples
+///
+/// ```ignore
+/// type Res = Evaluate<EApp<ELit<OpAdd>, ELit<U1>>>;
+/// ```
 pub struct EApp<Ef, Ea>(PhantomData<(Ef, Ea)>);
 
 impl<Ef, Ea> Eval for EApp<Ef, Ea>

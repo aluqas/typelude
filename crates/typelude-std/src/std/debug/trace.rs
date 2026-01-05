@@ -1,6 +1,7 @@
 //! **Trace Trait**
 //!
-//! A trait for converting type-level structures into runtime strings for debugging and tracing.
+//! A trait for converting type-level structures into runtime strings for
+//! debugging and tracing.
 
 use typenum::{B0, B1, Integer, NInt, PInt, UInt, UTerm, Unsigned, Z0};
 
