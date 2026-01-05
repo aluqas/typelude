@@ -1,3 +1,10 @@
+---
+id: spec-architecture
+title: "Architecture & Design"
+status: current
+created: 2025-01-01
+---
+
 # Architecture & Design
 
 Typelude is effectively a **Virtual Machine** specifically architected to run inside the Rust compiler's trait solver.

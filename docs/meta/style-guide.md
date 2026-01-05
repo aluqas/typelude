@@ -1,3 +1,10 @@
+---
+id: meta-style-guide
+title: "Code Style & Conventions"
+status: current
+created: 2025-01-01
+---
+
 # Code Style & Conventions
 
 This document outlines the coding standards, naming conventions, and documentation guidelines for the `typeutils` project. Adherence to these rules ensures consistency, readability, and maintainability across the codebase.

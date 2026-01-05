@@ -1,3 +1,10 @@
+---
+id: meta-philosophy
+title: "Philosophy & Theoretical Foundation"
+status: current
+created: 2025-01-01
+---
+
 # Philosophy & Theoretical Foundation
 
 > **"What if the type system wasn't just a verification tool, but the computer itself?"**

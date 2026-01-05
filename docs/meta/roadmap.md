@@ -1,3 +1,10 @@
+---
+id: meta-roadmap
+title: "Typelude Roadmap"
+status: current
+created: 2025-01-01
+---
+
 # Typelude Roadmap
 
 **Typelude** is a research project dedicated to turning the Rust compiler's type system into a fully-fledged runtime environment.
@@ -6,8 +13,8 @@ This roadmap outlines the path from "Theoretical Type Puzzle" to "Industrial Gra
 
 ### Reference
 
-* [Theoretical Foundation](./PHILOSOPHY_AND_THEORY.md)
-* [System Architecture](./ARCHITECTURE.md)
+* [Theoretical Foundation](philosophy.md)
+* [System Architecture](../specs/architecture.md)
 
 ---
 
