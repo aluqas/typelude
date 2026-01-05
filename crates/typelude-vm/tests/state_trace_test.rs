@@ -1,5 +1,3 @@
-use core::marker::PhantomData;
-
 use typelude_std::{
     std::{col::array::Nil, trace::Trace},
     tyarray,

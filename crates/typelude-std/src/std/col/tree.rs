@@ -270,7 +270,7 @@ def_op! {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typenum::{U1, U2, U3, U4, U5};
+    use typenum::{U1, U2, U3, U5};
 
     use super::*;
     use crate::data::collections::array::{Array as ArrayData, Nil as NilArray};

@@ -72,23 +72,19 @@ mod tests {
     use crate::std::ops::EAdd;
 
     #[test]
-    fn test_eval_typenum() {
-        // Since typenum types are implemented in kernel, they should evaluate to
-        // themselves.
-        assert_type_eq_all!(Evaluate<U1>, U1);
-        assert_type_eq_all!(Evaluate<P5>, P5);
-        assert_type_eq_all!(Evaluate<N2>, N2);
-        assert_type_eq_all!(Evaluate<B0>, B0);
-        assert_type_eq_all!(Evaluate<B1>, B1);
+    fn test_eval_lit() {
+        assert_type_eq_all!(Evaluate<ELit<U1>>, U1);
+        assert_type_eq_all!(Evaluate<ELit<P5>>, P5);
+        assert_type_eq_all!(Evaluate<ELit<N2>>, N2);
+        assert_type_eq_all!(Evaluate<ELit<B0>>, B0);
+        assert_type_eq_all!(Evaluate<ELit<B1>>, B1);
     }
 
     #[test]
     fn test_add() {
         // EAdd uses TypeAdd, which is implemented for U1.
-        // EAdd requires arguments to be Eval. U1 is Eval.
+        // EAdd requires arguments to be Eval. ELit<U1> is Eval.
         // So this should work.
         assert_type_eq_all!(Evaluate<EAdd<ELit<U1>, ELit<typenum::U2>>>, U3);
-        // Also direct if U1 is Eval?
-        assert_type_eq_all!(Evaluate<EAdd<U1, typenum::U2>>, U3);
     }
 }

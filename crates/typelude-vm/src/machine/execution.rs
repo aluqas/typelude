@@ -2,7 +2,7 @@
 //!
 //! Implements machine instruction execution logic and main loop.
 
-use typelude_core::{App, Apply, Eval, Evaluate};
+use typelude_core::{App, Apply, ELit, Eval, Evaluate};
 #[allow(unused_imports)]
 use typelude_std::std::int;
 use typelude_std::{
@@ -41,7 +41,7 @@ macro_rules! impl_binary_op {
             RestStack: IsList,
         {
             type OutputState = MachineState<
-                Array<Evaluate<$EvalOp>, RestStack>,
+                Array<ELit<Evaluate<$EvalOp>>, RestStack>,
                 Locals,
                 Memory,
                 CallStack,
@@ -70,12 +70,14 @@ macro_rules! impl_cmp_op {
         {
             type OutputState = MachineState<
                 Array<
-                    Evaluate<
-                        App<
-                            $CoreOp,
-                            typelude_core::ECons<
-                                Lhs,
-                                typelude_core::ECons<Rhs, typelude_core::ENil>,
+                    ELit<
+                        Evaluate<
+                            App<
+                                $CoreOp,
+                                typelude_core::ECons<
+                                    Lhs,
+                                    typelude_core::ECons<Rhs, typelude_core::ENil>,
+                                >,
                             >,
                         >,
                     >,
@@ -105,7 +107,7 @@ where
     RestStack: IsList,
 {
     type OutputState = MachineState<
-        Array<Evaluate<typelude_std::std::ops::ENot<Val>>, RestStack>,
+        Array<ELit<Evaluate<typelude_std::std::ops::ENot<Val>>>, RestStack>,
         Locals,
         Memory,
         CallStack,
@@ -147,12 +149,13 @@ where
 impl<Addr, RestStack, Locals, Memory, CallStack, RestProg>
     Execute<Array<Addr, RestStack>, Locals, Memory, CallStack, RestProg> for OpLoad
 where
-    Memory: Get<Addr>,
-    Addr: Unsigned,
+    Addr: Eval,
+    Memory: Get<Evaluate<Addr>>,
+    Evaluate<Addr>: Unsigned,
     RestStack: IsList,
 {
     type OutputState = MachineState<
-        Array<<Memory as Get<Addr>>::Output, RestStack>,
+        Array<<Memory as Get<Evaluate<Addr>>>::Output, RestStack>,
         Locals,
         Memory,
         CallStack,
@@ -163,12 +166,18 @@ where
 impl<Value, Addr, RestStack, Locals, Memory, CallStack, RestProg>
     Execute<Array<Value, Array<Addr, RestStack>>, Locals, Memory, CallStack, RestProg> for OpStore
 where
-    Memory: Set<Addr, Value>,
-    Addr: Unsigned,
+    Addr: Eval,
+    Memory: Set<Evaluate<Addr>, Value>,
+    Evaluate<Addr>: Unsigned,
     RestStack: IsList,
 {
-    type OutputState =
-        MachineState<RestStack, Locals, <Memory as Set<Addr, Value>>::Output, CallStack, RestProg>;
+    type OutputState = MachineState<
+        RestStack,
+        Locals,
+        <Memory as Set<Evaluate<Addr>, Value>>::Output,
+        CallStack,
+        RestProg,
+    >;
 }
 
 // --- Local Variables ---
@@ -192,12 +201,13 @@ where
 impl<Index, Stack, Locals, Memory, CallStack, RestProg>
     Execute<Stack, Locals, Memory, CallStack, RestProg> for OpGetLocal<Index>
 where
-    Locals: Get<Index>,
-    Index: Unsigned,
+    Index: Eval,
+    Locals: Get<Evaluate<Index>>,
+    Evaluate<Index>: Unsigned,
     Stack: IsList,
 {
     type OutputState = MachineState<
-        Array<<Locals as Get<Index>>::Output, Stack>,
+        Array<<Locals as Get<Evaluate<Index>>>::Output, Stack>,
         Locals,
         Memory,
         CallStack,
@@ -208,13 +218,14 @@ where
 impl<Index, Value, RestStack, Locals, Memory, CallStack, RestProg>
     Execute<Array<Value, RestStack>, Locals, Memory, CallStack, RestProg> for OpSetLocal<Index>
 where
-    Locals: Set<Index, Value>,
-    Index: Unsigned,
+    Index: Eval,
+    Locals: Set<Evaluate<Index>, Value>,
+    Evaluate<Index>: Unsigned,
     RestStack: IsList,
 {
     type OutputState = MachineState<
         RestStack,
-        <Locals as Set<Index, Value>>::Output,
+        <Locals as Set<Evaluate<Index>, Value>>::Output,
         Memory,
         CallStack,
         RestProg,
@@ -249,14 +260,14 @@ where
     EConcat<ThenProg, RestProg>: Eval,
     EConcat<ElseProg, RestProg>: Eval,
     EIf<
-        CondVal,
+        ELit<CondVal>,
         MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<ThenProg, RestProg>>>,
         MachineState<RestStack, Locals, Memory, CallStack, Evaluate<EConcat<ElseProg, RestProg>>>,
     >: Eval,
 {
     type OutputState = Evaluate<
         EIf<
-            CondVal,
+            ELit<CondVal>,
             MachineState<
                 RestStack,
                 Locals,
@@ -373,18 +384,18 @@ mod tests {
     #[test]
     fn test_stack_ops_logic() {
         type S0 = Nil;
-        type S1 = <OpPush<U1> as Execute<S0, Nil, Nil, Nil, Nil>>::OutputState;
-        type ExpectedState = MachineState<tyarray![U1], Nil, Nil, Nil, Nil>;
+        type S1 = <OpPush<ELit<U1>> as Execute<S0, Nil, Nil, Nil, Nil>>::OutputState;
+        type ExpectedState = MachineState<tyarray![ELit<U1>], Nil, Nil, Nil, Nil>;
         assert_type_eq_all!(S1, ExpectedState);
     }
 
     #[test]
     fn test_machine_run() {
-        type Prog = tyarray![OpPush<U2>, OpPush<U3>, OpAdd, OpPush<U5>, OpSub];
+        type Prog = tyarray![OpPush<ELit<U2>>, OpPush<ELit<U3>>, OpAdd, OpPush<ELit<U5>>, OpSub];
         type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
         type FinalState = Evaluate<ERun<InitialState>>;
 
-        type ExpectedStack = tyarray![typenum::U0];
+        type ExpectedStack = tyarray![ELit<typenum::U0>];
         type ExpectedState = MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
 
         assert_type_eq_all!(FinalState, ExpectedState);
@@ -392,13 +403,13 @@ mod tests {
 
     #[test]
     fn test_call_return() {
-        type SubRoutine = tyarray![OpPush<U5>, OpReturn];
-        type MainProg = tyarray![OpPush<U3>, OpCall<SubRoutine>, OpAdd];
+        type SubRoutine = tyarray![OpPush<ELit<U5>>, OpReturn];
+        type MainProg = tyarray![OpPush<ELit<U3>>, OpCall<SubRoutine>, OpAdd];
 
         type InitialState = MachineState<Nil, Nil, Nil, Nil, MainProg>;
         type FinalState = Evaluate<ERun<InitialState>>;
 
-        type ExpectedStack = tyarray![typenum::U8];
+        type ExpectedStack = tyarray![ELit<typenum::U8>];
         type ExpectedState = MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
 
         assert_type_eq_all!(FinalState, ExpectedState);
@@ -407,16 +418,16 @@ mod tests {
     #[test]
     fn test_memory_and_function() {
         use typenum::{U10, U20};
-        type InitialMemory = tyarray![typenum::U0];
+        type InitialMemory = tyarray![ELit<typenum::U0>];
         type Func = tyarray![
-            OpPush<typenum::U0>,
-            OpPush<U10>,
+            OpPush<ELit<typenum::U0>>,
+            OpPush<ELit<U10>>,
             OpStore,
-            OpPush<typenum::U0>,
+            OpPush<ELit<typenum::U0>>,
             OpLoad,
-            OpPush<U20>,
+            OpPush<ELit<U20>>,
             OpAdd,
-            OpPush<typenum::U0>,
+            OpPush<ELit<typenum::U0>>,
             OpSwap,
             OpStore,
             OpReturn
@@ -424,7 +435,7 @@ mod tests {
         type Main = tyarray![OpCall<Func>];
         type InitialState = MachineState<Nil, Nil, InitialMemory, Nil, Main>;
         type FinalState = Evaluate<ERun<InitialState>>;
-        type ExpectedMemory = tyarray![typenum::U30];
+        type ExpectedMemory = tyarray![ELit<typenum::U30>];
         type ExpectedState = MachineState<Nil, Nil, ExpectedMemory, Nil, Nil>;
         assert_type_eq_all!(FinalState, ExpectedState);
     }
@@ -433,36 +444,51 @@ mod tests {
     fn test_while_loop_countdown() {
         use typenum::{U0, U1, U3};
         // OpLt for < (0 < 3 -> True)
-        type CondProg = tyarray![OpDup, OpPush<U0>, OpLt];
-        type BodyProg = tyarray![OpPush<U1>, OpSub];
-        type Prog = tyarray![OpPush<U3>, OpWhile<CondProg, BodyProg>];
+        type CondProg = tyarray![OpDup, OpPush<ELit<U0>>, OpLt];
+
+        // Safe Body: Decrement Val, but if Val is 0, preserve 0 to avoid underflow in
+        // type check. This is necessary because typenum evaluation explores
+        // step validity even for unused branches in recursion. Logic: Push 1,
+        // Swap ([Val, 1]). Check if Val > 0. If > 0: Sub (Val-1).
+        // If = 0: Swap, Drop ([1, 0] -> [0]).
+        type BodyProg = tyarray![
+            OpPush<ELit<U1>>, OpSwap,
+            OpDup, OpPush<ELit<U0>>, OpGt,
+            OpIf<
+                tyarray![OpSub],
+                tyarray![OpSwap, OpDrop]
+            >
+        ];
+        type Prog = tyarray![OpPush<ELit<U3>>, OpWhile<CondProg, BodyProg>];
         type InitialState = MachineState<Nil, Nil, Nil, Nil, Prog>;
-        // FIXME: Recursive eval limit or trait resolution failure in test
-        // environment type FinalState = Evaluate<ERun<InitialState>>;
-        // type ExpectedStack = tyarray![U0];
-        // type ExpectedState = MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
+        // FIXME: Recursive eval limit reached due to ERun using EWhile (deep
+        // recursion). The logic below is correct (SafeSub + OpLt), but
+        // Rust trait solver overflows. type FinalState =
+        // Evaluate<ERun<InitialState>>; type ExpectedStack =
+        // tyarray![ELit<U0>]; type ExpectedState =
+        // MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
         // assert_type_eq_all!(FinalState, ExpectedState);
     }
 
     #[test]
     fn test_simple_sort() {
         use typenum::{U0, U1, U3};
-        type InitialMemory = tyarray![U3, U1];
+        type InitialMemory = tyarray![ELit<U3>, ELit<U1>];
         // OpLt for > (1 < 3 -> True)
         type SortProg = tyarray![
-            OpPush<U0>, OpLoad, OpPush<U1>, OpLoad, OpLt,
+            OpPush<ELit<U0>>, OpLoad, OpPush<ELit<U1>>, OpLoad, OpLt,
             OpIf<
                 tyarray![
-                    OpPush<U0>, OpLoad, OpPush<U1>, OpLoad, OpSwap,
-                    OpPush<U1>, OpSwap, OpStore,
-                    OpPush<U0>, OpSwap, OpStore
+                    OpPush<ELit<U0>>, OpLoad, OpPush<ELit<U1>>, OpLoad, OpSwap,
+                    OpPush<ELit<U1>>, OpSwap, OpStore,
+                    OpPush<ELit<U0>>, OpSwap, OpStore
                 ],
                 tyarray![]
             >
         ];
         type InitialState = MachineState<Nil, Nil, InitialMemory, Nil, SortProg>;
         type FinalState = Evaluate<ERun<InitialState>>;
-        type ExpectedMemory = tyarray![U1, U3];
+        type ExpectedMemory = tyarray![ELit<U1>, ELit<U3>];
         type ExpectedState = MachineState<Nil, Nil, ExpectedMemory, Nil, Nil>;
         assert_type_eq_all!(FinalState, ExpectedState);
     }
@@ -470,12 +496,13 @@ mod tests {
     #[test]
     fn test_locals_isolation() {
         use typenum::{U0, U10, U20};
-        type FuncB = tyarray![OpPush<U20>, OpLet, OpReturn];
-        type FuncA = tyarray![OpPush<U10>, OpLet, OpCall<FuncB>, OpGetLocal<U0>, OpReturn];
+        type FuncB = tyarray![OpPush<ELit<U20>>, OpLet, OpReturn];
+        type FuncA =
+            tyarray![OpPush<ELit<U10>>, OpLet, OpCall<FuncB>, OpGetLocal<ELit<U0>>, OpReturn];
         type Main = tyarray![OpCall<FuncA>];
         type InitialState = MachineState<Nil, Nil, Nil, Nil, Main>;
         type FinalState = Evaluate<ERun<InitialState>>;
-        type ExpectedStack = tyarray![U10];
+        type ExpectedStack = tyarray![ELit<U10>];
         type ExpectedState = MachineState<ExpectedStack, Nil, Nil, Nil, Nil>;
         assert_type_eq_all!(FinalState, ExpectedState);
     }

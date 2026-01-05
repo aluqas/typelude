@@ -15,7 +15,6 @@ macro_rules! define_arith_op {
                 Lhs: $crate::typelude_core::Eval,
                 Rhs: $crate::typelude_core::Eval,
                 $crate::typelude_core::Evaluate<Lhs>: $trait<$crate::typelude_core::Evaluate<Rhs>>,
-                <$crate::typelude_core::Evaluate<Lhs> as $trait<$crate::typelude_core::Evaluate<Rhs>>>::Output: $crate::typelude_core::Eval,
             {
                 type Output = <$crate::typelude_core::Evaluate<Lhs> as $trait<$crate::typelude_core::Evaluate<Rhs>>>::Output;
             }

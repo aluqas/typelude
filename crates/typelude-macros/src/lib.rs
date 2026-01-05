@@ -153,13 +153,15 @@ fn compile_instructions(
             Instruction::PushLiteral(lit) => {
                 compiled.push(quote! {
                     typelude::vm::machine::instruction::OpPush<
-                        <typelude::core::typenum::Const<#lit> as typelude::core::typenum::ToUInt>::Output
+                        typelude::core::ELit<
+                            <typelude::core::typenum::Const<#lit> as typelude::core::typenum::ToUInt>::Output
+                        >
                     >
                 });
             },
             Instruction::PushType(ty) => {
                 compiled.push(quote! {
-                    typelude::vm::machine::instruction::OpPush< #ty >
+                    typelude::vm::machine::instruction::OpPush< typelude::core::ELit<#ty> >
                 });
             },
             Instruction::SimpleOp(ident) => {
@@ -201,7 +203,7 @@ fn compile_instructions(
                 Some(idx) => {
                     let uint = generate_uint(idx);
                     compiled
-                        .push(quote! { typelude::vm::machine::instruction::OpGetLocal< #uint > });
+                        .push(quote! { typelude::vm::machine::instruction::OpGetLocal< typelude::core::ELit<#uint> > });
                 },
                 None => {
                     let msg = format!("Variable not found: {}", ident);
@@ -212,7 +214,7 @@ fn compile_instructions(
                 Some(idx) => {
                     let uint = generate_uint(idx);
                     compiled
-                        .push(quote! { typelude::vm::machine::instruction::OpSetLocal< #uint > });
+                        .push(quote! { typelude::vm::machine::instruction::OpSetLocal< typelude::core::ELit<#uint> > });
                 },
                 None => {
                     let msg = format!("Variable not found: {}", ident);
@@ -221,13 +223,13 @@ fn compile_instructions(
             },
             Instruction::Load(ident) => {
                 compiled.push(quote! {
-                    typelude::vm::machine::instruction::OpPush<#ident>,
+                    typelude::vm::machine::instruction::OpPush< typelude::core::ELit<#ident> >,
                     typelude::vm::machine::instruction::OpLoad
                 });
             },
             Instruction::Store(ident) => {
                 compiled.push(quote! {
-                    typelude::vm::machine::instruction::OpPush<#ident>,
+                    typelude::vm::machine::instruction::OpPush< typelude::core::ELit<#ident> >,
                     typelude::vm::machine::instruction::OpSwap,
                     typelude::vm::machine::instruction::OpStore
                 });

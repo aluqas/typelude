@@ -58,6 +58,40 @@ impl Bool for B1 {
 }
 
 //
+// IntoBool: Explicit conversion to Church booleans
+//
+
+use crate::lambda::church::{LFalse, LTrue};
+
+/// Explicit conversion from practical booleans to Church booleans.
+pub trait IntoBool {
+    type Output;
+}
+
+impl IntoBool for True {
+    type Output = LTrue;
+}
+
+impl IntoBool for False {
+    type Output = LFalse;
+}
+
+impl IntoBool for B0 {
+    type Output = LFalse;
+}
+
+impl IntoBool for B1 {
+    type Output = LTrue;
+}
+
+// Blanket impl for ELit<T> - delegates to inner type's IntoBool
+impl<T: IntoBool> IntoBool for typelude_core::ELit<T> {
+    type Output = <T as IntoBool>::Output;
+}
+
+pub type ToBool<T> = <T as IntoBool>::Output;
+
+//
 // Bool Conversion Utilities
 //
 
@@ -66,7 +100,6 @@ pub struct Assert<const COND: bool>;
 impl<const COND: bool> Eval for Assert<COND>
 where
     (): crate::std::reify::ReflectBool<COND>,
-    <() as crate::std::reify::ReflectBool<COND>>::Output: Eval,
 {
     type Output = <() as crate::std::reify::ReflectBool<COND>>::Output;
 }

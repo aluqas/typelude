@@ -46,7 +46,6 @@ mod tests {
     use super::*;
 
     struct A;
-    struct B;
 
     #[test]
     fn test_reflexivity() {

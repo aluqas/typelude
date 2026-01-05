@@ -20,7 +20,7 @@
 //! This "Adapter Pattern" allows the core logic to remain agnostic of the
 //! underlying concrete types.
 
-use typelude_core::{ELit, Eval};
+use typelude_core::ELit;
 
 /// Trait representing a function
 ///
@@ -53,14 +53,14 @@ pub use typelude_core::Apply;
     label = "not a Nat",
     note = "implement `Nat` for `{Self}` to use it in arithmetic operations"
 )]
-pub trait Nat: Eval {}
+pub trait Nat {}
 
 /// Marker trait for Integers (Signed).
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a valid Type-Level Integer",
     label = "not an Int"
 )]
-pub trait Int: Eval {}
+pub trait Int {}
 
 /// Type-level Addition: `Lhs + Rhs`
 #[diagnostic::on_unimplemented(
@@ -105,7 +105,7 @@ pub trait TPow<Rhs> {
     label = "not a Bool",
     note = "implement `Bool` for `{Self}` to use it in logical operations"
 )]
-pub trait Bool: Eval {
+pub trait Bool {
     /// Result of `!Self`
     type Not;
     /// Result of `Self && Rhs`
@@ -128,7 +128,7 @@ pub trait Bool: Eval {
     label = "not a List",
     note = "implement `List` for `{Self}` to use it in list operations like `Map`, `Filter`, `Fold`"
 )]
-pub trait List: Eval {
+pub trait List {
     /// The type of the head element.
     type Head;
     /// The type of the tail (must also be a List, or Nil).

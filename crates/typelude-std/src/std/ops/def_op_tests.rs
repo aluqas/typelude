@@ -24,12 +24,13 @@ def_op! {
 
 #[test]
 fn test_ast_pattern_add() {
+    use typelude_core::ELit;
     // Apply returns AST
-    type Ast = <TestOpAdd as Apply<ECons<U1, ECons<U2, ENil>>>>::Output;
-    assert_type_eq_all!(Ast, TestEAdd<U1, U2>);
+    type Ast = <TestOpAdd as Apply<ECons<ELit<U1>, ECons<ELit<U2>, ENil>>>>::Output;
+    assert_type_eq_all!(Ast, TestEAdd<ELit<U1>, ELit<U2>>);
 
     // Evaluate computes result
-    type Result = Evaluate<TestEAdd<U1, U2>>;
+    type Result = Evaluate<TestEAdd<ELit<U1>, ELit<U2>>>;
     assert_type_eq_all!(Result, U3);
 }
 def_op! {
@@ -44,10 +45,11 @@ def_op! {
 
 #[test]
 fn test_ast_pattern_unary() {
-    type Ast = <TestOpId as Apply<U42>>::Output;
-    assert_type_eq_all!(Ast, TestEId<U42>);
+    use typelude_core::ELit;
+    type Ast = <TestOpId as Apply<ELit<U42>>>::Output;
+    assert_type_eq_all!(Ast, TestEId<ELit<U42>>);
 
-    type Result = Evaluate<TestEId<U42>>;
+    type Result = Evaluate<TestEId<ELit<U42>>>;
     assert_type_eq_all!(Result, U42);
 }
 /// A simple wrapper AST for testing
@@ -65,12 +67,13 @@ def_op! {
 
 #[test]
 fn test_alias_pattern() {
+    use typelude_core::ELit;
     // Apply directly returns the alias type
-    type Ast = <TestOpWrap as Apply<U1>>::Output;
-    assert_type_eq_all!(Ast, TestWrap<U1>);
+    type Ast = <TestOpWrap as Apply<ELit<U1>>>::Output;
+    assert_type_eq_all!(Ast, TestWrap<ELit<U1>>);
 
     // Evaluate through the wrapper
-    type Result = Evaluate<TestWrap<U1>>;
+    type Result = Evaluate<TestWrap<ELit<U1>>>;
     assert_type_eq_all!(Result, U1);
 }
 def_op! {
@@ -82,8 +85,9 @@ def_op! {
 
 #[test]
 fn test_alias_pattern_binary() {
-    type Ast = <TestOpAddAlias as Apply<ECons<U5, ECons<U1, ENil>>>>::Output;
-    assert_type_eq_all!(Ast, TestEAdd<U5, U1>);
+    use typelude_core::ELit;
+    type Ast = <TestOpAddAlias as Apply<ECons<ELit<U5>, ECons<ELit<U1>, ENil>>>>::Output;
+    assert_type_eq_all!(Ast, TestEAdd<ELit<U5>, ELit<U1>>);
 
     type Result = Evaluate<Ast>;
     assert_type_eq_all!(Result, U6);
@@ -115,22 +119,24 @@ def_op! {
 
 #[test]
 fn test_complex_bounds() {
-    type R1 = Evaluate<TestEMul<U3, U2>>;
+    use typelude_core::ELit;
+    type R1 = Evaluate<TestEMul<ELit<U3>, ELit<U2>>>;
     assert_type_eq_all!(R1, U6);
 
-    type R2 = Evaluate<TestEMul<typenum::U4, U3>>;
+    type R2 = Evaluate<TestEMul<ELit<typenum::U4>, ELit<U3>>>;
     assert_type_eq_all!(R2, U12);
 }
 #[test]
 fn test_nested_evaluation() {
+    use typelude_core::ELit;
     // (1 + 2) + 3 = 6
-    type Inner = TestEAdd<U1, U2>;
-    type Outer = TestEAdd<Inner, U3>;
+    type Inner = TestEAdd<ELit<U1>, ELit<U2>>;
+    type Outer = TestEAdd<Inner, ELit<U3>>;
     type Result = Evaluate<Outer>;
     assert_type_eq_all!(Result, U6);
 
     // 2 + (1 + 2) = 5
-    type Outer2 = TestEAdd<U2, Inner>;
+    type Outer2 = TestEAdd<ELit<U2>, Inner>;
     type Result2 = Evaluate<Outer2>;
     assert_type_eq_all!(Result2, U5);
 }

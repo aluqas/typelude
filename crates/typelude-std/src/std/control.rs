@@ -20,37 +20,12 @@ use std::marker::PhantomData;
 use typelude_core::{Apply, Eval, Evaluate};
 
 use crate::{
-    data::primitives::bool::{False, True},
     lambda::{
         LApp, Lambda,
         church::{LFalse, LTrue, LWhile2},
     },
+    std::prim::bool::IntoBool,
 };
-/// Convert type-level booleans to Church booleans.
-///
-/// This adapter bridges the gap between practical boolean types
-/// (`True`/`False`) and pure lambda calculus (`LTrue`/`LFalse`).
-pub trait ToChurch {
-    type Church: Lambda;
-}
-
-impl ToChurch for True {
-    type Church = LTrue;
-}
-
-impl ToChurch for False {
-    type Church = LFalse;
-}
-
-use typenum::{B0, B1};
-
-impl ToChurch for B0 {
-    type Church = LFalse;
-}
-
-impl ToChurch for B1 {
-    type Church = LTrue;
-}
 /// Practical If expression.
 ///
 /// Evaluates `Cond`, converts to Church boolean via `ToChurch`,
@@ -87,10 +62,10 @@ where
 impl<Cond, Then, Else> Eval for EIf<Cond, Then, Else>
 where
     Cond: Eval,
-    Evaluate<Cond>: ToChurch,
-    <Evaluate<Cond> as ToChurch>::Church: EIfHelper<Then, Else>,
+    Evaluate<Cond>: IntoBool,
+    <Evaluate<Cond> as IntoBool>::Output: EIfHelper<Then, Else>,
 {
-    type Output = <<Evaluate<Cond> as ToChurch>::Church as EIfHelper<Then, Else>>::Output;
+    type Output = <<Evaluate<Cond> as IntoBool>::Output as EIfHelper<Then, Else>>::Output;
 }
 
 // Op wrapper for Apply pattern
@@ -142,9 +117,9 @@ where
     Pred: Apply<Evaluate<S>>,
     // Pred(S) returns Bool
     <Pred as Apply<Evaluate<S>>>::Output: Eval,
-    Evaluate<<Pred as Apply<Evaluate<S>>>::Output>: ToChurch,
+    Evaluate<<Pred as Apply<Evaluate<S>>>::Output>: IntoBool,
 {
-    type Output = <Evaluate<<Pred as Apply<Evaluate<S>>>::Output> as ToChurch>::Church;
+    type Output = <Evaluate<<Pred as Apply<Evaluate<S>>>::Output> as IntoBool>::Output;
 }
 
 /// Adapter for Step function in lambda world.
@@ -202,24 +177,28 @@ mod tests {
     use typenum::{U0, U1};
 
     use super::*;
+    use crate::std::prim::bool::{False, True};
 
     #[test]
     fn test_eif_true() {
-        type Result = Evaluate<EIf<True, U1, U0>>;
+        use typelude_core::ELit;
+        type Result = Evaluate<EIf<ELit<True>, ELit<U1>, ELit<U0>>>;
         assert_type_eq_all!(Result, U1);
     }
 
     #[test]
     fn test_eif_false() {
-        type Result = Evaluate<EIf<False, U1, U0>>;
+        use typelude_core::ELit;
+        type Result = Evaluate<EIf<ELit<False>, ELit<U1>, ELit<U0>>>;
         assert_type_eq_all!(Result, U0);
     }
 
     // Verify Op wrappers use EList correctly
     #[test]
     fn test_op_if_apply() {
-        type Args = ECons<True, ECons<U1, ECons<U0, ENil>>>;
+        use typelude_core::ELit;
+        type Args = ECons<ELit<True>, ECons<ELit<U1>, ECons<ELit<U0>, ENil>>>;
         type Result = <OpIf as Apply<Args>>::Output;
-        assert_type_eq_all!(Result, EIf<True, U1, U0>);
+        assert_type_eq_all!(Result, EIf<ELit<True>, ELit<U1>, ELit<U0>>);
     }
 }

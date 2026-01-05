@@ -127,3 +127,9 @@ where
         format!("[{}]", <Self as TraceList>::fmt_list())
     }
 }
+
+impl<T: Trace> Trace for typelude_core::ELit<T> {
+    fn fmt() -> String {
+        T::fmt()
+    }
+}
