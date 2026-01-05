@@ -71,6 +71,20 @@ impl Trace for B1 {
     }
 }
 
+use crate::std::prim::bool::{False, True};
+
+impl Trace for True {
+    fn fmt() -> String {
+        "true".to_string()
+    }
+}
+
+impl Trace for False {
+    fn fmt() -> String {
+        "false".to_string()
+    }
+}
+
 impl Trace for Nil {
     fn fmt() -> String {
         "[]".to_string()

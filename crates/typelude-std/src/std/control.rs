@@ -41,6 +41,16 @@ impl ToChurch for True {
 impl ToChurch for False {
     type Church = LFalse;
 }
+
+use typenum::{B0, B1};
+
+impl ToChurch for B0 {
+    type Church = LFalse;
+}
+
+impl ToChurch for B1 {
+    type Church = LTrue;
+}
 /// Practical If expression.
 ///
 /// Evaluates `Cond`, converts to Church boolean via `ToChurch`,

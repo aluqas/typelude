@@ -10,7 +10,6 @@ use typelude_std::{
     std::{
         array::{Array, Concat, EConcat, Get, IsList, Nil, Set},
         bool::{False, True},
-        ops::OpNot,
     },
 };
 use typenum::Unsigned;

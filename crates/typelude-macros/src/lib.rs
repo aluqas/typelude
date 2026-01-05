@@ -31,52 +31,60 @@ enum Instruction {
 
 impl Parse for Instruction {
     fn parse(input: ParseStream) -> Result<Self> {
-        let content;
-        parenthesized!(content in input);
+        if input.peek(syn::token::Paren) {
+            let content;
+            parenthesized!(content in input);
+            return content.parse();
+        }
 
-        if content.peek(Token![if]) {
-            content.parse::<Token![if]>()?;
+        if input.peek(Token![if]) {
+            input.parse::<Token![if]>()?;
             let then_content;
-            parenthesized!(then_content in content);
+            parenthesized!(then_content in input);
             let then_block = parse_block_content(&then_content)?;
             let else_content;
-            parenthesized!(else_content in content);
+            parenthesized!(else_content in input);
             let else_block = parse_block_content(&else_content)?;
             return Ok(Instruction::If(then_block, else_block));
         }
 
-        if content.peek(Token![while]) {
-            content.parse::<Token![while]>()?;
+        if input.peek(Token![while]) {
+            input.parse::<Token![while]>()?;
             let cond_content;
-            parenthesized!(cond_content in content);
+            parenthesized!(cond_content in input);
             let cond_block = parse_block_content(&cond_content)?;
             let body_content;
-            parenthesized!(body_content in content);
+            parenthesized!(body_content in input);
             let body_block = parse_block_content(&body_content)?;
             return Ok(Instruction::While(cond_block, body_block));
         }
 
-        if content.peek(Token![let]) {
-            content.parse::<Token![let]>()?;
-            let v: Ident = content.parse()?;
+        if input.peek(Token![let]) {
+            input.parse::<Token![let]>()?;
+            let v: Ident = input.parse()?;
             return Ok(Instruction::Let(v));
         }
 
-        let op: Ident = content.parse()?;
+        if input.peek(Token![return]) {
+            let token: Token![return] = input.parse()?;
+            return Ok(Instruction::SimpleOp(Ident::new("return", token.span)));
+        }
+
+        let op: Ident = input.parse()?;
         let s = op.to_string();
         match s.as_str() {
             "push" => {
-                if content.peek(LitInt) {
-                    Ok(Instruction::PushLiteral(content.parse()?))
+                if input.peek(LitInt) {
+                    Ok(Instruction::PushLiteral(input.parse()?))
                 } else {
-                    Ok(Instruction::PushType(content.parse()?))
+                    Ok(Instruction::PushType(input.parse()?))
                 }
             },
-            "call" => Ok(Instruction::Call(content.parse()?)),
-            "get" => Ok(Instruction::Get(content.parse()?)),
-            "set" => Ok(Instruction::Set(content.parse()?)),
-            "load" => Ok(Instruction::Load(content.parse()?)),
-            "store" => Ok(Instruction::Store(content.parse()?)),
+            "call" => Ok(Instruction::Call(input.parse()?)),
+            "get" => Ok(Instruction::Get(input.parse()?)),
+            "set" => Ok(Instruction::Set(input.parse()?)),
+            "load" => Ok(Instruction::Load(input.parse()?)),
+            "store" => Ok(Instruction::Store(input.parse()?)),
             _ => Ok(Instruction::SimpleOp(op)),
         }
     }
@@ -260,7 +268,7 @@ fn compile_block(
     }
 
     let expanded = quote! {
-        typelude::core::tyarray![ #(#all_instrs),* ]
+        typelude::tyarray![ #(#all_instrs),* ]
     };
 
     (expanded, Vec::new())
@@ -269,8 +277,25 @@ fn compile_block(
 #[proc_macro]
 pub fn program(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ProgramInput);
-    let (output, _) = compile_block(&input.instrs, &[]);
-    TokenStream::from(output)
+    let (prog, _) = compile_block(&input.instrs, &[]);
+
+    let expanded = quote! {
+        <
+            typelude::core::Evaluate<
+                typelude::vm::machine::execution::ERun<
+                    typelude::vm::machine::state::MachineState<
+                        typelude::std::array::Nil,
+                        typelude::std::array::Nil,
+                        typelude::std::array::Nil,
+                        typelude::std::array::Nil,
+                        #prog
+                    >
+                >
+            >
+            as typelude::vm::machine::state::GetStack
+        >::Output
+    };
+    TokenStream::from(expanded)
 }
 
 #[proc_macro]

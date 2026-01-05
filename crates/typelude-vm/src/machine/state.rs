@@ -21,3 +21,11 @@ pub struct MachineState<Stack, Locals, Memory, CallStack, Program>(
 impl<S, L, M, C, P> Eval for MachineState<S, L, M, C, P> {
     type Output = MachineState<S, L, M, C, P>;
 }
+
+pub trait GetStack {
+    type Output;
+}
+
+impl<S, L, M, C, P> GetStack for MachineState<S, L, M, C, P> {
+    type Output = S;
+}

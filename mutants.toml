@@ -1,0 +1,9 @@
+# jobs = 8
+test_tool = "nextest"
+# all_features = true
+
+exclude_re = [
+    # "fmt",             # Debug/Display実装をスキップ
+    # "trace",           # 関数名に trace が入るものをスキップ
+    # ".*::to_tokens",
+]
