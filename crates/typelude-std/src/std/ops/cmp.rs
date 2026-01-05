@@ -2,7 +2,7 @@
 //!
 //! Implementation of comparison operations using `typenum`.
 
-use typelude_core::{Eval, Evaluate};
+use typelude_core::Evaluate;
 use typelude_macros::def_op;
 use typenum::{Bit, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 

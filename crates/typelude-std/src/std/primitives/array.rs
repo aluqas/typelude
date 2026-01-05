@@ -542,6 +542,7 @@ mod tests {
     use crate::{
         std::{
             bool::{ToTyBoolOut, TyFalse, TyTrue},
+            control::EIf, // Updated from expr::EIf
             ops::TyFrom,
         },
         tyarray,

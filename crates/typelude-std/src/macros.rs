@@ -22,7 +22,7 @@ macro_rules! define_arith_op {
             }
 
             // Apply Implementation
-            impl<Lhs, Rhs> $crate::traits::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
+            impl<Lhs, Rhs> $crate::typelude_core::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
                 type Output = [<E $op_name>]<Lhs, Rhs>;
             }
         }
@@ -52,7 +52,7 @@ macro_rules! define_logic_op {
             }
 
             // Apply Implementation
-            impl<Lhs, Rhs> $crate::traits::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
+            impl<Lhs, Rhs> $crate::typelude_core::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
                 type Output = [<E $op_name>]<Lhs, Rhs>;
             }
         }
@@ -80,7 +80,7 @@ macro_rules! define_unary_logic_op {
             }
 
             // Apply Implementation
-            impl<Val> $crate::traits::Apply<Val> for [<Op $op_name>] {
+            impl<Val> $crate::typelude_core::Apply<Val> for [<Op $op_name>] {
                 type Output = [<E $op_name>]<Val>;
             }
         }

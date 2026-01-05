@@ -312,6 +312,20 @@ where
     type Output = TyTrue;
 }
 
+// -------------------------------------------------------------------------------------------------
+// Eval Implementations for Ops
+// -------------------------------------------------------------------------------------------------
+
+// OpIsFinished must be Evaluatable to be used in EWhile
+impl Eval for OpIsFinished {
+    type Output = Self;
+}
+
+// OpStep must be Evaluatable to be used in EWhile
+impl Eval for OpStep {
+    type Output = Self;
+}
+
 pub type ERun<S> = EWhile<OpIsFinished, OpStep, S>;
 
 #[cfg(test)]

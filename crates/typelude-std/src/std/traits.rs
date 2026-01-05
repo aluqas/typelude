@@ -39,6 +39,9 @@ where
     type Output = <F as TyFn<Arg>>::Output;
 }
 
+// Re-export Apply from core to ensure compatibility with LApp and other core constructs
+pub use typelude_core::Apply;
+
 // =============================================================================
 // Math Traits (Arithmetic)
 // =============================================================================

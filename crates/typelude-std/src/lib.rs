@@ -11,9 +11,11 @@ pub mod data;
 pub mod expr;
 pub mod lambda;
 pub mod std;
-pub mod traits;
 
 // Export typenum for macros
+// Re-export traits at crate root for macro compatibility
+pub use std::traits;
+
 pub use paste;
 pub use typelude_core::{self, Eval, Evaluate};
 pub use typenum;

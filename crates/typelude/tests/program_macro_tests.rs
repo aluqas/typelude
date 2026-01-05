@@ -4,7 +4,7 @@ use typelude::{
     machine::{execution::ERun, state::MachineState},
     program,
     std::array::{TyArray, TyNil},
-    typenum::{U0, U1, U3, U4, U10, U15, U20, U40},
+    typenum::{U4, U10, U15, U20, U40},
 };
 
 trait GetStack {
@@ -82,23 +82,6 @@ fn test_local_vars() {
 
 #[test]
 fn test_local_vars_scoping() {
-    type Prog = program! {
-        (push 10)
-        (let x)
-        (push 1)
-        (push 0) (gt) // 0 > 1 (False) wait. 1, 0 -> 0 > 1 (False).
-        // 1, 0 (lt) -> 0 < 1 (True).
-        (if
-            ((push 20) (let y) (get y) (get x) (add))
-            ((push 0))
-        )
-        (get x)
-        (add)
-    };
-    // If False: Stack has [0]. Get x (10). Add -> 10.
-    // If True (using lt): Stack [30]. Get x (10). Add -> 40.
-    // Let's use (lt).
-
     // (push 1) (push 0) (lt) -> 0 < 1 -> True.
     type Prog2 = program! {
         (push 10)
