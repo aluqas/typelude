@@ -9,11 +9,11 @@ use typelude_macros::def_op;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
 
 /// Marker trait for type-level trees
-pub use crate::data::collections::tree::IsTree as TypeTree;
+pub use crate::data::col::tree::IsTree as TypeTree;
 // Re-export kernel types for convenience/compatibility if mostly used from here
-pub use crate::data::collections::tree::{Nil, Tree};
+pub use crate::data::col::tree::{Nil, Tree};
 use crate::{
-    data::primitives::bool::{False, True},
+    data::prim::bool::{False, True},
     std::prim::option::{None, Some},
 };
 /// Insert a value into the tree.
@@ -182,24 +182,24 @@ where
 /// type List = <Tree<U2, Tree<U1, Nil, Nil>, Nil> as TreeToList>::Output; // [U1, U2]
 /// ```
 pub trait TreeToList {
-    type Output: crate::data::collections::array::IsList;
+    type Output: crate::data::col::array::IsList;
 }
 
 impl TreeToList for Nil {
-    type Output = crate::data::collections::array::Nil;
+    type Output = crate::data::col::array::Nil;
 }
 
 impl<V, L: TypeTree + TreeToList, R: TypeTree + TreeToList> TreeToList for Tree<V, L, R>
 where
-    <L as TreeToList>::Output: crate::data::collections::array::IsList
+    <L as TreeToList>::Output: crate::data::col::array::IsList
         + crate::std::col::array::Concat<
-            crate::data::collections::array::Array<V, <R as TreeToList>::Output>,
+            crate::data::col::array::Array<V, <R as TreeToList>::Output>,
         >,
-    <R as TreeToList>::Output: crate::data::collections::array::IsList,
+    <R as TreeToList>::Output: crate::data::col::array::IsList,
 {
     // In-order: left ++ [value] ++ right
     type Output = <<L as TreeToList>::Output as crate::std::col::array::Concat<
-        crate::data::collections::array::Array<V, <R as TreeToList>::Output>,
+        crate::data::col::array::Array<V, <R as TreeToList>::Output>,
     >>::Output;
 }
 
@@ -273,7 +273,7 @@ mod tests {
     use typenum::{U1, U2, U3, U5};
 
     use super::*;
-    use crate::data::collections::array::{Array as ArrayData, Nil as NilArray};
+    use crate::data::col::array::{Array as ArrayData, Nil as NilArray};
 
     #[test]
     fn test_tree_insert() {

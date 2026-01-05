@@ -41,9 +41,9 @@ impl<Head, Tail: IsList> Eval for Array<Head, Tail> {
 #[macro_export]
 macro_rules! tyarray {
     // Empty list
-    () => { $crate::data::collections::array::Nil };
+    () => { $crate::data::col::array::Nil };
     // List with length 1 (with optional trailing comma)
-    ($n:ty $(,)?) => { $crate::data::collections::array::Array<$n, $crate::data::collections::array::Nil> };
+    ($n:ty $(,)?) => { $crate::data::col::array::Array<$n, $crate::data::col::array::Nil> };
     // List with length 2 or more (with optional trailing comma)
-    ($n:ty, $($tail:ty),+ $(,)?) => { $crate::data::collections::array::Array<$n, $crate::tyarray![$($tail),+]> };
+    ($n:ty, $($tail:ty),+ $(,)?) => { $crate::data::col::array::Array<$n, $crate::tyarray![$($tail),+]> };
 }

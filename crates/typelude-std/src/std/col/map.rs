@@ -6,11 +6,11 @@ use typelude_core::Evaluate;
 use typelude_macros::def_op;
 
 /// Marker trait for type-level maps
-pub use crate::data::collections::map::IsMap as TypeMap;
+pub use crate::data::col::map::IsMap as TypeMap;
 // Re-export kernel types for convenience/compatibility if mostly used from here
-pub use crate::data::collections::map::{Map, Nil};
+pub use crate::data::col::map::{Map, Nil};
 use crate::{
-    data::primitives::bool::{False, True},
+    data::prim::bool::{False, True},
     std::prim::option::{None, Some},
 };
 
@@ -77,28 +77,28 @@ impl<K, V, T: TypeMap> MapContains<K> for Map<K, V, T> {
 
 /// Extract all keys as an Array
 pub trait MapKeys {
-    type Output: crate::data::collections::array::IsList;
+    type Output: crate::data::col::array::IsList;
 }
 
 impl MapKeys for Nil {
-    type Output = crate::data::collections::array::Nil;
+    type Output = crate::data::col::array::Nil;
 }
 
 impl<K, V, T: TypeMap + MapKeys> MapKeys for Map<K, V, T> {
-    type Output = crate::data::collections::array::Array<K, <T as MapKeys>::Output>;
+    type Output = crate::data::col::array::Array<K, <T as MapKeys>::Output>;
 }
 
 /// Extract all values as an Array
 pub trait MapValues {
-    type Output: crate::data::collections::array::IsList;
+    type Output: crate::data::col::array::IsList;
 }
 
 impl MapValues for Nil {
-    type Output = crate::data::collections::array::Nil;
+    type Output = crate::data::col::array::Nil;
 }
 
 impl<K, V, T: TypeMap + MapValues> MapValues for Map<K, V, T> {
-    type Output = crate::data::collections::array::Array<V, <T as MapValues>::Output>;
+    type Output = crate::data::col::array::Array<V, <T as MapValues>::Output>;
 }
 
 /// Get the size of the map
@@ -196,7 +196,7 @@ mod tests {
     use typenum::{U1, U2};
 
     use super::*;
-    use crate::data::collections::array::{Array, Nil as NilArray};
+    use crate::data::col::array::{Array, Nil as NilArray};
 
     #[test]
     fn test_map_insert_keys_values() {

@@ -12,7 +12,7 @@
 pub use tstr::{TS, ts};
 
 // Re-export kernel types
-pub use crate::data::primitives::str::Char;
+pub use crate::data::prim::str::Char;
 pub use crate::std::prim::option::{None, Some};
 
 // Convert Array of TyChar to &str?

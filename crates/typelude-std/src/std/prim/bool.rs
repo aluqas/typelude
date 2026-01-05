@@ -6,7 +6,7 @@ use typelude_core::Eval;
 use typenum::{B0, B1};
 
 // Re-export kernel types
-pub use crate::data::primitives::bool::{False, IsBool, True};
+pub use crate::data::prim::bool::{False, IsBool, True};
 pub use crate::std::traits::Bool;
 
 //

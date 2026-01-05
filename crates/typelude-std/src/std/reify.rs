@@ -11,11 +11,11 @@
 use typenum::{Bit, Integer, UInt, UTerm, Unsigned};
 
 #[cfg(feature = "nightly")]
-use crate::data::collections::array::{Array, IsList};
+use crate::data::col::array::{Array, IsList};
 use crate::{
     data::{
-        collections::array::Nil,
-        primitives::bool::{False, True},
+        col::array::Nil,
+        prim::bool::{False, True},
     },
     std::traits::Bool,
 };
@@ -136,8 +136,8 @@ where
 
 // ... Tuple ...
 macro_rules! define_tylist {
-    ($head:ident) => { crate::data::collections::array::Array<$head, Nil> };
-    ($head:ident, $($tail:ident),+) => { crate::data::collections::array::Array<$head, define_tylist!($($tail),+)> };
+    ($head:ident) => { crate::data::col::array::Array<$head, Nil> };
+    ($head:ident, $($tail:ident),+) => { crate::data::col::array::Array<$head, define_tylist!($($tail),+)> };
 }
 macro_rules! impl_flat_tuple {
     ($($n:tt $T:ident $V:ident),+) => {

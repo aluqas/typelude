@@ -1,2 +1,2 @@
-pub mod collections;
-pub mod primitives;
+pub mod col;
+pub mod prim;
