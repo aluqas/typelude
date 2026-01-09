@@ -7,11 +7,11 @@ use typelude_macros::def_op;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
 
 /// Marker trait for type-level TreeArray
-pub use crate::data::col::tree_array::IsTreeArray;
+pub use crate::model::col::tree_array::IsTreeArray;
 // Re-export kernel types
-pub use crate::data::col::tree_array::{Nil, TreeArray};
+pub use crate::model::col::tree_array::{Nil, TreeArray};
 use crate::{
-    data::prim::bool::{False, True},
+    model::prim::bool::{False, True},
     std::prim::option::{None, Some},
 };
 
@@ -189,24 +189,24 @@ where
 
 /// Convert TreeArray to sorted list (in-order traversal)
 pub trait TreeArrayToList {
-    type Output: crate::data::col::array::IsList;
+    type Output: crate::model::col::array::IsList;
 }
 
 impl TreeArrayToList for Nil {
-    type Output = crate::data::col::array::Nil;
+    type Output = crate::model::col::array::Nil;
 }
 
 impl<V, L: IsTreeArray + TreeArrayToList, R: IsTreeArray + TreeArrayToList> TreeArrayToList
     for TreeArray<V, L, R>
 where
-    <L as TreeArrayToList>::Output: crate::data::col::array::IsList
+    <L as TreeArrayToList>::Output: crate::model::col::array::IsList
         + crate::std::col::array::Concat<
-            crate::data::col::array::Array<V, <R as TreeArrayToList>::Output>,
+            crate::model::col::array::Array<V, <R as TreeArrayToList>::Output>,
         >,
-    <R as TreeArrayToList>::Output: crate::data::col::array::IsList,
+    <R as TreeArrayToList>::Output: crate::model::col::array::IsList,
 {
     type Output = <<L as TreeArrayToList>::Output as crate::std::col::array::Concat<
-        crate::data::col::array::Array<V, <R as TreeArrayToList>::Output>,
+        crate::model::col::array::Array<V, <R as TreeArrayToList>::Output>,
     >>::Output;
 }
 
@@ -240,7 +240,7 @@ mod tests {
     use typenum::{U1, U2, U3, U5};
 
     use super::*;
-    use crate::data::col::array::{Array as ArrayData, Nil as NilArray};
+    use crate::model::col::array::{Array as ArrayData, Nil as NilArray};
 
     #[test]
     fn test_insert() {

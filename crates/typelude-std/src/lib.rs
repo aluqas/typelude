@@ -7,7 +7,7 @@
 #[macro_use]
 pub mod macros;
 
-pub mod data;
+pub mod model;
 pub mod expr;
 pub mod lambda;
 pub mod std;

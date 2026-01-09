@@ -6,7 +6,7 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use typenum::Pow;
 
-pub use crate::data::prim::int::*;
+pub use crate::model::prim::int::*;
 use crate::std::traits::{Nat, TAdd, TDiv, TMul, TPow, TRem, TSub};
 
 // Eval implementation is now in typelude-kernel (via impls.rs)

@@ -11,9 +11,9 @@
 use typenum::{Bit, Integer, UInt, UTerm, Unsigned};
 
 #[cfg(feature = "nightly")]
-use crate::data::col::array::{Array, IsList};
+use crate::model::col::array::{Array, IsList};
 use crate::{
-    data::{
+    model::{
         col::array::Nil,
         prim::bool::{False, True},
     },

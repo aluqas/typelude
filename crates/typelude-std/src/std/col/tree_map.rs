@@ -7,11 +7,11 @@ use typelude_macros::def_op;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
 
 /// Marker trait for type-level TreeMap
-pub use crate::data::col::tree_map::IsTreeMap;
+pub use crate::model::col::tree_map::IsTreeMap;
 // Re-export kernel types
-pub use crate::data::col::tree_map::{Nil, TreeMap};
+pub use crate::model::col::tree_map::{Nil, TreeMap};
 use crate::{
-    data::prim::bool::{False, True},
+    model::prim::bool::{False, True},
     std::prim::option::{None, Some},
 };
 
@@ -257,24 +257,24 @@ where
 
 /// Convert TreeMap to sorted list of key-value pairs (in-order traversal)
 pub trait TreeMapToList {
-    type Output: crate::data::col::array::IsList;
+    type Output: crate::model::col::array::IsList;
 }
 
 impl TreeMapToList for Nil {
-    type Output = crate::data::col::array::Nil;
+    type Output = crate::model::col::array::Nil;
 }
 
 impl<K, V, L: IsTreeMap + TreeMapToList, R: IsTreeMap + TreeMapToList> TreeMapToList
     for TreeMap<K, V, L, R>
 where
-    <L as TreeMapToList>::Output: crate::data::col::array::IsList
+    <L as TreeMapToList>::Output: crate::model::col::array::IsList
         + crate::std::col::array::Concat<
-            crate::data::col::array::Array<(K, V), <R as TreeMapToList>::Output>,
+            crate::model::col::array::Array<(K, V), <R as TreeMapToList>::Output>,
         >,
-    <R as TreeMapToList>::Output: crate::data::col::array::IsList,
+    <R as TreeMapToList>::Output: crate::model::col::array::IsList,
 {
     type Output = <<L as TreeMapToList>::Output as crate::std::col::array::Concat<
-        crate::data::col::array::Array<(K, V), <R as TreeMapToList>::Output>,
+        crate::model::col::array::Array<(K, V), <R as TreeMapToList>::Output>,
     >>::Output;
 }
 
@@ -320,7 +320,7 @@ mod tests {
     use typenum::{U1, U2, U3, U5};
 
     use super::*;
-    use crate::data::col::array::{Array as ArrayData, Nil as NilArray};
+    use crate::model::col::array::{Array as ArrayData, Nil as NilArray};
 
     #[test]
     fn test_insert() {

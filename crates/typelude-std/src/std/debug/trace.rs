@@ -6,7 +6,7 @@
 use typenum::{B0, B1, Integer, NInt, PInt, UInt, UTerm, Unsigned, Z0};
 
 use crate::{
-    data::col::array::IsList,
+    model::col::array::IsList,
     std::col::array::{Array, Nil},
 };
 

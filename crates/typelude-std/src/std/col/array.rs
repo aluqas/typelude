@@ -10,13 +10,13 @@ use std::{
 use typelude_core::{ELit, Eval, Evaluate};
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
-pub use crate::data::col::array::IsList;
+pub use crate::model::col::array::IsList;
 // Re-export kernel types for convenience/compatibility if mostly used from here
-pub use crate::data::col::array::{Array, Nil};
+pub use crate::model::col::array::{Array, Nil};
 /// Re-export List trait for public use
 pub use crate::std::traits::List;
 use crate::{
-    data::prim::bool::{False, True},
+    model::prim::bool::{False, True},
     expr::EIf,
     traits::Apply,
 };
