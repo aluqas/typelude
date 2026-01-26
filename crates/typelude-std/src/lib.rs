@@ -7,9 +7,9 @@
 #[macro_use]
 pub mod macros;
 
-pub mod model;
 pub mod expr;
 pub mod lambda;
+pub mod model;
 pub mod std;
 
 // Export typenum for macros

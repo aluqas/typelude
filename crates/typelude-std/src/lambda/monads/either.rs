@@ -6,28 +6,22 @@ use std::marker::PhantomData;
 
 use typelude_core::{Eval, Evaluate};
 
-use crate::lambda::{LApp, Lambda, traits::LBind};
+use crate::lambda::{LApp, traits::LBind};
 
 /// Left<L>: Represents the Error case or Left side of Either.
 /// Church encoding: λl r. l L
 pub struct LLeft<L>(PhantomData<L>);
 
-impl<L> Lambda for LLeft<L> {
-    type Output = LLeft<L>;
-}
 impl<L> Eval for LLeft<L> {
-    type Output = Self;
+    type Output = LLeft<L>;
 }
 
 /// Right<R>: Represents the Success case or Right side of Either.
 /// Church encoding: λl r. r R
 pub struct LRight<R>(PhantomData<R>);
 
-impl<R> Lambda for LRight<R> {
-    type Output = LRight<R>;
-}
 impl<R> Eval for LRight<R> {
-    type Output = Self;
+    type Output = LRight<R>;
 }
 // Left<L> >>= k  -->  Left<L> (Short-circuit error)
 impl<L, K> LBind<K> for LLeft<L> {
@@ -39,12 +33,12 @@ impl<R, K> LBind<K> for LRight<R>
 where
     K: Eval,
     R: Eval,
-    LApp<K, R>: Lambda,
+    LApp<K, R>: Eval,
 {
-    type Output = <LApp<K, R> as Lambda>::Output;
+    type Output = Evaluate<LApp<K, R>>;
 }
 // Left<L> HandlL -> Left1<L, HandlL>
-impl<L, HandlL> Lambda for LApp<LLeft<L>, HandlL>
+impl<L, HandlL> Eval for LApp<LLeft<L>, HandlL>
 where
     L: Eval,
     HandlL: Eval,
@@ -53,26 +47,23 @@ where
 }
 
 pub struct LLeft1<L, HandlL>(PhantomData<(L, HandlL)>);
-impl<L, HandlL> Lambda for LLeft1<L, HandlL> {
-    type Output = LLeft1<L, HandlL>;
-}
 impl<L, HandlL> Eval for LLeft1<L, HandlL> {
-    type Output = Self;
+    type Output = LLeft1<L, HandlL>;
 }
 
 // Left1<L, HandlL> HandlR -> HandlL L
-impl<L, HandlL, HandlR> Lambda for LApp<LLeft1<L, HandlL>, HandlR>
+impl<L, HandlL, HandlR> Eval for LApp<LLeft1<L, HandlL>, HandlR>
 where
     L: Eval,
     HandlL: Eval,
     HandlR: Eval,
-    LApp<HandlL, L>: Lambda,
+    LApp<HandlL, L>: Eval,
 {
-    type Output = <LApp<HandlL, L> as Lambda>::Output;
+    type Output = Evaluate<LApp<HandlL, L>>;
 }
 
 // Right<R> HandlL -> Right1<R, HandlL>
-impl<R, HandlL> Lambda for LApp<LRight<R>, HandlL>
+impl<R, HandlL> Eval for LApp<LRight<R>, HandlL>
 where
     R: Eval,
     HandlL: Eval,
@@ -81,22 +72,19 @@ where
 }
 
 pub struct LRight1<R, HandlL>(PhantomData<(R, HandlL)>);
-impl<R, HandlL> Lambda for LRight1<R, HandlL> {
-    type Output = LRight1<R, HandlL>;
-}
 impl<R, HandlL> Eval for LRight1<R, HandlL> {
-    type Output = Self;
+    type Output = LRight1<R, HandlL>;
 }
 
 // Right1<R, HandlL> HandlR -> HandlR R
-impl<R, HandlL, HandlR> Lambda for LApp<LRight1<R, HandlL>, HandlR>
+impl<R, HandlL, HandlR> Eval for LApp<LRight1<R, HandlL>, HandlR>
 where
     R: Eval,
     HandlL: Eval,
     HandlR: Eval,
-    LApp<HandlR, R>: Lambda,
+    LApp<HandlR, R>: Eval,
 {
-    type Output = <LApp<HandlR, R> as Lambda>::Output;
+    type Output = Evaluate<LApp<HandlR, R>>;
 }
 
 #[cfg(test)]
@@ -108,14 +96,11 @@ mod tests {
 
     #[derive(Clone)]
     struct RightAddOne;
-    impl Lambda for RightAddOne {
+    impl Eval for RightAddOne {
         type Output = RightAddOne;
     }
-    impl Eval for RightAddOne {
-        type Output = Self;
-    }
 
-    impl<X> Lambda for LApp<RightAddOne, X>
+    impl<X> Eval for LApp<RightAddOne, X>
     where
         X: crate::lambda::traits::LNat + Eval,
     {
@@ -124,14 +109,11 @@ mod tests {
 
     #[derive(Clone)]
     struct FailAtStep;
-    impl Lambda for FailAtStep {
+    impl Eval for FailAtStep {
         type Output = FailAtStep;
     }
-    impl Eval for FailAtStep {
-        type Output = Self;
-    }
 
-    impl<X> Lambda for LApp<FailAtStep, X>
+    impl<X> Eval for LApp<FailAtStep, X>
     where
         X: crate::lambda::traits::LNat + Eval,
     {

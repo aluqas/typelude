@@ -10,37 +10,31 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::Eval;
+use typelude_core::{Eval, Evaluate};
 
-use crate::lambda::{LApp, Lambda};
+use crate::lambda::LApp;
 /// Thunk: Represents a delayed application of `F` to `Arg`.
 ///
 /// It is a passive value until `Force` is applied.
 pub struct LThunk<F, Arg>(PhantomData<(F, Arg)>);
 
-impl<F, Arg> Lambda for LThunk<F, Arg> {
-    type Output = LThunk<F, Arg>;
-}
 impl<F, Arg> Eval for LThunk<F, Arg> {
-    type Output = Self;
+    type Output = LThunk<F, Arg>;
 }
 /// Force: Trigger evaluation of a Thunk.
 pub struct LForce;
-impl Lambda for LForce {
-    type Output = LForce;
-}
 impl Eval for LForce {
-    type Output = Self;
+    type Output = LForce;
 }
 
 // Thunk<F, Arg> Force -> F Arg
-impl<F, Arg> Lambda for LApp<LThunk<F, Arg>, LForce>
+impl<F, Arg> Eval for LApp<LThunk<F, Arg>, LForce>
 where
     F: Eval,
     Arg: Eval,
-    LApp<F, Arg>: Lambda,
+    LApp<F, Arg>: Eval,
 {
-    type Output = <LApp<F, Arg> as Lambda>::Output;
+    type Output = Evaluate<LApp<F, Arg>>;
 }
 
 #[cfg(test)]
@@ -54,32 +48,23 @@ mod tests {
 
     #[derive(Clone)]
     struct AddOne;
-    impl Lambda for AddOne {
-        type Output = AddOne;
-    }
     impl Eval for AddOne {
-        type Output = Self;
+        type Output = AddOne;
     }
 
     #[derive(Clone)]
     struct Zero;
-    impl Lambda for Zero {
-        type Output = Zero;
-    }
     impl Eval for Zero {
-        type Output = Self;
+        type Output = Zero;
     }
 
     #[derive(Clone)]
     struct One;
-    impl Lambda for One {
+    impl Eval for One {
         type Output = One;
     }
-    impl Eval for One {
-        type Output = Self;
-    }
 
-    impl Lambda for LApp<AddOne, Zero> {
+    impl Eval for LApp<AddOne, Zero> {
         type Output = One;
     }
 

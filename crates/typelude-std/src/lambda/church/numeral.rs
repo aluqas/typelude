@@ -10,7 +10,7 @@ use crate::{
     impl_eval_for_lambda, impl_eval_for_lambda_generic,
     lambda::{
         LApp,
-        traits::{LNat, LTerm, Lambda},
+        traits::{LNat, LTerm},
     },
 };
 /// Zero: λf x. x
@@ -19,9 +19,6 @@ pub struct LZero;
 impl LTerm for LZero {}
 impl LNat for LZero {}
 
-impl Lambda for LZero {
-    type Output = LZero;
-}
 impl_eval_for_lambda!(LZero);
 
 /// Succ: λn f x. f (n f x)
@@ -30,9 +27,6 @@ pub struct LSucc<N>(PhantomData<N>);
 impl<N> LTerm for LSucc<N> {}
 impl<N> LNat for LSucc<N> {}
 
-impl<N> Lambda for LSucc<N> {
-    type Output = LSucc<N>;
-}
 impl_eval_for_lambda_generic!(LSucc, [N]);
 
 // --- Partial Application States (Value Types) ---
@@ -42,23 +36,17 @@ pub struct LZero1<F>(PhantomData<F>);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct LSucc1<N, F>(PhantomData<(N, F)>);
 
-impl<F> Lambda for LZero1<F> {
-    type Output = LZero1<F>;
-}
 impl_eval_for_lambda_generic!(LZero1, [F]);
 
-impl<N, F> Lambda for LSucc1<N, F> {
-    type Output = LSucc1<N, F>;
-}
 impl_eval_for_lambda_generic!(LSucc1, [N, F]);
 // --- Zero ---
 // Zero F -> Zero1<F>
-impl<F> Lambda for LApp<LZero, F> {
+impl<F> Eval for LApp<LZero, F> {
     type Output = LZero1<F>;
 }
 
 // Zero1<F> X -> X
-impl<F, X> Lambda for LApp<LZero1<F>, X>
+impl<F, X> Eval for LApp<LZero1<F>, X>
 where
     X: Eval,
 {
@@ -67,12 +55,12 @@ where
 
 // --- Succ ---
 // Succ<N> F -> Succ1<N, F>
-impl<N, F> Lambda for LApp<LSucc<N>, F> {
+impl<N, F> Eval for LApp<LSucc<N>, F> {
     type Output = LSucc1<N, F>;
 }
 
 // Succ1<N, F> X -> F (N F X)
-impl<N, F, X> Lambda for LApp<LSucc1<N, F>, X>
+impl<N, F, X> Eval for LApp<LSucc1<N, F>, X>
 where
     // (N F)
     LApp<N, F>: Eval,
@@ -88,13 +76,10 @@ where
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct LSuccGen;
 
-impl Lambda for LSuccGen {
-    type Output = LSuccGen;
-}
 impl_eval_for_lambda!(LSuccGen);
 
 // SuccGen N -> Succ<N>
-impl<N> Lambda for LApp<LSuccGen, N> {
+impl<N> Eval for LApp<LSuccGen, N> {
     type Output = LSucc<N>;
 }
 // --- Add: λm n f x. m f (n f x) ---
@@ -108,43 +93,31 @@ pub struct LAdd2<M, N>(PhantomData<(M, N)>);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct LAdd3<M, N, F>(PhantomData<(M, N, F)>);
 
-impl Lambda for LAdd {
-    type Output = LAdd;
-}
 impl_eval_for_lambda!(LAdd);
 
-impl<M> Lambda for LAdd1<M> {
-    type Output = LAdd1<M>;
-}
 impl_eval_for_lambda_generic!(LAdd1, [M]);
 
-impl<M, N> Lambda for LAdd2<M, N> {
-    type Output = LAdd2<M, N>;
-}
 impl_eval_for_lambda_generic!(LAdd2, [M, N]);
 
-impl<M, N, F> Lambda for LAdd3<M, N, F> {
-    type Output = LAdd3<M, N, F>;
-}
 impl_eval_for_lambda_generic!(LAdd3, [M, N, F]);
 
 // Add M -> Add1<M>
-impl<M> Lambda for LApp<LAdd, M> {
+impl<M> Eval for LApp<LAdd, M> {
     type Output = LAdd1<M>;
 }
 
 // Add1<M> N -> Add2<M, N>
-impl<M, N> Lambda for LApp<LAdd1<M>, N> {
+impl<M, N> Eval for LApp<LAdd1<M>, N> {
     type Output = LAdd2<M, N>;
 }
 
 // Add2<M, N> F -> Add3<M, N, F>
-impl<M, N, F> Lambda for LApp<LAdd2<M, N>, F> {
+impl<M, N, F> Eval for LApp<LAdd2<M, N>, F> {
     type Output = LAdd3<M, N, F>;
 }
 
 // Add3<M, N, F> X -> M F (N F X)
-impl<M, N, F, X> Lambda for LApp<LAdd3<M, N, F>, X>
+impl<M, N, F, X> Eval for LApp<LAdd3<M, N, F>, X>
 where
     // (N F)
     LApp<N, F>: Eval,
@@ -169,43 +142,31 @@ pub struct LMul2<M, N>(PhantomData<(M, N)>);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct LMul3<M, N, F>(PhantomData<(M, N, F)>);
 
-impl Lambda for LMul {
-    type Output = LMul;
-}
 impl_eval_for_lambda!(LMul);
 
-impl<M> Lambda for LMul1<M> {
-    type Output = LMul1<M>;
-}
 impl_eval_for_lambda_generic!(LMul1, [M]);
 
-impl<M, N> Lambda for LMul2<M, N> {
-    type Output = LMul2<M, N>;
-}
 impl_eval_for_lambda_generic!(LMul2, [M, N]);
 
-impl<M, N, F> Lambda for LMul3<M, N, F> {
-    type Output = LMul3<M, N, F>;
-}
 impl_eval_for_lambda_generic!(LMul3, [M, N, F]);
 
 // Mul M -> Mul1<M>
-impl<M> Lambda for LApp<LMul, M> {
+impl<M> Eval for LApp<LMul, M> {
     type Output = LMul1<M>;
 }
 
 // Mul1<M> N -> Mul2<M, N>
-impl<M, N> Lambda for LApp<LMul1<M>, N> {
+impl<M, N> Eval for LApp<LMul1<M>, N> {
     type Output = LMul2<M, N>;
 }
 
 // Mul2<M, N> F -> Mul3<M, N, F>
-impl<M, N, F> Lambda for LApp<LMul2<M, N>, F> {
+impl<M, N, F> Eval for LApp<LMul2<M, N>, F> {
     type Output = LMul3<M, N, F>;
 }
 
 // Mul3<M, N, F> X -> M (N F) X
-impl<M, N, F, X> Lambda for LApp<LMul3<M, N, F>, X>
+impl<M, N, F, X> Eval for LApp<LMul3<M, N, F>, X>
 where
     // (N F)
     LApp<N, F>: Eval,
@@ -228,43 +189,30 @@ pub struct LExp2<M, N>(PhantomData<(M, N)>);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct LExp3<M, N, F>(PhantomData<(M, N, F)>);
 
-impl Lambda for LExp {
-    type Output = LExp;
-}
 impl_eval_for_lambda!(LExp);
 
-impl<M> Lambda for LExp1<M> {
-    type Output = LExp1<M>;
-}
 impl_eval_for_lambda_generic!(LExp1, [M]);
 
-impl<M, N> Lambda for LExp2<M, N> {
-    type Output = LExp2<M, N>;
-}
 impl_eval_for_lambda_generic!(LExp2, [M, N]);
-
-impl<M, N, F> Lambda for LExp3<M, N, F> {
-    type Output = LExp3<M, N, F>;
-}
 impl_eval_for_lambda_generic!(LExp3, [M, N, F]);
 
 // Exp M -> Exp1<M>
-impl<M> Lambda for LApp<LExp, M> {
+impl<M> Eval for LApp<LExp, M> {
     type Output = LExp1<M>;
 }
 
 // Exp1<M> N -> Exp2<M, N>
-impl<M, N> Lambda for LApp<LExp1<M>, N> {
+impl<M, N> Eval for LApp<LExp1<M>, N> {
     type Output = LExp2<M, N>;
 }
 
 // Exp2<M, N> F -> Exp3<M, N, F>
-impl<M, N, F> Lambda for LApp<LExp2<M, N>, F> {
+impl<M, N, F> Eval for LApp<LExp2<M, N>, F> {
     type Output = LExp3<M, N, F>;
 }
 
 // Exp3<M, N, F> X -> ((N M) F) X
-impl<M, N, F, X> Lambda for LApp<LExp3<M, N, F>, X>
+impl<M, N, F, X> Eval for LApp<LExp3<M, N, F>, X>
 where
     // (N M)
     LApp<N, M>: Eval,
@@ -280,18 +228,12 @@ pub struct LPred;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct LPredStep;
 
-impl Lambda for LPred {
-    type Output = LPred;
-}
 impl_eval_for_lambda!(LPred);
 
-impl Lambda for LPredStep {
-    type Output = LPredStep;
-}
 impl_eval_for_lambda!(LPredStep);
 
 // Pred N -> Fst (N PredStep (Pair Zero Zero))
-impl<N> Lambda for LApp<LPred, N>
+impl<N> Eval for LApp<LPred, N>
 where
     // (N PredStep)
     LApp<N, LPredStep>: Eval,
@@ -312,7 +254,7 @@ where
 }
 
 // PredStep P -> Pair (Snd P) (Succ (Snd P))
-impl<P> Lambda for LApp<LPredStep, P>
+impl<P> Eval for LApp<LPredStep, P>
 where
     // (Snd P)
     LApp<super::pair::LSnd, P>: Eval,
@@ -332,23 +274,17 @@ pub struct LSub;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct LSub1<M>(PhantomData<M>);
 
-impl Lambda for LSub {
-    type Output = LSub;
-}
 impl_eval_for_lambda!(LSub);
 
-impl<M> Lambda for LSub1<M> {
-    type Output = LSub1<M>;
-}
 impl_eval_for_lambda_generic!(LSub1, [M]);
 
 // Sub M -> Sub1<M>
-impl<M> Lambda for LApp<LSub, M> {
+impl<M> Eval for LApp<LSub, M> {
     type Output = LSub1<M>;
 }
 
 // Sub1<M> N -> (N Pred) M
-impl<M, N> Lambda for LApp<LSub1<M>, N>
+impl<M, N> Eval for LApp<LSub1<M>, N>
 where
     // (N Pred)
     LApp<N, LPred>: Eval,

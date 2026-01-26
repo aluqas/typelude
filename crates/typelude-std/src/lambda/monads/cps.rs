@@ -5,20 +5,17 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::Eval;
+use typelude_core::{Eval, Evaluate};
 
-use crate::lambda::{LApp, Lambda, traits::LBind};
+use crate::lambda::{LApp, traits::LBind};
 /// Continuation Monad.
 ///
 /// `Cont<R, A>` wraps a computation that takes a continuation and produces `R`.
 /// Here, `F` is the internal function `(A -> R) -> R`.
 pub struct LCont<F>(PhantomData<F>);
 
-impl<F> Lambda for LCont<F> {
-    type Output = LCont<F>;
-}
 impl<F> Eval for LCont<F> {
-    type Output = Self;
+    type Output = LCont<F>;
 }
 
 /// Run a continuation with a given continuation function.
@@ -27,43 +24,37 @@ impl<F> Eval for LCont<F> {
 pub struct LRunCont<C, K>(PhantomData<(C, K)>);
 
 // RunCont<Cont<F>, K> -> F K
-impl<F, K> Lambda for LRunCont<LCont<F>, K>
+impl<F, K> Eval for LRunCont<LCont<F>, K>
 where
     F: Eval,
     K: Eval,
-    LApp<F, K>: Lambda,
+    LApp<F, K>: Eval,
 {
-    type Output = <LApp<F, K> as Lambda>::Output;
+    type Output = Evaluate<LApp<F, K>>;
 }
 /// Pure/Return for Cont: wraps a value in a continuation.
 ///
 /// `ContPure<A>` represents `\k. k a`.
 pub struct LContPure<A>(PhantomData<A>);
 
-impl<A> Lambda for LContPure<A> {
-    type Output = LContPure<A>;
-}
 impl<A> Eval for LContPure<A> {
-    type Output = Self;
+    type Output = LContPure<A>;
 }
 
 // ContPure<A> is Cont where F = PureF<A>
 // PureF<A> K -> K A
 pub struct LPureF<A>(PhantomData<A>);
-impl<A> Lambda for LPureF<A> {
+impl<A> Eval for LPureF<A> {
     type Output = LPureF<A>;
 }
-impl<A> Eval for LPureF<A> {
-    type Output = Self;
-}
 
-impl<A, K> Lambda for LApp<LPureF<A>, K>
+impl<A, K> Eval for LApp<LPureF<A>, K>
 where
     A: Eval,
     K: Eval,
-    LApp<K, A>: Lambda,
+    LApp<K, A>: Eval,
 {
-    type Output = <LApp<K, A> as Lambda>::Output;
+    type Output = Evaluate<LApp<K, A>>;
 }
 /// Bind implementation for Cont.
 ///
@@ -74,50 +65,44 @@ impl<F, G> LBind<G> for LCont<F> {
 
 /// Internal bind function: `\k. runCont m (\a. runCont (f a) k)`
 pub struct LBindF<F, G>(PhantomData<(F, G)>);
-impl<F, G> Lambda for LBindF<F, G> {
+impl<F, G> Eval for LBindF<F, G> {
     type Output = LBindF<F, G>;
 }
-impl<F, G> Eval for LBindF<F, G> {
-    type Output = Self;
-}
 
-impl<F, G, K> Lambda for LApp<LBindF<F, G>, K>
+impl<F, G, K> Eval for LApp<LBindF<F, G>, K>
 where
     F: Eval,
     G: Eval,
     K: Eval,
     // F (BindK G K)
-    LApp<F, LBindK<G, K>>: Lambda,
+    LApp<F, LBindK<G, K>>: Eval,
 {
-    type Output = <LApp<F, LBindK<G, K>> as Lambda>::Output;
+    type Output = Evaluate<LApp<F, LBindK<G, K>>>;
 }
 
 /// Inner continuation: `\a. runCont (f a) k`
 pub struct LBindK<G, K>(PhantomData<(G, K)>);
-impl<G, K> Lambda for LBindK<G, K> {
+impl<G, K> Eval for LBindK<G, K> {
     type Output = LBindK<G, K>;
 }
-impl<G, K> Eval for LBindK<G, K> {
-    type Output = Self;
-}
 
-impl<G, K, A> Lambda for LApp<LBindK<G, K>, A>
+impl<G, K, A> Eval for LApp<LBindK<G, K>, A>
 where
     G: Eval + Clone,
     K: Eval + Clone,
     A: Eval,
     // G A -> Cont<G'>
-    LApp<G, A>: Lambda,
+    LApp<G, A>: Eval,
     // RunCont (G A) K
     // (G A) must evaluate to LCont<F'>
     // We assume (G A) returns something that can apply K.
-    // LApp<<LApp<G, A> as Lambda>::Output, K>
+    // LApp<Evaluate<LApp<G, A>>, K>
     // But G A returns LCont<F'>. LCont doesn't implement LApp directly to run.
     // LApp<LCont<F'>, K> is not defined. LApp<F', K> is what we want.
     // We need to extract F' from LCont<F'>.
-    <LApp<G, A> as Lambda>::Output: LContRunner<K>,
+    Evaluate<LApp<G, A>>: LContRunner<K>,
 {
-    type Output = <<LApp<G, A> as Lambda>::Output as LContRunner<K>>::Output;
+    type Output = <Evaluate<LApp<G, A>> as LContRunner<K>>::Output;
 }
 
 /// Helper trait to run a Cont with a continuation via LApp
@@ -129,9 +114,9 @@ impl<F, K> LContRunner<K> for LCont<F>
 where
     F: Eval,
     K: Eval,
-    LApp<F, K>: Lambda,
+    LApp<F, K>: Eval,
 {
-    type Output = <LApp<F, K> as Lambda>::Output;
+    type Output = Evaluate<LApp<F, K>>;
 }
 
 #[cfg(test)]
@@ -146,32 +131,23 @@ mod tests {
 
     #[derive(Clone)]
     struct A;
-    impl Lambda for A {
-        type Output = A;
-    }
     impl Eval for A {
-        type Output = Self;
+        type Output = A;
     }
     #[derive(Clone)]
     struct B;
-    impl Lambda for B {
-        type Output = B;
-    }
     impl Eval for B {
-        type Output = Self;
+        type Output = B;
     }
 
     // Identity continuation: K A -> A
     #[derive(Clone)]
     struct IdK;
-    impl Lambda for IdK {
+    impl Eval for IdK {
         type Output = IdK;
     }
-    impl Eval for IdK {
-        type Output = Self;
-    }
 
-    impl<X> Lambda for LApp<IdK, X>
+    impl<X> Eval for LApp<IdK, X>
     where
         X: Eval,
     {
@@ -191,14 +167,11 @@ mod tests {
         // Create a simple transformation: A -> Cont<PureF<B>>
         #[derive(Clone)]
         struct Transform;
-        impl Lambda for Transform {
+        impl Eval for Transform {
             type Output = Transform;
         }
-        impl Eval for Transform {
-            type Output = Self;
-        }
 
-        impl<X> Lambda for LApp<Transform, X>
+        impl<X> Eval for LApp<Transform, X>
         where
             X: Eval,
         {

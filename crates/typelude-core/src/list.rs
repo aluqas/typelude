@@ -35,12 +35,6 @@ where
     Head: Eval,
     Tail: Eval,
 {
-    // Evaluate to a tuple-list (H, T) or just a value list?
-    // For now, let's make it evaluate to a nested tuple (H, T::Output) to maintain
-    // compatibility with some structures, or arguably it should evaluate to a
-    // Value List. Given the refactor goal is "reduction", maybe we want the
-    // output to be a standard Cons List Value? Let's assume (H::Output,
-    // T::Output) for now as a generic container.
     type Output = (Head::Output, Tail::Output);
 }
 

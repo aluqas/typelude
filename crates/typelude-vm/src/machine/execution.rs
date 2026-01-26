@@ -20,8 +20,6 @@ pub trait Execute<Stack, Locals, Memory, CallStack, RestProg> {
     type OutputState;
 }
 
-// ... Implementations ...
-
 // --- Push ---
 impl<Stack, Locals, Memory, CallStack, Val, RestProg>
     Execute<Stack, Locals, Memory, CallStack, RestProg> for OpPush<Val>

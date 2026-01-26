@@ -16,8 +16,8 @@ pub use crate::model::col::array::{Array, Nil};
 /// Re-export List trait for public use
 pub use crate::std::traits::List;
 use crate::{
-    model::prim::bool::{False, True},
     expr::EIf,
+    model::prim::bool::{False, True},
     traits::Apply,
 };
 impl List for Nil {

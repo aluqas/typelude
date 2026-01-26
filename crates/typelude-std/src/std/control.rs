@@ -21,7 +21,7 @@ use typelude_core::{Apply, Eval, Evaluate};
 
 use crate::{
     lambda::{
-        LApp, Lambda,
+        LApp,
         church::{LFalse, LTrue, LWhile2},
     },
     std::prim::bool::IntoBool,
@@ -100,16 +100,12 @@ pub struct EWhile<Pred, Step, State>(PhantomData<(Pred, Step, State)>);
 /// Adapter to convert Bool predicate output to Church boolean.
 pub struct ChurchifyPred<Pred>(PhantomData<Pred>);
 
-impl<Pred> Lambda for ChurchifyPred<Pred> {
+impl<Pred> Eval for ChurchifyPred<Pred> {
     type Output = ChurchifyPred<Pred>;
 }
 
-impl<Pred> Eval for ChurchifyPred<Pred> {
-    type Output = Self;
-}
-
 // ChurchifyPred<Pred> S -> Church Boolean
-impl<Pred, S> Lambda for LApp<ChurchifyPred<Pred>, S>
+impl<Pred, S> Eval for LApp<ChurchifyPred<Pred>, S>
 where
     Pred: Eval,
     S: Eval,
@@ -125,16 +121,12 @@ where
 /// Adapter for Step function in lambda world.
 pub struct LambdifyStep<Step>(PhantomData<Step>);
 
-impl<Step> Lambda for LambdifyStep<Step> {
+impl<Step> Eval for LambdifyStep<Step> {
     type Output = LambdifyStep<Step>;
 }
 
-impl<Step> Eval for LambdifyStep<Step> {
-    type Output = Self;
-}
-
 // LambdifyStep<Step> S -> Step::Output (evaluated)
-impl<Step, S> Lambda for LApp<LambdifyStep<Step>, S>
+impl<Step, S> Eval for LApp<LambdifyStep<Step>, S>
 where
     Step: Eval,
     S: Eval,
@@ -150,10 +142,10 @@ where
     Step: Eval,
     State: Eval,
     // Use LWhile2 directly with adapted pred and step
-    LApp<LWhile2<ChurchifyPred<Pred>, LambdifyStep<Step>>, Evaluate<State>>: Lambda,
+    LApp<LWhile2<ChurchifyPred<Pred>, LambdifyStep<Step>>, Evaluate<State>>: Eval,
 {
     type Output =
-        <LApp<LWhile2<ChurchifyPred<Pred>, LambdifyStep<Step>>, Evaluate<State>> as Lambda>::Output;
+        Evaluate<LApp<LWhile2<ChurchifyPred<Pred>, LambdifyStep<Step>>, Evaluate<State>>>;
 }
 
 // Op wrapper
