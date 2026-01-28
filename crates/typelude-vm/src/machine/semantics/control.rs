@@ -5,9 +5,8 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_core::{Apply, Eval, Evaluate};
 use typelude_std::{
-    traits::Apply,
     model::prim::bool::{False, True},
     std::col::array::Array,
 };

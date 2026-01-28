@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_core::Eval;
 /// Reflexivity witness: `Refl<A>` proves that `A` equals itself.
 pub struct LRefl<A>(PhantomData<A>);
 
@@ -42,6 +42,7 @@ pub struct LCong<F, Proof>(PhantomData<(F, Proof)>);
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
+    use typelude_core::Evaluate;
 
     use super::*;
 

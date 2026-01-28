@@ -1,18 +1,17 @@
 //! **Tests for def_op! Procedural Macro**
 //!
-//! Unit tests for the def_op! procedural macro functionality.
+//! Unit tests for the def_op! procedural macro functionality (AST-only).
 
 use std::ops::Add;
 
 use static_assertions::assert_type_eq_all;
-use typelude_core::{ECons, ENil, Eval, Evaluate};
+use typelude_core::Evaluate;
 use typelude_macros::def_op;
 use typenum::{U1, U2, U3, U5, U6, U12, U42};
 
-use crate::traits::Apply;
 def_op! {
     /// Test: Addition operation
-    name: TestOpAdd,
+    name: TestAddDef,
     args: (Lhs, Rhs),
     ast: TestEAdd {
         where: [
@@ -25,17 +24,13 @@ def_op! {
 #[test]
 fn test_ast_pattern_add() {
     use typelude_core::ELit;
-    // Apply returns AST
-    type Ast = <TestOpAdd as Apply<ECons<ELit<U1>, ECons<ELit<U2>, ENil>>>>::Output;
-    assert_type_eq_all!(Ast, TestEAdd<ELit<U1>, ELit<U2>>);
-
     // Evaluate computes result
     type Result = Evaluate<TestEAdd<ELit<U1>, ELit<U2>>>;
     assert_type_eq_all!(Result, U3);
 }
 def_op! {
     /// Test: Identity operation (unary)
-    name: TestOpId,
+    name: TestIdDef,
     args: (T),
     ast: TestEId {
         where: [],
@@ -46,51 +41,8 @@ def_op! {
 #[test]
 fn test_ast_pattern_unary() {
     use typelude_core::ELit;
-    type Ast = <TestOpId as Apply<ELit<U42>>>::Output;
-    assert_type_eq_all!(Ast, TestEId<ELit<U42>>);
-
     type Result = Evaluate<TestEId<ELit<U42>>>;
     assert_type_eq_all!(Result, U42);
-}
-/// A simple wrapper AST for testing
-pub struct TestWrap<T>(std::marker::PhantomData<T>);
-impl<T: Eval> Eval for TestWrap<T> {
-    type Output = Evaluate<T>;
-}
-
-def_op! {
-    /// Test: Wrap operation (alias)
-    name: TestOpWrap,
-    args: (T),
-    alias: TestWrap<T>
-}
-
-#[test]
-fn test_alias_pattern() {
-    use typelude_core::ELit;
-    // Apply directly returns the alias type
-    type Ast = <TestOpWrap as Apply<ELit<U1>>>::Output;
-    assert_type_eq_all!(Ast, TestWrap<ELit<U1>>);
-
-    // Evaluate through the wrapper
-    type Result = Evaluate<TestWrap<ELit<U1>>>;
-    assert_type_eq_all!(Result, U1);
-}
-def_op! {
-    /// Test: Add alias redirecting to TestEAdd
-    name: TestOpAddAlias,
-    args: (L, R),
-    alias: TestEAdd<L, R>
-}
-
-#[test]
-fn test_alias_pattern_binary() {
-    use typelude_core::ELit;
-    type Ast = <TestOpAddAlias as Apply<ECons<ELit<U5>, ECons<ELit<U1>, ENil>>>>::Output;
-    assert_type_eq_all!(Ast, TestEAdd<ELit<U5>, ELit<U1>>);
-
-    type Result = Evaluate<Ast>;
-    assert_type_eq_all!(Result, U6);
 }
 /// Custom Multiply trait for testing
 pub trait TestMul<Rhs> {
@@ -107,7 +59,7 @@ impl TestMul<U3> for typenum::U4 {
 
 def_op! {
     /// Test: Multiply operation with complex bounds
-    name: TestOpMul,
+    name: TestMulDef,
     args: (Lhs, Rhs),
     ast: TestEMul {
         where: [

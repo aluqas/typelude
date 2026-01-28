@@ -9,7 +9,7 @@ pub use typelude_std::lambda::monads::state::{
     LBindGet, LBindPut, LBindState, LGet, LPut, LReturn, LState, Unit,
 };
 pub use typelude_std::lambda::traits::LBind;
-use typelude_std::traits::Apply;
+use typelude_core::Apply;
 
 use typelude_core::{Eval, Evaluate};
 

@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_core::Evaluate;
 
 /// Macro to implement Eval for a Lambda value type.
 /// Usage: `impl_eval_for_lambda!(MyStruct);`
@@ -34,7 +34,7 @@ macro_rules! impl_eval_for_lambda_generic {
 /// This struct is used with the `Eval` pattern.
 pub struct LApp<F, A>(PhantomData<(F, A)>);
 /// Type-level application result: `Apply<F, A> = Evaluate<LApp<F, A>>`.
-pub type Apply<F, A> = Evaluate<LApp<F, A>>;
+// pub type Apply<F, A> = Evaluate<LApp<F, A>>; // Deprecated/Removed to avoid conflict with core::Apply trait
 /// Bind Trait: `m >>= f`
 pub trait LBind<F> {
     type Output;

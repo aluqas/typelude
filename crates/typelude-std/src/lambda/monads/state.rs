@@ -7,6 +7,7 @@ use std::marker::PhantomData;
 use typelude_core::{Eval, Evaluate};
 
 use crate::lambda::{LApp, church::LPair2, traits::LBind};
+use typelude_core::Apply;
 
 // Macro to implement Eval for terms (they evaluate to themselves)
 macro_rules! impl_eval_term {
@@ -77,11 +78,22 @@ where
         Evaluate<LApp<crate::lambda::church::LSnd, Evaluate<LApp<F, S>>>>,
     >: Eval,
 {
-    type Output = Evaluate<LApp<
-        Evaluate<LApp<K, Evaluate<LApp<crate::lambda::church::LFst, Evaluate<LApp<F, S>>>>>>,
-        Evaluate<LApp<crate::lambda::church::LSnd, Evaluate<LApp<F, S>>>>,
-    >>;
+    type Output = Evaluate<
+        LApp<
+            Evaluate<LApp<K, Evaluate<LApp<crate::lambda::church::LFst, Evaluate<LApp<F, S>>>>>>,
+            Evaluate<LApp<crate::lambda::church::LSnd, Evaluate<LApp<F, S>>>>,
+        >,
+    >;
 }
+
+/*
+impl<F, K, S> Apply<S> for LBindState<F, K>
+where
+    LApp<LBindState<F, K>, S>: Eval,
+{
+    type Output = Evaluate<LApp<LBindState<F, K>, S>>;
+}
+*/
 pub struct LReturn<A>(PhantomData<A>);
 impl<A> Eval for LReturn<A> {
     type Output = LReturn<A>;
@@ -98,6 +110,13 @@ where
     // We can just return LPair2<A, S> since A and S are Evaluated.
     // Wait, Evaluate<A> and Evaluate<S>.
     type Output = LPair2<Evaluate<A>, Evaluate<S>>;
+}
+
+impl<A, S> Apply<S> for LReturn<A>
+where
+    LApp<LReturn<A>, S>: Eval,
+{
+    type Output = Evaluate<LApp<LReturn<A>, S>>;
 }
 
 // Return<A> >>= k  === k A
@@ -118,6 +137,13 @@ where
     S: Eval,
 {
     type Output = LPair2<Evaluate<S>, Evaluate<S>>;
+}
+
+impl<S> Apply<S> for LGet
+where
+    LApp<LGet, S>: Eval,
+{
+    type Output = Evaluate<LApp<LGet, S>>;
 }
 
 // Get >>= k
@@ -142,6 +168,15 @@ where
 {
     type Output = Evaluate<LApp<Evaluate<LApp<K, S>>, S>>;
 }
+
+/*
+impl<K, S> Apply<S> for LBindGet<K>
+where
+    LApp<LBindGet<K>, S>: Eval,
+{
+    type Output = Evaluate<LApp<LBindGet<K>, S>>;
+}
+*/
 pub struct LPut<NewS>(PhantomData<NewS>);
 impl<NewS> Eval for LPut<NewS> {
     type Output = LPut<NewS>;
@@ -158,6 +193,13 @@ where
     OldS: Eval,
 {
     type Output = LPair2<Unit, Evaluate<NewS>>;
+}
+
+impl<NewS, OldS> Apply<OldS> for LPut<NewS>
+where
+    LApp<LPut<NewS>, OldS>: Eval,
+{
+    type Output = Evaluate<LApp<LPut<NewS>, OldS>>;
 }
 
 // Put<NewS> >>= k
@@ -183,6 +225,15 @@ where
 {
     type Output = Evaluate<LApp<Evaluate<LApp<K, Unit>>, NewS>>;
 }
+
+/*
+impl<NewS, K, OldS> Apply<OldS> for LBindPut<NewS, K>
+where
+    LApp<LBindPut<NewS, K>, OldS>: Eval,
+{
+    type Output = Evaluate<LApp<LBindPut<NewS, K>, OldS>>;
+}
+*/
 
 #[cfg(test)]
 mod tests {

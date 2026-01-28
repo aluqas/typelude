@@ -28,3 +28,6 @@ pub trait Eval {
 
 /// Type alias to obtain evaluation results of expressions
 pub type Evaluate<T> = <T as Eval>::Output;
+
+/// Type alias for apply style
+pub type Apply<Fn, Arg> = <Fn<Arg> as Eval>::Output;

@@ -12,12 +12,7 @@
 use static_assertions::assert_type_eq_all;
 use typelude_core::{ELit, Evaluate};
 use typelude_std::{
-    std::{
-        col::array::Nil,
-        // Import operators from typelude_std::std::ops for TracedExecute
-        ops::OpAdd as StdOpAdd,
-        trace::Trace,
-    },
+    std::{col::array::Nil, trace::Trace},
     tyarray,
 };
 use typelude_vm::machine::{
@@ -71,11 +66,11 @@ fn test_traced_multi_step_execution() {
     assert_type_eq_all!(S2, Expected2);
 
     // Step 3: Add on S2
-    type S3 = <StdOpAdd as TracedExecute<ExpectedStack2, Nil, Nil, Nil, Nil, ExpectedHistory2>>::OutputState;
+    type S3 = <OpAdd as TracedExecute<ExpectedStack2, Nil, Nil, Nil, Nil, ExpectedHistory2>>::OutputState;
 
     // Verify final state
     type ExpectedStack3 = tyarray![U3]; // 2 + 1 = 3
-    type ExpectedHistory3 = tyarray![StdOpAdd, OpPush<ELit<U2>>, OpPush<ELit<U1>>];
+    type ExpectedHistory3 = tyarray![OpAdd, OpPush<ELit<U2>>, OpPush<ELit<U1>>];
     type Expected3 = TracedMachineState<ExpectedStack3, Nil, Nil, Nil, Nil, ExpectedHistory3>;
     assert_type_eq_all!(S3, Expected3);
 
@@ -213,7 +208,7 @@ fn test_traced_call_instruction() {
     // Step 2: Call<SubRoutine>
     type Stack1 = tyarray![ELit<U1>];
     type Locals1 = Nil;
-    type RestProg1 = tyarray![StdOpAdd]; // The continuation after call
+    type RestProg1 = tyarray![OpAdd]; // The continuation after call
     type History1 = tyarray![OpPush<ELit<U1>>];
 
     type S2 = <OpCall<SubRoutine> as TracedExecute<
@@ -263,7 +258,7 @@ fn test_complex_manual_chain() {
     type Val5 = ELit<U5>;
 
     // Explicit SubRoutine definition
-    type SubRoutine = tyarray![OpPush<U0>, OpLoad, StdOpAdd, OpReturn];
+    type SubRoutine = tyarray![OpPush<U0>, OpLoad, OpAdd, OpReturn];
 
     // --- Steps ---
     // Start State
@@ -370,14 +365,13 @@ fn test_complex_manual_chain() {
         OpLet,
         OpPush<Val10>
     ];
-    type S10 =
-        <StdOpAdd as TracedExecute<Stack9, Nil, Mem5, CallStack7, Nil, History9>>::OutputState;
+    type S10 = <OpAdd as TracedExecute<Stack9, Nil, Mem5, CallStack7, Nil, History9>>::OutputState;
     // Stack=[25]
 
     // 11. Return
     type Stack10 = tyarray![ELit<typenum::Sum<U20, U5>>];
     type History10 = tyarray![
-        StdOpAdd,
+        OpAdd,
         OpLoad,
         OpPush<U0>,
         OpCall<SubRoutine>,
@@ -400,7 +394,7 @@ fn test_complex_manual_chain() {
     type Stack11 = Stack10;
     type History11 = tyarray![
         OpReturn,
-        StdOpAdd,
+        OpAdd,
         OpLoad,
         OpPush<U0>,
         OpCall<SubRoutine>,
@@ -419,7 +413,7 @@ fn test_complex_manual_chain() {
     type History12 = tyarray![
         OpGetLocal<U0>,
         OpReturn,
-        StdOpAdd,
+        OpAdd,
         OpLoad,
         OpPush<U0>,
         OpCall<SubRoutine>,
@@ -430,8 +424,7 @@ fn test_complex_manual_chain() {
         OpLet,
         OpPush<Val10>
     ];
-    type S13 =
-        <StdOpAdd as TracedExecute<Stack12, Locals2, Mem5, Nil, Nil, History12>>::OutputState;
+    type S13 = <OpAdd as TracedExecute<Stack12, Locals2, Mem5, Nil, Nil, History12>>::OutputState;
     // Stack=[35].
 
     // Verify Final Trace

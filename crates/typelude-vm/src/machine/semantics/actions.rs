@@ -9,8 +9,8 @@ use typelude_core::{Eval, Evaluate};
 use typelude_std::{
     lambda::church::LPair2,
     std::col::array::Array,
-    traits::Apply,
 };
+use typelude_core::Apply;
 
 use crate::machine::semantics::{monad::Unit, state::VmState};
 

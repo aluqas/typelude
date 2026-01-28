@@ -280,7 +280,7 @@ where
 
 def_op! {
     /// Insert key-value pair into TreeMap
-    name: OpTreeMapInsert,
+    name: DefTreeMapInsert,
     args: (Tree, Key, Value),
     ast: ETreeMapInsert {
         where: [
@@ -292,7 +292,7 @@ def_op! {
 
 def_op! {
     /// Get value by key from TreeMap
-    name: OpTreeMapGet,
+    name: DefTreeMapGet,
     args: (Tree, Key),
     ast: ETreeMapGet {
         where: [
@@ -304,7 +304,7 @@ def_op! {
 
 def_op! {
     /// Check if TreeMap contains key
-    name: OpTreeMapContains,
+    name: DefTreeMapContains,
     args: (Tree, Key),
     ast: ETreeMapContains {
         where: [

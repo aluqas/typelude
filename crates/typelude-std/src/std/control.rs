@@ -17,7 +17,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Apply, Eval, Evaluate};
+use typelude_core::{EApp, Eval, Evaluate};
 
 use crate::{
     lambda::{
@@ -68,19 +68,6 @@ where
     type Output = <<Evaluate<Cond> as IntoBool>::Output as EIfHelper<Then, Else>>::Output;
 }
 
-// Op wrapper for Apply pattern
-pub struct OpIf;
-
-impl<Cond, Then, Else>
-    Apply<
-        typelude_core::ECons<
-            Cond,
-            typelude_core::ECons<Then, typelude_core::ECons<Else, typelude_core::ENil>>,
-        >,
-    > for OpIf
-{
-    type Output = EIf<Cond, Then, Else>;
-}
 /// Practical While expression.
 ///
 /// Wraps the pure `LWhile` combinator with `ToChurch` conversion.
@@ -97,7 +84,7 @@ impl<Cond, Then, Else>
 /// ```
 pub struct EWhile<Pred, Step, State>(PhantomData<(Pred, Step, State)>);
 
-/// Adapter to convert Bool predicate output to Church boolean.
+/// Adapter to convert Bool predicate output to Church boolean (via `EApp`).
 pub struct ChurchifyPred<Pred>(PhantomData<Pred>);
 
 impl<Pred> Eval for ChurchifyPred<Pred> {
@@ -109,16 +96,13 @@ impl<Pred, S> Eval for LApp<ChurchifyPred<Pred>, S>
 where
     Pred: Eval,
     S: Eval,
-    // Pred applied to S
-    Pred: Apply<Evaluate<S>>,
-    // Pred(S) returns Bool
-    <Pred as Apply<Evaluate<S>>>::Output: Eval,
-    Evaluate<<Pred as Apply<Evaluate<S>>>::Output>: IntoBool,
+    EApp<Pred, S>: Eval,
+    Evaluate<EApp<Pred, S>>: IntoBool,
 {
-    type Output = <Evaluate<<Pred as Apply<Evaluate<S>>>::Output> as IntoBool>::Output;
+    type Output = <Evaluate<EApp<Pred, S>> as IntoBool>::Output;
 }
 
-/// Adapter for Step function in lambda world.
+/// Adapter for Step function in lambda world (via `EApp`).
 pub struct LambdifyStep<Step>(PhantomData<Step>);
 
 impl<Step> Eval for LambdifyStep<Step> {
@@ -130,10 +114,9 @@ impl<Step, S> Eval for LApp<LambdifyStep<Step>, S>
 where
     Step: Eval,
     S: Eval,
-    Step: Apply<Evaluate<S>>,
-    <Step as Apply<Evaluate<S>>>::Output: Eval,
+    EApp<Step, S>: Eval,
 {
-    type Output = Evaluate<<Step as Apply<Evaluate<S>>>::Output>;
+    type Output = Evaluate<EApp<Step, S>>;
 }
 
 impl<Pred, Step, State> Eval for EWhile<Pred, Step, State>
@@ -148,24 +131,10 @@ where
         Evaluate<LApp<LWhile2<ChurchifyPred<Pred>, LambdifyStep<Step>>, Evaluate<State>>>;
 }
 
-// Op wrapper
-pub struct OpWhile;
-
-impl<Pred, Step, State>
-    Apply<
-        typelude_core::ECons<
-            Pred,
-            typelude_core::ECons<Step, typelude_core::ECons<State, typelude_core::ENil>>,
-        >,
-    > for OpWhile
-{
-    type Output = EWhile<Pred, Step, State>;
-}
-
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::{ECons, ENil};
+    use typelude_core::ELit;
     use typenum::{U0, U1};
 
     use super::*;
@@ -173,24 +142,13 @@ mod tests {
 
     #[test]
     fn test_eif_true() {
-        use typelude_core::ELit;
         type Result = Evaluate<EIf<ELit<True>, ELit<U1>, ELit<U0>>>;
         assert_type_eq_all!(Result, U1);
     }
 
     #[test]
     fn test_eif_false() {
-        use typelude_core::ELit;
         type Result = Evaluate<EIf<ELit<False>, ELit<U1>, ELit<U0>>>;
         assert_type_eq_all!(Result, U0);
-    }
-
-    // Verify Op wrappers use EList correctly
-    #[test]
-    fn test_op_if_apply() {
-        use typelude_core::ELit;
-        type Args = ECons<ELit<True>, ECons<ELit<U1>, ECons<ELit<U0>, ENil>>>;
-        type Result = <OpIf as Apply<Args>>::Output;
-        assert_type_eq_all!(Result, EIf<ELit<True>, ELit<U1>, ELit<U0>>);
     }
 }

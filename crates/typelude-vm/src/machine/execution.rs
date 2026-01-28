@@ -2,7 +2,7 @@
 //!
 //! Implements machine instruction execution logic and main loop.
 
-use typelude_core::{App, Apply, ELit, Eval, Evaluate};
+use typelude_core::{Apply, ELit, Eval, Evaluate};
 #[allow(unused_imports)]
 use typelude_std::std::int;
 use typelude_std::{
@@ -53,34 +53,17 @@ impl_binary_op!(OpAdd, typelude_std::std::ops::EAdd<Lhs, Rhs>);
 impl_binary_op!(OpSub, typelude_std::std::ops::ESub<Lhs, Rhs>);
 
 // --- Comparison Ops ---
+// --- Comparison Ops ---
 macro_rules! impl_cmp_op {
-    ($Op:ident, $CoreOp:ty) => {
+    ($Op:ident, $EvalOp:ty) => {
         impl<Lhs, Rhs, RestStack, Locals, Memory, CallStack, RestProg>
             Execute<Array<Lhs, Array<Rhs, RestStack>>, Locals, Memory, CallStack, RestProg> for $Op
         where
-            $CoreOp:
-                Apply<typelude_core::ECons<Lhs, typelude_core::ECons<Rhs, typelude_core::ENil>>>,
-            App<
-                $CoreOp,
-                typelude_core::ECons<Lhs, typelude_core::ECons<Rhs, typelude_core::ENil>>,
-            >: Eval,
+            $EvalOp: Eval,
             RestStack: IsList,
         {
             type OutputState = MachineState<
-                Array<
-                    ELit<
-                        Evaluate<
-                            App<
-                                $CoreOp,
-                                typelude_core::ECons<
-                                    Lhs,
-                                    typelude_core::ECons<Rhs, typelude_core::ENil>,
-                                >,
-                            >,
-                        >,
-                    >,
-                    RestStack,
-                >,
+                Array<ELit<Evaluate<$EvalOp>>, RestStack>,
                 Locals,
                 Memory,
                 CallStack,
@@ -91,11 +74,11 @@ macro_rules! impl_cmp_op {
 }
 
 #[cfg(feature = "nightly")]
-impl_cmp_op!(OpEq, typelude_std::std::ops::OpEq);
+impl_cmp_op!(OpEq, typelude_std::std::ops::EEq<Lhs, Rhs>);
 #[cfg(feature = "nightly")]
-impl_cmp_op!(OpNeq, typelude_std::std::ops::OpNeq);
-impl_cmp_op!(OpLt, typelude_std::std::ops::OpLt);
-impl_cmp_op!(OpGt, typelude_std::std::ops::OpGt);
+impl_cmp_op!(OpNeq, typelude_std::std::ops::ENeq<Lhs, Rhs>);
+impl_cmp_op!(OpLt, typelude_std::std::ops::ELt<Lhs, Rhs>);
+impl_cmp_op!(OpGt, typelude_std::std::ops::EGt<Lhs, Rhs>);
 
 // --- Unary Ops ---
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg>

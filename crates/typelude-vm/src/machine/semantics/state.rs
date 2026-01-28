@@ -5,10 +5,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
-use typelude_std::{
-    traits::Apply, // Use Apply instead of LApp impl
-};
+use typelude_core::{Apply, Eval, Evaluate};
 
 // =============================================================================
 // Machine State Definition

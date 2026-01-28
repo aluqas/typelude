@@ -17,6 +17,6 @@ pub use list::{LCons, LFoldr, LHeadOr, LIsEmpty, LNil, LTailOr};
 pub use monads::*;
 // 5. Control
 pub use thunk::{LForce, LThunk};
-pub use traits::{Apply, LApp, LBind, LBool, LList, LNat, LTerm};
+pub use traits::{LApp, LBind, LBool, LList, LNat, LTerm};
 
 // 6. Helpers

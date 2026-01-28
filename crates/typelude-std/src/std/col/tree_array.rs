@@ -212,7 +212,7 @@ where
 
 def_op! {
     /// Insert value into TreeArray
-    name: OpTreeArrayInsert,
+    name: DefTreeArrayInsert,
     args: (Tree, Value),
     ast: ETreeArrayInsert {
         where: [
@@ -224,7 +224,7 @@ def_op! {
 
 def_op! {
     /// Check if TreeArray contains value
-    name: OpTreeArrayContains,
+    name: DefTreeArrayContains,
     args: (Tree, Value),
     ast: ETreeArrayContains {
         where: [

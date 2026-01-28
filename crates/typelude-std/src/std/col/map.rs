@@ -162,7 +162,7 @@ where
 
 def_op! {
     /// Get value from map by key
-    name: OpMapGet,
+    name: DefMapGet,
     args: (Map, Key),
     ast: EMapGet {
         where: [
@@ -174,7 +174,7 @@ def_op! {
 
 def_op! {
     /// Insert key-value pair into map
-    name: OpMapInsert,
+    name: DefMapInsert,
     args: (Map, Key, Value),
     ast: EMapInsert {
         where: [
@@ -186,7 +186,7 @@ def_op! {
 
 def_op! {
     /// Check if map contains key
-    name: OpMapContains,
+    name: DefMapContains,
     args: (Map, Key),
     ast: EMapContains {
         where: [
@@ -198,7 +198,7 @@ def_op! {
 
 def_op! {
     /// Get all keys from map
-    name: OpMapKeys,
+    name: DefMapKeys,
     args: (Map),
     ast: EMapKeys {
         where: [
@@ -210,7 +210,7 @@ def_op! {
 
 def_op! {
     /// Get all values from map
-    name: OpMapValues,
+    name: DefMapValues,
     args: (Map),
     ast: EMapValues {
         where: [

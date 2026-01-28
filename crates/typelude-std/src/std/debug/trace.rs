@@ -134,46 +134,46 @@ impl<T: Trace> Trace for typelude_core::ELit<T> {
     }
 }
 
-// Trace implementations for std::ops operators
-use crate::std::ops::{OpAdd, OpAnd, OpGt, OpLt, OpNot, OpOr, OpSub};
+// Trace implementations for std::ops expressions
+use crate::std::ops::{EAdd, EAnd, EGt, ELt, ENot, EOr, ESub};
 
-impl Trace for OpAdd {
+impl<Lhs, Rhs> Trace for EAdd<Lhs, Rhs> {
     fn fmt() -> String {
         "Add".to_string()
     }
 }
 
-impl Trace for OpSub {
+impl<Lhs, Rhs> Trace for ESub<Lhs, Rhs> {
     fn fmt() -> String {
         "Sub".to_string()
     }
 }
 
-impl Trace for OpAnd {
+impl<Lhs, Rhs> Trace for EAnd<Lhs, Rhs> {
     fn fmt() -> String {
         "And".to_string()
     }
 }
 
-impl Trace for OpOr {
+impl<Lhs, Rhs> Trace for EOr<Lhs, Rhs> {
     fn fmt() -> String {
         "Or".to_string()
     }
 }
 
-impl Trace for OpNot {
+impl<Val> Trace for ENot<Val> {
     fn fmt() -> String {
         "Not".to_string()
     }
 }
 
-impl Trace for OpLt {
+impl<Lhs, Rhs> Trace for ELt<Lhs, Rhs> {
     fn fmt() -> String {
         "Lt".to_string()
     }
 }
 
-impl Trace for OpGt {
+impl<Lhs, Rhs> Trace for EGt<Lhs, Rhs> {
     fn fmt() -> String {
         "Gt".to_string()
     }

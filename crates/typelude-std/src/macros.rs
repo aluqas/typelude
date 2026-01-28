@@ -2,10 +2,6 @@
 macro_rules! define_arith_op {
     ($op_name:ident, $trait:path, $doc:literal) => {
         $crate::paste::paste! {
-            // Operator Symbol
-            #[doc = $doc]
-            pub struct [<Op $op_name>];
-
             // Expression Struct
             pub struct [<E $op_name>]<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
 
@@ -19,6 +15,10 @@ macro_rules! define_arith_op {
                 type Output = <$crate::typelude_core::Evaluate<Lhs> as $trait<$crate::typelude_core::Evaluate<Rhs>>>::Output;
             }
 
+            // Op Struct
+            #[derive(Clone, Copy)]
+            pub struct [<Op $op_name>];
+
             // Apply Implementation
             impl<Lhs, Rhs> $crate::typelude_core::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
                 type Output = [<E $op_name>]<Lhs, Rhs>;
@@ -31,10 +31,6 @@ macro_rules! define_arith_op {
 macro_rules! define_logic_op {
     ($op_name:ident, $trait:path, $method:ident, $doc:literal) => {
         $crate::paste::paste! {
-            // Operator Symbol
-            #[doc = $doc]
-            pub struct [<Op $op_name>];
-
             // Expression Struct
             pub struct [<E $op_name>]<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
 
@@ -48,6 +44,10 @@ macro_rules! define_logic_op {
                 type Output = <$crate::typelude_core::Evaluate<Lhs> as $trait>::$method<$crate::typelude_core::Evaluate<Rhs>>;
             }
 
+            // Op Struct
+            #[derive(Clone, Copy)]
+            pub struct [<Op $op_name>];
+
             // Apply Implementation
             impl<Lhs, Rhs> $crate::typelude_core::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
                 type Output = [<E $op_name>]<Lhs, Rhs>;
@@ -60,10 +60,6 @@ macro_rules! define_logic_op {
 macro_rules! define_unary_logic_op {
     ($op_name:ident, $trait:path, $method:ident, $doc:literal) => {
         $crate::paste::paste! {
-            // Operator Symbol
-            #[doc = $doc]
-            pub struct [<Op $op_name>];
-
             // Expression Struct
             pub struct [<E $op_name>]<Val>(std::marker::PhantomData<Val>);
 
@@ -74,6 +70,10 @@ macro_rules! define_unary_logic_op {
             {
                 type Output = <$crate::typelude_core::Evaluate<Val> as $trait>::$method;
             }
+
+            // Op Struct
+            #[derive(Clone, Copy)]
+            pub struct [<Op $op_name>];
 
             // Apply Implementation
             impl<Val> $crate::typelude_core::Apply<Val> for [<Op $op_name>] {

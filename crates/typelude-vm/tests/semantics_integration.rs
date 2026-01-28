@@ -23,20 +23,17 @@ mod tests {
     #[test]
     fn test_compile_push_push() {
         // Program: Push 1, Push 2
-        type Prog = tyarray![
-            OpPush<ELit<U1>>,
-            OpPush<ELit<U2>>
-        ];
+        type Prog = tyarray![OpPush<ELit<U1>>, OpPush<ELit<U2>>];
 
         // Compile
         type CompiledAction = <Prog as Compile>::Output;
 
         // Run
         // type ResultPair = Evaluate<LApp<CompiledAction, EmptyState>>;
-        type ResultPair = <CompiledAction as typelude_std::traits::Apply<EmptyState>>::Output;
+        type ResultPair = <CompiledAction as typelude_core::Apply<EmptyState>>::Output;
 
         // Expected Result: LPair2<Unit, Stack<[2, 1]>>
-        type ExpectedStack = tyarray![ELit<U2>, ELit<U1>];
+        type ExpectedStack = tyarray![U2, U1];
         type ExpectedState = Stack<ExpectedStack>;
         type ExpectedResult = typelude_std::lambda::church::LPair2<Unit, ExpectedState>;
 
@@ -46,11 +43,7 @@ mod tests {
     #[test]
     fn test_compile_push_add() {
         // Program: Push 1, Push 2, Add
-        type Prog = tyarray![
-            OpPush<ELit<U1>>,
-            OpPush<ELit<U2>>,
-            OpAdd
-        ];
+        type Prog = tyarray![OpPush<ELit<U1>>, OpPush<ELit<U2>>, OpAdd];
 
         // Compile
         type CompiledAction = <Prog as Compile>::Output;
@@ -58,14 +51,13 @@ mod tests {
         // Run: Apply CompiledAction to EmptyState
         // Result is (Unit, FinalState)
         // type ResultPair = Evaluate<LApp<CompiledAction, EmptyState>>;
-        type ResultPair = <CompiledAction as typelude_std::traits::Apply<EmptyState>>::Output;
+        type ResultPair = <CompiledAction as typelude_core::Apply<EmptyState>>::Output;
 
         // Expected Result: LPair2<Unit, Stack<[3]>>
-        type ExpectedStack = tyarray![ELit<U3>];
+        type ExpectedStack = tyarray![U3];
         type ExpectedState = Stack<ExpectedStack>;
         type ExpectedResult = typelude_std::lambda::church::LPair2<Unit, ExpectedState>;
 
         assert_type_eq_all!(ResultPair, ExpectedResult);
     }
-
 }

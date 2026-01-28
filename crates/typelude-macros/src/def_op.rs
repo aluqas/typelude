@@ -13,10 +13,8 @@ use syn::{
 
 /// Input for the def_op! macro
 ///
-/// Supports two patterns:
-/// 1. AST Pattern: `def_op! { name: OpAdd, args: (Lhs, Rhs), ast: EAdd { ... }
-///    }`
-/// 2. Alias Pattern: `def_op! { name: OpInc, args: (N), alias: EAdd<N, P1> }`
+/// Supports the AST pattern:
+/// `def_op! { name: DefAdd, args: (Lhs, Rhs), ast: EAdd { ... } }`
 pub struct DefOpInput {
     pub doc_attrs: Vec<syn::Attribute>,
     pub op_name: Ident,
@@ -30,9 +28,6 @@ pub enum DefOpBody {
         bounds: Vec<WhereBound>,
         output_ty: Type,
     },
-    Alias {
-        alias_ty: Type,
-    },
 }
 
 /// A where bound - can be simple or complex
@@ -45,7 +40,7 @@ impl Parse for DefOpInput {
         // Parse doc attributes
         let doc_attrs = input.call(syn::Attribute::parse_outer)?;
 
-        // Parse "name: OpName"
+        // Parse "name: DefName" (identifier is only used for macro bookkeeping)
         let _name_kw: Ident = input.parse()?;
         if _name_kw != "name" {
             return Err(syn::Error::new(_name_kw.span(), "expected 'name'"));
@@ -66,11 +61,13 @@ impl Parse for DefOpInput {
         let args: Vec<Ident> = args.into_iter().collect();
         input.parse::<Token![,]>()?;
 
-        // Parse body: either "ast: Name { ... }" or "alias: Type"
+        // Parse body: "ast: Name { ... }"
         let body_kw: Ident = input.parse()?;
         input.parse::<Token![:]>()?;
 
-        let body = if body_kw == "ast" {
+        let body = if body_kw != "ast" {
+            return Err(syn::Error::new(body_kw.span(), "expected 'ast'"));
+        } else {
             let ast_name: Ident = input.parse()?;
             let body_content;
             braced!(body_content in input);
@@ -100,13 +97,6 @@ impl Parse for DefOpInput {
                 bounds,
                 output_ty,
             }
-        } else if body_kw == "alias" {
-            let alias_ty: Type = input.parse()?;
-            DefOpBody::Alias {
-                alias_ty,
-            }
-        } else {
-            return Err(syn::Error::new(body_kw.span(), "expected 'ast' or 'alias'"));
         };
 
         Ok(DefOpInput {
@@ -185,26 +175,9 @@ impl DefOpInput {
                     quote! { (#(#args),*) }
                 };
 
-                // Generate Apply argument type
-                // 1 Arg -> A
-                // N Args -> ECons<A, ECons<B, ...>>
-                let apply_args = if args.len() <= 1 {
-                    if args.is_empty() {
-                        quote! { typelude_core::ENil }
-                    } else {
-                        let arg = &args[0];
-                        quote! { #arg }
-                    }
-                } else {
-                    let mut stream = quote! { typelude_core::ENil };
-                    for arg in args.iter().rev() {
-                        stream = quote! { typelude_core::ECons<#arg, #stream> };
-                    }
-                    stream
-                };
-
                 quote! {
                     // 1. Define AST struct
+                    #(#doc_attrs)*
                     pub struct #ast_name<#(#args),*>(::std::marker::PhantomData<#phantom_args>);
 
                     // 2. Implement Eval for AST
@@ -216,45 +189,17 @@ impl DefOpInput {
                         type Output = #output_ty;
                     }
 
-                    // 3. Define Op marker
+                    // 3. Define Op struct
                     #(#doc_attrs)*
+                    #[derive(Clone, Copy)]
                     pub struct #op_name;
 
-                    // 4. Implement Apply
-                    impl<#(#args),*> typelude_core::Apply<#apply_args> for #op_name {
+                    // 4. Implement Apply for Op struct (Tuple args -> AST)
+                    impl<#(#args),*> typelude_core::Apply<(#(#args),*)> for #op_name {
                         type Output = #ast_name<#(#args),*>;
                     }
                 }
-            },
-            DefOpBody::Alias {
-                alias_ty,
-            } => {
-                let apply_args = if args.len() <= 1 {
-                    if args.is_empty() {
-                        quote! { typelude_core::ENil }
-                    } else {
-                        let arg = &args[0];
-                        quote! { #arg }
-                    }
-                } else {
-                    let mut stream = quote! { typelude_core::ENil };
-                    for arg in args.iter().rev() {
-                        stream = quote! { typelude_core::ECons<#arg, #stream> };
-                    }
-                    stream
-                };
-
-                quote! {
-                    // 1. Define Op marker
-                    #(#doc_attrs)*
-                    pub struct #op_name;
-
-                    // 2. Implement Apply with alias
-                    impl<#(#args),*> typelude_core::Apply<#apply_args> for #op_name {
-                        type Output = #alias_ty;
-                    }
-                }
-            },
+            }
         }
     }
 }

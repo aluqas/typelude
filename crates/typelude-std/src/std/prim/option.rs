@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_core::{EApp, ELit, Eval, Evaluate};
 
 use crate::std::prim::bool::{False, True};
 /// Type-level `Some<T>` — wraps a value
@@ -58,7 +58,7 @@ impl<T, D> UnwrapOr<D> for Some<T> {
 impl<D> UnwrapOr<D> for None {
     type Output = D;
 }
-/// Map a function over an Option
+/// Map a function over an Option (via `EApp` + `ELit`)
 pub trait OptionMap<Op> {
     type Output;
 }
@@ -66,9 +66,10 @@ pub trait OptionMap<Op> {
 impl<T, Op> OptionMap<Op> for Some<T>
 where
     Op: Eval,
-    Evaluate<Op>: crate::traits::Apply<T>,
+    EApp<Op, ELit<T>>: Eval,
+    Evaluate<EApp<Op, ELit<T>>>: Eval,
 {
-    type Output = Some<<Evaluate<Op> as crate::traits::Apply<T>>::Output>;
+    type Output = Some<Evaluate<Evaluate<EApp<Op, ELit<T>>>>>;
 }
 
 impl<Op> OptionMap<Op> for None {
