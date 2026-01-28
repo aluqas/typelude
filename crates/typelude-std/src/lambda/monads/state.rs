@@ -86,14 +86,9 @@ where
     >;
 }
 
-/*
-impl<F, K, S> Apply<S> for LBindState<F, K>
-where
-    LApp<LBindState<F, K>, S>: Eval,
-{
-    type Output = Evaluate<LApp<LBindState<F, K>, S>>;
+impl<F, K, S> Apply<S> for LBindState<F, K> {
+    type Output = LApp<LBindState<F, K>, S>;
 }
-*/
 pub struct LReturn<A>(PhantomData<A>);
 impl<A> Eval for LReturn<A> {
     type Output = LReturn<A>;
@@ -105,18 +100,15 @@ where
     A: Eval,
     S: Eval,
 {
-    // Return a Pair Value directly.
-    // LApp<LApp<LPair, A>, S> -> LPair2<A, S>
-    // We can just return LPair2<A, S> since A and S are Evaluated.
-    // Wait, Evaluate<A> and Evaluate<S>.
     type Output = LPair2<Evaluate<A>, Evaluate<S>>;
 }
 
 impl<A, S> Apply<S> for LReturn<A>
 where
-    LApp<LReturn<A>, S>: Eval,
+    A: Eval,
+    S: Eval,
 {
-    type Output = Evaluate<LApp<LReturn<A>, S>>;
+    type Output = LPair2<Evaluate<A>, Evaluate<S>>;
 }
 
 // Return<A> >>= k  === k A
@@ -141,9 +133,9 @@ where
 
 impl<S> Apply<S> for LGet
 where
-    LApp<LGet, S>: Eval,
+    S: Eval,
 {
-    type Output = Evaluate<LApp<LGet, S>>;
+    type Output = LPair2<Evaluate<S>, Evaluate<S>>;
 }
 
 // Get >>= k
@@ -169,14 +161,9 @@ where
     type Output = Evaluate<LApp<Evaluate<LApp<K, S>>, S>>;
 }
 
-/*
-impl<K, S> Apply<S> for LBindGet<K>
-where
-    LApp<LBindGet<K>, S>: Eval,
-{
-    type Output = Evaluate<LApp<LBindGet<K>, S>>;
+impl<K, S> Apply<S> for LBindGet<K> {
+    type Output = LApp<LBindGet<K>, S>;
 }
-*/
 pub struct LPut<NewS>(PhantomData<NewS>);
 impl<NewS> Eval for LPut<NewS> {
     type Output = LPut<NewS>;
@@ -197,9 +184,9 @@ where
 
 impl<NewS, OldS> Apply<OldS> for LPut<NewS>
 where
-    LApp<LPut<NewS>, OldS>: Eval,
+    NewS: Eval,
 {
-    type Output = Evaluate<LApp<LPut<NewS>, OldS>>;
+    type Output = LPair2<Unit, Evaluate<NewS>>;
 }
 
 // Put<NewS> >>= k
@@ -226,14 +213,9 @@ where
     type Output = Evaluate<LApp<Evaluate<LApp<K, Unit>>, NewS>>;
 }
 
-/*
-impl<NewS, K, OldS> Apply<OldS> for LBindPut<NewS, K>
-where
-    LApp<LBindPut<NewS, K>, OldS>: Eval,
-{
-    type Output = Evaluate<LApp<LBindPut<NewS, K>, OldS>>;
+impl<NewS, K, OldS> Apply<OldS> for LBindPut<NewS, K> {
+    type Output = LApp<LBindPut<NewS, K>, OldS>;
 }
-*/
 
 #[cfg(test)]
 mod tests {
@@ -289,17 +271,6 @@ mod tests {
         // Val = Fst FinalResult
         type Val = App<crate::lambda::church::LFst, FinalResult>;
         type St = App<crate::lambda::church::LSnd, FinalResult>;
-
-        // Expected: PutSucc(Zero) -> Put(1). State becomes 1. Val is ().
-        // Then DoGet -> Get. Returns (1, 1).
-        // Wait.
-        // Return(0) >>= k. -> k 0.
-        // PutSucc 0 -> Put 1.
-        // Put 1 >>= k'. -> \old. k' () 1.
-        // DoGet () -> Get.
-        // \old. Get 1. -> (1, 1).
-
-        // So Val should be 1, St should be 1.
 
         assert_type_eq_all!(Val, LSucc<LZero>);
         assert_type_eq_all!(St, LSucc<LZero>);
