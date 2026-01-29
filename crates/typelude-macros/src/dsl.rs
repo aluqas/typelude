@@ -2,11 +2,10 @@ use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
 use syn::{
     BinOp, Generics, Ident, Result, Token, Type,
-    parse::{Parse, ParseStream},
+    parse::{Parse, ParseStream, discouraged::Speculative},
     punctuated::Punctuated,
     token,
 };
-use syn::parse::discouraged::Speculative;
 
 /// Represents a type expression in the DSL.
 pub enum DslType {
@@ -61,8 +60,8 @@ fn parse_unary(input: ParseStream) -> Result<DslType> {
         }
 
         if elems.len() == 1 && !elems.trailing_punct() {
-             let first = elems.into_iter().next().unwrap();
-             return parse_postfix(input, first);
+            let first = elems.into_iter().next().unwrap();
+            return parse_postfix(input, first);
         }
 
         parse_postfix(input, DslType::Tuple(elems))
@@ -76,8 +75,12 @@ fn parse_unary(input: ParseStream) -> Result<DslType> {
         parse_postfix(input, DslType::Verbatim(verbatim))
     } else {
         // Parse a base type (path, identifier, etc.)
-        let ty: DslType = if input.peek(Ident) || input.peek(Token![::])
-            || input.peek(Token![crate]) || input.peek(Token![super]) || input.peek(Token![self]) {
+        let ty: DslType = if input.peek(Ident)
+            || input.peek(Token![::])
+            || input.peek(Token![crate])
+            || input.peek(Token![super])
+            || input.peek(Token![self])
+        {
             // Priority: Parse as DslPath structure to allow DSL inside generics
             // e.g. Vec<~T> or Result<A + B>
             let p: DslPath = input.parse()?;
@@ -122,7 +125,9 @@ fn parse_dsl_qself(input: ParseStream) -> Result<DslType> {
         input.parse::<Token![<]>()?;
         let mut args = Punctuated::new();
         loop {
-            if input.peek(Token![>]) { break; }
+            if input.peek(Token![>]) {
+                break;
+            }
             args.push_value(input.parse::<DslType>()?);
             if input.peek(Token![,]) {
                 args.push_punct(input.parse()?);
@@ -288,11 +293,16 @@ impl ToTokens for DslType {
             } => {
                 quote!(< #receiver > :: #ident).to_tokens(tokens);
             },
-            DslType::QSelf { ty, trait_path, ident, args } => {
+            DslType::QSelf {
+                ty,
+                trait_path,
+                ident,
+                args,
+            } => {
                 let as_trait = if let Some(tp) = trait_path {
-                     quote!(as #tp)
+                    quote!(as #tp)
                 } else {
-                     quote!()
+                    quote!()
                 };
 
                 let gen_args = if let Some(a) = args {

@@ -6,6 +6,7 @@ use syn::{
     punctuated::Punctuated,
     token,
 };
+
 use crate::dsl::{DslBound, DslType};
 
 pub struct TyFnInput {
@@ -52,7 +53,7 @@ impl Parse for TyFnInput {
                     match &tt {
                         proc_macro2::TokenTree::Punct(p) if p.as_char() == '<' => depth += 1,
                         proc_macro2::TokenTree::Punct(p) if p.as_char() == '>' => depth -= 1,
-                        _ => {}
+                        _ => {},
                     }
                     tokens.extend(std::iter::once(tt));
                 }
@@ -66,7 +67,10 @@ impl Parse for TyFnInput {
                     bounds.push_punct(input.parse()?);
                 } else {
                     if !input.peek(token::Brace) && !input.is_empty() {
-                         return Err(syn::Error::new(input.span(), "Unexpected end of bound parsing"));
+                        return Err(syn::Error::new(
+                            input.span(),
+                            "Unexpected end of bound parsing",
+                        ));
                     }
                 }
             }
@@ -110,8 +114,10 @@ impl TyFnInput {
         let (impl_generics, type_generics, _) = generics.split_for_impl();
 
         // Construct PhantomData content
-        let phantom_types: Vec<TokenStream> = generics.params.iter().filter_map(|p| {
-            match p {
+        let phantom_types: Vec<TokenStream> = generics
+            .params
+            .iter()
+            .filter_map(|p| match p {
                 GenericParam::Type(t) => {
                     let id = &t.ident;
                     Some(quote! { #id })
@@ -121,11 +127,11 @@ impl TyFnInput {
                     Some(quote! { &#id () })
                 },
                 GenericParam::Const(_) => None,
-            }
-        }).collect();
+            })
+            .collect();
 
         let phantom_type = if phantom_types.is_empty() {
-             quote! { ::std::marker::PhantomData<()> }
+            quote! { ::std::marker::PhantomData<()> }
         } else {
             quote! { ::std::marker::PhantomData<(#(#phantom_types),*)> }
         };
