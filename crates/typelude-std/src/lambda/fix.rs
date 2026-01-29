@@ -86,8 +86,7 @@ mod tests {
             LApp<Arg, LTrue>: Eval,
             LApp<Evaluate<LApp<Arg, LTrue>>, Thunk<R, LTrue>>: Eval,
         {
-            type Output =
-                Evaluate<LApp<Evaluate<LApp<Arg, LTrue>>, Thunk<R, LTrue>>>;
+            type Output = Evaluate<LApp<Evaluate<LApp<Arg, LTrue>>, Thunk<R, LTrue>>>;
         }
 
         type F = LFix<LoopBody>;

@@ -8,10 +8,7 @@ use std::marker::PhantomData;
 use typelude_std::core::{Eval, Evaluate};
 
 use super::bool::{LFalse, LTrue};
-use crate::{
-    impl_eval_for_lambda, impl_eval_for_lambda_generic,
-    lambda::LApp,
-};
+use crate::{impl_eval_for_lambda, impl_eval_for_lambda_generic, lambda::LApp};
 /// Pair: λx y. λf. f x y
 pub struct LPair;
 

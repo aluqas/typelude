@@ -5,8 +5,8 @@
 use std::ops::Add;
 
 use static_assertions::assert_type_eq_all;
-use typelude_std::core::Evaluate;
 use typelude_macros::def_op;
+use typelude_std::core::Evaluate;
 use typenum::{U1, U2, U3, U5, U6, U12, U42};
 
 def_op! {

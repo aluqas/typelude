@@ -2,10 +2,10 @@
 //!
 //! Implements machine instruction execution logic and main loop.
 
-use typelude_std::core::{Apply, ELit, Eval, Evaluate};
 #[allow(unused_imports)]
 use typelude_std::std::int;
 use typelude_std::{
+    core::{Apply, ELit, Eval, Evaluate},
     expr::{EIf, EWhile},
     std::{
         array::{Array, Concat, EConcat, Get, IsList, Nil, Set},

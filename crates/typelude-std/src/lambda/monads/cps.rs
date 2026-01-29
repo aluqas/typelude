@@ -93,13 +93,6 @@ where
     A: Eval,
     // G A -> Cont<G'>
     LApp<G, A>: Eval,
-    // RunCont (G A) K
-    // (G A) must evaluate to LCont<F'>
-    // We assume (G A) returns something that can apply K.
-    // LApp<Evaluate<LApp<G, A>>, K>
-    // But G A returns LCont<F'>. LCont doesn't implement LApp directly to run.
-    // LApp<LCont<F'>, K> is not defined. LApp<F', K> is what we want.
-    // We need to extract F' from LCont<F'>.
     Evaluate<LApp<G, A>>: LContRunner<K>,
 {
     type Output = <Evaluate<LApp<G, A>> as LContRunner<K>>::Output;

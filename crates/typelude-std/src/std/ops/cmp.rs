@@ -2,8 +2,8 @@
 //!
 //! Implementation of comparison operations using `typenum`.
 
-use typelude_std::core::Evaluate;
 use typelude_macros::def_op;
+use typelude_std::core::Evaluate;
 use typenum::{Bit, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
 use crate::std::{

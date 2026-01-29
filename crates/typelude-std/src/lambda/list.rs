@@ -7,6 +7,7 @@ use super::{
     church::{LFalse, LTrue},
     traits::{LList, LTerm},
 };
+
 // Macro to implement Eval for terms (they evaluate to themselves)
 macro_rules! impl_eval_term {
     ($($t:ty),*) => {
@@ -44,7 +45,7 @@ where
 // Cons1<H> T -> Cons2<H, T> (The list value)
 pub struct LCons2<H, T>(PhantomData<(H, T)>);
 impl<H, T> LTerm for LCons2<H, T> {}
-impl<H, T> LList for LCons2<H, T> {} // Only if T is list? Not necessarily for encoding, but good for marking.
+impl<H, T> LList for LCons2<H, T> {}
 impl<H, T> Eval for LCons2<H, T> {
     type Output = LCons2<H, T>;
 }
@@ -255,8 +256,7 @@ where
     LApp<L, LFoldrConsBuilder<F, Z>>: Eval,
     LApp<Evaluate<LApp<L, LFoldrConsBuilder<F, Z>>>, Z>: Eval,
 {
-    type Output =
-        Evaluate<LApp<Evaluate<LApp<L, LFoldrConsBuilder<F, Z>>>, Z>>;
+    type Output = Evaluate<LApp<Evaluate<LApp<L, LFoldrConsBuilder<F, Z>>>, Z>>;
 }
 
 // Cons Builder: \h t. F h (Foldr F Z t)
@@ -283,20 +283,23 @@ impl<F, Z, H> Eval for LFoldrConsBuilder1<F, Z, H> {
 // Builder1<F, Z, H> T -> F H (Foldr F Z T)
 impl<F, Z, H, T> Eval for LApp<LFoldrConsBuilder1<F, Z, H>, T>
 where
-    F: Eval + Clone, Z: Eval + Clone, H: Eval, T: Eval,
+    F: Eval + Clone,
+    Z: Eval + Clone,
+    H: Eval,
+    T: Eval,
     // Recurse: Foldr F Z T
-    LApp<LFoldr, F>: Eval, // Foldr1
-    LApp<Evaluate<LApp<LFoldr, F>>, Z>: Eval, // Foldr2
+    LApp<LFoldr, F>: Eval,                                       // Foldr1
+    LApp<Evaluate<LApp<LFoldr, F>>, Z>: Eval,                    // Foldr2
     LApp<Evaluate<LApp<Evaluate<LApp<LFoldr, F>>, Z>>, T>: Eval, // Result
-
     // Apply F H
     LApp<F, H>: Eval,
     // Apply (F H) to Recurse Result
-    LApp<Evaluate<LApp<F, H>>, Evaluate<LApp<Evaluate<LApp<Evaluate<LApp<LFoldr, F>>, Z>>, T>>>: Eval,
+    LApp<Evaluate<LApp<F, H>>, Evaluate<LApp<Evaluate<LApp<Evaluate<LApp<LFoldr, F>>, Z>>, T>>>:
+        Eval,
 {
     type Output = <LApp<
         Evaluate<LApp<F, H>>,
-        Evaluate<LApp<Evaluate<LApp<Evaluate<LApp<LFoldr, F>>, Z>>, T>>
+        Evaluate<LApp<Evaluate<LApp<Evaluate<LApp<LFoldr, F>>, Z>>, T>>,
     > as Eval>::Output;
 }
 

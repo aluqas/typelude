@@ -5,8 +5,8 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::{Apply, Eval, Evaluate};
 use typelude_std::{
+    core::{Apply, Eval, Evaluate},
     model::prim::bool::{False, True},
     std::col::array::Array,
 };
@@ -93,18 +93,15 @@ where
     First: Apply<S, Output = typelude_std::lambda::church::LPair2<Val, NextState>>,
     Val: Eval,
     NextState: Eval,
-
     // Apply Second to NextState (Pre-Evaluated/Normalized)
-    // We already have NextState as a type variable, so it is "Evaluated" in the sense that it's extracted.
-    // If NextState comes from LPair2, it is usually already evaluated (since Actions return (Unit, State)).
-    // But to be safe and ensure normalization:
+    // We already have NextState as a type variable, so it is "Evaluated" in the sense that it's
+    // extracted. If NextState comes from LPair2, it is usually already evaluated (since
+    // Actions return (Unit, State)). But to be safe and ensure normalization:
     Evaluate<NextState>: Eval,
     Second: Apply<Evaluate<NextState>>,
 {
     type Output = <Second as Apply<Evaluate<NextState>>>::Output;
 }
-
-
 
 // LoopGen<C, B> Loop -> Action
 impl<CondAction, BodyAction, Loop> Apply<Loop> for LoopGen<CondAction, BodyAction> {

@@ -35,6 +35,7 @@ fn parse_unary(input: ParseStream) -> Result<DslType> {
     if input.peek(Token![~]) {
         input.parse::<Token![~]>()?;
         let inner = parse_unary(input)?;
+
         Ok(DslType::Evaluate(Box::new(inner)))
     } else if input.peek(token::Paren) {
         let content;

@@ -12,10 +12,7 @@ use std::marker::PhantomData;
 use typelude_std::core::{Eval, Evaluate};
 
 use super::bool::{LFalse, LTrue};
-use crate::{
-    impl_eval_for_lambda, impl_eval_for_lambda_generic,
-    lambda::LApp,
-};
+use crate::{impl_eval_for_lambda, impl_eval_for_lambda_generic, lambda::LApp};
 /// Pure While combinator (curried).
 ///
 /// Semantics: `while pred body state = if (pred state) then while pred body
@@ -62,8 +59,7 @@ where
     // while pred body newState -> result (recursive call)
     LApp<LWhile2<Pred, Body>, Evaluate<LApp<Body, State>>>: Eval,
 {
-    type Output =
-        Evaluate<LApp<LWhile2<Pred, Body>, Evaluate<LApp<Body, State>>>>;
+    type Output = Evaluate<LApp<LWhile2<Pred, Body>, Evaluate<LApp<Body, State>>>>;
 }
 
 // Condition == LFalse: Return current state
@@ -79,8 +75,7 @@ where
     LApp<Pred, State>: Eval,
     Evaluate<LApp<Pred, State>>: LWhileHelper<Pred, Body, State>,
 {
-    type Output =
-        <Evaluate<LApp<Pred, State>> as LWhileHelper<Pred, Body, State>>::Output;
+    type Output = <Evaluate<LApp<Pred, State>> as LWhileHelper<Pred, Body, State>>::Output;
 }
 /// Pure For combinator: iterate over Church list, applying function to each
 /// element.

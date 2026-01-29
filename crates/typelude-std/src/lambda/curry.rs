@@ -5,10 +5,9 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::{Eval, Evaluate};
+use typelude_std::core::{Apply, Eval, Evaluate};
 
 use super::{LApp, church::LPair2};
-use typelude_std::core::Apply;
 /// Curry a function that takes a tuple into a curried function.
 ///
 /// `Curry<F>` transforms `F: Apply<Pair<A, B>>` into a two-argument curried

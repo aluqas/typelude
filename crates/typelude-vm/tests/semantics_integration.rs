@@ -9,13 +9,12 @@ mod tests {
         std::col::array::Nil,
         tyarray,
     };
-    use typenum::{U1, U2, U3};
-
     use typelude_vm::machine::{
         compiler::{Compile, ToAction},
         instruction::{OpAdd, OpPush},
         semantics::{monad::Unit, state::VmState},
     };
+    use typenum::{U1, U2, U3};
     // Define aliases for clarity
     type EmptyState = VmState<Nil, Nil, Nil, Nil>;
     type Stack<S> = VmState<S, Nil, Nil, Nil>;

@@ -43,7 +43,6 @@ where
     type Output = <F as TyFn<Arg>>::Output;
 }
 
-
 /// Marker trait for Natural Numbers (Unsigned Integers).
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a valid Type-Level Natural Number",

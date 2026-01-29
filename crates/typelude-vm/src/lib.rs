@@ -5,4 +5,4 @@
 pub mod machine;
 
 // Re-export typelude-core for internal use consistency if needed
-pub use typelude_std::core as core;
+pub use typelude_std::core;

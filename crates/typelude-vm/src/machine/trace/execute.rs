@@ -464,7 +464,8 @@ where
     typelude_std::std::array::EIsEmpty<ELit<P>>: Eval,
     typelude_std::std::ops::ENot<typelude_std::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
-    type Output = Evaluate<typelude_std::std::ops::ENot<typelude_std::std::array::EIsEmpty<ELit<P>>>>;
+    type Output =
+        Evaluate<typelude_std::std::ops::ENot<typelude_std::std::array::EIsEmpty<ELit<P>>>>;
 }
 
 /// Runner for traced execution

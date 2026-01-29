@@ -442,12 +442,24 @@ impl<Op, Acc> FoldHelper<Op, Acc> for Nil {
 
 impl<Op, Acc, Head, Tail> FoldHelper<Op, Acc> for Array<Head, Tail>
 where
-    EApp<ELit<Op>, ELit<typelude_std::core::ECons<Acc, typelude_std::core::ECons<Head, typelude_std::core::ENil>>>>:
-        Eval,
+    EApp<
+        ELit<Op>,
+        ELit<
+            typelude_std::core::ECons<
+                Acc,
+                typelude_std::core::ECons<Head, typelude_std::core::ENil>,
+            >,
+        >,
+    >: Eval,
     Evaluate<
         EApp<
             ELit<Op>,
-            ELit<typelude_std::core::ECons<Acc, typelude_std::core::ECons<Head, typelude_std::core::ENil>>>,
+            ELit<
+                typelude_std::core::ECons<
+                    Acc,
+                    typelude_std::core::ECons<Head, typelude_std::core::ENil>,
+                >,
+            >,
         >,
     >: Eval,
     Tail: IsList
@@ -457,7 +469,12 @@ where
                 Evaluate<
                     EApp<
                         ELit<Op>,
-                        ELit<typelude_std::core::ECons<Acc, typelude_std::core::ECons<Head, typelude_std::core::ENil>>>,
+                        ELit<
+                            typelude_std::core::ECons<
+                                Acc,
+                                typelude_std::core::ECons<Head, typelude_std::core::ENil>,
+                            >,
+                        >,
                     >,
                 >,
             >,
@@ -470,7 +487,12 @@ where
             Evaluate<
                 EApp<
                     ELit<Op>,
-                    ELit<typelude_std::core::ECons<Acc, typelude_std::core::ECons<Head, typelude_std::core::ENil>>>,
+                    ELit<
+                        typelude_std::core::ECons<
+                            Acc,
+                            typelude_std::core::ECons<Head, typelude_std::core::ENil>,
+                        >,
+                    >,
                 >,
             >,
         >,
@@ -797,11 +819,10 @@ def_op! {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_std::core::ELit;
+    use typelude_std::core::{Apply, ELit};
     use typenum::{U0, U1, U2, U4, U10, U12};
 
     use super::*;
-    use typelude_std::core::Apply;
     use crate::{
         std::{
             ops::From,
@@ -923,8 +944,12 @@ mod tests {
         // Sum: (Acc, Elem) -> Acc + Elem
         struct FnSum;
         impl<Acc, Elem>
-            Apply<typelude_std::core::ECons<Acc, typelude_std::core::ECons<Elem, typelude_std::core::ENil>>>
-            for FnSum
+            Apply<
+                typelude_std::core::ECons<
+                    Acc,
+                    typelude_std::core::ECons<Elem, typelude_std::core::ENil>,
+                >,
+            > for FnSum
         where
             Acc: std::ops::Add<Elem>,
         {

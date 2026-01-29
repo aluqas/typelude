@@ -5,12 +5,11 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::{Eval, Evaluate};
 use typelude_std::{
+    core::{Apply, Eval, Evaluate},
     lambda::church::LPair2,
     std::col::array::Array,
 };
-use typelude_std::core::Apply;
 
 use crate::machine::semantics::{monad::Unit, state::VmState};
 
@@ -80,16 +79,6 @@ where
 {
     type Output = LPair2<
         Unit,
-        VmState<
-            Array<
-                Evaluate<
-                    <Op as Apply<(Lhs, Rhs)>>::Output,
-                >,
-                Evaluate<Rest>,
-            >,
-            L,
-            M,
-            C,
-        >,
+        VmState<Array<Evaluate<<Op as Apply<(Lhs, Rhs)>>::Output>, Evaluate<Rest>>, L, M, C>,
     >;
 }

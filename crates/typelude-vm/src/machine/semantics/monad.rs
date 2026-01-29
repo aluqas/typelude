@@ -5,13 +5,11 @@
 
 use std::marker::PhantomData;
 
-pub use typelude_std::lambda::monads::state::{
-    LBindGet, LBindPut, LBindState, LGet, LPut, LReturn, LState, Unit,
+use typelude_std::core::{Apply, Eval, Evaluate};
+pub use typelude_std::lambda::{
+    monads::state::{LBindGet, LBindPut, LBindState, LGet, LPut, LReturn, LState, Unit},
+    traits::LBind,
 };
-pub use typelude_std::lambda::traits::LBind;
-use typelude_std::core::Apply;
-
-use typelude_std::core::{Eval, Evaluate};
 
 // =============================================================================
 // LModify
@@ -39,6 +37,7 @@ where
 // In typelude, "State Actions" are usually just the Eval-driven `S -> (A, S)`.
 // But `LState<T>` wrapper exists to tag them.
 // Let's rely on the Eval signature.
-// If we need explicit `LState` wrapping, we can add `type ActionModify<F> = LState<LModify<F>>`.
+// If we need explicit `LState` wrapping, we can add `type ActionModify<F> =
+// LState<LModify<F>>`.
 
 pub type ActionModify<F> = LState<LModify<F>>;
