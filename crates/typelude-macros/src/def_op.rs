@@ -161,7 +161,7 @@ impl DefOpInput {
                 let eval_bounds: Vec<_> = args
                     .iter()
                     .map(|arg| {
-                        quote! { #arg: typelude_core::Eval }
+                        quote! { #arg: typelude_std::core::Eval }
                     })
                     .collect();
 
@@ -181,7 +181,7 @@ impl DefOpInput {
                     pub struct #ast_name<#(#args),*>(::std::marker::PhantomData<#phantom_args>);
 
                     // 2. Implement Eval for AST
-                    impl<#(#args),*> typelude_core::Eval for #ast_name<#(#args),*>
+                    impl<#(#args),*> typelude_std::core::Eval for #ast_name<#(#args),*>
                     where
                         #(#eval_bounds,)*
                         #(#user_bounds,)*
@@ -195,11 +195,11 @@ impl DefOpInput {
                     pub struct #op_name;
 
                     // 4. Implement Apply for Op struct (Tuple args -> AST)
-                    impl<#(#args),*> typelude_core::Apply<(#(#args),*)> for #op_name {
+                    impl<#(#args),*> typelude_std::core::Apply<(#(#args),*)> for #op_name {
                         type Output = #ast_name<#(#args),*>;
                     }
                 }
-            }
+            },
         }
     }
 }

@@ -1,9 +1,9 @@
 pub mod expr;
 pub mod impls;
-pub mod list;
+pub mod col;
 
 pub use expr::*;
-pub use list::*;
+pub use col::*;
 
 #[diagnostic::on_unimplemented(
     message = "`{Self}` cannot be applied to argument `{Arg}`",

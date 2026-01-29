@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{EApp, ELit, Eval, Evaluate};
+use typelude_std::core::{EApp, ELit, Eval, Evaluate};
 
 use crate::std::prim::bool::{False, True};
 /// Type-level `Some<T>` — wraps a value

@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::Eval;
+use typelude_std::core::Eval;
 
 /// Marker Trait for TreeMap (key-value tree)
 pub trait IsTreeMap {}

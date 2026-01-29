@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use typelude_core::Eval;
+use typelude_std::core::Eval;
 use typelude_std::std::trace::Trace;
 
 #[derive(Debug)]

@@ -2,7 +2,7 @@
 //!
 //! Implementation of comparison operations using `typenum`.
 
-use typelude_core::Evaluate;
+use typelude_std::core::Evaluate;
 use typelude_macros::def_op;
 use typenum::{Bit, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
@@ -143,7 +143,7 @@ def_op! {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::ELit;
+    use typelude_std::core::ELit;
     use typenum::{N1, P1, P2, U1, U2};
 
     use super::*;

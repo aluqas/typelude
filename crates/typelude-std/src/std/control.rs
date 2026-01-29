@@ -17,7 +17,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{EApp, Eval, Evaluate};
+use typelude_std::core::{EApp, Eval, Evaluate};
 
 use crate::{
     lambda::{
@@ -134,7 +134,7 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::ELit;
+    use typelude_std::core::ELit;
     use typenum::{U0, U1};
 
     use super::*;

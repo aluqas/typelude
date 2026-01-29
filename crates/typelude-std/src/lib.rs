@@ -4,6 +4,8 @@
 #![allow(incomplete_features)]
 #![recursion_limit = "65536"]
 
+extern crate self as typelude_std;
+
 #[macro_use]
 pub mod macros;
 
@@ -17,5 +19,7 @@ pub mod std;
 pub use std::traits;
 
 pub use paste;
-pub use typelude_core::{self, Eval, Evaluate};
+pub mod core;
+// pub use typelude_std::core::{self, Eval, Evaluate};
+pub use core::{Apply, Eval, Evaluate};
 pub use typenum;

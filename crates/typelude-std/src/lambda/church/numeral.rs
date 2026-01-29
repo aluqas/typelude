@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate};
 
 use crate::{
     impl_eval_for_lambda, impl_eval_for_lambda_generic,

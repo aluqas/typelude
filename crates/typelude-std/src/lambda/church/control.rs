@@ -9,7 +9,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate};
 
 use super::bool::{LFalse, LTrue};
 use crate::{

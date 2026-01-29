@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::Eval;
+use typelude_std::core::Eval;
 
 /// Machine State
 /// - `Stack`: Calculation Stack (Array)

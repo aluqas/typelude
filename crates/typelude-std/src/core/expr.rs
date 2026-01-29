@@ -61,30 +61,3 @@ where
 {
     type Output = <Evaluate<EApp<Ef, Ea>> as Apply<A>>::Output;
 }
-
-/// **Call-by-Name Application**: `ELazyApp<Ef, Ea>`
-///
-/// 1. Evaluate `Ef` -> `F_val`
-/// 2. Apply `F_val` to `Ea` (unevaluated) -> `Result`
-pub struct ELazyApp<Ef, Ea>(PhantomData<(Ef, Ea)>);
-
-impl<Ef, Ea> Eval for ELazyApp<Ef, Ea>
-where
-    Ef: Eval,
-    Evaluate<Ef>: Apply<Ea>,
-{
-    type Output = <Evaluate<Ef> as Apply<Ea>>::Output;
-}
-
-/// **Pure Application Wrapper**: `EPureApp<F, A>`
-///
-/// Simply runs `Apply`. Result is NOT re-evaluated.
-/// `Evaluate<EPureApp<F, A>>` = `F::Output`.
-pub struct EPureApp<F, A>(PhantomData<(F, A)>);
-
-impl<F, A> Eval for EPureApp<F, A>
-where
-    F: Apply<A>,
-{
-    type Output = <F as Apply<A>>::Output;
-}

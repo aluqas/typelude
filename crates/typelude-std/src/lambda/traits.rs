@@ -4,14 +4,14 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::Evaluate;
+// use typelude_std::core::Evaluate;
 
 /// Macro to implement Eval for a Lambda value type.
 /// Usage: `impl_eval_for_lambda!(MyStruct);`
 #[macro_export]
 macro_rules! impl_eval_for_lambda {
     ($t:ty) => {
-        impl $crate::typelude_core::Eval for $t {
+        impl $crate::typelude_std::core::Eval for $t {
             type Output = $t;
         }
     };
@@ -22,7 +22,7 @@ macro_rules! impl_eval_for_lambda {
 #[macro_export]
 macro_rules! impl_eval_for_lambda_generic {
     ($t:ident, [$($p:ident),+]) => {
-        impl<$($p),+> $crate::typelude_core::Eval for $t<$($p),+>
+        impl<$($p),+> $crate::typelude_std::core::Eval for $t<$($p),+>
         {
             type Output = $t<$($p),+>;
         }
@@ -33,8 +33,6 @@ macro_rules! impl_eval_for_lambda_generic {
 /// Represents the application of function `F` to argument `A`.
 /// This struct is used with the `Eval` pattern.
 pub struct LApp<F, A>(PhantomData<(F, A)>);
-/// Type-level application result: `Apply<F, A> = Evaluate<LApp<F, A>>`.
-// pub type Apply<F, A> = Evaluate<LApp<F, A>>; // Deprecated/Removed to avoid conflict with core::Apply trait
 /// Bind Trait: `m >>= f`
 pub trait LBind<F> {
     type Output;

@@ -5,7 +5,7 @@
 use std::ops::Add;
 
 use static_assertions::assert_type_eq_all;
-use typelude_core::Evaluate;
+use typelude_std::core::Evaluate;
 use typelude_macros::def_op;
 use typenum::{U1, U2, U3, U5, U6, U12, U42};
 
@@ -23,7 +23,7 @@ def_op! {
 
 #[test]
 fn test_ast_pattern_add() {
-    use typelude_core::ELit;
+    use typelude_std::core::ELit;
     // Evaluate computes result
     type Result = Evaluate<TestEAdd<ELit<U1>, ELit<U2>>>;
     assert_type_eq_all!(Result, U3);
@@ -40,7 +40,7 @@ def_op! {
 
 #[test]
 fn test_ast_pattern_unary() {
-    use typelude_core::ELit;
+    use typelude_std::core::ELit;
     type Result = Evaluate<TestEId<ELit<U42>>>;
     assert_type_eq_all!(Result, U42);
 }
@@ -71,7 +71,7 @@ def_op! {
 
 #[test]
 fn test_complex_bounds() {
-    use typelude_core::ELit;
+    use typelude_std::core::ELit;
     type R1 = Evaluate<TestEMul<ELit<U3>, ELit<U2>>>;
     assert_type_eq_all!(R1, U6);
 
@@ -80,7 +80,7 @@ fn test_complex_bounds() {
 }
 #[test]
 fn test_nested_evaluation() {
-    use typelude_core::ELit;
+    use typelude_std::core::ELit;
     // (1 + 2) + 3 = 6
     type Inner = TestEAdd<ELit<U1>, ELit<U2>>;
     type Outer = TestEAdd<Inner, ELit<U3>>;

@@ -20,7 +20,7 @@
 //! This "Adapter Pattern" allows the core logic to remain agnostic of the
 //! underlying concrete types.
 
-use typelude_core::ELit;
+use typelude_std::core::ELit;
 
 /// Trait representing a function
 ///

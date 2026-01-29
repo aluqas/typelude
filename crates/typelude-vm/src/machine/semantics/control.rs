@@ -5,7 +5,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Apply, Eval, Evaluate};
+use typelude_std::core::{Apply, Eval, Evaluate};
 use typelude_std::{
     model::prim::bool::{False, True},
     std::col::array::Array,

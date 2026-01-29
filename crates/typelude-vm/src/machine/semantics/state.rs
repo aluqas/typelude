@@ -5,7 +5,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Apply, Eval, Evaluate};
+use typelude_std::core::{Apply, Eval, Evaluate};
 
 // =============================================================================
 // Machine State Definition

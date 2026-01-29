@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod debug_tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::ELit;
+    use typelude_std::core::ELit;
     use typelude_std::tyarray;
     use typenum::{B0, B1, U0, U3};
 

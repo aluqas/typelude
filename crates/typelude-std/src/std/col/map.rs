@@ -2,7 +2,7 @@
 //!
 //! Type-level associative map (key-value store) and its operations.
 
-use typelude_core::Evaluate;
+use typelude_std::core::Evaluate;
 use typelude_macros::def_op;
 use typenum::{B0, B1, Bit, IsEqual};
 

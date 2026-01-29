@@ -2,7 +2,7 @@
 //!
 //! Implements machine instruction execution logic with history tracking.
 
-use typelude_core::{Apply, ELit, Eval, Evaluate};
+use typelude_std::core::{Apply, ELit, Eval, Evaluate};
 #[cfg(feature = "nightly")]
 use typelude_std::std::ops::{OpEq, OpNeq};
 use typelude_std::{

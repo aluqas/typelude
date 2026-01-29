@@ -128,7 +128,7 @@ where
     }
 }
 
-impl<T: Trace> Trace for typelude_core::ELit<T> {
+impl<T: Trace> Trace for typelude_std::core::ELit<T> {
     fn fmt() -> String {
         T::fmt()
     }

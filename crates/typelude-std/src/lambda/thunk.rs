@@ -10,7 +10,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate};
 
 use crate::lambda::LApp;
 /// Thunk: Represents a delayed application of `F` to `Arg`.
@@ -40,7 +40,7 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::Evaluate;
+    use typelude_std::core::Evaluate;
 
     use super::*; // Imported here for tests
 

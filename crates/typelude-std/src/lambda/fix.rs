@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate};
 
 use super::LApp;
 /// The Fixed-Point Combinator `Fix`
@@ -27,7 +27,7 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::Evaluate; // Imported here for tests
+    use typelude_std::core::Evaluate; // Imported here for tests
 
     use super::*;
     use crate::lambda::church::{LFalse, LTrue};

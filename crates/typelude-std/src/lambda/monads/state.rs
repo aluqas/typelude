@@ -4,10 +4,10 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate};
 
 use crate::lambda::{LApp, church::LPair2, traits::LBind};
-use typelude_core::Apply;
+use typelude_std::core::Apply;
 
 // Macro to implement Eval for terms (they evaluate to themselves)
 macro_rules! impl_eval_term {

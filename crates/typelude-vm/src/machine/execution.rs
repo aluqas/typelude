@@ -2,7 +2,7 @@
 //!
 //! Implements machine instruction execution logic and main loop.
 
-use typelude_core::{Apply, ELit, Eval, Evaluate};
+use typelude_std::core::{Apply, ELit, Eval, Evaluate};
 #[allow(unused_imports)]
 use typelude_std::std::int;
 use typelude_std::{

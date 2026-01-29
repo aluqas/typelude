@@ -506,17 +506,9 @@ name = "typelude"
 version = "0.1.0"
 dependencies = [
  "static_assertions",
- "typelude-core",
  "typelude-macros",
  "typelude-std",
  "typelude-vm",
- "typenum",
-]
-
-[[package]]
-name = "typelude-core"
-version = "0.1.0"
-dependencies = [
  "typenum",
 ]
 
@@ -542,7 +534,6 @@ dependencies = [
  "static_assertions",
  "trybuild",
  "tstr",
- "typelude-core",
  "typelude-macros",
  "typenum",
 ]
@@ -554,7 +545,6 @@ dependencies = [
  "derive_more",
  "paste",
  "static_assertions",
- "typelude-core",
  "typelude-std",
  "typenum",
 ]
