@@ -2,26 +2,15 @@
 macro_rules! define_arith_op {
     ($op_name:ident, $trait:path, $doc:literal) => {
         $crate::paste::paste! {
-            // Expression Struct
-            pub struct [<E $op_name>]<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
-
-            // Updated: Uses $trait (TypeAdd, etc.) instead of typenum traits
-            impl<Lhs, Rhs> $crate::core::Eval for [<E $op_name>]<Lhs, Rhs>
-            where
-                Lhs: $crate::core::Eval,
-                Rhs: $crate::core::Eval,
-                $crate::core::Evaluate<Lhs>: $trait<$crate::core::Evaluate<Rhs>>,
-            {
-                type Output = <$crate::core::Evaluate<Lhs> as $trait<$crate::core::Evaluate<Rhs>>>::Output;
-            }
-
-            // Op Struct
-            #[derive(Clone, Copy)]
-            pub struct [<Op $op_name>];
-
-            // Apply Implementation
-            impl<Lhs, Rhs> $crate::core::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
-                type Output = [<E $op_name>]<Lhs, Rhs>;
+            $crate::typelude_macros::ty_fn! {
+                #[doc = $doc]
+                pub struct [<E $op_name>]<Lhs, Rhs>
+                where
+                    Lhs, Rhs,
+                    ~Lhs: $trait<~Rhs>
+                {
+                    type Output = <~Lhs as $trait<~Rhs>>::Output;
+                }
             }
         }
     };
@@ -31,26 +20,16 @@ macro_rules! define_arith_op {
 macro_rules! define_logic_op {
     ($op_name:ident, $trait:path, $method:ident, $doc:literal) => {
         $crate::paste::paste! {
-            // Expression Struct
-            pub struct [<E $op_name>]<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
-
-            impl<Lhs, Rhs> $crate::core::Eval for [<E $op_name>]<Lhs, Rhs>
-            where
-                Lhs: $crate::core::Eval,
-                Rhs: $crate::core::Eval,
-                $crate::core::Evaluate<Lhs>: $trait,
-                $crate::core::Evaluate<Rhs>: $trait,
-            {
-                type Output = <$crate::core::Evaluate<Lhs> as $trait>::$method<$crate::core::Evaluate<Rhs>>;
-            }
-
-            // Op Struct
-            #[derive(Clone, Copy)]
-            pub struct [<Op $op_name>];
-
-            // Apply Implementation
-            impl<Lhs, Rhs> $crate::core::Apply<(Lhs, Rhs)> for [<Op $op_name>] {
-                type Output = [<E $op_name>]<Lhs, Rhs>;
+            $crate::typelude_macros::ty_fn! {
+                #[doc = $doc]
+                pub struct [<E $op_name>]<Lhs, Rhs>
+                where
+                    Lhs, Rhs,
+                    ~Lhs: $trait,
+                    ~Rhs: $trait
+                {
+                    type Output = <~Lhs as $trait>::$method<~Rhs>;
+                }
             }
         }
     };
@@ -60,24 +39,15 @@ macro_rules! define_logic_op {
 macro_rules! define_unary_logic_op {
     ($op_name:ident, $trait:path, $method:ident, $doc:literal) => {
         $crate::paste::paste! {
-            // Expression Struct
-            pub struct [<E $op_name>]<Val>(std::marker::PhantomData<Val>);
-
-            impl<Val> $crate::core::Eval for [<E $op_name>]<Val>
-            where
-                Val: $crate::core::Eval,
-                $crate::core::Evaluate<Val>: $trait,
-            {
-                type Output = <$crate::core::Evaluate<Val> as $trait>::$method;
-            }
-
-            // Op Struct
-            #[derive(Clone, Copy)]
-            pub struct [<Op $op_name>];
-
-            // Apply Implementation
-            impl<Val> $crate::core::Apply<Val> for [<Op $op_name>] {
-                type Output = [<E $op_name>]<Val>;
+            $crate::typelude_macros::ty_fn! {
+                #[doc = $doc]
+                pub struct [<E $op_name>]<Val>
+                where
+                    Val,
+                    ~Val: $trait
+                {
+                    type Output = <~Val as $trait>::$method;
+                }
             }
         }
     };

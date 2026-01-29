@@ -7,6 +7,8 @@ use std::marker::PhantomData;
 use typelude_std::core::{EApp, ELit, Eval, Evaluate};
 
 use crate::std::prim::bool::{False, True};
+use typelude_macros::ty_fn;
+
 /// Type-level `Some<T>` — wraps a value
 pub struct Some<T>(PhantomData<T>);
 
@@ -75,28 +77,62 @@ where
 impl<Op> OptionMap<Op> for None {
     type Output = None;
 }
-/// Expression: Unwrap an option
-pub struct EUnwrap<Opt>(PhantomData<Opt>);
 
-impl<Opt> Eval for EUnwrap<Opt>
-where
-    Opt: Eval,
-    Evaluate<Opt>: Unwrap,
-{
-    type Output = <Evaluate<Opt> as Unwrap>::Output;
+ty_fn! {
+    /// Expression: Unwrap an option
+    pub struct EUnwrap<Opt>
+    where
+        Opt,
+        ~Opt: Unwrap
+    {
+        type Output = <~Opt as Unwrap>::Output;
+    }
 }
 
-/// Expression: Unwrap with default
-pub struct EUnwrapOr<Opt, Default>(PhantomData<(Opt, Default)>);
-
-impl<Opt, Default> Eval for EUnwrapOr<Opt, Default>
-where
-    Opt: Eval,
-    Default: Eval,
-    Evaluate<Opt>: UnwrapOr<Evaluate<Default>>,
-{
-    type Output = <Evaluate<Opt> as UnwrapOr<Evaluate<Default>>>::Output;
+ty_fn! {
+    /// Expression: Unwrap with default
+    pub struct EUnwrapOr<Opt, Default>
+    where
+        Opt, Default,
+        ~Opt: UnwrapOr<~Default>
+    {
+        type Output = <~Opt as UnwrapOr<~Default>>::Output;
+    }
 }
+
+ty_fn! {
+    /// Expression: Check if Option is Some
+    pub struct EIsSome<Opt>
+    where
+        Opt,
+        ~Opt: Option
+    {
+        type Output = <~Opt as Option>::IsSome;
+    }
+}
+
+ty_fn! {
+    /// Expression: Check if Option is None
+    pub struct EIsNone<Opt>
+    where
+        Opt,
+        ~Opt: Option
+    {
+        type Output = <~Opt as Option>::IsNone;
+    }
+}
+
+ty_fn! {
+    /// Expression: Map a function over an Option
+    pub struct EMap<Op, Opt>
+    where
+        Opt,
+        ~Opt: OptionMap<Op>
+    {
+        type Output = <~Opt as OptionMap<Op>>::Output;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
@@ -126,5 +162,17 @@ mod tests {
     fn test_is_some() {
         assert_type_eq_all!(<Some<U42> as Option>::IsSome, True);
         assert_type_eq_all!(<None as Option>::IsSome, False);
+    }
+
+    #[test]
+    fn test_exprs() {
+        use crate::core::ELit;
+        type S = ELit<Some<U42>>;
+        type N = ELit<None>;
+
+        assert_type_eq_all!(Evaluate<EUnwrap<S>>, U42);
+        assert_type_eq_all!(Evaluate<EUnwrapOr<N, ELit<typenum::U0>>>, typenum::U0);
+        assert_type_eq_all!(Evaluate<EIsSome<S>>, True);
+        assert_type_eq_all!(Evaluate<EIsNone<N>>, True);
     }
 }

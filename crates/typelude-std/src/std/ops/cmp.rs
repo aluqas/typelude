@@ -2,7 +2,7 @@
 //!
 //! Implementation of comparison operations using `typenum`.
 
-use typelude_macros::def_op;
+use typelude_macros::ty_fn;
 use typelude_std::core::Evaluate;
 use typenum::{Bit, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
@@ -51,95 +51,91 @@ impl ConstToBool<false> for () {
 pub type EqResult<L, R> = <() as ConstToBool<{ <L as IsEq<R>>::EQ }>>::Output;
 #[cfg(feature = "nightly")]
 pub type NeqResult<L, R> = <() as ConstToBool<{ !<L as IsEq<R>>::EQ }>>::Output;
+
 // Equality: A == B
 #[cfg(feature = "nightly")]
-def_op! {
+ty_fn! {
     /// Equality: A == B -> Bool
-    name: OpEq,
-    args: (Lhs, Rhs),
-    ast: EEq {
-        where: [
-            Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
-            (): ConstToBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
-        ],
-        type Output = EqResult<Evaluate<Lhs>, Evaluate<Rhs>>
+    pub struct EEq<Lhs, Rhs>
+    where
+        Lhs, Rhs,
+        ~Lhs: IsEq<~Rhs>,
+        (): ConstToBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
+    {
+        type Output = EqResult<~Lhs, ~Rhs>;
     }
 }
 
 // Inequality: A != B
 #[cfg(feature = "nightly")]
-def_op! {
+ty_fn! {
     /// Inequality: A != B -> Bool
-    name: OpNeq,
-    args: (Lhs, Rhs),
-    ast: ENeq {
-        where: [
-            Evaluate<Lhs>: IsEq<Evaluate<Rhs>>,
-            (): ConstToBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
-        ],
-        type Output = NeqResult<Evaluate<Lhs>, Evaluate<Rhs>>
+    pub struct ENeq<Lhs, Rhs>
+    where
+        Lhs, Rhs,
+        ~Lhs: IsEq<~Rhs>,
+        (): ConstToBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
+    {
+        type Output = NeqResult<~Lhs, ~Rhs>;
     }
 }
 
 // Less than: A < B
-def_op! {
+ty_fn! {
     /// Less than: A < B
-    name: OpLt,
-    args: (Lhs, Rhs),
-    ast: ELt {
-        where: [
-            Evaluate<Lhs>: IsLess<Evaluate<Rhs>>,
-            <Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output: Bit,
-            bool: From<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
-        ],
-        type Output = ToBoolOut<<Evaluate<Lhs> as IsLess<Evaluate<Rhs>>>::Output>
+    pub struct ELt<Lhs, Rhs>
+    where
+        Lhs, Rhs,
+        ~Lhs: IsLess<~Rhs>,
+        <~Lhs as IsLess<~Rhs>>::Output: Bit,
+        bool: From<<~Lhs as IsLess<~Rhs>>::Output>
+    {
+        type Output = ToBoolOut<<~Lhs as IsLess<~Rhs>>::Output>;
     }
 }
 
 // Less than or equal: A <= B
-def_op! {
+ty_fn! {
     /// Less than or equal: A <= B
-    name: OpLe,
-    args: (Lhs, Rhs),
-    ast: ELe {
-        where: [
-            Evaluate<Lhs>: IsLessOrEqual<Evaluate<Rhs>>,
-            <Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output: Bit,
-            bool: From<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
-        ],
-        type Output = ToBoolOut<<Evaluate<Lhs> as IsLessOrEqual<Evaluate<Rhs>>>::Output>
+    pub struct ELe<Lhs, Rhs>
+    where
+        Lhs, Rhs,
+        ~Lhs: IsLessOrEqual<~Rhs>,
+        <~Lhs as IsLessOrEqual<~Rhs>>::Output: Bit,
+        bool: From<<~Lhs as IsLessOrEqual<~Rhs>>::Output>
+    {
+        type Output = ToBoolOut<<~Lhs as IsLessOrEqual<~Rhs>>::Output>;
     }
 }
 
 // Greater than: A > B
-def_op! {
+ty_fn! {
     /// Greater than: A > B
-    name: OpGt,
-    args: (Lhs, Rhs),
-    ast: EGt {
-        where: [
-            Evaluate<Lhs>: IsGreater<Evaluate<Rhs>>,
-            <Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output: Bit,
-            bool: From<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
-        ],
-        type Output = ToBoolOut<<Evaluate<Lhs> as IsGreater<Evaluate<Rhs>>>::Output>
+    pub struct EGt<Lhs, Rhs>
+    where
+        Lhs, Rhs,
+        ~Lhs: IsGreater<~Rhs>,
+        <~Lhs as IsGreater<~Rhs>>::Output: Bit,
+        bool: From<<~Lhs as IsGreater<~Rhs>>::Output>
+    {
+        type Output = ToBoolOut<<~Lhs as IsGreater<~Rhs>>::Output>;
     }
 }
 
 // Greater than or equal: A >= B
-def_op! {
+ty_fn! {
     /// Greater than or equal: A >= B
-    name: OpGe,
-    args: (Lhs, Rhs),
-    ast: EGe {
-        where: [
-            Evaluate<Lhs>: IsGreaterOrEqual<Evaluate<Rhs>>,
-            <Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output: Bit,
-            bool: From<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
-        ],
-        type Output = ToBoolOut<<Evaluate<Lhs> as IsGreaterOrEqual<Evaluate<Rhs>>>::Output>
+    pub struct EGe<Lhs, Rhs>
+    where
+        Lhs, Rhs,
+        ~Lhs: IsGreaterOrEqual<~Rhs>,
+        <~Lhs as IsGreaterOrEqual<~Rhs>>::Output: Bit,
+        bool: From<<~Lhs as IsGreaterOrEqual<~Rhs>>::Output>
+    {
+        type Output = ToBoolOut<<~Lhs as IsGreaterOrEqual<~Rhs>>::Output>;
     }
 }
+
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;

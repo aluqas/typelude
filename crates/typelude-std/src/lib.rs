@@ -19,6 +19,9 @@ pub mod std;
 pub use std::traits;
 
 pub use paste;
+// Re-export macros crate for use in macros.rs
+pub use typelude_macros;
+
 pub mod core;
 // pub use typelude_std::core::{self, Eval, Evaluate};
 pub use core::{Apply, Eval, Evaluate};

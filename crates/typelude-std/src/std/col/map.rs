@@ -2,7 +2,7 @@
 //!
 //! Type-level associative map (key-value store) and its operations.
 
-use typelude_macros::def_op;
+use typelude_macros::ty_fn;
 use typelude_std::core::Evaluate;
 use typenum::{B0, B1, Bit, IsEqual};
 
@@ -160,63 +160,58 @@ where
     type Output = <<T as MapLen>::Output as std::ops::Add<typenum::B1>>::Output;
 }
 
-def_op! {
+ty_fn! {
     /// Get value from map by key
-    name: DefMapGet,
-    args: (Map, Key),
-    ast: EMapGet {
-        where: [
-            Evaluate<Map>: MapGet<Evaluate<Key>>
-        ],
-        type Output = <Evaluate<Map> as MapGet<Evaluate<Key>>>::Output
+    pub struct EMapGet<Map, Key>
+    where
+        Map, Key,
+        ~Map: MapGet<~Key>
+    {
+        type Output = <~Map as MapGet<~Key>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Insert key-value pair into map
-    name: DefMapInsert,
-    args: (Map, Key, Value),
-    ast: EMapInsert {
-        where: [
-            Evaluate<Map>: MapInsert<Evaluate<Key>, Evaluate<Value>>
-        ],
-        type Output = <Evaluate<Map> as MapInsert<Evaluate<Key>, Evaluate<Value>>>::Output
+    pub struct EMapInsert<Map, Key, Value>
+    where
+        Map, Key, Value,
+        ~Map: MapInsert<~Key, ~Value>
+    {
+        type Output = <~Map as MapInsert<~Key, ~Value>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Check if map contains key
-    name: DefMapContains,
-    args: (Map, Key),
-    ast: EMapContains {
-        where: [
-            Evaluate<Map>: MapContains<Evaluate<Key>>
-        ],
-        type Output = <Evaluate<Map> as MapContains<Evaluate<Key>>>::Output
+    pub struct EMapContains<Map, Key>
+    where
+        Map, Key,
+        ~Map: MapContains<~Key>
+    {
+        type Output = <~Map as MapContains<~Key>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Get all keys from map
-    name: DefMapKeys,
-    args: (Map),
-    ast: EMapKeys {
-        where: [
-            Evaluate<Map>: MapKeys
-        ],
-        type Output = <Evaluate<Map> as MapKeys>::Output
+    pub struct EMapKeys<Map>
+    where
+        Map,
+        ~Map: MapKeys
+    {
+        type Output = <~Map as MapKeys>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Get all values from map
-    name: DefMapValues,
-    args: (Map),
-    ast: EMapValues {
-        where: [
-            Evaluate<Map>: MapValues
-        ],
-        type Output = <Evaluate<Map> as MapValues>::Output
+    pub struct EMapValues<Map>
+    where
+        Map,
+        ~Map: MapValues
+    {
+        type Output = <~Map as MapValues>::Output;
     }
 }
 
