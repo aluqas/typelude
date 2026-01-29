@@ -2,7 +2,7 @@
 //!
 //! Key-Value binary search tree (sorted map).
 
-use typelude_macros::def_op;
+use typelude_macros::ty_fn;
 use typelude_std::core::Evaluate;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
 
@@ -278,39 +278,36 @@ where
     >>::Output;
 }
 
-def_op! {
+ty_fn! {
     /// Insert key-value pair into TreeMap
-    name: DefTreeMapInsert,
-    args: (Tree, Key, Value),
-    ast: ETreeMapInsert {
-        where: [
-            Evaluate<Tree>: TreeMapInsert<Evaluate<Key>, Evaluate<Value>>
-        ],
-        type Output = <Evaluate<Tree> as TreeMapInsert<Evaluate<Key>, Evaluate<Value>>>::Output
+    pub struct ETreeMapInsert<Tree, Key, Value>
+    where
+        Tree, Key, Value,
+        ~Tree: TreeMapInsert<~Key, ~Value>
+    {
+        type Output = <~Tree as TreeMapInsert<~Key, ~Value>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Get value by key from TreeMap
-    name: DefTreeMapGet,
-    args: (Tree, Key),
-    ast: ETreeMapGet {
-        where: [
-            Evaluate<Tree>: TreeMapGet<Evaluate<Key>>
-        ],
-        type Output = <Evaluate<Tree> as TreeMapGet<Evaluate<Key>>>::Output
+    pub struct ETreeMapGet<Tree, Key>
+    where
+        Tree, Key,
+        ~Tree: TreeMapGet<~Key>
+    {
+        type Output = <~Tree as TreeMapGet<~Key>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Check if TreeMap contains key
-    name: DefTreeMapContains,
-    args: (Tree, Key),
-    ast: ETreeMapContains {
-        where: [
-            Evaluate<Tree>: TreeMapContains<Evaluate<Key>>
-        ],
-        type Output = <Evaluate<Tree> as TreeMapContains<Evaluate<Key>>>::Output
+    pub struct ETreeMapContains<Tree, Key>
+    where
+        Tree, Key,
+        ~Tree: TreeMapContains<~Key>
+    {
+        type Output = <~Tree as TreeMapContains<~Key>>::Output;
     }
 }
 

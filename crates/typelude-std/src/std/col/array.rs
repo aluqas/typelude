@@ -175,160 +175,150 @@ where
 {
     const VALUE: bool = <Head as IsEq<Elem>>::EQ || <Tail as Contains<Elem>>::VALUE;
 }
-use typelude_macros::def_op;
+use typelude_macros::ty_fn;
 
 // --- Basic Array Operations ---
 
-def_op! {
+ty_fn! {
     /// Get the length of an array
-    name: DefLen,
-    args: (Arr),
-    ast: ELen {
-        where: [
-            Evaluate<Arr>: Len
-        ],
-        type Output = <Evaluate<Arr> as Len>::Output
+    pub struct ELen<Arr>
+    where
+        Arr,
+        ~Arr: Len
+    {
+        type Output = <~Arr as Len>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Get the head (first element) of an array
-    name: DefHead,
-    args: (Arr),
-    ast: EHead {
-        where: [
-            Evaluate<Arr>: List
-        ],
-        type Output = <Evaluate<Arr> as List>::Head
+    pub struct EHead<Arr>
+    where
+        Arr,
+        ~Arr: List
+    {
+        type Output = <~Arr as List>::Head;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Get the tail (all but first) of an array
-    name: DefTail,
-    args: (Arr),
-    ast: ETail {
-        where: [
-            Evaluate<Arr>: List,
-            <Evaluate<Arr> as List>::Tail: Eval
-        ],
-        type Output = <Evaluate<Arr> as List>::Tail
+    pub struct ETail<Arr>
+    where
+        Arr,
+        ~Arr: List,
+        <~Arr as List>::Tail: Eval
+    {
+        type Output = <~Arr as List>::Tail;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Check if an array is empty
-    name: DefIsEmpty,
-    args: (Arr),
-    ast: EIsEmpty {
-        where: [
-            Evaluate<Arr>: IsEmpty
-        ],
-        type Output = <Evaluate<Arr> as IsEmpty>::Output
+    pub struct EIsEmpty<Arr>
+    where
+        Arr,
+        ~Arr: IsEmpty
+    {
+        type Output = <~Arr as IsEmpty>::Output;
     }
 }
 
 // --- Index Operations ---
 
-def_op! {
+ty_fn! {
     /// Get element at index
-    name: DefGet,
-    args: (Arr, Idx),
-    ast: EGet {
-        where: [
-            Evaluate<Idx>: Unsigned,
-            Evaluate<Arr>: Get<Evaluate<Idx>>
-        ],
-        type Output = <Evaluate<Arr> as Get<Evaluate<Idx>>>::Output
+    pub struct EGet<Arr, Idx>
+    where
+        Idx, Arr,
+        ~Idx: Unsigned,
+        ~Arr: Get<~Idx>
+    {
+        type Output = <~Arr as Get<~Idx>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Set element at index
-    name: DefSet,
-    args: (Arr, Idx, Val),
-    ast: ESet {
-        where: [
-            Evaluate<Idx>: Unsigned,
-            Evaluate<Arr>: Set<Evaluate<Idx>, Evaluate<Val>>
-        ],
-        type Output = <Evaluate<Arr> as Set<Evaluate<Idx>, Evaluate<Val>>>::Output
+    pub struct ESet<Arr, Idx, Val>
+    where
+        Idx, Arr, Val,
+        ~Idx: Unsigned,
+        ~Arr: Set<~Idx, ~Val>
+    {
+        type Output = <~Arr as Set<~Idx, ~Val>>::Output;
     }
 }
 
 // --- Concatenation Operations ---
 
-def_op! {
+ty_fn! {
     /// Concatenate two arrays
-    name: DefConcat,
-    args: (Lhs, Rhs),
-    ast: EConcat {
-        where: [
-            Evaluate<Rhs>: IsList,
-            Evaluate<Lhs>: Concat<Evaluate<Rhs>>
-        ],
-        type Output = <Evaluate<Lhs> as Concat<Evaluate<Rhs>>>::Output
+    pub struct EConcat<Lhs, Rhs>
+    where
+        Rhs, Lhs,
+        ~Rhs: IsList,
+        ~Lhs: Concat<~Rhs>
+    {
+        type Output = <~Lhs as Concat<~Rhs>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Append element to end of array
-    name: DefAppend,
-    args: (Arr, Elem),
-    ast: EAppend {
-        where: [
-            Evaluate<Arr>: Concat<Array<Evaluate<Elem>, Nil>>
-        ],
-        type Output = <Evaluate<Arr> as Concat<Array<Evaluate<Elem>, Nil>>>::Output
+    pub struct EAppend<Arr, Elem>
+    where
+        Arr, Elem,
+        ~Arr: Concat<Array<~Elem, Nil>>
+    {
+        type Output = <~Arr as Concat<Array<~Elem, Nil>>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Prepend element to start of array
-    name: DefPrepend,
-    args: (Elem, Arr),
-    ast: EPrepend {
-        where: [
-            Evaluate<Arr>: List
-        ],
-        type Output = <Evaluate<Arr> as List>::Cons<Evaluate<Elem>>
+    pub struct EPrepend<Elem, Arr>
+    where
+        Arr, Elem,
+        ~Arr: List
+    {
+        type Output = <~Arr as List>::Cons<~Elem>;
     }
 }
 
 // --- Higher-Order Operations (defined separately due to complex bounds) ---
 
 // --- EMap ---
-pub struct EMap<Op, List>(PhantomData<(Op, List)>);
-
-impl<Op, List> Eval for EMap<Op, List>
-where
-    List: Eval,
-    Evaluate<List>: MapHelper<Op>,
-{
-    type Output = <Evaluate<List> as MapHelper<Op>>::Output;
+ty_fn! {
+    pub struct EMap<Op, List>
+    where
+        List,
+        ~List: MapHelper<Op>
+    {
+        type Output = <~List as MapHelper<Op>>::Output;
+    }
 }
 
 // --- EFilter ---
-pub struct EFilter<Pred, List>(PhantomData<(Pred, List)>);
-
-impl<Pred, List> Eval for EFilter<Pred, List>
-where
-    List: Eval,
-    Evaluate<List>: FilterHelper<Pred>,
-{
-    type Output = <Evaluate<List> as FilterHelper<Pred>>::Output;
+ty_fn! {
+    pub struct EFilter<Pred, List>
+    where
+        List,
+        ~List: FilterHelper<Pred>
+    {
+        type Output = <~List as FilterHelper<Pred>>::Output;
+    }
 }
 
 // --- EFold ---
-pub struct EFold<Op, Init, List>(PhantomData<(Op, Init, List)>);
-
-impl<Op, Init, List> Eval for EFold<Op, Init, List>
-where
-    Init: Eval,
-    List: Eval,
-    Evaluate<List>: FoldHelper<Op, Evaluate<Init>>,
-{
-    type Output = <Evaluate<List> as FoldHelper<Op, Evaluate<Init>>>::Output;
+ty_fn! {
+    pub struct EFold<Op, Init, List>
+    where
+        Init, List,
+        ~List: FoldHelper<Op, ~Init>
+    {
+        type Output = <~List as FoldHelper<Op, ~Init>>::Output;
+    }
 }
 
 /// Expression to check if an array contains an element.
@@ -339,19 +329,15 @@ where
 /// type Res = Evaluate<EContains<ELit<tyarray![U1, U2]>, ELit<U1>>>; // True
 /// ```
 #[cfg(feature = "nightly")]
-pub struct EContains<Array, Elem>(PhantomData<(Array, Elem)>);
-
-#[cfg(feature = "nightly")]
-impl<Array, Elem> Eval for EContains<Array, Elem>
-where
-    Array: Eval,
-    Elem: Eval,
-    Evaluate<Array>: Contains<Evaluate<Elem>>,
-    (): crate::std::reify::ReflectBool<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>,
-{
-    type Output = Evaluate<
-        crate::std::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>,
-    >;
+ty_fn! {
+    pub struct EContains<Array, Elem>
+    where
+        Array, Elem,
+        ~Array: Contains<~Elem>,
+        (): crate::std::reify::ReflectBool<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>
+    {
+        type Output = ~crate::std::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>;
+    }
 }
 
 // --- Higher-Order Operations ---
@@ -721,101 +707,94 @@ where
 
 // --- RFC-0001 Phase 1: Expression definitions via def_op! ---
 
-def_op! {
+ty_fn! {
     /// Reverse a list
-    name: DefReverse,
-    args: (List),
-    ast: EReverse {
-        where: [
-            Evaluate<List>: Reverse
-        ],
-        type Output = <Evaluate<List> as Reverse>::Output
+    pub struct EReverse<List>
+    where
+        List,
+        ~List: Reverse
+    {
+        type Output = <~List as Reverse>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Take first N elements from a list
-    name: DefTake,
-    args: (N, List),
-    ast: ETake {
-        where: [
-            Evaluate<List>: Take<Evaluate<N>>
-        ],
-        type Output = <Evaluate<List> as Take<Evaluate<N>>>::Output
+    pub struct ETake<N, List>
+    where
+        N, List,
+        ~List: Take<~N>
+    {
+        type Output = <~List as Take<~N>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Drop first N elements from a list
-    name: DefDrop,
-    args: (N, List),
-    ast: EDrop {
-        where: [
-            Evaluate<List>: Drop<Evaluate<N>>
-        ],
-        type Output = <Evaluate<List> as Drop<Evaluate<N>>>::Output
+    pub struct EDrop<N, List>
+    where
+        N, List,
+        ~List: Drop<~N>
+    {
+        type Output = <~List as Drop<~N>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Get the last element of a list
-    name: DefLast,
-    args: (List),
-    ast: ELast {
-        where: [
-            Evaluate<List>: Last
-        ],
-        type Output = <Evaluate<List> as Last>::Output
+    pub struct ELast<List>
+    where
+        List,
+        ~List: Last
+    {
+        type Output = <~List as Last>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Zip two lists together pairwise
-    name: DefZip,
-    args: (L1, L2),
-    ast: EZip {
-        where: [
-            Evaluate<L1>: Zip<Evaluate<L2>>
-        ],
-        type Output = <Evaluate<L1> as Zip<Evaluate<L2>>>::Output
+    pub struct EZip<L1, L2>
+    where
+        L1, L2,
+        ~L1: Zip<~L2>
+    {
+        type Output = <~L1 as Zip<~L2>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Find first element matching predicate
-    name: DefFind,
-    args: (Pred, List),
-    ast: EFind {
-        where: [
-            Evaluate<List>: Find<Evaluate<Pred>>
-        ],
-        type Output = <Evaluate<List> as Find<Evaluate<Pred>>>::Output
+    pub struct EFind<Pred, List>
+    where
+        Pred, List,
+        ~List: Find<~Pred>
+    {
+        type Output = <~List as Find<~Pred>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// True if any element matches predicate
-    name: DefAny,
-    args: (Pred, List),
-    ast: EAny {
-        where: [
-            Evaluate<List>: Any<Evaluate<Pred>>
-        ],
-        type Output = <Evaluate<List> as Any<Evaluate<Pred>>>::Output
+    pub struct EAny<Pred, List>
+    where
+        Pred, List,
+        ~List: Any<~Pred>
+    {
+        type Output = <~List as Any<~Pred>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// True if all elements match predicate
-    name: DefAll,
-    args: (Pred, List),
-    ast: EAll {
-        where: [
-            Evaluate<List>: All<Evaluate<Pred>>
-        ],
-        type Output = <Evaluate<List> as All<Evaluate<Pred>>>::Output
+    pub struct EAll<Pred, List>
+    where
+        Pred, List,
+        ~List: All<~Pred>
+    {
+        type Output = <~List as All<~Pred>>::Output;
     }
 }
+
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;

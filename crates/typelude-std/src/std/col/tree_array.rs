@@ -2,7 +2,7 @@
 //!
 //! Value-only binary search tree (sorted set).
 
-use typelude_macros::def_op;
+use typelude_macros::ty_fn;
 use typelude_std::core::Evaluate;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
 
@@ -210,27 +210,25 @@ where
     >>::Output;
 }
 
-def_op! {
+ty_fn! {
     /// Insert value into TreeArray
-    name: DefTreeArrayInsert,
-    args: (Tree, Value),
-    ast: ETreeArrayInsert {
-        where: [
-            Evaluate<Tree>: TreeArrayInsert<Evaluate<Value>>
-        ],
-        type Output = <Evaluate<Tree> as TreeArrayInsert<Evaluate<Value>>>::Output
+    pub struct ETreeArrayInsert<Tree, Value>
+    where
+        Tree, Value,
+        ~Tree: TreeArrayInsert<~Value>
+    {
+        type Output = <~Tree as TreeArrayInsert<~Value>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Check if TreeArray contains value
-    name: DefTreeArrayContains,
-    args: (Tree, Value),
-    ast: ETreeArrayContains {
-        where: [
-            Evaluate<Tree>: TreeArrayContains<Evaluate<Value>>
-        ],
-        type Output = <Evaluate<Tree> as TreeArrayContains<Evaluate<Value>>>::Output
+    pub struct ETreeArrayContains<Tree, Value>
+    where
+        Tree, Value,
+        ~Tree: TreeArrayContains<~Value>
+    {
+        type Output = <~Tree as TreeArrayContains<~Value>>::Output;
     }
 }
 
