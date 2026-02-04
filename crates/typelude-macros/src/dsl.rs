@@ -8,6 +8,7 @@ use syn::{
 };
 
 /// Represents a type expression in the DSL.
+#[derive(Clone)]
 pub enum DslType {
     Base(Type),
     Path(DslPath),
@@ -236,7 +237,10 @@ impl ToTokens for DslType {
             DslType::Base(ty) => ty.to_tokens(tokens),
             DslType::Path(p) => p.to_tokens(tokens),
             DslType::Evaluate(inner) => {
-                let t = inner.as_ref();
+                let mut t = inner.as_ref();
+                while let DslType::Evaluate(inner2) = t {
+                    t = inner2.as_ref();
+                }
                 quote!(typelude_std::core::Evaluate<#t>).to_tokens(tokens);
             },
             DslType::BinaryOp(lhs, op, rhs) => {
@@ -320,16 +324,19 @@ impl ToTokens for DslType {
         }
     }
 }
+#[derive(Clone)]
 pub struct DslPath {
     pub leading_colon: Option<Token![::]>,
     pub segments: Punctuated<DslPathSegment, Token![::]>,
 }
 
+#[derive(Clone)]
 pub struct DslPathSegment {
     pub ident: Ident,
     pub args: DslGenericArguments,
 }
 
+#[derive(Clone)]
 pub enum DslGenericArguments {
     None,
     AngleBracketed(Punctuated<DslType, Token![,]>),
@@ -412,6 +419,7 @@ impl ToTokens for DslPathSegment {
         }
     }
 }
+#[derive(Clone)]
 pub enum DslBound {
     // T: Trait
     TraitBound {

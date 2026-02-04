@@ -31,33 +31,13 @@ impl<K, V> TreeMapInsert<K, V> for Nil {
 }
 
 #[doc(hidden)]
-pub trait TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right, IsEq, IsLessResult> {
-    type Output: IsTreeMap;
-}
-
-// K == NodeKey: Replace value
-impl<K, V, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap, IsLessResult>
-    TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right, B1, IsLessResult> for ()
-{
-    type Output = TreeMap<NodeKey, V, Left, Right>;
-}
-
-// K < NodeKey: go left
-impl<K, V, NodeKey, NodeValue, Left: IsTreeMap + TreeMapInsert<K, V>, Right: IsTreeMap>
-    TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right, B0, B1> for ()
-where
-    <Left as TreeMapInsert<K, V>>::Output: IsTreeMap,
-{
-    type Output = TreeMap<NodeKey, NodeValue, <Left as TreeMapInsert<K, V>>::Output, Right>;
-}
-
-// K > NodeKey: go right
-impl<K, V, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap + TreeMapInsert<K, V>>
-    TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right, B0, B0> for ()
-where
-    <Right as TreeMapInsert<K, V>>::Output: IsTreeMap,
-{
-    type Output = TreeMap<NodeKey, NodeValue, Left, <Right as TreeMapInsert<K, V>>::Output>;
+crate::helper_bit! {
+    pub trait TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right; IsEq, IsLessResult> for ();
+    on (B1, IsLessResult) where [Left: IsTreeMap, Right: IsTreeMap] => TreeMap<NodeKey, V, Left, Right>;
+    on (B0, B1) where [Left: IsTreeMap + TreeMapInsert<K, V>, Right: IsTreeMap, <Left as TreeMapInsert<K, V>>::Output: IsTreeMap]
+        => TreeMap<NodeKey, NodeValue, <Left as TreeMapInsert<K, V>>::Output, Right>;
+    on (B0, B0) where [Left: IsTreeMap, Right: IsTreeMap + TreeMapInsert<K, V>, <Right as TreeMapInsert<K, V>>::Output: IsTreeMap]
+        => TreeMap<NodeKey, NodeValue, Left, <Right as TreeMapInsert<K, V>>::Output>;
 }
 
 impl<K, V, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap> TreeMapInsert<K, V>
@@ -76,6 +56,16 @@ where
             <K as IsEqual<NodeKey>>::Output,
             <K as IsLess<NodeKey>>::Output,
         >,
+    <() as TreeMapInsertHelper<
+            K,
+            V,
+            NodeKey,
+            NodeValue,
+            Left,
+            Right,
+            <K as IsEqual<NodeKey>>::Output,
+            <K as IsLess<NodeKey>>::Output,
+        >>::Output: IsTreeMap,
 {
     type Output = <() as TreeMapInsertHelper<
         K,
@@ -101,29 +91,11 @@ impl<K> TreeMapGet<K> for Nil {
 }
 
 #[doc(hidden)]
-pub trait TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right, IsEq, IsLessResult> {
-    type Output;
-}
-
-// K == NodeKey: Found
-impl<K, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap, IsLessResult>
-    TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right, B1, IsLessResult> for ()
-{
-    type Output = Some<NodeValue>;
-}
-
-// K < NodeKey: search left
-impl<K, NodeKey, NodeValue, Left: IsTreeMap + TreeMapGet<K>, Right: IsTreeMap>
-    TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right, B0, B1> for ()
-{
-    type Output = <Left as TreeMapGet<K>>::Output;
-}
-
-// K > NodeKey: search right
-impl<K, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap + TreeMapGet<K>>
-    TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right, B0, B0> for ()
-{
-    type Output = <Right as TreeMapGet<K>>::Output;
+crate::helper_bit! {
+    pub trait TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right; IsEq, IsLessResult> for ();
+    on (B1, IsLessResult) => Some<NodeValue>;
+    on (B0, B1) where [Left: IsTreeMap + TreeMapGet<K>] => <Left as TreeMapGet<K>>::Output;
+    on (B0, B0) where [Right: IsTreeMap + TreeMapGet<K>] => <Right as TreeMapGet<K>>::Output;
 }
 
 impl<K, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap> TreeMapGet<K>
@@ -163,29 +135,11 @@ impl<K> TreeMapContains<K> for Nil {
 }
 
 #[doc(hidden)]
-pub trait TreeMapContainsHelper<K, NodeKey, Left, Right, IsEq, IsLessResult> {
-    type Output;
-}
-
-// K == NodeKey: found
-impl<K, NodeKey, Left: IsTreeMap, Right: IsTreeMap, IsLessResult>
-    TreeMapContainsHelper<K, NodeKey, Left, Right, B1, IsLessResult> for ()
-{
-    type Output = True;
-}
-
-// K < NodeKey: search left
-impl<K, NodeKey, Left: IsTreeMap + TreeMapContains<K>, Right: IsTreeMap>
-    TreeMapContainsHelper<K, NodeKey, Left, Right, B0, B1> for ()
-{
-    type Output = <Left as TreeMapContains<K>>::Output;
-}
-
-// K > NodeKey: search right
-impl<K, NodeKey, Left: IsTreeMap, Right: IsTreeMap + TreeMapContains<K>>
-    TreeMapContainsHelper<K, NodeKey, Left, Right, B0, B0> for ()
-{
-    type Output = <Right as TreeMapContains<K>>::Output;
+crate::helper_bit! {
+    pub trait TreeMapContainsHelper<K, NodeKey, Left, Right; IsEq, IsLessResult> for ();
+    on (B1, IsLessResult) => True;
+    on (B0, B1) where [Left: IsTreeMap + TreeMapContains<K>] => <Left as TreeMapContains<K>>::Output;
+    on (B0, B0) where [Right: IsTreeMap + TreeMapContains<K>] => <Right as TreeMapContains<K>>::Output;
 }
 
 impl<K, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap> TreeMapContains<K>

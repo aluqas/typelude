@@ -99,15 +99,6 @@ where
     type Output = ActBranch<<Then as Compile>::Output, <Else as Compile>::Output>;
 }
 
-// --- While ---
-// OpWhile<Cond, Body>
-// In Old VM: OpWhile ran Cond, then If(Body.., Nil).
-// Semantics:
-// Loop = Cond >> Pop >> If(Body >> Loop, Return)
-// ActWhile<CondAction, BodyAction> assumes CondAction leaves Bool on stack.
-// Compiler needs to accept `Cond` as instruction list.
-// OpWhile<CondProg, BodyProg>
-
 impl<Cond, Body> ToAction for OpWhile<Cond, Body>
 where
     Cond: Compile,

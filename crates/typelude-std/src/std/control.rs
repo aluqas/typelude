@@ -39,24 +39,11 @@ use crate::{
 pub struct EIf<Cond, Then, Else>(PhantomData<(Cond, Then, Else)>);
 
 /// Helper for If dispatch based on converted Church boolean.
-pub trait EIfHelper<Then, Else> {
-    type Output;
-}
-
-// LTrue -> evaluate Then
-impl<Then, Else> EIfHelper<Then, Else> for LTrue
-where
-    Then: Eval,
-{
-    type Output = Evaluate<Then>;
-}
-
-// LFalse -> evaluate Else
-impl<Then, Else> EIfHelper<Then, Else> for LFalse
-where
-    Else: Eval,
-{
-    type Output = Evaluate<Else>;
+crate::helper_if! {
+    #[doc(hidden)]
+    pub trait EIfHelper<Then, Else>;
+    on LTrue where [Then: Eval] => Evaluate<Then>;
+    on LFalse where [Else: Eval] => Evaluate<Else>;
 }
 
 impl<Cond, Then, Else> Eval for EIf<Cond, Then, Else>

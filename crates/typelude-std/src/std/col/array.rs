@@ -342,114 +342,113 @@ ty_fn! {
 
 // --- Higher-Order Operations ---
 /// Helper for Map
-#[doc(hidden)]
-#[diagnostic::on_unimplemented(
-    message = "Internal `MapHelper` not implemented for `{Self}`",
-    label = "Map not implemented",
-    note = "ensure `{Self}` is a List and `Op` is a valid function"
-)]
-pub trait MapHelper<Op> {
-    type Output: IsList;
-}
-
-impl<Op> MapHelper<Op> for Nil {
-    type Output = Nil;
-}
-
-impl<Op, Head, Tail> MapHelper<Op> for Array<Head, Tail>
-where
-    EApp<ELit<Op>, ELit<Head>>: Eval,
-    Evaluate<EApp<ELit<Op>, ELit<Head>>>: Eval,
-    Tail: IsList + MapHelper<Op>,
-    <Tail as MapHelper<Op>>::Output: IsList,
-{
-    // Evaluate application result for strict map
-    type Output =
-        Array<Evaluate<Evaluate<EApp<ELit<Op>, ELit<Head>>>>, <Tail as MapHelper<Op>>::Output>;
+crate::helper_list! {
+    #[doc(hidden)]
+    #[diagnostic::on_unimplemented(
+        message = "Internal `MapHelper` not implemented for `{Self}`",
+        label = "Map not implemented",
+        note = "ensure `{Self}` is a List and `Op` is a valid function"
+    )]
+    pub trait MapHelper<Op>;
+    base Nil => Nil;
+    step <Head, Tail> Array<Head, Tail>
+        where [
+            EApp<ELit<Op>, ELit<Head>>: Eval,
+            Evaluate<EApp<ELit<Op>, ELit<Head>>>: Eval,
+            Tail: IsList + MapHelper<Op>,
+            <Tail as MapHelper<Op>>::Output: IsList
+        ]
+        => Array<Evaluate<Evaluate<EApp<ELit<Op>, ELit<Head>>>>, <Tail as MapHelper<Op>>::Output>;
 }
 
 /// Helper for Filter
-#[doc(hidden)]
-#[diagnostic::on_unimplemented(
-    message = "Internal `FilterHelper` not implemented for `{Self}`",
-    label = "Filter not implemented",
-    note = "ensure `{Self}` is a List and `Pred` is a valid function"
-)]
-pub trait FilterHelper<Pred> {
-    type Output: IsList;
-}
-
-impl<P> FilterHelper<P> for Nil {
-    type Output = Nil;
-}
-
-impl<P, Head, Tail> FilterHelper<P> for Array<Head, Tail>
-where
-    EApp<ELit<P>, ELit<Head>>: Eval,
-    Tail: IsList + FilterHelper<P>,
-    <Tail as FilterHelper<P>>::Output: IsList,
-    // EIf<Pred(Head), Array<Head, Filter(Tail)>, Filter(Tail)>
-    EIf<
-        Evaluate<EApp<ELit<P>, ELit<Head>>>, // Predicate Result Expr
-        ELit<Array<Head, <Tail as FilterHelper<P>>::Output>>,
-        ELit<<Tail as FilterHelper<P>>::Output>,
-    >: Eval,
-    Evaluate<
-        EIf<
-            Evaluate<EApp<ELit<P>, ELit<Head>>>,
-            ELit<Array<Head, <Tail as FilterHelper<P>>::Output>>,
-            ELit<<Tail as FilterHelper<P>>::Output>,
-        >,
-    >: IsList,
-{
-    type Output = Evaluate<
-        EIf<
-            Evaluate<EApp<ELit<P>, ELit<Head>>>,
-            ELit<Array<Head, <Tail as FilterHelper<P>>::Output>>,
-            ELit<<Tail as FilterHelper<P>>::Output>,
-        >,
-    >;
+crate::helper_list! {
+    #[doc(hidden)]
+    #[diagnostic::on_unimplemented(
+        message = "Internal `FilterHelper` not implemented for `{Self}`",
+        label = "Filter not implemented",
+        note = "ensure `{Self}` is a List and `Pred` is a valid function"
+    )]
+    pub trait FilterHelper<Pred>;
+    base Nil => Nil;
+    step <Head, Tail> Array<Head, Tail>
+        where [
+            EApp<ELit<Pred>, ELit<Head>>: Eval,
+            Tail: IsList + FilterHelper<Pred>,
+            <Tail as FilterHelper<Pred>>::Output: IsList,
+            EIf<
+                Evaluate<EApp<ELit<Pred>, ELit<Head>>>,
+                ELit<Array<Head, <Tail as FilterHelper<Pred>>::Output>>,
+                ELit<<Tail as FilterHelper<Pred>>::Output>,
+            >: Eval,
+            Evaluate<
+                EIf<
+                    Evaluate<EApp<ELit<Pred>, ELit<Head>>>,
+                    ELit<Array<Head, <Tail as FilterHelper<Pred>>::Output>>,
+                    ELit<<Tail as FilterHelper<Pred>>::Output>,
+                >,
+            >: IsList
+        ]
+        => Evaluate<
+            EIf<
+                Evaluate<EApp<ELit<Pred>, ELit<Head>>>,
+                ELit<Array<Head, <Tail as FilterHelper<Pred>>::Output>>,
+                ELit<<Tail as FilterHelper<Pred>>::Output>,
+            >,
+        >;
 }
 
 /// Helper for Fold
-#[doc(hidden)]
-#[diagnostic::on_unimplemented(
-    message = "Internal `FoldHelper` not implemented for `{Self}`",
-    label = "Fold not implemented",
-    note = "ensure `{Self}` is a Cons list and `Op` is a valid function"
-)]
-pub trait FoldHelper<Op, Acc> {
-    type Output;
-}
-
-impl<Op, Acc> FoldHelper<Op, Acc> for Nil {
-    type Output = Acc;
-}
-
-impl<Op, Acc, Head, Tail> FoldHelper<Op, Acc> for Array<Head, Tail>
-where
-    EApp<
-        ELit<Op>,
-        ELit<
-            typelude_std::core::ECons<
-                Acc,
-                typelude_std::core::ECons<Head, typelude_std::core::ENil>,
-            >,
-        >,
-    >: Eval,
-    Evaluate<
-        EApp<
-            ELit<Op>,
-            ELit<
-                typelude_std::core::ECons<
-                    Acc,
-                    typelude_std::core::ECons<Head, typelude_std::core::ENil>,
+crate::helper_list! {
+    #[doc(hidden)]
+    #[diagnostic::on_unimplemented(
+        message = "Internal `FoldHelper` not implemented for `{Self}`",
+        label = "Fold not implemented",
+        note = "ensure `{Self}` is a Cons list and `Op` is a valid function"
+    )]
+    pub trait FoldHelper<Op, Acc>;
+    base Nil => Acc;
+    step <Head, Tail> Array<Head, Tail>
+        where [
+            EApp<
+                ELit<Op>,
+                ELit<
+                    typelude_std::core::ECons<
+                        Acc,
+                        typelude_std::core::ECons<Head, typelude_std::core::ENil>,
+                    >,
                 >,
-            >,
-        >,
-    >: Eval,
-    Tail: IsList
-        + FoldHelper<
+            >: Eval,
+            Evaluate<
+                EApp<
+                    ELit<Op>,
+                    ELit<
+                        typelude_std::core::ECons<
+                            Acc,
+                            typelude_std::core::ECons<Head, typelude_std::core::ENil>,
+                        >,
+                    >,
+                >,
+            >: Eval,
+            Tail: IsList
+                + FoldHelper<
+                    Op,
+                    Evaluate<
+                        Evaluate<
+                            EApp<
+                                ELit<Op>,
+                                ELit<
+                                    typelude_std::core::ECons<
+                                        Acc,
+                                        typelude_std::core::ECons<Head, typelude_std::core::ENil>,
+                                    >,
+                                >,
+                            >,
+                        >,
+                    >,
+                >
+        ]
+        => <Tail as FoldHelper<
             Op,
             Evaluate<
                 Evaluate<
@@ -464,25 +463,7 @@ where
                     >,
                 >,
             >,
-        >,
-{
-    // Strict Fold
-    type Output = <Tail as FoldHelper<
-        Op,
-        Evaluate<
-            Evaluate<
-                EApp<
-                    ELit<Op>,
-                    ELit<
-                        typelude_std::core::ECons<
-                            Acc,
-                            typelude_std::core::ECons<Head, typelude_std::core::ENil>,
-                        >,
-                    >,
-                >,
-            >,
-        >,
-    >>::Output;
+        >>::Output;
 }
 use crate::std::prim::option::{None, Some};
 
@@ -612,17 +593,11 @@ impl<Pred> Find<Pred> for Nil {
 }
 
 /// Helper for Find dispatch
-#[doc(hidden)]
-pub trait FindHelper<Pred, Head, Tail> {
-    type Output;
-}
-
-impl<Pred, Head, Tail: IsList> FindHelper<Pred, Head, Tail> for True {
-    type Output = Some<Head>;
-}
-
-impl<Pred, Head, Tail: IsList + Find<Pred>> FindHelper<Pred, Head, Tail> for False {
-    type Output = <Tail as Find<Pred>>::Output;
+crate::helper_if! {
+    #[doc(hidden)]
+    pub trait FindHelper<Pred, Head, Tail>;
+    on True where [Tail: IsList] => Some<Head>;
+    on False where [Tail: IsList + Find<Pred>] => <Tail as Find<Pred>>::Output;
 }
 
 impl<Pred, Head, Tail: IsList> Find<Pred> for Array<Head, Tail>
@@ -647,17 +622,11 @@ impl<Pred> Any<Pred> for Nil {
 }
 
 /// Helper for Any dispatch
-#[doc(hidden)]
-pub trait AnyHelper<Pred, Tail> {
-    type Output;
-}
-
-impl<Pred, Tail: IsList> AnyHelper<Pred, Tail> for True {
-    type Output = True;
-}
-
-impl<Pred, Tail: IsList + Any<Pred>> AnyHelper<Pred, Tail> for False {
-    type Output = <Tail as Any<Pred>>::Output;
+crate::helper_if! {
+    #[doc(hidden)]
+    pub trait AnyHelper<Pred, Tail>;
+    on True where [Tail: IsList] => True;
+    on False where [Tail: IsList + Any<Pred>] => <Tail as Any<Pred>>::Output;
 }
 
 impl<Pred, Head, Tail: IsList> Any<Pred> for Array<Head, Tail>
@@ -682,17 +651,11 @@ impl<Pred> All<Pred> for Nil {
 }
 
 /// Helper for All dispatch
-#[doc(hidden)]
-pub trait AllHelper<Pred, Tail> {
-    type Output;
-}
-
-impl<Pred, Tail: IsList + All<Pred>> AllHelper<Pred, Tail> for True {
-    type Output = <Tail as All<Pred>>::Output;
-}
-
-impl<Pred, Tail: IsList> AllHelper<Pred, Tail> for False {
-    type Output = False;
+crate::helper_if! {
+    #[doc(hidden)]
+    pub trait AllHelper<Pred, Tail>;
+    on True where [Tail: IsList + All<Pred>] => <Tail as All<Pred>>::Output;
+    on False where [Tail: IsList] => False;
 }
 
 impl<Pred, Head, Tail: IsList> All<Pred> for Array<Head, Tail>

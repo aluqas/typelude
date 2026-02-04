@@ -5,20 +5,20 @@
 use std::ops::Add;
 
 use static_assertions::assert_type_eq_all;
-use typelude_macros::def_op;
+use typelude_std::core::Eval;
 use typelude_std::core::Evaluate;
 use typenum::{U1, U2, U3, U5, U6, U12, U42};
 
-def_op! {
-    /// Test: Addition operation
-    name: TestAddDef,
-    args: (Lhs, Rhs),
-    ast: TestEAdd {
-        where: [
-            Evaluate<Lhs>: Add<Evaluate<Rhs>>
-        ],
-        type Output = <Evaluate<Lhs> as Add<Evaluate<Rhs>>>::Output
-    }
+/// Test: Addition operation
+pub struct TestEAdd<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for TestEAdd<Lhs, Rhs>
+where
+    Lhs: Eval,
+    Rhs: Eval,
+    Evaluate<Lhs>: Add<Evaluate<Rhs>>,
+{
+    type Output = <Evaluate<Lhs> as Add<Evaluate<Rhs>>>::Output;
 }
 
 #[test]
@@ -28,14 +28,14 @@ fn test_ast_pattern_add() {
     type Result = Evaluate<TestEAdd<ELit<U1>, ELit<U2>>>;
     assert_type_eq_all!(Result, U3);
 }
-def_op! {
-    /// Test: Identity operation (unary)
-    name: TestIdDef,
-    args: (T),
-    ast: TestEId {
-        where: [],
-        type Output = Evaluate<T>
-    }
+/// Test: Identity operation (unary)
+pub struct TestEId<T>(std::marker::PhantomData<T>);
+
+impl<T> Eval for TestEId<T>
+where
+    T: Eval,
+{
+    type Output = Evaluate<T>;
 }
 
 #[test]
@@ -57,16 +57,16 @@ impl TestMul<U3> for typenum::U4 {
     type Output = U12;
 }
 
-def_op! {
-    /// Test: Multiply operation with complex bounds
-    name: TestMulDef,
-    args: (Lhs, Rhs),
-    ast: TestEMul {
-        where: [
-            Evaluate<Lhs>: TestMul<Evaluate<Rhs>>
-        ],
-        type Output = <Evaluate<Lhs> as TestMul<Evaluate<Rhs>>>::Output
-    }
+/// Test: Multiply operation with complex bounds
+pub struct TestEMul<Lhs, Rhs>(std::marker::PhantomData<(Lhs, Rhs)>);
+
+impl<Lhs, Rhs> Eval for TestEMul<Lhs, Rhs>
+where
+    Lhs: Eval,
+    Rhs: Eval,
+    Evaluate<Lhs>: TestMul<Evaluate<Rhs>>,
+{
+    type Output = <Evaluate<Lhs> as TestMul<Evaluate<Rhs>>>::Output;
 }
 
 #[test]

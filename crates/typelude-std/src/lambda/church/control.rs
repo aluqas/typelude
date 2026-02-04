@@ -46,25 +46,14 @@ where
 {
     type Output = LWhile2<Pred, Evaluate<Body>>;
 }
-/// Helper trait for while loop dispatch based on condition result.
-pub trait LWhileHelper<Pred, Body, State> {
-    type Output;
-}
-
-// Condition == LTrue: Execute body, recurse
-impl<Pred, Body, State> LWhileHelper<Pred, Body, State> for LTrue
-where
-    // body(state) -> newState
-    LApp<Body, State>: Eval,
-    // while pred body newState -> result (recursive call)
-    LApp<LWhile2<Pred, Body>, Evaluate<LApp<Body, State>>>: Eval,
-{
-    type Output = Evaluate<LApp<LWhile2<Pred, Body>, Evaluate<LApp<Body, State>>>>;
-}
-
-// Condition == LFalse: Return current state
-impl<Pred, Body, State> LWhileHelper<Pred, Body, State> for LFalse {
-    type Output = State;
+crate::helper_if! {
+    #[doc(hidden)]
+    pub trait LWhileHelper<Pred, Body, State>;
+    on LTrue where [
+        LApp<Body, State>: Eval,
+        LApp<LWhile2<Pred, Body>, Evaluate<LApp<Body, State>>>: Eval
+    ] => Evaluate<LApp<LWhile2<Pred, Body>, Evaluate<LApp<Body, State>>>>;
+    on LFalse => State;
 }
 
 // Full application: LWhile2<Pred, Body> State -> if (pred state) recurse else
