@@ -71,7 +71,7 @@ where
     EApp<Op, ELit<T>>: Eval,
     Evaluate<EApp<Op, ELit<T>>>: Eval,
 {
-    type Output = Some<Evaluate<Evaluate<EApp<Op, ELit<T>>>>>;
+    type Output = Some<crate::eval_twice!(EApp<Op, ELit<T>>)>;
 }
 
 impl<Op> OptionMap<Op> for None {

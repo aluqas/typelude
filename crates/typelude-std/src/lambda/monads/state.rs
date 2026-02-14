@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::{Apply, Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate, TyFn};
 
 use crate::lambda::{LApp, church::LPair2, traits::LBind};
 
@@ -85,7 +85,7 @@ where
     >;
 }
 
-impl<F, K, S> Apply<S> for LBindState<F, K> {
+impl<F, K, S> TyFn<S> for LBindState<F, K> {
     type Output = LApp<LBindState<F, K>, S>;
 }
 pub struct LReturn<A>(PhantomData<A>);
@@ -102,7 +102,7 @@ where
     type Output = LPair2<Evaluate<A>, Evaluate<S>>;
 }
 
-impl<A, S> Apply<S> for LReturn<A>
+impl<A, S> TyFn<S> for LReturn<A>
 where
     A: Eval,
     S: Eval,
@@ -130,7 +130,7 @@ where
     type Output = LPair2<Evaluate<S>, Evaluate<S>>;
 }
 
-impl<S> Apply<S> for LGet
+impl<S> TyFn<S> for LGet
 where
     S: Eval,
 {
@@ -160,7 +160,7 @@ where
     type Output = Evaluate<LApp<Evaluate<LApp<K, S>>, S>>;
 }
 
-impl<K, S> Apply<S> for LBindGet<K> {
+impl<K, S> TyFn<S> for LBindGet<K> {
     type Output = LApp<LBindGet<K>, S>;
 }
 pub struct LPut<NewS>(PhantomData<NewS>);
@@ -181,7 +181,7 @@ where
     type Output = LPair2<Unit, Evaluate<NewS>>;
 }
 
-impl<NewS, OldS> Apply<OldS> for LPut<NewS>
+impl<NewS, OldS> TyFn<OldS> for LPut<NewS>
 where
     NewS: Eval,
 {
@@ -212,7 +212,7 @@ where
     type Output = Evaluate<LApp<Evaluate<LApp<K, Unit>>, NewS>>;
 }
 
-impl<NewS, K, OldS> Apply<OldS> for LBindPut<NewS, K> {
+impl<NewS, K, OldS> TyFn<OldS> for LBindPut<NewS, K> {
     type Output = LApp<LBindPut<NewS, K>, OldS>;
 }
 

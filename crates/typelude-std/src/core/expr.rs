@@ -4,7 +4,10 @@
 
 use std::marker::PhantomData;
 
-use crate::{Apply, Eval, Evaluate};
+use crate::{
+    core::TyFn,
+    Eval, Evaluate,
+};
 
 /// **Identity Evaluator**: Lifts a value `T` into an expression `ELit<T>`.
 ///
@@ -21,12 +24,12 @@ impl<T> Eval for ELit<T> {
     type Output = T;
 }
 
-// Allow ELit<T> to act as a function T
-impl<T, A> Apply<A> for ELit<T>
+// Allow ELit<T> to act as a function T.
+impl<T, A> TyFn<A> for ELit<T>
 where
-    T: Apply<A>,
+    T: TyFn<A>,
 {
-    type Output = <T as Apply<A>>::Output;
+    type Output = <T as TyFn<A>>::Output;
 }
 
 /// **Call-by-Value Application**: `EApp<Ef, Ea>`
@@ -48,16 +51,16 @@ impl<Ef, Ea> Eval for EApp<Ef, Ea>
 where
     Ef: Eval,
     Ea: Eval,
-    Evaluate<Ef>: Apply<Evaluate<Ea>>,
+    Evaluate<Ef>: TyFn<Evaluate<Ea>>,
 {
-    type Output = <Evaluate<Ef> as Apply<Evaluate<Ea>>>::Output;
+    type Output = <Evaluate<Ef> as TyFn<Evaluate<Ea>>>::Output;
 }
 
 // Allow EApp<Ef, Ea> to act as a function if it evaluates to one.
-impl<Ef, Ea, A> Apply<A> for EApp<Ef, Ea>
+impl<Ef, Ea, A> TyFn<A> for EApp<Ef, Ea>
 where
     EApp<Ef, Ea>: Eval,
-    Evaluate<EApp<Ef, Ea>>: Apply<A>,
+    Evaluate<EApp<Ef, Ea>>: TyFn<A>,
 {
-    type Output = <Evaluate<EApp<Ef, Ea>> as Apply<A>>::Output;
+    type Output = <Evaluate<EApp<Ef, Ea>> as TyFn<A>>::Output;
 }

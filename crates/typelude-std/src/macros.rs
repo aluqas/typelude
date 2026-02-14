@@ -164,6 +164,24 @@ macro_rules! helper_list {
     };
 }
 
+/// Evaluate a type-level expression once.
+#[macro_export]
+macro_rules! eval_once {
+    ($expr:ty) => {
+        $crate::core::Evaluate<$expr>
+    };
+}
+
+/// Evaluate a type-level expression twice.
+///
+/// This is useful for operations returning a quoted expression like `ELit<T>`.
+#[macro_export]
+macro_rules! eval_twice {
+    ($expr:ty) => {
+        $crate::core::Evaluate<$crate::core::Evaluate<$expr>>
+    };
+}
+
 /// Assert that a type-level boolean is true at compile time.
 ///
 /// If the condition evaluates to `TyFalse` (or isn't `TyTrue`), this will
@@ -173,9 +191,9 @@ macro_rules! helper_list {
 /// # Example
 ///
 /// ```rust,compile_fail
-/// use typelude_std::core::{static_assert_true, std::bool::TyFalse};
+/// use typelude_std::{static_assert_true, std::prim::bool::False};
 ///
-/// static_assert_true!(TyFalse, "This should fail");
+/// static_assert_true!(False, "This should fail");
 /// ```
 #[macro_export]
 macro_rules! static_assert_true {

@@ -15,15 +15,12 @@ pub mod model;
 pub mod std;
 
 // Export typenum for macros
-// Re-export traits at crate root for macro compatibility
-pub use std::traits;
-
 pub use paste;
 // Re-export macros crate for use in macros.rs
 pub use typelude_macros;
 
 pub mod core;
 // pub use typelude_std::core::{self, Eval, Evaluate};
-pub use core::{Apply, Eval, Evaluate};
+pub use core::{Eval, Evaluate, TyFn};
 
 pub use typenum;

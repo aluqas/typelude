@@ -17,7 +17,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::{EApp, Eval, Evaluate};
+use typelude_std::core::{EApp, Eval, Evaluate, TyFn};
 
 use crate::{
     lambda::{
@@ -83,6 +83,7 @@ impl<Pred, S> Eval for LApp<ChurchifyPred<Pred>, S>
 where
     Pred: Eval,
     S: Eval,
+    Evaluate<Pred>: TyFn<Evaluate<S>>,
     EApp<Pred, S>: Eval,
     Evaluate<EApp<Pred, S>>: IntoBool,
 {
@@ -101,6 +102,7 @@ impl<Step, S> Eval for LApp<LambdifyStep<Step>, S>
 where
     Step: Eval,
     S: Eval,
+    Evaluate<Step>: TyFn<Evaluate<S>>,
     EApp<Step, S>: Eval,
 {
     type Output = Evaluate<EApp<Step, S>>;

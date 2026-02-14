@@ -5,12 +5,12 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::{Apply, Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate, TyFn};
 
 use super::{LApp, church::LPair2};
 /// Curry a function that takes a tuple into a curried function.
 ///
-/// `Curry<F>` transforms `F: Apply<Pair<A, B>>` into a two-argument curried
+/// `Curry<F>` transforms `F: TyFn<Pair<A, B>>` into a two-argument curried
 /// form.
 pub struct LCurry<F>(PhantomData<F>);
 
@@ -18,7 +18,7 @@ impl<F> Eval for LCurry<F> {
     type Output = LCurry<F>;
 }
 
-impl<F, A> Apply<A> for LCurry<F> {
+impl<F, A> TyFn<A> for LCurry<F> {
     type Output = LApp<LCurry<F>, A>;
 }
 
@@ -29,7 +29,7 @@ impl<F, A> Eval for LCurry1<F, A> {
     type Output = LCurry1<F, A>;
 }
 
-impl<F, A, B> Apply<B> for LCurry1<F, A> {
+impl<F, A, B> TyFn<B> for LCurry1<F, A> {
     type Output = LApp<LCurry1<F, A>, B>;
 }
 
@@ -61,7 +61,7 @@ impl<F> Eval for LUncurry<F> {
     type Output = LUncurry<F>;
 }
 
-impl<F, Arg> Apply<Arg> for LUncurry<F> {
+impl<F, Arg> TyFn<Arg> for LUncurry<F> {
     type Output = LApp<LUncurry<F>, Arg>;
 }
 

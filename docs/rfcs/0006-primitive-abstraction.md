@@ -298,3 +298,27 @@ where /* 直接 popcount 等を使用 */ {
 - `BitSet`: `Fold` を PopCount で O(1) 実装
 - `Queue`: `Map` で `Queue<Map(In), Map(Out)>` 構造保持
 - `Trie`: `Map` で値のみ変換、構造固有操作は維持
+
+---
+
+## 2026-02 Phase 1 Decision Record (AST/Interop Reorg)
+
+本RFCに関連する実装方針として、以下を確定事項として扱う。
+
+1. **CoreIR正準化**
+- 中核評価モデルはAST中心（`Eval/EApp/LApp`）とする。
+- 互換用途を除き、`Apply/Op`中心設計には戻さない。
+
+2. **相互運用の責務分離**
+- `typenum` は数値正準。
+- `tstr` は文字列正準。
+- リスト演算IRは `Array/Nil` を正準。
+- 相互運用は `IntoCore*` / `Reify` に明示的に集約する。
+
+3. **抽象化の将来拡張**
+- 将来的な `Iterable/Foldable/Mappable` は CoreIR 上の薄い抽象層として追加する。
+- 初期段階では抽象層を最小化し、意味論の一貫性を優先する。
+
+4. **段階導入の境界**
+- Phase 1 は `typelude-std` を成功条件にする。
+- `typelude-vm` の追従は次フェーズで行い、同時最適化は避ける。

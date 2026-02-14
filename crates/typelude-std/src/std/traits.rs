@@ -6,6 +6,9 @@
 //! use. Implementations are provided in their respective modules (`int`,
 //! `bool`, `array`).
 //!
+//! `TyFn` is canonically exposed at `typelude_std::core::TyFn` and re-exported
+//! from this module for compatibility.
+//!
 //! ## Interoperability Pattern
 //!
 //! To use external types (like `typenum` integers or custom structs) with
@@ -20,28 +23,7 @@
 //! This "Adapter Pattern" allows the core logic to remain agnostic of the
 //! underlying concrete types.
 
-use typelude_std::core::ELit;
-
-/// Trait representing a function
-///
-/// Represents a transformation from type to type, used in `EWhile` etc.
-#[diagnostic::on_unimplemented(
-    message = "`{Self}` is not a valid type-level function for argument `{Arg}`",
-    label = "this type cannot be applied to `{Arg}`",
-    note = "ensure `{Self}` implements `TyFn<{Arg}>`"
-)]
-pub trait TyFn<Arg> {
-    type Output;
-}
-
-// Automatically unwrap ELit
-#[diagnostic::do_not_recommend]
-impl<F, Arg> TyFn<ELit<Arg>> for F
-where
-    F: TyFn<Arg>,
-{
-    type Output = <F as TyFn<Arg>>::Output;
-}
+pub use crate::core::TyFn;
 
 /// Marker trait for Natural Numbers (Unsigned Integers).
 #[diagnostic::on_unimplemented(

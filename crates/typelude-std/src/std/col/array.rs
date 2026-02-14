@@ -336,7 +336,7 @@ ty_fn! {
         ~Array: Contains<~Elem>,
         (): crate::std::reify::ReflectBool<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>
     {
-        type Output = ~crate::std::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>;
+        type Output = ~crate::std::prim::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>;
     }
 }
 
@@ -761,7 +761,7 @@ ty_fn! {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_std::core::{Apply, ELit};
+    use typelude_std::core::{ELit, TyFn};
     use typenum::{U0, U1, U2, U4, U10, U12};
 
     use super::*;
@@ -846,7 +846,7 @@ mod tests {
         use typenum::{Add1, U1, U2, U3, U4};
 
         struct FnAddOne;
-        impl<T> Apply<T> for FnAddOne
+        impl<T> TyFn<T> for FnAddOne
         where
             T: std::ops::Add<typenum::B1>,
         {
@@ -864,7 +864,7 @@ mod tests {
         use typenum::{IsLess, U1, U2, U3, U4, U5};
 
         struct PredLessThan3;
-        impl<T> Apply<T> for PredLessThan3
+        impl<T> TyFn<T> for PredLessThan3
         where
             T: IsLess<U3>,
             bool: From<<T as IsLess<U3>>::Output>,
@@ -886,7 +886,7 @@ mod tests {
         // Sum: (Acc, Elem) -> Acc + Elem
         struct FnSum;
         impl<Acc, Elem>
-            Apply<
+            TyFn<
                 typelude_std::core::ECons<
                     Acc,
                     typelude_std::core::ECons<Elem, typelude_std::core::ENil>,
