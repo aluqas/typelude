@@ -11,5 +11,4 @@ pub mod ops;
 pub mod prim;
 
 pub mod reify;
-pub mod testing; // New testing module
 pub mod traits;

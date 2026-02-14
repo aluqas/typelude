@@ -1,27 +1,7 @@
-//! **Core Traits**
-//!
-//! Core trait definitions for `typelude`.
-//!
-//! This module defines the "Type Classes" that abstraction layers (like `std`)
-//! use. Implementations are provided in their respective modules (`int`,
-//! `bool`, `array`).
+//! Core traits used by `std` adapters.
 //!
 //! `TyFn` is canonically exposed at `typelude_std::core::TyFn` and re-exported
-//! from this module for compatibility.
-//!
-//! ## Interoperability Pattern
-//!
-//! To use external types (like `typenum` integers or custom structs) with
-//! `typelude` operations, you must implement the relevant "Type Class" traits
-//! for them.
-//!
-//! For example, to use a custom boolean type `MyBool` with `EAnd`, `EIf`,
-//! etc.:
-//! 1. Implement `Eval` for `MyBool` (usually identity).
-//! 2. Implement `TypeBool` for `MyBool`.
-//!
-//! This "Adapter Pattern" allows the core logic to remain agnostic of the
-//! underlying concrete types.
+//! here.
 
 pub use crate::core::TyFn;
 

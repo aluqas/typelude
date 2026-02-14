@@ -2,9 +2,7 @@
 //!
 //! Value-only binary search tree (sorted set).
 
-use typelude_macros::ty_fn;
-use typelude_std::core::Evaluate;
-use typenum::{B0, B1, Bit, IsEqual, IsLess};
+use typenum::{Bit, IsEqual, IsLess};
 
 /// Marker trait for type-level TreeArray
 pub use crate::model::col::tree_array::IsTreeArray;
@@ -180,27 +178,21 @@ where
     >>::Output;
 }
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Insert value into TreeArray
-    pub struct ETreeArrayInsert<Tree, Value>
-    where
-        Tree, Value,
-        ~Tree: TreeArrayInsert<~Value>
-    {
-        type Output = <~Tree as TreeArrayInsert<~Value>>::Output;
-    }
-}
+    pub ETreeArrayInsert<Tree, Value>
+    args [Tree, Value]
+    where [~Tree: TreeArrayInsert<~Value>]
+    => <~Tree as TreeArrayInsert<~Value>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Check if TreeArray contains value
-    pub struct ETreeArrayContains<Tree, Value>
-    where
-        Tree, Value,
-        ~Tree: TreeArrayContains<~Value>
-    {
-        type Output = <~Tree as TreeArrayContains<~Value>>::Output;
-    }
-}
+    pub ETreeArrayContains<Tree, Value>
+    args [Tree, Value]
+    where [~Tree: TreeArrayContains<~Value>]
+    => <~Tree as TreeArrayContains<~Value>>::Output
+);
 
 #[cfg(test)]
 mod tests {

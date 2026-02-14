@@ -3,18 +3,10 @@
 //! Bridge layer between pure lambda calculus combinators and practical Rust
 //! types.
 //!
-//! - `ToChurch`: Convert `TyTrue`/`TyFalse` to `LTrue`/`LFalse`
-//! - `EIf`: Practical conditional using `ToChurch` adapter
+//! - `IntoBool`: Convert bool-like types to `LTrue`/`LFalse`
+//! - `EIf`: Practical conditional using the `IntoBool` adapter
 //! - `EWhile`: Practical loop using `LWhile` internally
 //!
-//! # Architecture
-//!
-//! ```text
-//! User Code → std/control (this module) → lambda/church (pure)
-//!              ↓                            ↓
-//!           TyTrue/TyFalse              LTrue/LFalse
-//! ```
-
 use std::marker::PhantomData;
 
 use typelude_std::core::{EApp, Eval, Evaluate, TyFn};
@@ -28,7 +20,7 @@ use crate::{
 };
 /// Practical If expression.
 ///
-/// Evaluates `Cond`, converts to Church boolean via `ToChurch`,
+/// Evaluates `Cond`, converts to Church boolean via `IntoBool`,
 /// then dispatches to `Then` or `Else` branch.
 ///
 /// # Example
@@ -38,7 +30,7 @@ use crate::{
 /// ```
 pub struct EIf<Cond, Then, Else>(PhantomData<(Cond, Then, Else)>);
 
-/// Helper for If dispatch based on converted Church boolean.
+// Helper for If dispatch based on converted Church boolean.
 crate::helper_if! {
     #[doc(hidden)]
     pub trait EIfHelper<Then, Else>;
@@ -57,18 +49,12 @@ where
 
 /// Practical While expression.
 ///
-/// Wraps the pure `LWhile` combinator with `ToChurch` conversion.
+/// Wraps the pure `LWhile` combinator with `IntoBool` conversion.
 ///
 /// `Pred` is a predicate that returns `True`/`False`.
 /// `Step` is a function that transforms the state.
 /// `State` is the initial/current state.
 ///
-/// # Semantics
-///
-/// ```text
-/// while (pred state == True) { state = step(state) }
-/// return state
-/// ```
 pub struct EWhile<Pred, Step, State>(PhantomData<(Pred, Step, State)>);
 
 /// Adapter to convert Bool predicate output to Church boolean (via `EApp`).

@@ -1,40 +1,12 @@
 //! # Type-Level Strings
 //!
-//! Re-exports from the `tstr` crate to support type-level strings.
-//!
-//! Example:
-//! ```rust
-//! use typelude_std::std::prim::str::*;
-//!
-//! type Hello = TS!("Hello");
-//! ```
+//! Re-exports from `tstr` and core string primitives.
 
 pub use tstr::{TS, ts};
 
 // Re-export kernel types
 pub use crate::model::prim::str::Char;
 pub use crate::std::prim::option::{None, Some};
-
-// Convert Array of TyChar to &str?
-// Requires const concatenation which is complex.
-// We can use a recursive approach with a const block.
-
-/*
-// This would be ideal but requires advanced const generic expressions
-impl<H, T> Reify<&'static str> for Array<H, T>
-where
-    H: Reify<char>,
-    T: Reify<&'static str>
-{
-    const REIFIED: &'static str = ...;
-}
-*/
-
-// For now, we rely on tstr for static strings, and Array<TyChar> for
-// manipulation. We can provide conversion from Array<TyChar> to runtime string
-// via Reify<[char; N]>.
-
-// The Reify<u8> for Char is now handled in `crate::data::primitives::str::Char`
 
 #[cfg(test)]
 mod tests {

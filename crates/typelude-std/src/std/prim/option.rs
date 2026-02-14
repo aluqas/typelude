@@ -4,7 +4,6 @@
 
 use std::marker::PhantomData;
 
-use typelude_macros::ty_fn;
 use typelude_std::core::{EApp, ELit, Eval, Evaluate};
 
 use crate::std::prim::bool::{False, True};
@@ -78,60 +77,45 @@ impl<Op> OptionMap<Op> for None {
     type Output = None;
 }
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Expression: Unwrap an option
-    pub struct EUnwrap<Opt>
-    where
-        Opt,
-        ~Opt: Unwrap
-    {
-        type Output = <~Opt as Unwrap>::Output;
-    }
-}
+    pub EUnwrap<Opt>
+    args [Opt]
+    where [~Opt: Unwrap]
+    => <~Opt as Unwrap>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Expression: Unwrap with default
-    pub struct EUnwrapOr<Opt, Default>
-    where
-        Opt, Default,
-        ~Opt: UnwrapOr<~Default>
-    {
-        type Output = <~Opt as UnwrapOr<~Default>>::Output;
-    }
-}
+    pub EUnwrapOr<Opt, Default>
+    args [Opt, Default]
+    where [~Opt: UnwrapOr<~Default>]
+    => <~Opt as UnwrapOr<~Default>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Expression: Check if Option is Some
-    pub struct EIsSome<Opt>
-    where
-        Opt,
-        ~Opt: Option
-    {
-        type Output = <~Opt as Option>::IsSome;
-    }
-}
+    pub EIsSome<Opt>
+    args [Opt]
+    where [~Opt: Option]
+    => <~Opt as Option>::IsSome
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Expression: Check if Option is None
-    pub struct EIsNone<Opt>
-    where
-        Opt,
-        ~Opt: Option
-    {
-        type Output = <~Opt as Option>::IsNone;
-    }
-}
+    pub EIsNone<Opt>
+    args [Opt]
+    where [~Opt: Option]
+    => <~Opt as Option>::IsNone
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Expression: Map a function over an Option
-    pub struct EMap<Op, Opt>
-    where
-        Opt,
-        ~Opt: OptionMap<Op>
-    {
-        type Output = <~Opt as OptionMap<Op>>::Output;
-    }
-}
+    pub EMap<Op, Opt>
+    args [Opt]
+    where [~Opt: OptionMap<Op>]
+    => <~Opt as OptionMap<Op>>::Output
+);
 
 #[cfg(test)]
 mod tests {

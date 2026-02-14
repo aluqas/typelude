@@ -2,10 +2,7 @@
 //!
 //! Type-level array (cons list) and its operations.
 
-use std::{
-    marker::PhantomData,
-    ops::{Add, Sub},
-};
+use std::ops::{Add, Sub};
 
 use typelude_std::core::{EApp, ELit, Eval, Evaluate};
 use typenum::{B1, Sub1, U0, UInt, Unsigned};
@@ -175,173 +172,124 @@ where
 {
     const VALUE: bool = <Head as IsEq<Elem>>::EQ || <Tail as Contains<Elem>>::VALUE;
 }
-use typelude_macros::ty_fn;
-
 // --- Basic Array Operations ---
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Get the length of an array
-    pub struct ELen<Arr>
-    where
-        Arr,
-        ~Arr: Len
-    {
-        type Output = <~Arr as Len>::Output;
-    }
-}
+    pub ELen<Arr>
+    args [Arr]
+    where [~Arr: Len]
+    => <~Arr as Len>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Get the head (first element) of an array
-    pub struct EHead<Arr>
-    where
-        Arr,
-        ~Arr: List
-    {
-        type Output = <~Arr as List>::Head;
-    }
-}
+    pub EHead<Arr>
+    args [Arr]
+    where [~Arr: List]
+    => <~Arr as List>::Head
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Get the tail (all but first) of an array
-    pub struct ETail<Arr>
-    where
-        Arr,
-        ~Arr: List,
-        <~Arr as List>::Tail: Eval
-    {
-        type Output = <~Arr as List>::Tail;
-    }
-}
+    pub ETail<Arr>
+    args [Arr]
+    where [~Arr: List, <~Arr as List>::Tail: Eval]
+    => <~Arr as List>::Tail
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Check if an array is empty
-    pub struct EIsEmpty<Arr>
-    where
-        Arr,
-        ~Arr: IsEmpty
-    {
-        type Output = <~Arr as IsEmpty>::Output;
-    }
-}
+    pub EIsEmpty<Arr>
+    args [Arr]
+    where [~Arr: IsEmpty]
+    => <~Arr as IsEmpty>::Output
+);
 
 // --- Index Operations ---
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Get element at index
-    pub struct EGet<Arr, Idx>
-    where
-        Idx, Arr,
-        ~Idx: Unsigned,
-        ~Arr: Get<~Idx>
-    {
-        type Output = <~Arr as Get<~Idx>>::Output;
-    }
-}
+    pub EGet<Arr, Idx>
+    args [Idx, Arr]
+    where [~Idx: Unsigned, ~Arr: Get<~Idx>]
+    => <~Arr as Get<~Idx>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Set element at index
-    pub struct ESet<Arr, Idx, Val>
-    where
-        Idx, Arr, Val,
-        ~Idx: Unsigned,
-        ~Arr: Set<~Idx, ~Val>
-    {
-        type Output = <~Arr as Set<~Idx, ~Val>>::Output;
-    }
-}
+    pub ESet<Arr, Idx, Val>
+    args [Idx, Arr, Val]
+    where [~Idx: Unsigned, ~Arr: Set<~Idx, ~Val>]
+    => <~Arr as Set<~Idx, ~Val>>::Output
+);
 
 // --- Concatenation Operations ---
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Concatenate two arrays
-    pub struct EConcat<Lhs, Rhs>
-    where
-        Rhs, Lhs,
-        ~Rhs: IsList,
-        ~Lhs: Concat<~Rhs>
-    {
-        type Output = <~Lhs as Concat<~Rhs>>::Output;
-    }
-}
+    pub EConcat<Lhs, Rhs>
+    args [Rhs, Lhs]
+    where [~Rhs: IsList, ~Lhs: Concat<~Rhs>]
+    => <~Lhs as Concat<~Rhs>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Append element to end of array
-    pub struct EAppend<Arr, Elem>
-    where
-        Arr, Elem,
-        ~Arr: Concat<Array<~Elem, Nil>>
-    {
-        type Output = <~Arr as Concat<Array<~Elem, Nil>>>::Output;
-    }
-}
+    pub EAppend<Arr, Elem>
+    args [Arr, Elem]
+    where [~Arr: Concat<Array<~Elem, Nil>>]
+    => <~Arr as Concat<Array<~Elem, Nil>>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Prepend element to start of array
-    pub struct EPrepend<Elem, Arr>
-    where
-        Arr, Elem,
-        ~Arr: List
-    {
-        type Output = <~Arr as List>::Cons<~Elem>;
-    }
-}
+    pub EPrepend<Elem, Arr>
+    args [Arr, Elem]
+    where [~Arr: List]
+    => <~Arr as List>::Cons<~Elem>
+);
 
 // --- Higher-Order Operations (defined separately due to complex bounds) ---
 
 // --- EMap ---
-ty_fn! {
-    pub struct EMap<Op, List>
-    where
-        List,
-        ~List: MapHelper<Op>
-    {
-        type Output = <~List as MapHelper<Op>>::Output;
-    }
-}
+crate::def_expr_via_trait!(
+    pub EMap<Op, List>
+    args [List]
+    where [~List: MapHelper<Op>]
+    => <~List as MapHelper<Op>>::Output
+);
 
 // --- EFilter ---
-ty_fn! {
-    pub struct EFilter<Pred, List>
-    where
-        List,
-        ~List: FilterHelper<Pred>
-    {
-        type Output = <~List as FilterHelper<Pred>>::Output;
-    }
-}
+crate::def_expr_via_trait!(
+    pub EFilter<Pred, List>
+    args [List]
+    where [~List: FilterHelper<Pred>]
+    => <~List as FilterHelper<Pred>>::Output
+);
 
 // --- EFold ---
-ty_fn! {
-    pub struct EFold<Op, Init, List>
-    where
-        Init, List,
-        ~List: FoldHelper<Op, ~Init>
-    {
-        type Output = <~List as FoldHelper<Op, ~Init>>::Output;
-    }
-}
+crate::def_expr_via_trait!(
+    pub EFold<Op, Init, List>
+    args [Init, List]
+    where [~List: FoldHelper<Op, ~Init>]
+    => <~List as FoldHelper<Op, ~Init>>::Output
+);
 
-/// Expression to check if an array contains an element.
-///
-/// # Examples
-///
-/// ```ignore
-/// type Res = Evaluate<EContains<ELit<tyarray![U1, U2]>, ELit<U1>>>; // True
-/// ```
+// Expression to check if an array contains an element.
 #[cfg(feature = "nightly")]
-ty_fn! {
-    pub struct EContains<Array, Elem>
-    where
-        Array, Elem,
+crate::def_expr_via_trait!(
+    pub EContains<Array, Elem>
+    args [Array, Elem]
+    where [
         ~Array: Contains<~Elem>,
         (): crate::std::reify::ReflectBool<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>
-    {
-        type Output = ~crate::std::prim::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>;
-    }
-}
+    ]
+    => ~crate::std::prim::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>
+);
 
 // --- Higher-Order Operations ---
-/// Helper for Map
+// Helper for Map.
 crate::helper_list! {
     #[doc(hidden)]
     #[diagnostic::on_unimplemented(
@@ -354,14 +302,14 @@ crate::helper_list! {
     step <Head, Tail> Array<Head, Tail>
         where [
             EApp<ELit<Op>, ELit<Head>>: Eval,
-            Evaluate<EApp<ELit<Op>, ELit<Head>>>: Eval,
+            crate::eval_once!(EApp<ELit<Op>, ELit<Head>>): Eval,
             Tail: IsList + MapHelper<Op>,
             <Tail as MapHelper<Op>>::Output: IsList
         ]
-        => Array<Evaluate<Evaluate<EApp<ELit<Op>, ELit<Head>>>>, <Tail as MapHelper<Op>>::Output>;
+        => Array<crate::eval_twice!(EApp<ELit<Op>, ELit<Head>>), <Tail as MapHelper<Op>>::Output>;
 }
 
-/// Helper for Filter
+// Helper for Filter.
 crate::helper_list! {
     #[doc(hidden)]
     #[diagnostic::on_unimplemented(
@@ -377,13 +325,13 @@ crate::helper_list! {
             Tail: IsList + FilterHelper<Pred>,
             <Tail as FilterHelper<Pred>>::Output: IsList,
             EIf<
-                Evaluate<EApp<ELit<Pred>, ELit<Head>>>,
+                crate::eval_once!(EApp<ELit<Pred>, ELit<Head>>),
                 ELit<Array<Head, <Tail as FilterHelper<Pred>>::Output>>,
                 ELit<<Tail as FilterHelper<Pred>>::Output>,
             >: Eval,
             Evaluate<
                 EIf<
-                    Evaluate<EApp<ELit<Pred>, ELit<Head>>>,
+                    crate::eval_once!(EApp<ELit<Pred>, ELit<Head>>),
                     ELit<Array<Head, <Tail as FilterHelper<Pred>>::Output>>,
                     ELit<<Tail as FilterHelper<Pred>>::Output>,
                 >,
@@ -391,14 +339,14 @@ crate::helper_list! {
         ]
         => Evaluate<
             EIf<
-                Evaluate<EApp<ELit<Pred>, ELit<Head>>>,
+                crate::eval_once!(EApp<ELit<Pred>, ELit<Head>>),
                 ELit<Array<Head, <Tail as FilterHelper<Pred>>::Output>>,
                 ELit<<Tail as FilterHelper<Pred>>::Output>,
             >,
         >;
 }
 
-/// Helper for Fold
+// Helper for Fold.
 crate::helper_list! {
     #[doc(hidden)]
     #[diagnostic::on_unimplemented(
@@ -433,36 +381,32 @@ crate::helper_list! {
             Tail: IsList
                 + FoldHelper<
                     Op,
-                    Evaluate<
-                        Evaluate<
-                            EApp<
-                                ELit<Op>,
-                                ELit<
-                                    typelude_std::core::ECons<
-                                        Acc,
-                                        typelude_std::core::ECons<Head, typelude_std::core::ENil>,
-                                    >,
+                    crate::eval_twice!(
+                        EApp<
+                            ELit<Op>,
+                            ELit<
+                                typelude_std::core::ECons<
+                                    Acc,
+                                    typelude_std::core::ECons<Head, typelude_std::core::ENil>,
                                 >,
                             >,
-                        >,
-                    >,
+                        >
+                    ),
                 >
         ]
         => <Tail as FoldHelper<
             Op,
-            Evaluate<
-                Evaluate<
-                    EApp<
-                        ELit<Op>,
-                        ELit<
-                            typelude_std::core::ECons<
-                                Acc,
-                                typelude_std::core::ECons<Head, typelude_std::core::ENil>,
-                            >,
+            crate::eval_twice!(
+                EApp<
+                    ELit<Op>,
+                    ELit<
+                        typelude_std::core::ECons<
+                            Acc,
+                            typelude_std::core::ECons<Head, typelude_std::core::ENil>,
                         >,
                     >,
-                >,
-            >,
+                >
+            ),
         >>::Output;
 }
 use crate::std::prim::option::{None, Some};
@@ -592,7 +536,7 @@ impl<Pred> Find<Pred> for Nil {
     type Output = None;
 }
 
-/// Helper for Find dispatch
+// Helper for Find dispatch.
 crate::helper_if! {
     #[doc(hidden)]
     pub trait FindHelper<Pred, Head, Tail>;
@@ -603,11 +547,11 @@ crate::helper_if! {
 impl<Pred, Head, Tail: IsList> Find<Pred> for Array<Head, Tail>
 where
     EApp<ELit<Pred>, ELit<Head>>: Eval,
-    Evaluate<EApp<ELit<Pred>, ELit<Head>>>: Eval,
-    Evaluate<Evaluate<EApp<ELit<Pred>, ELit<Head>>>>: FindHelper<Pred, Head, Tail>,
+    crate::eval_once!(EApp<ELit<Pred>, ELit<Head>>): Eval,
+    crate::eval_twice!(EApp<ELit<Pred>, ELit<Head>>): FindHelper<Pred, Head, Tail>,
 {
     type Output =
-        <Evaluate<Evaluate<EApp<ELit<Pred>, ELit<Head>>>> as FindHelper<Pred, Head, Tail>>::Output;
+        <crate::eval_twice!(EApp<ELit<Pred>, ELit<Head>>) as FindHelper<Pred, Head, Tail>>::Output;
 }
 
 // --- Any<Pred> ---
@@ -621,7 +565,7 @@ impl<Pred> Any<Pred> for Nil {
     type Output = False;
 }
 
-/// Helper for Any dispatch
+// Helper for Any dispatch.
 crate::helper_if! {
     #[doc(hidden)]
     pub trait AnyHelper<Pred, Tail>;
@@ -632,11 +576,11 @@ crate::helper_if! {
 impl<Pred, Head, Tail: IsList> Any<Pred> for Array<Head, Tail>
 where
     EApp<ELit<Pred>, ELit<Head>>: Eval,
-    Evaluate<EApp<ELit<Pred>, ELit<Head>>>: Eval,
-    Evaluate<Evaluate<EApp<ELit<Pred>, ELit<Head>>>>: AnyHelper<Pred, Tail>,
+    crate::eval_once!(EApp<ELit<Pred>, ELit<Head>>): Eval,
+    crate::eval_twice!(EApp<ELit<Pred>, ELit<Head>>): AnyHelper<Pred, Tail>,
 {
     type Output =
-        <Evaluate<Evaluate<EApp<ELit<Pred>, ELit<Head>>>> as AnyHelper<Pred, Tail>>::Output;
+        <crate::eval_twice!(EApp<ELit<Pred>, ELit<Head>>) as AnyHelper<Pred, Tail>>::Output;
 }
 
 // --- All<Pred> ---
@@ -650,7 +594,7 @@ impl<Pred> All<Pred> for Nil {
     type Output = True;
 }
 
-/// Helper for All dispatch
+// Helper for All dispatch.
 crate::helper_if! {
     #[doc(hidden)]
     pub trait AllHelper<Pred, Tail>;
@@ -661,102 +605,78 @@ crate::helper_if! {
 impl<Pred, Head, Tail: IsList> All<Pred> for Array<Head, Tail>
 where
     EApp<ELit<Pred>, ELit<Head>>: Eval,
-    Evaluate<EApp<ELit<Pred>, ELit<Head>>>: Eval,
-    Evaluate<Evaluate<EApp<ELit<Pred>, ELit<Head>>>>: AllHelper<Pred, Tail>,
+    crate::eval_once!(EApp<ELit<Pred>, ELit<Head>>): Eval,
+    crate::eval_twice!(EApp<ELit<Pred>, ELit<Head>>): AllHelper<Pred, Tail>,
 {
     type Output =
-        <Evaluate<Evaluate<EApp<ELit<Pred>, ELit<Head>>>> as AllHelper<Pred, Tail>>::Output;
+        <crate::eval_twice!(EApp<ELit<Pred>, ELit<Head>>) as AllHelper<Pred, Tail>>::Output;
 }
 
-// --- RFC-0001 Phase 1: Expression definitions via def_op! ---
+// --- Additional list expressions ---
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Reverse a list
-    pub struct EReverse<List>
-    where
-        List,
-        ~List: Reverse
-    {
-        type Output = <~List as Reverse>::Output;
-    }
-}
+    pub EReverse<List>
+    args [List]
+    where [~List: Reverse]
+    => <~List as Reverse>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Take first N elements from a list
-    pub struct ETake<N, List>
-    where
-        N, List,
-        ~List: Take<~N>
-    {
-        type Output = <~List as Take<~N>>::Output;
-    }
-}
+    pub ETake<N, List>
+    args [N, List]
+    where [~List: Take<~N>]
+    => <~List as Take<~N>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Drop first N elements from a list
-    pub struct EDrop<N, List>
-    where
-        N, List,
-        ~List: Drop<~N>
-    {
-        type Output = <~List as Drop<~N>>::Output;
-    }
-}
+    pub EDrop<N, List>
+    args [N, List]
+    where [~List: Drop<~N>]
+    => <~List as Drop<~N>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Get the last element of a list
-    pub struct ELast<List>
-    where
-        List,
-        ~List: Last
-    {
-        type Output = <~List as Last>::Output;
-    }
-}
+    pub ELast<List>
+    args [List]
+    where [~List: Last]
+    => <~List as Last>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Zip two lists together pairwise
-    pub struct EZip<L1, L2>
-    where
-        L1, L2,
-        ~L1: Zip<~L2>
-    {
-        type Output = <~L1 as Zip<~L2>>::Output;
-    }
-}
+    pub EZip<L1, L2>
+    args [L1, L2]
+    where [~L1: Zip<~L2>]
+    => <~L1 as Zip<~L2>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Find first element matching predicate
-    pub struct EFind<Pred, List>
-    where
-        Pred, List,
-        ~List: Find<~Pred>
-    {
-        type Output = <~List as Find<~Pred>>::Output;
-    }
-}
+    pub EFind<Pred, List>
+    args [Pred, List]
+    where [~List: Find<~Pred>]
+    => <~List as Find<~Pred>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// True if any element matches predicate
-    pub struct EAny<Pred, List>
-    where
-        Pred, List,
-        ~List: Any<~Pred>
-    {
-        type Output = <~List as Any<~Pred>>::Output;
-    }
-}
+    pub EAny<Pred, List>
+    args [Pred, List]
+    where [~List: Any<~Pred>]
+    => <~List as Any<~Pred>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// True if all elements match predicate
-    pub struct EAll<Pred, List>
-    where
-        Pred, List,
-        ~List: All<~Pred>
-    {
-        type Output = <~List as All<~Pred>>::Output;
-    }
-}
+    pub EAll<Pred, List>
+    args [Pred, List]
+    where [~List: All<~Pred>]
+    => <~List as All<~Pred>>::Output
+);
 
 #[cfg(test)]
 mod tests {

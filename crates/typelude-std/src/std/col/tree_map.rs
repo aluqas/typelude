@@ -2,9 +2,7 @@
 //!
 //! Key-Value binary search tree (sorted map).
 
-use typelude_macros::ty_fn;
-use typelude_std::core::Evaluate;
-use typenum::{B0, B1, Bit, IsEqual, IsLess};
+use typenum::{Bit, IsEqual, IsLess};
 
 /// Marker trait for type-level TreeMap
 pub use crate::model::col::tree_map::IsTreeMap;
@@ -232,38 +230,29 @@ where
     >>::Output;
 }
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Insert key-value pair into TreeMap
-    pub struct ETreeMapInsert<Tree, Key, Value>
-    where
-        Tree, Key, Value,
-        ~Tree: TreeMapInsert<~Key, ~Value>
-    {
-        type Output = <~Tree as TreeMapInsert<~Key, ~Value>>::Output;
-    }
-}
+    pub ETreeMapInsert<Tree, Key, Value>
+    args [Tree, Key, Value]
+    where [~Tree: TreeMapInsert<~Key, ~Value>]
+    => <~Tree as TreeMapInsert<~Key, ~Value>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Get value by key from TreeMap
-    pub struct ETreeMapGet<Tree, Key>
-    where
-        Tree, Key,
-        ~Tree: TreeMapGet<~Key>
-    {
-        type Output = <~Tree as TreeMapGet<~Key>>::Output;
-    }
-}
+    pub ETreeMapGet<Tree, Key>
+    args [Tree, Key]
+    where [~Tree: TreeMapGet<~Key>]
+    => <~Tree as TreeMapGet<~Key>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Check if TreeMap contains key
-    pub struct ETreeMapContains<Tree, Key>
-    where
-        Tree, Key,
-        ~Tree: TreeMapContains<~Key>
-    {
-        type Output = <~Tree as TreeMapContains<~Key>>::Output;
-    }
-}
+    pub ETreeMapContains<Tree, Key>
+    args [Tree, Key]
+    where [~Tree: TreeMapContains<~Key>]
+    => <~Tree as TreeMapContains<~Key>>::Output
+);
 
 #[cfg(test)]
 mod tests {

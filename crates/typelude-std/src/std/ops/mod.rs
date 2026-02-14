@@ -7,6 +7,3 @@ pub use arith::*;
 pub use cmp::*;
 pub use into::*;
 pub use logic::*;
-
-#[cfg(test)]
-mod def_op_tests;

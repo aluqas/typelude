@@ -2,9 +2,7 @@
 //!
 //! Type-level associative map (key-value store) and its operations.
 
-use typelude_macros::ty_fn;
-use typelude_std::core::Evaluate;
-use typenum::{B0, B1, Bit, IsEqual};
+use typenum::{Bit, IsEqual};
 
 /// Marker trait for type-level maps
 pub use crate::model::col::map::IsMap as TypeMap;
@@ -32,7 +30,7 @@ impl<K> MapGet<K> for Nil {
     type Output = None;
 }
 
-/// Helper for MapGet dispatch based on key equality
+// Helper for MapGet dispatch based on key equality.
 crate::helper_bit! {
     #[doc(hidden)]
     pub trait MapGetHelper<Key, NodeKey, NodeValue, Tail; IsEq> for ();
@@ -79,7 +77,7 @@ impl<K> MapContains<K> for Nil {
     type Output = False;
 }
 
-/// Helper for MapContains dispatch based on key equality
+// Helper for MapContains dispatch based on key equality.
 crate::helper_bit! {
     #[doc(hidden)]
     pub trait MapContainsHelper<Key, NodeKey, Tail; IsEq> for ();
@@ -138,60 +136,45 @@ where
     type Output = <<T as MapLen>::Output as std::ops::Add<typenum::B1>>::Output;
 }
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Get value from map by key
-    pub struct EMapGet<Map, Key>
-    where
-        Map, Key,
-        ~Map: MapGet<~Key>
-    {
-        type Output = <~Map as MapGet<~Key>>::Output;
-    }
-}
+    pub EMapGet<Map, Key>
+    args [Map, Key]
+    where [~Map: MapGet<~Key>]
+    => <~Map as MapGet<~Key>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Insert key-value pair into map
-    pub struct EMapInsert<Map, Key, Value>
-    where
-        Map, Key, Value,
-        ~Map: MapInsert<~Key, ~Value>
-    {
-        type Output = <~Map as MapInsert<~Key, ~Value>>::Output;
-    }
-}
+    pub EMapInsert<Map, Key, Value>
+    args [Map, Key, Value]
+    where [~Map: MapInsert<~Key, ~Value>]
+    => <~Map as MapInsert<~Key, ~Value>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Check if map contains key
-    pub struct EMapContains<Map, Key>
-    where
-        Map, Key,
-        ~Map: MapContains<~Key>
-    {
-        type Output = <~Map as MapContains<~Key>>::Output;
-    }
-}
+    pub EMapContains<Map, Key>
+    args [Map, Key]
+    where [~Map: MapContains<~Key>]
+    => <~Map as MapContains<~Key>>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Get all keys from map
-    pub struct EMapKeys<Map>
-    where
-        Map,
-        ~Map: MapKeys
-    {
-        type Output = <~Map as MapKeys>::Output;
-    }
-}
+    pub EMapKeys<Map>
+    args [Map]
+    where [~Map: MapKeys]
+    => <~Map as MapKeys>::Output
+);
 
-ty_fn! {
+crate::def_expr_via_trait!(
     /// Get all values from map
-    pub struct EMapValues<Map>
-    where
-        Map,
-        ~Map: MapValues
-    {
-        type Output = <~Map as MapValues>::Output;
-    }
-}
+    pub EMapValues<Map>
+    args [Map]
+    where [~Map: MapValues]
+    => <~Map as MapValues>::Output
+);
 
 /// Create a type-level map from key-value pairs
 /// Usage: `tymap![(K1, V1), (K2, V2)]`

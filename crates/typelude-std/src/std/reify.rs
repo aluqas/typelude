@@ -35,7 +35,6 @@ pub trait Reify<T> {
     }
 }
 
-// ... Boolean ...
 impl Reify<bool> for True {
     const REIFIED: bool = true;
 }
@@ -43,7 +42,6 @@ impl Reify<bool> for False {
     const REIFIED: bool = false;
 }
 
-// ... Integer ...
 macro_rules! impl_reify_unsigned {
     ($($Type:ty),*) => {
         $(
@@ -101,7 +99,6 @@ impl<const N: usize> Reify<usize> for typenum::Const<N> {
     const REIFIED: usize = N;
 }
 
-// ... Unit ...
 impl Reify<()> for Nil {
     const REIFIED: () = ();
 }
@@ -109,7 +106,6 @@ impl<T> Reify<[T; 0]> for Nil {
     const REIFIED: [T; 0] = [];
 }
 
-// ... Array ...
 #[allow(unsafe_code)]
 #[cfg(feature = "nightly")]
 impl<Head, Tail, Val, const N: usize> Reify<[Val; N]> for Array<Head, Tail>
@@ -134,7 +130,6 @@ where
     };
 }
 
-// ... Tuple ...
 macro_rules! define_tylist {
     ($head:ident) => { crate::model::col::array::Array<$head, Nil> };
     ($head:ident, $($tail:ident),+) => { crate::model::col::array::Array<$head, define_tylist!($($tail),+)> };
@@ -177,24 +172,14 @@ pub trait ReflectInt<const N: isize> {
     type Output;
 }
 
-// Note: Implementation for integers typically requires macros or specific
-// values if we want typenum U* For now, we can reflect to Const<N> or leave
-// generic implementation for specialized crates to fill, or use typenum::Const
-// as the output for generic integers.
-
 impl<const N: usize> ReflectUsize<N> for () {
     type Output = typenum::Const<N>;
 }
-/*
-impl<const N: isize> ReflectInt<N> for () {
-    type Output = typenum::Const<N>; // Error: Const<N> requires N: usize
-}
-*/
 
 /// Macro for value-to-type reflection.
 #[macro_export]
 macro_rules! ty {
     (true) => { <() as $crate::std::reify::ReflectBool<true>>::Output };
     (false) => { <() as $crate::std::reify::ReflectBool<false>>::Output };
-    ($n:literal) => { typenum::Const<$n> }; // fallback or refined later
+    ($n:literal) => { typenum::Const<$n> };
 }

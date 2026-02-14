@@ -54,6 +54,28 @@ macro_rules! define_unary_logic_op {
 }
 
 #[macro_export]
+macro_rules! def_expr_via_trait {
+    (
+        $(#[$meta:meta])*
+        $vis:vis $name:ident<$($arg:ident),+>
+        args [ $($eval_arg:ident),* ]
+        where [ $($bound:tt)* ]
+        => $($out:tt)+
+    ) => {
+        $crate::typelude_macros::ty_fn! {
+            $(#[$meta])*
+            $vis struct $name<$($arg),+>
+            where
+                $($eval_arg),*,
+                $($bound)*
+            {
+                type Output = $($out)+;
+            }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! helper_if {
     (
         $(#[$meta:meta])*
