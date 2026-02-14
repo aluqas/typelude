@@ -6,7 +6,7 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use typenum::Pow;
 
-pub use crate::data::prim::int::*;
+pub use crate::model::prim::int::*;
 use crate::std::traits::{Nat, TAdd, TDiv, TMul, TPow, TRem, TSub};
 
 // Eval implementation is now in typelude-kernel (via impls.rs)
@@ -66,7 +66,7 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::{ELit, Evaluate};
+    use typelude_std::core::{ELit, Evaluate};
     use typenum::{B0, B1, N2, P5, U1, U3};
 
     use crate::std::ops::EAdd;

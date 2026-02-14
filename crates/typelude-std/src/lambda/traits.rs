@@ -1,38 +1,30 @@
 //! **Lambda Traits**
 //!
-//! Traits specific to pure functional programming context.
+//! Traits and AST nodes for type-level lambda calculus.
 
 use std::marker::PhantomData;
 
-use typelude_core::Eval;
-/// **Pure Lambda Term Trait**
-///
-/// Types implementing this trait represent pure lambda calculus terms.
-pub trait Lambda {
-    type Output;
-}
+// use typelude_std::core::Evaluate;
 
-/// Macro to implement Eval for a Lambda type.
+/// Macro to implement Eval for a Lambda value type.
 /// Usage: `impl_eval_for_lambda!(MyStruct);`
 #[macro_export]
 macro_rules! impl_eval_for_lambda {
     ($t:ty) => {
-        impl $crate::typelude_core::Eval for $t {
-            type Output = <$t as $crate::lambda::traits::Lambda>::Output;
+        impl $crate::typelude_std::core::Eval for $t {
+            type Output = $t;
         }
     };
 }
 
-/// Macro for generic Lambda types.
+/// Macro for generic Lambda value types.
 /// Usage: `impl_eval_for_lambda_generic!(MyStruct, [T, U]);`
 #[macro_export]
 macro_rules! impl_eval_for_lambda_generic {
     ($t:ident, [$($p:ident),+]) => {
-        impl<$($p),+> $crate::typelude_core::Eval for $t<$($p),+>
-        where
-            $t<$($p),+>: $crate::lambda::traits::Lambda,
+        impl<$($p),+> $crate::typelude_std::core::Eval for $t<$($p),+>
         {
-            type Output = <$t<$($p),+> as $crate::lambda::traits::Lambda>::Output;
+            type Output = $t<$($p),+>;
         }
     };
 }
@@ -41,16 +33,6 @@ macro_rules! impl_eval_for_lambda_generic {
 /// Represents the application of function `F` to argument `A`.
 /// This struct is used with the `Eval` pattern.
 pub struct LApp<F, A>(PhantomData<(F, A)>);
-
-// Implement Eval for LApp directly, effectively replacing the blanket impl for
-// this specific type. Assuming LApp implements Lambda (which is usually where
-// logic lives).
-impl<F, A> Eval for LApp<F, A>
-where
-    Self: Lambda,
-{
-    type Output = <Self as Lambda>::Output;
-}
 /// Bind Trait: `m >>= f`
 pub trait LBind<F> {
     type Output;

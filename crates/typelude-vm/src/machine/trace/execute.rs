@@ -2,7 +2,7 @@
 //!
 //! Implements machine instruction execution logic with history tracking.
 
-use typelude_core::{App, Apply, ELit, Eval, Evaluate};
+use typelude_std::core::{Apply, ELit, Eval, Evaluate};
 #[cfg(feature = "nightly")]
 use typelude_std::std::ops::{OpEq, OpNeq};
 use typelude_std::{
@@ -15,13 +15,6 @@ use typelude_std::{
             ENot,
             EOr,
             ESub, // Expressions
-            OpAdd,
-            OpAnd,
-            OpGt,
-            OpLt,
-            OpNot,
-            OpOr,
-            OpSub, // Operators
         },
     },
 };
@@ -68,7 +61,7 @@ impl_traced_binary_op!(OpAnd, EAnd<Lhs, Rhs>);
 impl_traced_binary_op!(OpOr, EOr<Lhs, Rhs>);
 
 macro_rules! impl_traced_cmp_op {
-    ($Op:ty, $CoreOp:ty) => {
+    ($Op:ty, $EvalOp:ty) => {
         impl<Lhs, Rhs, RestStack, Locals, Memory, CallStack, RestProg, History>
             TracedExecute<
                 Array<Lhs, Array<Rhs, RestStack>>,
@@ -79,13 +72,12 @@ macro_rules! impl_traced_cmp_op {
                 History,
             > for $Op
         where
-            $CoreOp: Apply<(Lhs, Rhs)>,
-            App<$CoreOp, (Lhs, Rhs)>: Eval,
+            $EvalOp: Eval,
             RestStack: IsList,
             History: IsList,
         {
             type OutputState = TracedMachineState<
-                Array<Evaluate<App<$CoreOp, (Lhs, Rhs)>>, RestStack>,
+                Array<Evaluate<$EvalOp>, RestStack>,
                 Locals,
                 Memory,
                 CallStack,
@@ -97,11 +89,11 @@ macro_rules! impl_traced_cmp_op {
 }
 
 #[cfg(feature = "nightly")]
-impl_traced_cmp_op!(OpEq, OpEq);
+impl_traced_cmp_op!(OpEq, typelude_std::std::ops::EEq<Lhs, Rhs>);
 #[cfg(feature = "nightly")]
-impl_traced_cmp_op!(OpNeq, OpNeq);
-impl_traced_cmp_op!(OpLt, OpLt);
-impl_traced_cmp_op!(OpGt, OpGt);
+impl_traced_cmp_op!(OpNeq, typelude_std::std::ops::ENeq<Lhs, Rhs>);
+impl_traced_cmp_op!(OpLt, typelude_std::std::ops::ELt<Lhs, Rhs>);
+impl_traced_cmp_op!(OpGt, typelude_std::std::ops::EGt<Lhs, Rhs>);
 
 // --- Unary Ops ---
 impl<Val, RestStack, Locals, Memory, CallStack, RestProg, History>
@@ -470,9 +462,10 @@ pub struct OpTracedIsFinished;
 impl<S, L, M, C, P, H> Apply<TracedMachineState<S, L, M, C, P, H>> for OpTracedIsFinished
 where
     typelude_std::std::array::EIsEmpty<ELit<P>>: Eval,
-    App<OpNot, typelude_std::std::array::EIsEmpty<ELit<P>>>: Eval,
+    typelude_std::std::ops::ENot<typelude_std::std::array::EIsEmpty<ELit<P>>>: Eval,
 {
-    type Output = App<OpNot, typelude_std::std::array::EIsEmpty<ELit<P>>>;
+    type Output =
+        Evaluate<typelude_std::std::ops::ENot<typelude_std::std::array::EIsEmpty<ELit<P>>>>;
 }
 
 /// Runner for traced execution

@@ -9,13 +9,10 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate};
 
 use super::bool::{LFalse, LTrue};
-use crate::{
-    impl_eval_for_lambda, impl_eval_for_lambda_generic,
-    lambda::{LApp, Lambda},
-};
+use crate::{impl_eval_for_lambda, impl_eval_for_lambda_generic, lambda::LApp};
 /// Pure While combinator (curried).
 ///
 /// Semantics: `while pred body state = if (pred state) then while pred body
@@ -24,20 +21,14 @@ use crate::{
 /// Usage: `LApp<LApp<LApp<LWhile, Pred>, Body>, State>`
 pub struct LWhile;
 
-impl Lambda for LWhile {
-    type Output = LWhile;
-}
 impl_eval_for_lambda!(LWhile);
 
 // Partial application: LWhile Pred -> LWhile1<Pred>
 pub struct LWhile1<Pred>(PhantomData<Pred>);
 
-impl<Pred> Lambda for LWhile1<Pred> {
-    type Output = LWhile1<Pred>;
-}
 impl_eval_for_lambda_generic!(LWhile1, [Pred]);
 
-impl<Pred> Lambda for LApp<LWhile, Pred>
+impl<Pred> Eval for LApp<LWhile, Pred>
 where
     Pred: Eval,
 {
@@ -47,49 +38,33 @@ where
 // Partial application: LWhile1<Pred> Body -> LWhile2<Pred, Body>
 pub struct LWhile2<Pred, Body>(PhantomData<(Pred, Body)>);
 
-impl<Pred, Body> Lambda for LWhile2<Pred, Body> {
-    type Output = LWhile2<Pred, Body>;
-}
 impl_eval_for_lambda_generic!(LWhile2, [Pred, Body]);
 
-impl<Pred, Body> Lambda for LApp<LWhile1<Pred>, Body>
+impl<Pred, Body> Eval for LApp<LWhile1<Pred>, Body>
 where
     Body: Eval,
 {
     type Output = LWhile2<Pred, Evaluate<Body>>;
 }
-/// Helper trait for while loop dispatch based on condition result.
-pub trait LWhileHelper<Pred, Body, State> {
-    type Output;
-}
-
-// Condition == LTrue: Execute body, recurse
-impl<Pred, Body, State> LWhileHelper<Pred, Body, State> for LTrue
-where
-    // body(state) -> newState
-    LApp<Body, State>: Lambda,
-    // while pred body newState -> result (recursive call)
-    LApp<LWhile2<Pred, Body>, <LApp<Body, State> as Lambda>::Output>: Lambda,
-{
-    type Output =
-        <LApp<LWhile2<Pred, Body>, <LApp<Body, State> as Lambda>::Output> as Lambda>::Output;
-}
-
-// Condition == LFalse: Return current state
-impl<Pred, Body, State> LWhileHelper<Pred, Body, State> for LFalse {
-    type Output = State;
+crate::helper_if! {
+    #[doc(hidden)]
+    pub trait LWhileHelper<Pred, Body, State>;
+    on LTrue where [
+        LApp<Body, State>: Eval,
+        LApp<LWhile2<Pred, Body>, Evaluate<LApp<Body, State>>>: Eval
+    ] => Evaluate<LApp<LWhile2<Pred, Body>, Evaluate<LApp<Body, State>>>>;
+    on LFalse => State;
 }
 
 // Full application: LWhile2<Pred, Body> State -> if (pred state) recurse else
 // state
-impl<Pred, Body, State> Lambda for LApp<LWhile2<Pred, Body>, State>
+impl<Pred, Body, State> Eval for LApp<LWhile2<Pred, Body>, State>
 where
     // pred(state) -> LTrue/LFalse
-    LApp<Pred, State>: Lambda,
-    <LApp<Pred, State> as Lambda>::Output: LWhileHelper<Pred, Body, State>,
+    LApp<Pred, State>: Eval,
+    Evaluate<LApp<Pred, State>>: LWhileHelper<Pred, Body, State>,
 {
-    type Output =
-        <<LApp<Pred, State> as Lambda>::Output as LWhileHelper<Pred, Body, State>>::Output;
+    type Output = <Evaluate<LApp<Pred, State>> as LWhileHelper<Pred, Body, State>>::Output;
 }
 /// Pure For combinator: iterate over Church list, applying function to each
 /// element.
@@ -99,9 +74,6 @@ where
 /// (To be implemented when Church lists are needed)
 pub struct LFor;
 
-impl Lambda for LFor {
-    type Output = LFor;
-}
 impl_eval_for_lambda!(LFor);
 
 #[cfg(test)]
@@ -116,48 +88,39 @@ mod tests {
 
     // Predicate: IsZero (returns LTrue if zero, LFalse otherwise)
     pub struct LIsZero;
-    impl Lambda for LIsZero {
-        type Output = LIsZero;
-    }
     impl_eval_for_lambda!(LIsZero);
 
     // IsZero Zero -> True
-    impl Lambda for LApp<LIsZero, LZero> {
+    impl Eval for LApp<LIsZero, LZero> {
         type Output = LTrue;
     }
 
     // IsZero (Succ n) -> False
-    impl<N> Lambda for LApp<LIsZero, LSucc<N>> {
+    impl<N> Eval for LApp<LIsZero, LSucc<N>> {
         type Output = LFalse;
     }
 
     // NotZero: negation of IsZero
     pub struct LNotZero;
-    impl Lambda for LNotZero {
-        type Output = LNotZero;
-    }
     impl_eval_for_lambda!(LNotZero);
 
-    impl Lambda for LApp<LNotZero, LZero> {
+    impl Eval for LApp<LNotZero, LZero> {
         type Output = LFalse;
     }
 
-    impl<N> Lambda for LApp<LNotZero, LSucc<N>> {
+    impl<N> Eval for LApp<LNotZero, LSucc<N>> {
         type Output = LTrue;
     }
 
     // Decrement: Pred
     pub struct LDecr;
-    impl Lambda for LDecr {
-        type Output = LDecr;
-    }
     impl_eval_for_lambda!(LDecr);
 
-    impl Lambda for LApp<LDecr, LZero> {
+    impl Eval for LApp<LDecr, LZero> {
         type Output = LZero;
     }
 
-    impl<N> Lambda for LApp<LDecr, LSucc<N>> {
+    impl<N> Eval for LApp<LDecr, LSucc<N>> {
         type Output = N;
     }
 

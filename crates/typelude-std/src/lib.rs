@@ -2,14 +2,16 @@
 #![cfg_attr(feature = "nightly", feature(specialization))]
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 #![allow(incomplete_features)]
-#![recursion_limit = "256"]
+#![recursion_limit = "65536"]
+
+extern crate self as typelude_std;
 
 #[macro_use]
 pub mod macros;
 
-pub mod data;
 pub mod expr;
 pub mod lambda;
+pub mod model;
 pub mod std;
 
 // Export typenum for macros
@@ -17,5 +19,11 @@ pub mod std;
 pub use std::traits;
 
 pub use paste;
-pub use typelude_core::{self, Eval, Evaluate};
+// Re-export macros crate for use in macros.rs
+pub use typelude_macros;
+
+pub mod core;
+// pub use typelude_std::core::{self, Eval, Evaluate};
+pub use core::{Apply, Eval, Evaluate};
+
 pub use typenum;

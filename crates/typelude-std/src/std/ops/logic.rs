@@ -4,10 +4,10 @@
 
 use crate::std::traits::Bool;
 
-// Define Unary: OpNot
+// Define Unary: ENot
 define_unary_logic_op!(Not, Bool, Not, "Logical NOT");
 
-// Define Binary: OpAnd, OpOr, etc.
+// Define Binary: EAnd, EOr, etc.
 define_logic_op!(And, Bool, And, "Logical AND");
 define_logic_op!(Or, Bool, Or, "Logical OR");
 define_logic_op!(Nand, Bool, Nand, "Logical NAND");

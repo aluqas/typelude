@@ -1,4 +1,4 @@
-use typelude_std::std::{col::array::Nil, reify::Reify};
+use typelude_std::std::reify::Reify;
 
 #[test]
 fn test_reify_array_unsafe_copy() {

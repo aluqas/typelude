@@ -4,20 +4,17 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::Eval;
+use typelude_std::core::{Eval, Evaluate};
 
-use crate::lambda::{LApp, Lambda, traits::LBind};
+use crate::lambda::{LApp, traits::LBind};
 
 /// Identity Monad: Id<T>
 ///
 /// `Id<T>` allows treating a plain value `T` as a Monad.
 pub struct LId<T>(PhantomData<T>);
 
-impl<T> Lambda for LId<T> {
-    type Output = LId<T>;
-}
 impl<T> Eval for LId<T> {
-    type Output = Self;
+    type Output = LId<T>;
 }
 
 // Bind: Id<T> >>= F  ->  F T
@@ -26,29 +23,26 @@ impl<T, F> LBind<F> for LId<T>
 where
     F: Eval,
     T: Eval,
-    LApp<F, T>: Lambda,
+    LApp<F, T>: Eval,
 {
-    type Output = <LApp<F, T> as Lambda>::Output;
+    type Output = Evaluate<LApp<F, T>>;
 }
 
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::Evaluate;
+    use typelude_std::core::Evaluate;
 
     use super::*;
     use crate::lambda::church::{LSucc, LZero};
 
     #[derive(Clone)]
     struct AddOne;
-    impl Lambda for AddOne {
+    impl Eval for AddOne {
         type Output = AddOne;
     }
-    impl Eval for AddOne {
-        type Output = Self;
-    }
 
-    impl<X> Lambda for LApp<AddOne, X>
+    impl<X> Eval for LApp<AddOne, X>
     where
         X: crate::lambda::traits::LNat + Eval,
     {

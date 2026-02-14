@@ -2,16 +2,16 @@
 //!
 //! Key-Value binary search tree (sorted map).
 
-use typelude_core::Evaluate;
-use typelude_macros::def_op;
+use typelude_macros::ty_fn;
+use typelude_std::core::Evaluate;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
 
 /// Marker trait for type-level TreeMap
-pub use crate::data::col::tree_map::IsTreeMap;
+pub use crate::model::col::tree_map::IsTreeMap;
 // Re-export kernel types
-pub use crate::data::col::tree_map::{Nil, TreeMap};
+pub use crate::model::col::tree_map::{Nil, TreeMap};
 use crate::{
-    data::prim::bool::{False, True},
+    model::prim::bool::{False, True},
     std::prim::option::{None, Some},
 };
 
@@ -31,33 +31,13 @@ impl<K, V> TreeMapInsert<K, V> for Nil {
 }
 
 #[doc(hidden)]
-pub trait TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right, IsEq, IsLessResult> {
-    type Output: IsTreeMap;
-}
-
-// K == NodeKey: Replace value
-impl<K, V, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap, IsLessResult>
-    TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right, B1, IsLessResult> for ()
-{
-    type Output = TreeMap<NodeKey, V, Left, Right>;
-}
-
-// K < NodeKey: go left
-impl<K, V, NodeKey, NodeValue, Left: IsTreeMap + TreeMapInsert<K, V>, Right: IsTreeMap>
-    TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right, B0, B1> for ()
-where
-    <Left as TreeMapInsert<K, V>>::Output: IsTreeMap,
-{
-    type Output = TreeMap<NodeKey, NodeValue, <Left as TreeMapInsert<K, V>>::Output, Right>;
-}
-
-// K > NodeKey: go right
-impl<K, V, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap + TreeMapInsert<K, V>>
-    TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right, B0, B0> for ()
-where
-    <Right as TreeMapInsert<K, V>>::Output: IsTreeMap,
-{
-    type Output = TreeMap<NodeKey, NodeValue, Left, <Right as TreeMapInsert<K, V>>::Output>;
+crate::helper_bit! {
+    pub trait TreeMapInsertHelper<K, V, NodeKey, NodeValue, Left, Right; IsEq, IsLessResult> for ();
+    on (B1, IsLessResult) where [Left: IsTreeMap, Right: IsTreeMap] => TreeMap<NodeKey, V, Left, Right>;
+    on (B0, B1) where [Left: IsTreeMap + TreeMapInsert<K, V>, Right: IsTreeMap, <Left as TreeMapInsert<K, V>>::Output: IsTreeMap]
+        => TreeMap<NodeKey, NodeValue, <Left as TreeMapInsert<K, V>>::Output, Right>;
+    on (B0, B0) where [Left: IsTreeMap, Right: IsTreeMap + TreeMapInsert<K, V>, <Right as TreeMapInsert<K, V>>::Output: IsTreeMap]
+        => TreeMap<NodeKey, NodeValue, Left, <Right as TreeMapInsert<K, V>>::Output>;
 }
 
 impl<K, V, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap> TreeMapInsert<K, V>
@@ -76,6 +56,16 @@ where
             <K as IsEqual<NodeKey>>::Output,
             <K as IsLess<NodeKey>>::Output,
         >,
+    <() as TreeMapInsertHelper<
+            K,
+            V,
+            NodeKey,
+            NodeValue,
+            Left,
+            Right,
+            <K as IsEqual<NodeKey>>::Output,
+            <K as IsLess<NodeKey>>::Output,
+        >>::Output: IsTreeMap,
 {
     type Output = <() as TreeMapInsertHelper<
         K,
@@ -101,29 +91,11 @@ impl<K> TreeMapGet<K> for Nil {
 }
 
 #[doc(hidden)]
-pub trait TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right, IsEq, IsLessResult> {
-    type Output;
-}
-
-// K == NodeKey: Found
-impl<K, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap, IsLessResult>
-    TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right, B1, IsLessResult> for ()
-{
-    type Output = Some<NodeValue>;
-}
-
-// K < NodeKey: search left
-impl<K, NodeKey, NodeValue, Left: IsTreeMap + TreeMapGet<K>, Right: IsTreeMap>
-    TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right, B0, B1> for ()
-{
-    type Output = <Left as TreeMapGet<K>>::Output;
-}
-
-// K > NodeKey: search right
-impl<K, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap + TreeMapGet<K>>
-    TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right, B0, B0> for ()
-{
-    type Output = <Right as TreeMapGet<K>>::Output;
+crate::helper_bit! {
+    pub trait TreeMapGetHelper<K, NodeKey, NodeValue, Left, Right; IsEq, IsLessResult> for ();
+    on (B1, IsLessResult) => Some<NodeValue>;
+    on (B0, B1) where [Left: IsTreeMap + TreeMapGet<K>] => <Left as TreeMapGet<K>>::Output;
+    on (B0, B0) where [Right: IsTreeMap + TreeMapGet<K>] => <Right as TreeMapGet<K>>::Output;
 }
 
 impl<K, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap> TreeMapGet<K>
@@ -163,29 +135,11 @@ impl<K> TreeMapContains<K> for Nil {
 }
 
 #[doc(hidden)]
-pub trait TreeMapContainsHelper<K, NodeKey, Left, Right, IsEq, IsLessResult> {
-    type Output;
-}
-
-// K == NodeKey: found
-impl<K, NodeKey, Left: IsTreeMap, Right: IsTreeMap, IsLessResult>
-    TreeMapContainsHelper<K, NodeKey, Left, Right, B1, IsLessResult> for ()
-{
-    type Output = True;
-}
-
-// K < NodeKey: search left
-impl<K, NodeKey, Left: IsTreeMap + TreeMapContains<K>, Right: IsTreeMap>
-    TreeMapContainsHelper<K, NodeKey, Left, Right, B0, B1> for ()
-{
-    type Output = <Left as TreeMapContains<K>>::Output;
-}
-
-// K > NodeKey: search right
-impl<K, NodeKey, Left: IsTreeMap, Right: IsTreeMap + TreeMapContains<K>>
-    TreeMapContainsHelper<K, NodeKey, Left, Right, B0, B0> for ()
-{
-    type Output = <Right as TreeMapContains<K>>::Output;
+crate::helper_bit! {
+    pub trait TreeMapContainsHelper<K, NodeKey, Left, Right; IsEq, IsLessResult> for ();
+    on (B1, IsLessResult) => True;
+    on (B0, B1) where [Left: IsTreeMap + TreeMapContains<K>] => <Left as TreeMapContains<K>>::Output;
+    on (B0, B0) where [Right: IsTreeMap + TreeMapContains<K>] => <Right as TreeMapContains<K>>::Output;
 }
 
 impl<K, NodeKey, NodeValue, Left: IsTreeMap, Right: IsTreeMap> TreeMapContains<K>
@@ -257,60 +211,57 @@ where
 
 /// Convert TreeMap to sorted list of key-value pairs (in-order traversal)
 pub trait TreeMapToList {
-    type Output: crate::data::col::array::IsList;
+    type Output: crate::model::col::array::IsList;
 }
 
 impl TreeMapToList for Nil {
-    type Output = crate::data::col::array::Nil;
+    type Output = crate::model::col::array::Nil;
 }
 
 impl<K, V, L: IsTreeMap + TreeMapToList, R: IsTreeMap + TreeMapToList> TreeMapToList
     for TreeMap<K, V, L, R>
 where
-    <L as TreeMapToList>::Output: crate::data::col::array::IsList
+    <L as TreeMapToList>::Output: crate::model::col::array::IsList
         + crate::std::col::array::Concat<
-            crate::data::col::array::Array<(K, V), <R as TreeMapToList>::Output>,
+            crate::model::col::array::Array<(K, V), <R as TreeMapToList>::Output>,
         >,
-    <R as TreeMapToList>::Output: crate::data::col::array::IsList,
+    <R as TreeMapToList>::Output: crate::model::col::array::IsList,
 {
     type Output = <<L as TreeMapToList>::Output as crate::std::col::array::Concat<
-        crate::data::col::array::Array<(K, V), <R as TreeMapToList>::Output>,
+        crate::model::col::array::Array<(K, V), <R as TreeMapToList>::Output>,
     >>::Output;
 }
 
-def_op! {
+ty_fn! {
     /// Insert key-value pair into TreeMap
-    name: OpTreeMapInsert,
-    args: (Tree, Key, Value),
-    ast: ETreeMapInsert {
-        where: [
-            Evaluate<Tree>: TreeMapInsert<Evaluate<Key>, Evaluate<Value>>
-        ],
-        type Output = <Evaluate<Tree> as TreeMapInsert<Evaluate<Key>, Evaluate<Value>>>::Output
+    pub struct ETreeMapInsert<Tree, Key, Value>
+    where
+        Tree, Key, Value,
+        ~Tree: TreeMapInsert<~Key, ~Value>
+    {
+        type Output = <~Tree as TreeMapInsert<~Key, ~Value>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Get value by key from TreeMap
-    name: OpTreeMapGet,
-    args: (Tree, Key),
-    ast: ETreeMapGet {
-        where: [
-            Evaluate<Tree>: TreeMapGet<Evaluate<Key>>
-        ],
-        type Output = <Evaluate<Tree> as TreeMapGet<Evaluate<Key>>>::Output
+    pub struct ETreeMapGet<Tree, Key>
+    where
+        Tree, Key,
+        ~Tree: TreeMapGet<~Key>
+    {
+        type Output = <~Tree as TreeMapGet<~Key>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Check if TreeMap contains key
-    name: OpTreeMapContains,
-    args: (Tree, Key),
-    ast: ETreeMapContains {
-        where: [
-            Evaluate<Tree>: TreeMapContains<Evaluate<Key>>
-        ],
-        type Output = <Evaluate<Tree> as TreeMapContains<Evaluate<Key>>>::Output
+    pub struct ETreeMapContains<Tree, Key>
+    where
+        Tree, Key,
+        ~Tree: TreeMapContains<~Key>
+    {
+        type Output = <~Tree as TreeMapContains<~Key>>::Output;
     }
 }
 
@@ -320,7 +271,7 @@ mod tests {
     use typenum::{U1, U2, U3, U5};
 
     use super::*;
-    use crate::data::col::array::{Array as ArrayData, Nil as NilArray};
+    use crate::model::col::array::{Array as ArrayData, Nil as NilArray};
 
     #[test]
     fn test_insert() {

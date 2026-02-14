@@ -2,11 +2,11 @@
 //!
 //! Type-level booleans (`True`, `False`) and logical operations.
 
-use typelude_core::Eval;
+use typelude_std::core::Eval;
 use typenum::{B0, B1};
 
 // Re-export kernel types
-pub use crate::data::prim::bool::{False, IsBool, True};
+pub use crate::model::prim::bool::{False, IsBool, True};
 pub use crate::std::traits::Bool;
 
 //
@@ -85,7 +85,7 @@ impl IntoBool for B1 {
 }
 
 // Blanket impl for ELit<T> - delegates to inner type's IntoBool
-impl<T: IntoBool> IntoBool for typelude_core::ELit<T> {
+impl<T: IntoBool> IntoBool for typelude_std::core::ELit<T> {
     type Output = <T as IntoBool>::Output;
 }
 
@@ -118,7 +118,7 @@ pub type ToBoolOut<T> = <bool as From<T>>::Output;
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_core::{ELit, Evaluate};
+    use typelude_std::core::{ELit, Evaluate};
 
     use super::*;
     use crate::std::ops::logic::*;

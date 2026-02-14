@@ -1,20 +1,8 @@
+pub mod col;
 pub mod expr;
-pub mod list;
 
+pub use col::*;
 pub use expr::*;
-pub use list::*;
-
-#[diagnostic::on_unimplemented(
-    message = "`{Self}` cannot be applied to argument `{Arg}`",
-    label = "Apply not implemented",
-    note = "ensure `{Self}` implements `Apply<{Arg}>`"
-)]
-pub trait Apply<Arg> {
-    type Output;
-}
-
-/// Type alias for function application result
-pub type App<F, A> = <F as Apply<A>>::Output;
 
 #[diagnostic::on_unimplemented(
     message = "`{Self}` cannot be evaluated",
@@ -27,3 +15,5 @@ pub trait Eval {
 
 /// Type alias to obtain evaluation results of expressions
 pub type Evaluate<T> = <T as Eval>::Output;
+
+// pub type Apply<Fn, Args> = <Fn<Args> as Eval>::Output;

@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "crates/typelude",
-    "crates/typelude-core",
+    # "crates/typelude-core",
     "crates/typelude-std",
     "crates/typelude-vm",
     "crates/typelude-macros",

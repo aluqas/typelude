@@ -2,16 +2,16 @@
 //!
 //! Value-only binary search tree (sorted set).
 
-use typelude_core::Evaluate;
-use typelude_macros::def_op;
+use typelude_macros::ty_fn;
+use typelude_std::core::Evaluate;
 use typenum::{B0, B1, Bit, IsEqual, IsLess};
 
 /// Marker trait for type-level TreeArray
-pub use crate::data::col::tree_array::IsTreeArray;
+pub use crate::model::col::tree_array::IsTreeArray;
 // Re-export kernel types
-pub use crate::data::col::tree_array::{Nil, TreeArray};
+pub use crate::model::col::tree_array::{Nil, TreeArray};
 use crate::{
-    data::prim::bool::{False, True},
+    model::prim::bool::{False, True},
     std::prim::option::{None, Some},
 };
 
@@ -31,33 +31,13 @@ impl<V> TreeArrayInsert<V> for Nil {
 }
 
 #[doc(hidden)]
-pub trait TreeArrayInsertHelper<V, NodeValue, Left, Right, IsEq, IsLessResult> {
-    type Output: IsTreeArray;
-}
-
-// V == NodeValue: already exists, no change
-impl<V, NodeValue, Left: IsTreeArray, Right: IsTreeArray, IsLessResult>
-    TreeArrayInsertHelper<V, NodeValue, Left, Right, B1, IsLessResult> for ()
-{
-    type Output = TreeArray<NodeValue, Left, Right>;
-}
-
-// V < NodeValue: go left
-impl<V, NodeValue, Left: IsTreeArray + TreeArrayInsert<V>, Right: IsTreeArray>
-    TreeArrayInsertHelper<V, NodeValue, Left, Right, B0, B1> for ()
-where
-    <Left as TreeArrayInsert<V>>::Output: IsTreeArray,
-{
-    type Output = TreeArray<NodeValue, <Left as TreeArrayInsert<V>>::Output, Right>;
-}
-
-// V > NodeValue: go right
-impl<V, NodeValue, Left: IsTreeArray, Right: IsTreeArray + TreeArrayInsert<V>>
-    TreeArrayInsertHelper<V, NodeValue, Left, Right, B0, B0> for ()
-where
-    <Right as TreeArrayInsert<V>>::Output: IsTreeArray,
-{
-    type Output = TreeArray<NodeValue, Left, <Right as TreeArrayInsert<V>>::Output>;
+crate::helper_bit! {
+    pub trait TreeArrayInsertHelper<V, NodeValue, Left, Right; IsEq, IsLessResult> for ();
+    on (B1, IsLessResult) where [Left: IsTreeArray, Right: IsTreeArray] => TreeArray<NodeValue, Left, Right>;
+    on (B0, B1) where [Left: IsTreeArray + TreeArrayInsert<V>, Right: IsTreeArray, <Left as TreeArrayInsert<V>>::Output: IsTreeArray]
+        => TreeArray<NodeValue, <Left as TreeArrayInsert<V>>::Output, Right>;
+    on (B0, B0) where [Left: IsTreeArray, Right: IsTreeArray + TreeArrayInsert<V>, <Right as TreeArrayInsert<V>>::Output: IsTreeArray]
+        => TreeArray<NodeValue, Left, <Right as TreeArrayInsert<V>>::Output>;
 }
 
 impl<V, NodeValue, Left: IsTreeArray, Right: IsTreeArray> TreeArrayInsert<V>
@@ -74,6 +54,14 @@ where
             <V as IsEqual<NodeValue>>::Output,
             <V as IsLess<NodeValue>>::Output,
         >,
+    <() as TreeArrayInsertHelper<
+            V,
+            NodeValue,
+            Left,
+            Right,
+            <V as IsEqual<NodeValue>>::Output,
+            <V as IsLess<NodeValue>>::Output,
+        >>::Output: IsTreeArray,
 {
     type Output = <() as TreeArrayInsertHelper<
         V,
@@ -95,29 +83,11 @@ impl<V> TreeArrayContains<V> for Nil {
 }
 
 #[doc(hidden)]
-pub trait TreeArrayContainsHelper<V, NodeValue, Left, Right, IsEq, IsLessResult> {
-    type Output;
-}
-
-// V == NodeValue: found
-impl<V, NodeValue, Left: IsTreeArray, Right: IsTreeArray, IsLessResult>
-    TreeArrayContainsHelper<V, NodeValue, Left, Right, B1, IsLessResult> for ()
-{
-    type Output = True;
-}
-
-// V < NodeValue: search left
-impl<V, NodeValue, Left: IsTreeArray + TreeArrayContains<V>, Right: IsTreeArray>
-    TreeArrayContainsHelper<V, NodeValue, Left, Right, B0, B1> for ()
-{
-    type Output = <Left as TreeArrayContains<V>>::Output;
-}
-
-// V > NodeValue: search right
-impl<V, NodeValue, Left: IsTreeArray, Right: IsTreeArray + TreeArrayContains<V>>
-    TreeArrayContainsHelper<V, NodeValue, Left, Right, B0, B0> for ()
-{
-    type Output = <Right as TreeArrayContains<V>>::Output;
+crate::helper_bit! {
+    pub trait TreeArrayContainsHelper<V, NodeValue, Left, Right; IsEq, IsLessResult> for ();
+    on (B1, IsLessResult) => True;
+    on (B0, B1) where [Left: IsTreeArray + TreeArrayContains<V>] => <Left as TreeArrayContains<V>>::Output;
+    on (B0, B0) where [Right: IsTreeArray + TreeArrayContains<V>] => <Right as TreeArrayContains<V>>::Output;
 }
 
 impl<V, NodeValue, Left: IsTreeArray, Right: IsTreeArray> TreeArrayContains<V>
@@ -189,48 +159,46 @@ where
 
 /// Convert TreeArray to sorted list (in-order traversal)
 pub trait TreeArrayToList {
-    type Output: crate::data::col::array::IsList;
+    type Output: crate::model::col::array::IsList;
 }
 
 impl TreeArrayToList for Nil {
-    type Output = crate::data::col::array::Nil;
+    type Output = crate::model::col::array::Nil;
 }
 
 impl<V, L: IsTreeArray + TreeArrayToList, R: IsTreeArray + TreeArrayToList> TreeArrayToList
     for TreeArray<V, L, R>
 where
-    <L as TreeArrayToList>::Output: crate::data::col::array::IsList
+    <L as TreeArrayToList>::Output: crate::model::col::array::IsList
         + crate::std::col::array::Concat<
-            crate::data::col::array::Array<V, <R as TreeArrayToList>::Output>,
+            crate::model::col::array::Array<V, <R as TreeArrayToList>::Output>,
         >,
-    <R as TreeArrayToList>::Output: crate::data::col::array::IsList,
+    <R as TreeArrayToList>::Output: crate::model::col::array::IsList,
 {
     type Output = <<L as TreeArrayToList>::Output as crate::std::col::array::Concat<
-        crate::data::col::array::Array<V, <R as TreeArrayToList>::Output>,
+        crate::model::col::array::Array<V, <R as TreeArrayToList>::Output>,
     >>::Output;
 }
 
-def_op! {
+ty_fn! {
     /// Insert value into TreeArray
-    name: OpTreeArrayInsert,
-    args: (Tree, Value),
-    ast: ETreeArrayInsert {
-        where: [
-            Evaluate<Tree>: TreeArrayInsert<Evaluate<Value>>
-        ],
-        type Output = <Evaluate<Tree> as TreeArrayInsert<Evaluate<Value>>>::Output
+    pub struct ETreeArrayInsert<Tree, Value>
+    where
+        Tree, Value,
+        ~Tree: TreeArrayInsert<~Value>
+    {
+        type Output = <~Tree as TreeArrayInsert<~Value>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Check if TreeArray contains value
-    name: OpTreeArrayContains,
-    args: (Tree, Value),
-    ast: ETreeArrayContains {
-        where: [
-            Evaluate<Tree>: TreeArrayContains<Evaluate<Value>>
-        ],
-        type Output = <Evaluate<Tree> as TreeArrayContains<Evaluate<Value>>>::Output
+    pub struct ETreeArrayContains<Tree, Value>
+    where
+        Tree, Value,
+        ~Tree: TreeArrayContains<~Value>
+    {
+        type Output = <~Tree as TreeArrayContains<~Value>>::Output;
     }
 }
 
@@ -240,7 +208,7 @@ mod tests {
     use typenum::{U1, U2, U3, U5};
 
     use super::*;
-    use crate::data::col::array::{Array as ArrayData, Nil as NilArray};
+    use crate::model::col::array::{Array as ArrayData, Nil as NilArray};
 
     #[test]
     fn test_insert() {

@@ -28,7 +28,8 @@ pub struct OpPush<Val>(PhantomData<Val>);
 
 // Define all simple operations
 define_simple_ops!(
-    Add, Sub, Dup, Swap, Drop, Eq, Neq, Lt, Gt, Not, And, Or, Load, Store, Return, Let, DropLocal
+    Add, Sub, Dup, Swap, Drop, Pop, Eq, Neq, Lt, Gt, Not, And, Or, Load, Store, Return, Let,
+    DropLocal
 );
 
 /// Conditional execution.

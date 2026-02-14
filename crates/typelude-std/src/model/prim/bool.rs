@@ -2,7 +2,7 @@
 //!
 //! Pure data structures for type-level booleans.
 
-use typelude_core::Eval;
+use typelude_std::core::Eval;
 
 /// **Marker Trait**
 ///

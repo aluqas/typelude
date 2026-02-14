@@ -6,12 +6,12 @@
 
 use std::marker::PhantomData;
 
-use typelude_core::{Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate};
 
 use crate::{
     impl_eval_for_lambda, impl_eval_for_lambda_generic,
     lambda::{
-        LApp, Lambda,
+        LApp,
         traits::{LBool, LTerm},
     },
 };
@@ -19,36 +19,24 @@ use crate::{
 pub struct LTrue;
 impl LTerm for LTrue {}
 impl LBool for LTrue {}
-impl Lambda for LTrue {
-    type Output = LTrue;
-}
 impl_eval_for_lambda!(LTrue);
 
 /// Church False: λt f. f
 pub struct LFalse;
 impl LTerm for LFalse {}
 impl LBool for LFalse {}
-impl Lambda for LFalse {
-    type Output = LFalse;
-}
 impl_eval_for_lambda!(LFalse);
 
 // Partial Application States
 pub struct LTrue1<T>(PhantomData<T>);
-impl<T> Lambda for LTrue1<T> {
-    type Output = LTrue1<T>;
-}
 impl_eval_for_lambda_generic!(LTrue1, [T]);
 
 pub struct LFalse1<T>(PhantomData<T>);
-impl<T> Lambda for LFalse1<T> {
-    type Output = LFalse1<T>;
-}
 impl_eval_for_lambda_generic!(LFalse1, [T]);
 
 // --- True Implementation ---
 // True T -> True1<T>
-impl<T> Lambda for LApp<LTrue, T>
+impl<T> Eval for LApp<LTrue, T>
 where
     T: Eval,
 {
@@ -56,7 +44,7 @@ where
 }
 
 // True1<T> F -> T
-impl<T, F> Lambda for LApp<LTrue1<T>, F>
+impl<T, F> Eval for LApp<LTrue1<T>, F>
 where
     T: Eval,
 {
@@ -65,7 +53,7 @@ where
 
 // --- False Implementation ---
 // False T -> False1<T>
-impl<T> Lambda for LApp<LFalse, T>
+impl<T> Eval for LApp<LFalse, T>
 where
     T: Eval,
 {
@@ -73,7 +61,7 @@ where
 }
 
 // False1<T> F -> F
-impl<T, F> Lambda for LApp<LFalse1<T>, F>
+impl<T, F> Eval for LApp<LFalse1<T>, F>
 where
     F: Eval,
 {
@@ -84,19 +72,13 @@ pub type LPureIf<P, T, E> = Evaluate<LApp<LApp<LApp<LIf, P>, T>, E>>;
 
 /// LIf: P T E -> ((P T) E)
 pub struct LIf;
-impl Lambda for LIf {
-    type Output = LIf;
-}
 impl_eval_for_lambda!(LIf);
 
 // If P -> If1<P>
 pub struct LIf1<P>(PhantomData<P>);
-impl<P> Lambda for LIf1<P> {
-    type Output = LIf1<P>;
-}
 impl_eval_for_lambda_generic!(LIf1, [P]);
 
-impl<P> Lambda for LApp<LIf, P>
+impl<P> Eval for LApp<LIf, P>
 where
     P: Eval,
 {
@@ -105,12 +87,9 @@ where
 
 // If1<P> T -> If2<P, T>
 pub struct LIf2<P, T>(PhantomData<(P, T)>);
-impl<P, T> Lambda for LIf2<P, T> {
-    type Output = LIf2<P, T>;
-}
 impl_eval_for_lambda_generic!(LIf2, [P, T]);
 
-impl<P, T> Lambda for LApp<LIf1<P>, T>
+impl<P, T> Eval for LApp<LIf1<P>, T>
 where
     T: Eval,
 {
@@ -118,7 +97,7 @@ where
 }
 
 // If2<P, T> E -> P T E
-impl<P, T, E> Lambda for LApp<LIf2<P, T>, E>
+impl<P, T, E> Eval for LApp<LIf2<P, T>, E>
 where
     P: Eval,
     T: Eval,
@@ -144,16 +123,10 @@ mod tests {
     fn test_church_bools_basic() {
         #[derive(Clone)]
         struct A;
-        impl Lambda for A {
-            type Output = A;
-        }
         impl_eval_for_lambda!(A);
 
         #[derive(Clone)]
         struct B;
-        impl Lambda for B {
-            type Output = B;
-        }
         impl_eval_for_lambda!(B);
 
         // True A B -> A

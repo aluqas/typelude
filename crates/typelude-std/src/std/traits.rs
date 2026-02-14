@@ -12,7 +12,7 @@
 //! `typelude` operations, you must implement the relevant "Type Class" traits
 //! for them.
 //!
-//! For example, to use a custom boolean type `MyBool` with `OpAnd`, `OpIf`,
+//! For example, to use a custom boolean type `MyBool` with `EAnd`, `EIf`,
 //! etc.:
 //! 1. Implement `Eval` for `MyBool` (usually identity).
 //! 2. Implement `TypeBool` for `MyBool`.
@@ -20,7 +20,7 @@
 //! This "Adapter Pattern" allows the core logic to remain agnostic of the
 //! underlying concrete types.
 
-use typelude_core::ELit;
+use typelude_std::core::ELit;
 
 /// Trait representing a function
 ///
@@ -42,10 +42,6 @@ where
 {
     type Output = <F as TyFn<Arg>>::Output;
 }
-
-// Re-export Apply from core to ensure compatibility with LApp and other core
-// constructs
-pub use typelude_core::Apply;
 
 /// Marker trait for Natural Numbers (Unsigned Integers).
 #[diagnostic::on_unimplemented(

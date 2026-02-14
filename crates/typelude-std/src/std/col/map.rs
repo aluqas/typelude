@@ -2,16 +2,16 @@
 //!
 //! Type-level associative map (key-value store) and its operations.
 
-use typelude_core::Evaluate;
-use typelude_macros::def_op;
+use typelude_macros::ty_fn;
+use typelude_std::core::Evaluate;
 use typenum::{B0, B1, Bit, IsEqual};
 
 /// Marker trait for type-level maps
-pub use crate::data::col::map::IsMap as TypeMap;
+pub use crate::model::col::map::IsMap as TypeMap;
 // Re-export kernel types for convenience/compatibility if mostly used from here
-pub use crate::data::col::map::{Map, Nil};
+pub use crate::model::col::map::{Map, Nil};
 use crate::{
-    data::prim::bool::{False, True},
+    model::prim::bool::{False, True},
     std::prim::option::{None, Some},
 };
 
@@ -33,23 +33,11 @@ impl<K> MapGet<K> for Nil {
 }
 
 /// Helper for MapGet dispatch based on key equality
-#[doc(hidden)]
-pub trait MapGetHelper<Key, NodeKey, NodeValue, Tail, IsEq> {
-    type Output;
-}
-
-// Key == NodeKey: Found
-impl<Key, NodeKey, NodeValue, Tail: TypeMap> MapGetHelper<Key, NodeKey, NodeValue, Tail, B1>
-    for ()
-{
-    type Output = Some<NodeValue>;
-}
-
-// Key != NodeKey: Recurse into Tail
-impl<Key, NodeKey, NodeValue, Tail: TypeMap + MapGet<Key>>
-    MapGetHelper<Key, NodeKey, NodeValue, Tail, B0> for ()
-{
-    type Output = <Tail as MapGet<Key>>::Output;
+crate::helper_bit! {
+    #[doc(hidden)]
+    pub trait MapGetHelper<Key, NodeKey, NodeValue, Tail; IsEq> for ();
+    on B1 => Some<NodeValue>;
+    on B0 where [Tail: TypeMap + MapGet<Key>] => <Tail as MapGet<Key>>::Output;
 }
 
 impl<K, NK, V, T: TypeMap> MapGet<K> for Map<NK, V, T>
@@ -92,21 +80,11 @@ impl<K> MapContains<K> for Nil {
 }
 
 /// Helper for MapContains dispatch based on key equality
-#[doc(hidden)]
-pub trait MapContainsHelper<Key, NodeKey, Tail, IsEq> {
-    type Output;
-}
-
-// Key == NodeKey: Found
-impl<Key, NodeKey, Tail: TypeMap> MapContainsHelper<Key, NodeKey, Tail, B1> for () {
-    type Output = True;
-}
-
-// Key != NodeKey: Recurse into Tail
-impl<Key, NodeKey, Tail: TypeMap + MapContains<Key>> MapContainsHelper<Key, NodeKey, Tail, B0>
-    for ()
-{
-    type Output = <Tail as MapContains<Key>>::Output;
+crate::helper_bit! {
+    #[doc(hidden)]
+    pub trait MapContainsHelper<Key, NodeKey, Tail; IsEq> for ();
+    on B1 => True;
+    on B0 where [Tail: TypeMap + MapContains<Key>] => <Tail as MapContains<Key>>::Output;
 }
 
 impl<K, NK, V, T: TypeMap> MapContains<K> for Map<NK, V, T>
@@ -120,28 +98,28 @@ where
 
 /// Extract all keys as an Array
 pub trait MapKeys {
-    type Output: crate::data::col::array::IsList;
+    type Output: crate::model::col::array::IsList;
 }
 
 impl MapKeys for Nil {
-    type Output = crate::data::col::array::Nil;
+    type Output = crate::model::col::array::Nil;
 }
 
 impl<K, V, T: TypeMap + MapKeys> MapKeys for Map<K, V, T> {
-    type Output = crate::data::col::array::Array<K, <T as MapKeys>::Output>;
+    type Output = crate::model::col::array::Array<K, <T as MapKeys>::Output>;
 }
 
 /// Extract all values as an Array
 pub trait MapValues {
-    type Output: crate::data::col::array::IsList;
+    type Output: crate::model::col::array::IsList;
 }
 
 impl MapValues for Nil {
-    type Output = crate::data::col::array::Nil;
+    type Output = crate::model::col::array::Nil;
 }
 
 impl<K, V, T: TypeMap + MapValues> MapValues for Map<K, V, T> {
-    type Output = crate::data::col::array::Array<V, <T as MapValues>::Output>;
+    type Output = crate::model::col::array::Array<V, <T as MapValues>::Output>;
 }
 
 /// Get the size of the map
@@ -160,63 +138,58 @@ where
     type Output = <<T as MapLen>::Output as std::ops::Add<typenum::B1>>::Output;
 }
 
-def_op! {
+ty_fn! {
     /// Get value from map by key
-    name: OpMapGet,
-    args: (Map, Key),
-    ast: EMapGet {
-        where: [
-            Evaluate<Map>: MapGet<Evaluate<Key>>
-        ],
-        type Output = <Evaluate<Map> as MapGet<Evaluate<Key>>>::Output
+    pub struct EMapGet<Map, Key>
+    where
+        Map, Key,
+        ~Map: MapGet<~Key>
+    {
+        type Output = <~Map as MapGet<~Key>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Insert key-value pair into map
-    name: OpMapInsert,
-    args: (Map, Key, Value),
-    ast: EMapInsert {
-        where: [
-            Evaluate<Map>: MapInsert<Evaluate<Key>, Evaluate<Value>>
-        ],
-        type Output = <Evaluate<Map> as MapInsert<Evaluate<Key>, Evaluate<Value>>>::Output
+    pub struct EMapInsert<Map, Key, Value>
+    where
+        Map, Key, Value,
+        ~Map: MapInsert<~Key, ~Value>
+    {
+        type Output = <~Map as MapInsert<~Key, ~Value>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Check if map contains key
-    name: OpMapContains,
-    args: (Map, Key),
-    ast: EMapContains {
-        where: [
-            Evaluate<Map>: MapContains<Evaluate<Key>>
-        ],
-        type Output = <Evaluate<Map> as MapContains<Evaluate<Key>>>::Output
+    pub struct EMapContains<Map, Key>
+    where
+        Map, Key,
+        ~Map: MapContains<~Key>
+    {
+        type Output = <~Map as MapContains<~Key>>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Get all keys from map
-    name: OpMapKeys,
-    args: (Map),
-    ast: EMapKeys {
-        where: [
-            Evaluate<Map>: MapKeys
-        ],
-        type Output = <Evaluate<Map> as MapKeys>::Output
+    pub struct EMapKeys<Map>
+    where
+        Map,
+        ~Map: MapKeys
+    {
+        type Output = <~Map as MapKeys>::Output;
     }
 }
 
-def_op! {
+ty_fn! {
     /// Get all values from map
-    name: OpMapValues,
-    args: (Map),
-    ast: EMapValues {
-        where: [
-            Evaluate<Map>: MapValues
-        ],
-        type Output = <Evaluate<Map> as MapValues>::Output
+    pub struct EMapValues<Map>
+    where
+        Map,
+        ~Map: MapValues
+    {
+        type Output = <~Map as MapValues>::Output;
     }
 }
 
@@ -240,7 +213,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        data::col::array::{Array, Nil as NilArray},
+        model::col::array::{Array, Nil as NilArray},
         std::prim::option::{None, Some},
     };
 
