@@ -2,79 +2,68 @@
 //!
 //! Implementation of comparison operations using `typenum`.
 
-use typelude_std::core::Evaluate;
-use typenum::{Bit, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
+use typenum::{Bit, IsEqual, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
 use crate::std::{
     ops::From,
-    prim::bool::{False, ToBoolOut, True},
+    prim::bool::ToBoolOut,
+    traits::Bool,
 };
 
-//
-// IsEq Trait (Generic Equality)
-//
-
-/// Helper for Type Equality: Returns const bool
+/// Explicit equality decision.
+///
+/// Implement this trait when two types have a decidable equality relation.
+///
+/// ```rust,compile_fail
+/// use typelude_std::core::{ELit, Evaluate};
+/// use typelude_std::std::ops::EEq;
+///
+/// struct A;
+/// struct B;
+///
+/// // `EqDecide` is not implemented for these custom types.
+/// fn main() {
+///     let _: Evaluate<EEq<ELit<A>, ELit<B>>>;
+/// }
+/// ```
 #[diagnostic::on_unimplemented(
-    message = "Cannot compare `{Self}` with `{Other}` for equality",
-    label = "equality check not implemented",
-    note = "IsEq is currently only implemented for types on Nightly Rust"
+    message = "Cannot decide equality for `{Self}` and `{Rhs}`",
+    label = "equality decision not implemented",
+    note = "implement `EqDecide<{Rhs}>` for `{Self}`"
 )]
-pub trait IsEq<Other> {
-    const EQ: bool;
+pub trait EqDecide<Rhs> {
+    type Output: Bool;
 }
 
-#[cfg(feature = "nightly")]
-impl<T, U> IsEq<U> for T {
-    default const EQ: bool = false;
+impl<Lhs, Rhs> EqDecide<Rhs> for Lhs
+where
+    Lhs: IsEqual<Rhs>,
+    <Lhs as IsEqual<Rhs>>::Output: Bit,
+    bool: From<<Lhs as IsEqual<Rhs>>::Output>,
+    <bool as From<<Lhs as IsEqual<Rhs>>::Output>>::Output: Bool,
+{
+    type Output = ToBoolOut<<Lhs as IsEqual<Rhs>>::Output>;
 }
-
-impl<T> IsEq<T> for T {
-    const EQ: bool = true;
-}
-
-/// Helper trait to convert const bool to Bool
-pub trait ConstToBool<const B: bool> {
-    type Output;
-}
-
-impl ConstToBool<true> for () {
-    type Output = True;
-}
-
-impl ConstToBool<false> for () {
-    type Output = False;
-}
-
-#[cfg(feature = "nightly")]
-pub type EqResult<L, R> = <() as ConstToBool<{ <L as IsEq<R>>::EQ }>>::Output;
-#[cfg(feature = "nightly")]
-pub type NeqResult<L, R> = <() as ConstToBool<{ !<L as IsEq<R>>::EQ }>>::Output;
 
 // Equality: A == B
-#[cfg(feature = "nightly")]
 crate::def_expr_via_trait!(
     /// Equality: A == B -> Bool
     pub EEq<Lhs, Rhs>
     args [Lhs, Rhs]
-    where [
-        ~Lhs: IsEq<~Rhs>,
-        (): ConstToBool<{ <Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
-    ]
-    => EqResult<~Lhs, ~Rhs>
+    where [~Lhs: EqDecide<~Rhs>]
+    => <~Lhs as EqDecide<~Rhs>>::Output
 );
 
 // Inequality: A != B
-#[cfg(feature = "nightly")]
 crate::def_expr_via_trait!(
     /// Inequality: A != B -> Bool
     pub ENeq<Lhs, Rhs>
     args [Lhs, Rhs]
     where [
-        ~Lhs: IsEq<~Rhs>,
-        (): ConstToBool<{ !<Evaluate<Lhs> as IsEq<Evaluate<Rhs>>>::EQ }>
+        ~Lhs: EqDecide<~Rhs>,
+        <~Lhs as EqDecide<~Rhs>>::Output: Bool
     ]
-    => NeqResult<~Lhs, ~Rhs>
+    => <<~Lhs as EqDecide<~Rhs>>::Output as Bool>::Not
 );
 
 // Less than: A < B
@@ -132,13 +121,13 @@ crate::def_expr_via_trait!(
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_std::core::ELit;
+    use typelude_std::core::{ELit, Evaluate};
     use typenum::{N1, P1, P2, U1, U2};
 
     use super::*;
+    use crate::std::prim::bool::{False, True};
 
     #[test]
-    #[cfg(feature = "nightly")]
     fn test_eq_neq() {
         assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U1>>>, True);
         assert_type_eq_all!(Evaluate<EEq<ELit<U1>, ELit<U2>>>, False);

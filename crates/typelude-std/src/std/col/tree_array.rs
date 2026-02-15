@@ -2,7 +2,7 @@
 //!
 //! Value-only binary search tree (sorted set).
 
-use typenum::{Bit, IsEqual, IsLess};
+use typenum::{B0, B1, Bit, IsEqual, IsLess};
 
 /// Marker trait for type-level TreeArray
 pub use crate::model::col::tree_array::IsTreeArray;
@@ -29,13 +29,35 @@ impl<V> TreeArrayInsert<V> for Nil {
 }
 
 #[doc(hidden)]
-crate::helper_bit! {
-    pub trait TreeArrayInsertHelper<V, NodeValue, Left, Right; IsEq, IsLessResult> for ();
-    on (B1, IsLessResult) where [Left: IsTreeArray, Right: IsTreeArray] => TreeArray<NodeValue, Left, Right>;
-    on (B0, B1) where [Left: IsTreeArray + TreeArrayInsert<V>, Right: IsTreeArray, <Left as TreeArrayInsert<V>>::Output: IsTreeArray]
-        => TreeArray<NodeValue, <Left as TreeArrayInsert<V>>::Output, Right>;
-    on (B0, B0) where [Left: IsTreeArray, Right: IsTreeArray + TreeArrayInsert<V>, <Right as TreeArrayInsert<V>>::Output: IsTreeArray]
-        => TreeArray<NodeValue, Left, <Right as TreeArrayInsert<V>>::Output>;
+pub trait TreeArrayInsertHelper<V, NodeValue, Left, Right, IsEq, IsLessResult> {
+    type Output;
+}
+
+impl<V, NodeValue, Left, Right, IsLessResult>
+    TreeArrayInsertHelper<V, NodeValue, Left, Right, B1, IsLessResult> for ()
+where
+    Left: IsTreeArray,
+    Right: IsTreeArray,
+{
+    type Output = TreeArray<NodeValue, Left, Right>;
+}
+
+impl<V, NodeValue, Left, Right> TreeArrayInsertHelper<V, NodeValue, Left, Right, B0, B1> for ()
+where
+    Left: IsTreeArray + TreeArrayInsert<V>,
+    Right: IsTreeArray,
+    <Left as TreeArrayInsert<V>>::Output: IsTreeArray,
+{
+    type Output = TreeArray<NodeValue, <Left as TreeArrayInsert<V>>::Output, Right>;
+}
+
+impl<V, NodeValue, Left, Right> TreeArrayInsertHelper<V, NodeValue, Left, Right, B0, B0> for ()
+where
+    Left: IsTreeArray,
+    Right: IsTreeArray + TreeArrayInsert<V>,
+    <Right as TreeArrayInsert<V>>::Output: IsTreeArray,
+{
+    type Output = TreeArray<NodeValue, Left, <Right as TreeArrayInsert<V>>::Output>;
 }
 
 impl<V, NodeValue, Left: IsTreeArray, Right: IsTreeArray> TreeArrayInsert<V>
@@ -81,11 +103,30 @@ impl<V> TreeArrayContains<V> for Nil {
 }
 
 #[doc(hidden)]
-crate::helper_bit! {
-    pub trait TreeArrayContainsHelper<V, NodeValue, Left, Right; IsEq, IsLessResult> for ();
-    on (B1, IsLessResult) => True;
-    on (B0, B1) where [Left: IsTreeArray + TreeArrayContains<V>] => <Left as TreeArrayContains<V>>::Output;
-    on (B0, B0) where [Right: IsTreeArray + TreeArrayContains<V>] => <Right as TreeArrayContains<V>>::Output;
+pub trait TreeArrayContainsHelper<V, NodeValue, Left, Right, IsEq, IsLessResult> {
+    type Output;
+}
+
+impl<V, NodeValue, Left, Right, IsLessResult>
+    TreeArrayContainsHelper<V, NodeValue, Left, Right, B1, IsLessResult> for ()
+{
+    type Output = True;
+}
+
+impl<V, NodeValue, Left, Right>
+    TreeArrayContainsHelper<V, NodeValue, Left, Right, B0, B1> for ()
+where
+    Left: IsTreeArray + TreeArrayContains<V>,
+{
+    type Output = <Left as TreeArrayContains<V>>::Output;
+}
+
+impl<V, NodeValue, Left, Right>
+    TreeArrayContainsHelper<V, NodeValue, Left, Right, B0, B0> for ()
+where
+    Right: IsTreeArray + TreeArrayContains<V>,
+{
+    type Output = <Right as TreeArrayContains<V>>::Output;
 }
 
 impl<V, NodeValue, Left: IsTreeArray, Right: IsTreeArray> TreeArrayContains<V>

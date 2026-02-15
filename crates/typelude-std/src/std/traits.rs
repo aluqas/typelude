@@ -57,7 +57,7 @@ pub trait TPow<Rhs> {
 
 /// Type-level Boolean Logic.
 ///
-/// Implementors: `True`, `False`, `B0`, `B1`.
+/// Canonical implementors: `True`, `False`.
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a valid Type-Level Boolean",
     label = "not a Bool",

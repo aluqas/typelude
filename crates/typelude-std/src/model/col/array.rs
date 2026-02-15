@@ -4,8 +4,6 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::Eval;
-
 /// **Marker Trait**
 ///
 /// Represents that a type is a Cons List (Collection).
@@ -28,14 +26,8 @@ pub struct Nil;
 pub struct Array<Head, Tail: IsList>(pub PhantomData<(Head, Tail)>);
 
 impl IsList for Nil {}
-impl Eval for Nil {
-    type Output = Self;
-}
 
 impl<Head, Tail: IsList> IsList for Array<Head, Tail> {}
-impl<Head, Tail: IsList> Eval for Array<Head, Tail> {
-    type Output = Self;
-}
 
 /// Macro for easily creating type lists
 #[macro_export]

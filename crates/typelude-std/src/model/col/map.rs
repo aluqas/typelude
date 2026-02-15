@@ -4,8 +4,6 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::Eval;
-
 /// Marker Trait
 pub trait IsMap {}
 
@@ -18,11 +16,5 @@ pub struct Nil;
 pub struct Map<Key, Value, Tail: IsMap>(pub PhantomData<(Key, Value, Tail)>);
 
 impl IsMap for Nil {}
-impl Eval for Nil {
-    type Output = Self;
-}
 
 impl<K, V, T: IsMap> IsMap for Map<K, V, T> {}
-impl<K, V, T: IsMap> Eval for Map<K, V, T> {
-    type Output = Self;
-}

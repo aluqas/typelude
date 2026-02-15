@@ -154,23 +154,31 @@ where
     type Output = Array<Head, <Tail as Concat<Other>>::Output>;
 }
 
-// NOTE: Contains depends on Equality check.
-use crate::std::ops::IsEq;
+// NOTE: Contains depends on explicit equality decisions.
+use crate::std::ops::EqDecide;
 
-/// Check if array contains element (const version)
+/// Check if array contains element.
 pub trait Contains<Elem> {
-    const VALUE: bool;
+    type Output;
 }
 
 impl<Elem> Contains<Elem> for Nil {
-    const VALUE: bool = false;
+    type Output = False;
+}
+
+crate::helper_if! {
+    #[doc(hidden)]
+    pub trait ContainsHelper<Elem, Tail>;
+    on True => True;
+    on False where [Tail: IsList + Contains<Elem>] => <Tail as Contains<Elem>>::Output;
 }
 
 impl<Head, Tail: IsList + Contains<Elem>, Elem> Contains<Elem> for Array<Head, Tail>
 where
-    Head: IsEq<Elem>,
+    Head: EqDecide<Elem>,
+    <Head as EqDecide<Elem>>::Output: ContainsHelper<Elem, Tail>,
 {
-    const VALUE: bool = <Head as IsEq<Elem>>::EQ || <Tail as Contains<Elem>>::VALUE;
+    type Output = <<Head as EqDecide<Elem>>::Output as ContainsHelper<Elem, Tail>>::Output;
 }
 // --- Basic Array Operations ---
 
@@ -194,7 +202,7 @@ crate::def_expr_via_trait!(
     /// Get the tail (all but first) of an array
     pub ETail<Arr>
     args [Arr]
-    where [~Arr: List, <~Arr as List>::Tail: Eval]
+    where [~Arr: List]
     => <~Arr as List>::Tail
 );
 
@@ -277,15 +285,11 @@ crate::def_expr_via_trait!(
 );
 
 // Expression to check if an array contains an element.
-#[cfg(feature = "nightly")]
 crate::def_expr_via_trait!(
     pub EContains<Array, Elem>
     args [Array, Elem]
-    where [
-        ~Array: Contains<~Elem>,
-        (): crate::std::reify::ReflectBool<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>
-    ]
-    => ~crate::std::prim::bool::Assert<{ <Evaluate<Array> as Contains<Evaluate<Elem>>>::VALUE }>
+    where [~Array: Contains<~Elem>]
+    => <~Array as Contains<~Elem>>::Output
 );
 
 // --- Higher-Order Operations ---
@@ -743,22 +747,18 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "nightly")]
     fn test_econtains() {
-        type ListExpr = ELit<tyarray![i32, f64, bool, char]>;
+        use typenum::{U1, U2, U3, U4, U9};
 
-        // 含まれる場合 → True
-        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<i32>>>, True);
-        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<char>>>, True);
+        type ListExpr = ELit<tyarray![U1, U2, U3, U4]>;
 
-        // 含まれない場合 → False
-        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<String>>>, False);
-        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<()>>>, False);
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<U1>>>, True);
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<U4>>>, True);
+        assert_type_eq_all!(Evaluate<EContains<ListExpr, ELit<U9>>>, False);
 
-        // 合成したリストでテスト - 式のネスト！
-        type Concatenated = EConcat<ELit<tyarray![i32]>, ELit<tyarray![f64]>>;
-        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<f64>>>, True);
-        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<bool>>>, False);
+        type Concatenated = EConcat<ELit<tyarray![U1]>, ELit<tyarray![U2]>>;
+        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<U2>>>, True);
+        assert_type_eq_all!(Evaluate<EContains<Concatenated, ELit<U9>>>, False);
     }
 
     #[test]

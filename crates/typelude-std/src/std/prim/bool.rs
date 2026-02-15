@@ -10,7 +10,7 @@ pub use crate::model::prim::bool::{False, IsBool, True};
 pub use crate::std::traits::Bool;
 
 //
-// Adapter Implementation: Bool for True, False, B0, B1
+// Adapter Implementation: Bool for True, False
 //
 
 // --- True / False ---
@@ -35,28 +35,6 @@ impl Bool for False {
     type Xnor<Rhs: Bool> = Rhs::Not;
 }
 
-// --- B0 / B1 (typenum interoperability) ---
-
-impl Bool for B0 {
-    type Not = B1;
-    type And<Rhs: Bool> = B0;
-    type Or<Rhs: Bool> = Rhs;
-    type Xor<Rhs: Bool> = Rhs;
-    type Nand<Rhs: Bool> = B1;
-    type Nor<Rhs: Bool> = Rhs::Not;
-    type Xnor<Rhs: Bool> = Rhs::Not;
-}
-
-impl Bool for B1 {
-    type Not = B0;
-    type And<Rhs: Bool> = Rhs;
-    type Or<Rhs: Bool> = B1;
-    type Xor<Rhs: Bool> = Rhs::Not;
-    type Nand<Rhs: Bool> = Rhs::Not;
-    type Nor<Rhs: Bool> = B0;
-    type Xnor<Rhs: Bool> = Rhs;
-}
-
 //
 // IntoBool: Explicit conversion to Church booleans
 //
@@ -74,19 +52,6 @@ impl IntoBool for True {
 
 impl IntoBool for False {
     type Output = LFalse;
-}
-
-impl IntoBool for B0 {
-    type Output = LFalse;
-}
-
-impl IntoBool for B1 {
-    type Output = LTrue;
-}
-
-// Blanket impl for ELit<T> - delegates to inner type's IntoBool
-impl<T: IntoBool> IntoBool for typelude_std::core::ELit<T> {
-    type Output = <T as IntoBool>::Output;
 }
 
 pub type ToBool<T> = <T as IntoBool>::Output;
@@ -127,7 +92,5 @@ mod tests {
     fn test_not() {
         assert_type_eq_all!(Evaluate<ENot<ELit<True>>>, False);
         assert_type_eq_all!(Evaluate<ENot<ELit<False>>>, True);
-        // Interop test
-        assert_type_eq_all!(Evaluate<ENot<ELit<B1>>>, B0);
     }
 }

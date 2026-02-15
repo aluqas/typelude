@@ -2,7 +2,7 @@
 //!
 //! Type-level associative map (key-value store) and its operations.
 
-use typenum::{Bit, IsEqual};
+use typenum::{B0, B1, Bit, IsEqual};
 
 /// Marker trait for type-level maps
 pub use crate::model::col::map::IsMap as TypeMap;
@@ -31,11 +31,20 @@ impl<K> MapGet<K> for Nil {
 }
 
 // Helper for MapGet dispatch based on key equality.
-crate::helper_bit! {
-    #[doc(hidden)]
-    pub trait MapGetHelper<Key, NodeKey, NodeValue, Tail; IsEq> for ();
-    on B1 => Some<NodeValue>;
-    on B0 where [Tail: TypeMap + MapGet<Key>] => <Tail as MapGet<Key>>::Output;
+#[doc(hidden)]
+pub trait MapGetHelper<Key, NodeKey, NodeValue, Tail, IsEq> {
+    type Output;
+}
+
+impl<Key, NodeKey, NodeValue, Tail> MapGetHelper<Key, NodeKey, NodeValue, Tail, B1> for () {
+    type Output = Some<NodeValue>;
+}
+
+impl<Key, NodeKey, NodeValue, Tail> MapGetHelper<Key, NodeKey, NodeValue, Tail, B0> for ()
+where
+    Tail: TypeMap + MapGet<Key>,
+{
+    type Output = <Tail as MapGet<Key>>::Output;
 }
 
 impl<K, NK, V, T: TypeMap> MapGet<K> for Map<NK, V, T>
@@ -78,11 +87,20 @@ impl<K> MapContains<K> for Nil {
 }
 
 // Helper for MapContains dispatch based on key equality.
-crate::helper_bit! {
-    #[doc(hidden)]
-    pub trait MapContainsHelper<Key, NodeKey, Tail; IsEq> for ();
-    on B1 => True;
-    on B0 where [Tail: TypeMap + MapContains<Key>] => <Tail as MapContains<Key>>::Output;
+#[doc(hidden)]
+pub trait MapContainsHelper<Key, NodeKey, Tail, IsEq> {
+    type Output;
+}
+
+impl<Key, NodeKey, Tail> MapContainsHelper<Key, NodeKey, Tail, B1> for () {
+    type Output = True;
+}
+
+impl<Key, NodeKey, Tail> MapContainsHelper<Key, NodeKey, Tail, B0> for ()
+where
+    Tail: TypeMap + MapContains<Key>,
+{
+    type Output = <Tail as MapContains<Key>>::Output;
 }
 
 impl<K, NK, V, T: TypeMap> MapContains<K> for Map<NK, V, T>

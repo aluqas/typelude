@@ -4,8 +4,6 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::Eval;
-
 /// Marker Trait for TreeArray (value-only tree)
 pub trait IsTreeArray {}
 
@@ -14,9 +12,6 @@ pub trait IsTreeArray {}
 pub struct Nil;
 
 impl IsTreeArray for Nil {}
-impl Eval for Nil {
-    type Output = Self;
-}
 
 /// TreeArray: Value-only binary search tree node
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
@@ -25,6 +20,3 @@ pub struct TreeArray<Value, Left: IsTreeArray, Right: IsTreeArray>(
 );
 
 impl<V, L: IsTreeArray, R: IsTreeArray> IsTreeArray for TreeArray<V, L, R> {}
-impl<V, L: IsTreeArray, R: IsTreeArray> Eval for TreeArray<V, L, R> {
-    type Output = Self;
-}
