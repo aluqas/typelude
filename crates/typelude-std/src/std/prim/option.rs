@@ -13,6 +13,7 @@ pub struct Some<T>(PhantomData<T>);
 
 /// Type-level `None` — absence of value
 pub struct None;
+
 /// Trait for type-level Option operations
 pub trait Option {
     /// Is this a Some variant?
@@ -30,6 +31,7 @@ impl Option for None {
     type IsSome = False;
     type IsNone = True;
 }
+
 /// Unwrap a Some, compile error on None
 #[diagnostic::on_unimplemented(
     message = "`{Self}` cannot be unwrapped (it is None)",
