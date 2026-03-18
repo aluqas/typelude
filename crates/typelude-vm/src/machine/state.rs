@@ -1,31 +1,19 @@
-//! **Machine State**
-//!
-//! Machine state definition (Stack, Memory, CallStack, Program)
+use typelude_std::std::col::array::Nil;
 
-use std::marker::PhantomData;
+use crate::machine::{
+    core::CoreState,
+    effects::PureEffects,
+    machine::Machine,
+    meta::DefaultMeta,
+};
 
-use typelude_std::core::Eval;
-
-/// Machine State
-/// - `Stack`: Calculation Stack (Array)
-/// - `Locals`: Local Variables (Array)
-/// - `Memory`: Linear Memory (Array)
-/// - `CallStack`: Call Stack (Array of Frames)
-/// - `Program`: Currently executing instruction sequence (Array of
-///   Instructions)
-#[derive(Debug)]
-pub struct MachineState<Stack, Locals, Memory, CallStack, Program>(
-    pub PhantomData<(Stack, Locals, Memory, CallStack, Program)>,
-);
-
-impl<S, L, M, C, P> Eval for MachineState<S, L, M, C, P> {
-    type Output = MachineState<S, L, M, C, P>;
-}
+pub type MachineState<Stack, Locals, Memory, CallStack, Program> =
+    Machine<CoreState<Stack, Locals, Memory, CallStack, Nil, Program>, DefaultMeta, PureEffects>;
 
 pub trait GetStack {
     type Output;
 }
 
-impl<S, L, M, C, P> GetStack for MachineState<S, L, M, C, P> {
+impl<S, L, M, C, B, P, Meta, Fx> GetStack for Machine<CoreState<S, L, M, C, B, P>, Meta, Fx> {
     type Output = S;
 }

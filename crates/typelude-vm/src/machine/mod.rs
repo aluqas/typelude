@@ -1,6 +1,11 @@
-pub mod compiler;
-pub mod execution;
-pub mod instruction;
-pub mod semantics;
+pub mod core;
+pub mod effects;
+pub mod instr;
+pub mod lower;
+pub mod machine;
+pub mod meta;
+pub mod result;
+pub mod run;
 pub mod state;
+pub mod step;
 pub mod trace;

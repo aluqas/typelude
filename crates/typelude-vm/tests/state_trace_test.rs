@@ -1,5 +1,5 @@
 use typelude_std::{
-    std::{col::array::Nil, trace::Trace},
+    std::{col::array::Nil, debug::trace::Trace},
     tyarray,
     typenum::{U0, U1},
 };

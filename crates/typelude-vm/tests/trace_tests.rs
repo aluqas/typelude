@@ -1,4 +1,4 @@
-use typelude_std::std::trace::Trace;
+use typelude_std::std::debug::trace::Trace;
 use typelude_vm::machine::instruction::{OpCall, OpGetLocal, OpIf, OpPush, OpSetLocal, OpWhile};
 use typenum::{U0, U1};
 
