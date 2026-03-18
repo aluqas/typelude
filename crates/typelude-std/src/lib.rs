@@ -10,7 +10,6 @@ extern crate self as typelude_std;
 pub mod macros;
 
 pub mod expr;
-pub mod lambda;
 pub mod model;
 pub mod std;
 

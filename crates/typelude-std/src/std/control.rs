@@ -3,25 +3,18 @@
 //! Bridge layer between pure lambda calculus combinators and practical Rust
 //! types.
 //!
-//! - `IntoBool`: Convert bool-like types to `LTrue`/`LFalse`
-//! - `EIf`: Practical conditional using the `IntoBool` adapter
-//! - `EWhile`: Practical loop using `LWhile` internally
+//! - `EIf`: Practical conditional using `True`/`False`
+//! - `EWhile`: Practical loop recursion over type states
 //!
 use std::marker::PhantomData;
 
 use typelude_std::core::{EApp, Eval, Evaluate, TyFn};
 
-use crate::{
-    lambda::{
-        LApp,
-        church::{LFalse, LTrue, LWhile2},
-    },
-    std::prim::bool::IntoBool,
-};
+use crate::std::prim::bool::{False, True};
+
 /// Practical If expression.
 ///
-/// Evaluates `Cond`, converts to Church boolean via `IntoBool`,
-/// then dispatches to `Then` or `Else` branch.
+/// Evaluates `Cond` and dispatches to `Then` or `Else` branch.
 ///
 /// # Example
 ///
@@ -30,26 +23,22 @@ use crate::{
 /// ```
 pub struct EIf<Cond, Then, Else>(PhantomData<(Cond, Then, Else)>);
 
-// Helper for If dispatch based on converted Church boolean.
 crate::helper_if! {
     #[doc(hidden)]
     pub trait EIfHelper<Then, Else>;
-    on LTrue where [Then: Eval] => Evaluate<Then>;
-    on LFalse where [Else: Eval] => Evaluate<Else>;
+    on True where [Then: Eval] => Evaluate<Then>;
+    on False where [Else: Eval] => Evaluate<Else>;
 }
 
 impl<Cond, Then, Else> Eval for EIf<Cond, Then, Else>
 where
     Cond: Eval,
-    Evaluate<Cond>: IntoBool,
-    <Evaluate<Cond> as IntoBool>::Output: EIfHelper<Then, Else>,
+    Evaluate<Cond>: EIfHelper<Then, Else>,
 {
-    type Output = <<Evaluate<Cond> as IntoBool>::Output as EIfHelper<Then, Else>>::Output;
+    type Output = <Evaluate<Cond> as EIfHelper<Then, Else>>::Output;
 }
 
 /// Practical While expression.
-///
-/// Wraps the pure `LWhile` combinator with `IntoBool` conversion.
 ///
 /// `Pred` is a predicate that returns `True`/`False`.
 /// `Step` is a function that transforms the state.
@@ -57,53 +46,47 @@ where
 ///
 pub struct EWhile<Pred, Step, State>(PhantomData<(Pred, Step, State)>);
 
-/// Adapter to convert Bool predicate output to Church boolean (via `EApp`).
-pub struct ChurchifyPred<Pred>(PhantomData<Pred>);
-
-impl<Pred> Eval for ChurchifyPred<Pred> {
-    type Output = ChurchifyPred<Pred>;
+#[doc(hidden)]
+pub trait EWhileHelper<Pred, Step, State> {
+    type Output;
 }
 
-// ChurchifyPred<Pred> S -> Church Boolean
-impl<Pred, S> Eval for LApp<ChurchifyPred<Pred>, S>
+impl<Pred, Step, State> EWhileHelper<Pred, Step, State> for False
 where
-    Pred: Eval,
-    S: Eval,
-    Evaluate<Pred>: TyFn<Evaluate<S>>,
-    EApp<Pred, S>: Eval,
-    Evaluate<EApp<Pred, S>>: IntoBool,
+    State: Eval,
 {
-    type Output = <Evaluate<EApp<Pred, S>> as IntoBool>::Output;
+    type Output = Evaluate<State>;
 }
 
-/// Adapter for Step function in lambda world (via `EApp`).
-pub struct LambdifyStep<Step>(PhantomData<Step>);
-
-impl<Step> Eval for LambdifyStep<Step> {
-    type Output = LambdifyStep<Step>;
-}
-
-// LambdifyStep<Step> S -> Step::Output (evaluated)
-impl<Step, S> Eval for LApp<LambdifyStep<Step>, S>
+impl<Pred, Step, State> EWhileHelper<Pred, Step, State> for True
 where
+    State: Eval,
     Step: Eval,
-    S: Eval,
-    Evaluate<Step>: TyFn<Evaluate<S>>,
-    EApp<Step, S>: Eval,
+    Evaluate<Step>: TyFn<Evaluate<State>>,
+    EApp<Step, State>: Eval,
+
+    Pred: Eval,
+    Evaluate<Pred>: TyFn<Evaluate<EApp<Step, State>>>,
+    EApp<Pred, EApp<Step, State>>: Eval,
+
+    Evaluate<EApp<Pred, EApp<Step, State>>>: EWhileHelper<Pred, Step, Evaluate<EApp<Step, State>>>,
 {
-    type Output = Evaluate<EApp<Step, S>>;
+    type Output = <Evaluate<EApp<Pred, EApp<Step, State>>> as EWhileHelper<
+        Pred,
+        Step,
+        Evaluate<EApp<Step, State>>,
+    >>::Output;
 }
 
 impl<Pred, Step, State> Eval for EWhile<Pred, Step, State>
 where
     Pred: Eval,
-    Step: Eval,
     State: Eval,
-    // Use LWhile2 directly with adapted pred and step
-    LApp<LWhile2<ChurchifyPred<Pred>, LambdifyStep<Step>>, Evaluate<State>>: Eval,
+    Evaluate<Pred>: TyFn<Evaluate<State>>,
+    EApp<Pred, State>: Eval,
+    Evaluate<EApp<Pred, State>>: EWhileHelper<Pred, Step, Evaluate<State>>,
 {
-    type Output =
-        Evaluate<LApp<LWhile2<ChurchifyPred<Pred>, LambdifyStep<Step>>, Evaluate<State>>>;
+    type Output = <Evaluate<EApp<Pred, State>> as EWhileHelper<Pred, Step, Evaluate<State>>>::Output;
 }
 
 #[cfg(test)]
@@ -113,7 +96,6 @@ mod tests {
     use typenum::{U0, U1};
 
     use super::*;
-    use crate::std::prim::bool::{False, True};
 
     #[test]
     fn test_eif_true() {

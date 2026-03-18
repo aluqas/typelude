@@ -36,27 +36,6 @@ impl Bool for False {
 }
 
 //
-// IntoBool: Explicit conversion to Church booleans
-//
-
-use crate::lambda::church::{LFalse, LTrue};
-
-/// Explicit conversion from practical booleans to Church booleans.
-pub trait IntoBool {
-    type Output;
-}
-
-impl IntoBool for True {
-    type Output = LTrue;
-}
-
-impl IntoBool for False {
-    type Output = LFalse;
-}
-
-pub type ToBool<T> = <T as IntoBool>::Output;
-
-//
 // Bool Conversion Utilities
 //
 
