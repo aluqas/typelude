@@ -4,11 +4,7 @@
 
 use typenum::{Bit, IsEqual, IsGreater, IsGreaterOrEqual, IsLess, IsLessOrEqual};
 
-use crate::std::{
-    ops::From,
-    prim::bool::ToBoolOut,
-    traits::Bool,
-};
+use crate::std::{ops::From, prim::bool::ToBoolOut, traits::Bool};
 
 /// Explicit equality decision.
 ///

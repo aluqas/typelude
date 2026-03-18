@@ -3,7 +3,8 @@ use core::marker::PhantomData;
 use typelude_std::core::{Eval, Evaluate, TyFn};
 
 use crate::composed::core::traits::{
-    Bind, Done, Monad, MonadError, MonadState, MonadSuspend, MonadTrans, MonadWriter, Pure, Yielded,
+    Bind, Done, Monad, MonadError, MonadState, MonadSuspend, MonadTrans, MonadWriter, Pure,
+    Yielded,
 };
 
 #[derive(Debug)]

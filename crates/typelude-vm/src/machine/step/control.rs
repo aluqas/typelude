@@ -50,7 +50,20 @@ impl<ThenProg, ElseProg, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
     IfStep<ThenProg, ElseProg, Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, OpIf<ThenProg, ElseProg>, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            StackUnderflow,
+            StepMachine<
+                Nil,
+                Locals,
+                Memory,
+                Frames,
+                Labels,
+                OpIf<ThenProg, ElseProg>,
+                Rest,
+                Meta,
+                Fx,
+            >,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         StackUnderflow,
@@ -69,31 +82,31 @@ where
     EConcat<ElseProg, Rest>: Eval,
     Fx: EmitTrace<OpIf<ThenProg, ElseProg>, Meta>,
     <Cond as ToBranchBool>::Output: SelectBranch<
-        Continue<
-            CoreMachine<
-                RestStack,
-                Locals,
-                Memory,
-                Frames,
-                Labels,
-                Evaluate<EConcat<ThenProg, Rest>>,
-                <Fx as EmitTrace<OpIf<ThenProg, ElseProg>, Meta>>::OutputMeta,
-                Fx,
+            Continue<
+                CoreMachine<
+                    RestStack,
+                    Locals,
+                    Memory,
+                    Frames,
+                    Labels,
+                    Evaluate<EConcat<ThenProg, Rest>>,
+                    <Fx as EmitTrace<OpIf<ThenProg, ElseProg>, Meta>>::OutputMeta,
+                    Fx,
+                >,
+            >,
+            Continue<
+                CoreMachine<
+                    RestStack,
+                    Locals,
+                    Memory,
+                    Frames,
+                    Labels,
+                    Evaluate<EConcat<ElseProg, Rest>>,
+                    <Fx as EmitTrace<OpIf<ThenProg, ElseProg>, Meta>>::OutputMeta,
+                    Fx,
+                >,
             >,
         >,
-        Continue<
-            CoreMachine<
-                RestStack,
-                Locals,
-                Memory,
-                Frames,
-                Labels,
-                Evaluate<EConcat<ElseProg, Rest>>,
-                <Fx as EmitTrace<OpIf<ThenProg, ElseProg>, Meta>>::OutputMeta,
-                Fx,
-            >,
-        >,
-    >,
 {
     type Output = <<Cond as ToBranchBool>::Output as SelectBranch<
         Continue<
@@ -124,19 +137,50 @@ where
 }
 
 impl<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
-    Step<StepMachine<Stack, Locals, Memory, Frames, Labels, OpIf<ThenProg, ElseProg>, Rest, Meta, Fx>>
-    for OpIf<ThenProg, ElseProg>
+    Step<
+        StepMachine<
+            Stack,
+            Locals,
+            Memory,
+            Frames,
+            Labels,
+            OpIf<ThenProg, ElseProg>,
+            Rest,
+            Meta,
+            Fx,
+        >,
+    > for OpIf<ThenProg, ElseProg>
 where
     Rest: IsList,
     Stack: IfStep<ThenProg, ElseProg, Locals, Memory, Frames, Labels, Rest, Meta, Fx>,
 {
-    type Output =
-        <Stack as IfStep<ThenProg, ElseProg, Locals, Memory, Frames, Labels, Rest, Meta, Fx>>::Output;
+    type Output = <Stack as IfStep<
+        ThenProg,
+        ElseProg,
+        Locals,
+        Memory,
+        Frames,
+        Labels,
+        Rest,
+        Meta,
+        Fx,
+    >>::Output;
 }
 
 impl<CondProg, BodyProg, Stack, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
-    Step<StepMachine<Stack, Locals, Memory, Frames, Labels, OpWhile<CondProg, BodyProg>, Rest, Meta, Fx>>
-    for OpWhile<CondProg, BodyProg>
+    Step<
+        StepMachine<
+            Stack,
+            Locals,
+            Memory,
+            Frames,
+            Labels,
+            OpWhile<CondProg, BodyProg>,
+            Rest,
+            Meta,
+            Fx,
+        >,
+    > for OpWhile<CondProg, BodyProg>
 where
     Rest: IsList,
     OpWhile<CondProg, BodyProg>: LowerInstr<Rest>,

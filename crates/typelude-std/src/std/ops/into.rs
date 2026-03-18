@@ -10,7 +10,10 @@
 /// # Examples
 ///
 /// ```rust
-/// use typelude_std::std::{ops::From, prim::bool::{False, True}};
+/// use typelude_std::std::{
+///     ops::From,
+///     prim::bool::{False, True},
+/// };
 /// use typenum::{B0, B1};
 ///
 /// // If impl From<B1> for bool { type Output = True; }

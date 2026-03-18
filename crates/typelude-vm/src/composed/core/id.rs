@@ -54,4 +54,5 @@ where
 }
 
 #[allow(dead_code)]
-type _UseAliases = (Pure<IdK, ()>, Bind<IdK, Id<()>, crate::composed::core::traits::LConst<Id<()>>>);
+type _UseAliases =
+    (Pure<IdK, ()>, Bind<IdK, Id<()>, crate::composed::core::traits::LConst<Id<()>>>);

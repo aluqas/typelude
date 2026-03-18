@@ -1,5 +1,13 @@
 use typelude_std::std::prim::option::{None, Some};
-use crate::machine::{core::CoreState, machine::Machine, result::{Continue, Halt, Suspend, Trap}};
+
+use crate::machine::{
+    core::CoreState,
+    machine::Machine,
+    result::{Continue, Halt, Suspend, Trap},
+};
+pub use crate::shared::trap::{
+    BadLocalIndex, BadMemoryIndex, LocalUnderflow, ReturnUnderflow, StackUnderflow,
+};
 
 pub mod call;
 pub mod control;
@@ -11,21 +19,6 @@ pub mod stack;
 pub trait Step<M> {
     type Output;
 }
-
-#[derive(Debug)]
-pub struct StackUnderflow;
-
-#[derive(Debug)]
-pub struct LocalUnderflow;
-
-#[derive(Debug)]
-pub struct ReturnUnderflow;
-
-#[derive(Debug)]
-pub struct BadLocalIndex<Idx>(pub core::marker::PhantomData<Idx>);
-
-#[derive(Debug)]
-pub struct BadMemoryIndex<Idx>(pub core::marker::PhantomData<Idx>);
 
 pub trait ExtractContinue {
     type Output;
@@ -73,8 +66,18 @@ impl ToStepResult for None {
 pub(crate) type CoreMachine<Stack, Locals, Memory, Frames, Labels, Program, Meta, Fx> =
     Machine<CoreState<Stack, Locals, Memory, Frames, Labels, Program>, Meta, Fx>;
 
-pub(crate) type StepMachine<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx> =
-    Machine<CoreState<Stack, Locals, Memory, Frames, Labels, typelude_std::std::col::array::Array<Inst, Rest>>, Meta, Fx>;
+pub(crate) type StepMachine<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx> = Machine<
+    CoreState<
+        Stack,
+        Locals,
+        Memory,
+        Frames,
+        Labels,
+        typelude_std::std::col::array::Array<Inst, Rest>,
+    >,
+    Meta,
+    Fx,
+>;
 
 pub use call::*;
 pub use control::*;

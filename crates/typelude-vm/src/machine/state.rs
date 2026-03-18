@@ -1,11 +1,6 @@
 use typelude_std::std::col::array::Nil;
 
-use crate::machine::{
-    core::CoreState,
-    effects::PureEffects,
-    machine::Machine,
-    meta::DefaultMeta,
-};
+use crate::machine::{core::CoreState, effects::PureEffects, machine::Machine, meta::DefaultMeta};
 
 pub type MachineState<Stack, Locals, Memory, CallStack, Program> =
     Machine<CoreState<Stack, Locals, Memory, CallStack, Nil, Program>, DefaultMeta, PureEffects>;

@@ -5,7 +5,6 @@
 //!
 //! - `EIf`: Practical conditional using `True`/`False`
 //! - `EWhile`: Practical loop recursion over type states
-//!
 use std::marker::PhantomData;
 
 use typelude_std::core::{EApp, Eval, Evaluate, TyFn};
@@ -43,7 +42,6 @@ where
 /// `Pred` is a predicate that returns `True`/`False`.
 /// `Step` is a function that transforms the state.
 /// `State` is the initial/current state.
-///
 pub struct EWhile<Pred, Step, State>(PhantomData<(Pred, Step, State)>);
 
 #[doc(hidden)]
@@ -64,11 +62,9 @@ where
     Step: Eval,
     Evaluate<Step>: TyFn<Evaluate<State>>,
     EApp<Step, State>: Eval,
-
     Pred: Eval,
     Evaluate<Pred>: TyFn<Evaluate<EApp<Step, State>>>,
     EApp<Pred, EApp<Step, State>>: Eval,
-
     Evaluate<EApp<Pred, EApp<Step, State>>>: EWhileHelper<Pred, Step, Evaluate<EApp<Step, State>>>,
 {
     type Output = <Evaluate<EApp<Pred, EApp<Step, State>>> as EWhileHelper<
@@ -86,7 +82,8 @@ where
     EApp<Pred, State>: Eval,
     Evaluate<EApp<Pred, State>>: EWhileHelper<Pred, Step, Evaluate<State>>,
 {
-    type Output = <Evaluate<EApp<Pred, State>> as EWhileHelper<Pred, Step, Evaluate<State>>>::Output;
+    type Output =
+        <Evaluate<EApp<Pred, State>> as EWhileHelper<Pred, Step, Evaluate<State>>>::Output;
 }
 
 #[cfg(test)]

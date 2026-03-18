@@ -1,5 +1,5 @@
 use typelude_std::{
-    core::{Eval, Evaluate},
+    core::{ELit, Eval, Evaluate},
     std::col::array::{Array, IsList, Nil},
 };
 
@@ -10,66 +10,188 @@ use crate::machine::{
     step::{CoreMachine, StackUnderflow, Step, StepMachine},
 };
 
+pub trait AsValueExpr {
+    type Output;
+}
+
+impl<T> AsValueExpr for ELit<T> {
+    type Output = ELit<T>;
+}
+
+impl AsValueExpr for typenum::UTerm {
+    type Output = ELit<typenum::UTerm>;
+}
+
+impl<N, B> AsValueExpr for typenum::UInt<N, B> {
+    type Output = ELit<typenum::UInt<N, B>>;
+}
+
+impl<U> AsValueExpr for typenum::PInt<U>
+where
+    U: typenum::Unsigned + typenum::NonZero,
+{
+    type Output = ELit<typenum::PInt<U>>;
+}
+
+impl<U> AsValueExpr for typenum::NInt<U>
+where
+    U: typenum::Unsigned + typenum::NonZero,
+{
+    type Output = ELit<typenum::NInt<U>>;
+}
+
+impl AsValueExpr for typenum::Z0 {
+    type Output = ELit<typenum::Z0>;
+}
+
+impl AsValueExpr for typenum::B0 {
+    type Output = ELit<typenum::B0>;
+}
+
+impl AsValueExpr for typenum::B1 {
+    type Output = ELit<typenum::B1>;
+}
+
+impl AsValueExpr for typelude_std::std::prim::bool::True {
+    type Output = ELit<typelude_std::std::prim::bool::True>;
+}
+
+impl AsValueExpr for typelude_std::std::prim::bool::False {
+    type Output = ELit<typelude_std::std::prim::bool::False>;
+}
+
 pub trait ComputeBinary<Lhs, Rhs> {
     type Output;
 }
 
 impl<Lhs, Rhs> ComputeBinary<Lhs, Rhs> for OpAdd
 where
-    typelude_std::std::ops::EAdd<Lhs, Rhs>: Eval,
+    Lhs: AsValueExpr,
+    Rhs: AsValueExpr,
+    typelude_std::std::ops::EAdd<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
 {
-    type Output = Evaluate<typelude_std::std::ops::EAdd<Lhs, Rhs>>;
+    type Output = ELit<
+        Evaluate<
+            typelude_std::std::ops::EAdd<
+                <Lhs as AsValueExpr>::Output,
+                <Rhs as AsValueExpr>::Output,
+            >,
+        >,
+    >;
 }
 
 impl<Lhs, Rhs> ComputeBinary<Lhs, Rhs> for OpSub
 where
-    typelude_std::std::ops::ESub<Lhs, Rhs>: Eval,
+    Lhs: AsValueExpr,
+    Rhs: AsValueExpr,
+    typelude_std::std::ops::ESub<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
 {
-    type Output = Evaluate<typelude_std::std::ops::ESub<Lhs, Rhs>>;
+    type Output = ELit<
+        Evaluate<
+            typelude_std::std::ops::ESub<
+                <Lhs as AsValueExpr>::Output,
+                <Rhs as AsValueExpr>::Output,
+            >,
+        >,
+    >;
 }
 
 #[cfg(feature = "nightly")]
 impl<Lhs, Rhs> ComputeBinary<Lhs, Rhs> for OpEq
 where
-    typelude_std::std::ops::EEq<Lhs, Rhs>: Eval,
+    Lhs: AsValueExpr,
+    Rhs: AsValueExpr,
+    typelude_std::std::ops::EEq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
 {
-    type Output = Evaluate<typelude_std::std::ops::EEq<Lhs, Rhs>>;
+    type Output = ELit<
+        Evaluate<
+            typelude_std::std::ops::EEq<
+                <Lhs as AsValueExpr>::Output,
+                <Rhs as AsValueExpr>::Output,
+            >,
+        >,
+    >;
 }
 
 #[cfg(feature = "nightly")]
 impl<Lhs, Rhs> ComputeBinary<Lhs, Rhs> for OpNeq
 where
-    typelude_std::std::ops::ENeq<Lhs, Rhs>: Eval,
+    Lhs: AsValueExpr,
+    Rhs: AsValueExpr,
+    typelude_std::std::ops::ENeq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
 {
-    type Output = Evaluate<typelude_std::std::ops::ENeq<Lhs, Rhs>>;
+    type Output = ELit<
+        Evaluate<
+            typelude_std::std::ops::ENeq<
+                <Lhs as AsValueExpr>::Output,
+                <Rhs as AsValueExpr>::Output,
+            >,
+        >,
+    >;
 }
 
 impl<Lhs, Rhs> ComputeBinary<Lhs, Rhs> for OpLt
 where
-    typelude_std::std::ops::ELt<Lhs, Rhs>: Eval,
+    Lhs: AsValueExpr,
+    Rhs: AsValueExpr,
+    typelude_std::std::ops::ELt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
 {
-    type Output = Evaluate<typelude_std::std::ops::ELt<Lhs, Rhs>>;
+    type Output = ELit<
+        Evaluate<
+            typelude_std::std::ops::ELt<
+                <Lhs as AsValueExpr>::Output,
+                <Rhs as AsValueExpr>::Output,
+            >,
+        >,
+    >;
 }
 
 impl<Lhs, Rhs> ComputeBinary<Lhs, Rhs> for OpGt
 where
-    typelude_std::std::ops::EGt<Lhs, Rhs>: Eval,
+    Lhs: AsValueExpr,
+    Rhs: AsValueExpr,
+    typelude_std::std::ops::EGt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
 {
-    type Output = Evaluate<typelude_std::std::ops::EGt<Lhs, Rhs>>;
+    type Output = ELit<
+        Evaluate<
+            typelude_std::std::ops::EGt<
+                <Lhs as AsValueExpr>::Output,
+                <Rhs as AsValueExpr>::Output,
+            >,
+        >,
+    >;
 }
 
 impl<Lhs, Rhs> ComputeBinary<Lhs, Rhs> for OpAnd
 where
-    typelude_std::std::ops::EAnd<Lhs, Rhs>: Eval,
+    Lhs: AsValueExpr,
+    Rhs: AsValueExpr,
+    typelude_std::std::ops::EAnd<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
 {
-    type Output = Evaluate<typelude_std::std::ops::EAnd<Lhs, Rhs>>;
+    type Output = ELit<
+        Evaluate<
+            typelude_std::std::ops::EAnd<
+                <Lhs as AsValueExpr>::Output,
+                <Rhs as AsValueExpr>::Output,
+            >,
+        >,
+    >;
 }
 
 impl<Lhs, Rhs> ComputeBinary<Lhs, Rhs> for OpOr
 where
-    typelude_std::std::ops::EOr<Lhs, Rhs>: Eval,
+    Lhs: AsValueExpr,
+    Rhs: AsValueExpr,
+    typelude_std::std::ops::EOr<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
 {
-    type Output = Evaluate<typelude_std::std::ops::EOr<Lhs, Rhs>>;
+    type Output = ELit<
+        Evaluate<
+            typelude_std::std::ops::EOr<
+                <Lhs as AsValueExpr>::Output,
+                <Rhs as AsValueExpr>::Output,
+            >,
+        >,
+    >;
 }
 
 pub trait BinaryStep<Inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx> {
@@ -80,10 +202,15 @@ impl<Inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
     BinaryStep<Inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            StackUnderflow,
+            StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
+        >,
 {
-    type Output =
-        <Fx as RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>>>::Output;
+    type Output = <Fx as RaiseTrap<
+        StackUnderflow,
+        StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
+    >>::Output;
 }
 
 impl<Head, Inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
@@ -91,9 +218,9 @@ impl<Head, Inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
 where
     Rest: IsList,
     Fx: RaiseTrap<
-        StackUnderflow,
-        StepMachine<Array<Head, Nil>, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
-    >,
+            StackUnderflow,
+            StepMachine<Array<Head, Nil>, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         StackUnderflow,
@@ -102,7 +229,8 @@ where
 }
 
 impl<Inst, Lhs, Rhs, Tail, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
-    BinaryStep<Inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Array<Lhs, Array<Rhs, Tail>>
+    BinaryStep<Inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
+    for Array<Lhs, Array<Rhs, Tail>>
 where
     Rest: IsList,
     Inst: ComputeBinary<Lhs, Rhs>,
@@ -131,10 +259,15 @@ impl<Inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
     UnaryStep<Inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            StackUnderflow,
+            StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
+        >,
 {
-    type Output =
-        <Fx as RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>>>::Output;
+    type Output = <Fx as RaiseTrap<
+        StackUnderflow,
+        StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
+    >>::Output;
 }
 
 impl<Val, Tail, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
@@ -142,12 +275,16 @@ impl<Val, Tail, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
 where
     Rest: IsList,
     Tail: IsList,
-    typelude_std::std::ops::ENot<Val>: Eval,
+    Val: AsValueExpr,
+    typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>: Eval,
     Fx: EmitTrace<OpNot, Meta>,
 {
     type Output = Continue<
         CoreMachine<
-            Array<Evaluate<typelude_std::std::ops::ENot<Val>>, Tail>,
+            Array<
+                ELit<Evaluate<typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>>>,
+                Tail,
+            >,
             Locals,
             Memory,
             Frames,
@@ -168,8 +305,16 @@ macro_rules! impl_binary_step {
             Rest: IsList,
             Stack: BinaryStep<$inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx>,
         {
-            type Output =
-                <Stack as BinaryStep<$inst, Locals, Memory, Frames, Labels, Rest, Meta, Fx>>::Output;
+            type Output = <Stack as BinaryStep<
+                $inst,
+                Locals,
+                Memory,
+                Frames,
+                Labels,
+                Rest,
+                Meta,
+                Fx,
+            >>::Output;
         }
     };
 }
@@ -191,5 +336,6 @@ where
     Rest: IsList,
     Stack: UnaryStep<OpNot, Locals, Memory, Frames, Labels, Rest, Meta, Fx>,
 {
-    type Output = <Stack as UnaryStep<OpNot, Locals, Memory, Frames, Labels, Rest, Meta, Fx>>::Output;
+    type Output =
+        <Stack as UnaryStep<OpNot, Locals, Memory, Frames, Labels, Rest, Meta, Fx>>::Output;
 }

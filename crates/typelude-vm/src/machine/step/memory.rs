@@ -4,7 +4,7 @@ use typelude_std::{
     core::{Eval, Evaluate},
     std::col::array::{Array, IsList, Nil},
 };
-use typenum::{B1, Sub1, UInt, U0, Unsigned};
+use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
 use crate::machine::{
     effects::{EmitTrace, RaiseTrap},
@@ -23,9 +23,19 @@ where
     Rest: IsList,
     RestStack: IsList,
     Fx: RaiseTrap<
-        BadMemoryIndex<Idx>,
-        StepMachine<Array<Idx, RestStack>, Locals, Nil, Frames, Labels, OpLoad, Rest, Meta, Fx>,
-    >,
+            BadMemoryIndex<Idx>,
+            StepMachine<
+                Array<Idx, RestStack>,
+                Locals,
+                Nil,
+                Frames,
+                Labels,
+                OpLoad,
+                Rest,
+                Meta,
+                Fx,
+            >,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         BadMemoryIndex<Idx>,
@@ -56,15 +66,25 @@ where
 }
 
 impl<Head, Tail, N, B, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>
-    LoadFromMemory<UInt<N, B>, RestStack, Locals, Frames, Labels, Rest, Meta, Fx> for Array<Head, Tail>
+    LoadFromMemory<UInt<N, B>, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>
+    for Array<Head, Tail>
 where
     Rest: IsList,
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
-    Tail: LoadFromMemory<Sub1<UInt<N, B>>, RestStack, Locals, Frames, Labels, Rest, Meta, Fx> + IsList,
+    Tail: LoadFromMemory<Sub1<UInt<N, B>>, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>
+        + IsList,
 {
-    type Output =
-        <Tail as LoadFromMemory<Sub1<UInt<N, B>>, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>>::Output;
+    type Output = <Tail as LoadFromMemory<
+        Sub1<UInt<N, B>>,
+        RestStack,
+        Locals,
+        Frames,
+        Labels,
+        Rest,
+        Meta,
+        Fx,
+    >>::Output;
 }
 
 pub trait StoreInMemory<Idx, Value, RestStack, Locals, Frames, Labels, Rest, Meta, Fx> {
@@ -77,18 +97,39 @@ where
     Rest: IsList,
     RestStack: IsList,
     Fx: RaiseTrap<
-        BadMemoryIndex<Idx>,
-        StepMachine<Array<Value, Array<Idx, RestStack>>, Locals, Nil, Frames, Labels, OpStore, Rest, Meta, Fx>,
-    >,
+            BadMemoryIndex<Idx>,
+            StepMachine<
+                Array<Value, Array<Idx, RestStack>>,
+                Locals,
+                Nil,
+                Frames,
+                Labels,
+                OpStore,
+                Rest,
+                Meta,
+                Fx,
+            >,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         BadMemoryIndex<Idx>,
-        StepMachine<Array<Value, Array<Idx, RestStack>>, Locals, Nil, Frames, Labels, OpStore, Rest, Meta, Fx>,
+        StepMachine<
+            Array<Value, Array<Idx, RestStack>>,
+            Locals,
+            Nil,
+            Frames,
+            Labels,
+            OpStore,
+            Rest,
+            Meta,
+            Fx,
+        >,
     >>::Output;
 }
 
 impl<Head, Tail, Value, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>
-    StoreInMemory<U0, Value, RestStack, Locals, Frames, Labels, Rest, Meta, Fx> for Array<Head, Tail>
+    StoreInMemory<U0, Value, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>
+    for Array<Head, Tail>
 where
     Rest: IsList,
     Tail: IsList,
@@ -116,9 +157,19 @@ where
     Rest: IsList,
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
-    Tail: StoreInMemory<Sub1<UInt<N, B>>, Value, RestStack, Locals, Frames, Labels, Rest, Meta, Fx> + IsList,
-    <Tail as StoreInMemory<Sub1<UInt<N, B>>, Value, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>>::Output:
-        LiftStoredMemory<Head>,
+    Tail: StoreInMemory<Sub1<UInt<N, B>>, Value, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>
+        + IsList,
+    <Tail as StoreInMemory<
+        Sub1<UInt<N, B>>,
+        Value,
+        RestStack,
+        Locals,
+        Frames,
+        Labels,
+        Rest,
+        Meta,
+        Fx,
+    >>::Output: LiftStoredMemory<Head>,
 {
     type Output = <<Tail as StoreInMemory<
         Sub1<UInt<N, B>>,
@@ -142,7 +193,8 @@ impl<Head, Stack, Locals, Tail, Frames, Labels, Rest, Meta, Fx> LiftStoredMemory
 where
     Tail: IsList,
 {
-    type Output = Continue<CoreMachine<Stack, Locals, Array<Head, Tail>, Frames, Labels, Rest, Meta, Fx>>;
+    type Output =
+        Continue<CoreMachine<Stack, Locals, Array<Head, Tail>, Frames, Labels, Rest, Meta, Fx>>;
 }
 
 impl<Reason, M, Head> LiftStoredMemory<Head> for Trap<Reason, M> {
@@ -153,11 +205,14 @@ pub trait LoadStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx> {
     type Output;
 }
 
-impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx> LoadStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
-    for Nil
+impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
+    LoadStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, OpLoad, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            StackUnderflow,
+            StepMachine<Nil, Locals, Memory, Frames, Labels, OpLoad, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         StackUnderflow,
@@ -174,19 +229,30 @@ where
     RestStack: IsList,
     Memory: LoadFromMemory<Evaluate<Addr>, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>,
 {
-    type Output =
-        <Memory as LoadFromMemory<Evaluate<Addr>, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>>::Output;
+    type Output = <Memory as LoadFromMemory<
+        Evaluate<Addr>,
+        RestStack,
+        Locals,
+        Frames,
+        Labels,
+        Rest,
+        Meta,
+        Fx,
+    >>::Output;
 }
 
 pub trait StoreStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx> {
     type Output;
 }
 
-impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx> StoreStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
-    for Nil
+impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
+    StoreStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, OpStore, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            StackUnderflow,
+            StepMachine<Nil, Locals, Memory, Frames, Labels, OpStore, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         StackUnderflow,
@@ -199,9 +265,19 @@ impl<Value, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
 where
     Rest: IsList,
     Fx: RaiseTrap<
-        StackUnderflow,
-        StepMachine<Array<Value, Nil>, Locals, Memory, Frames, Labels, OpStore, Rest, Meta, Fx>,
-    >,
+            StackUnderflow,
+            StepMachine<
+                Array<Value, Nil>,
+                Locals,
+                Memory,
+                Frames,
+                Labels,
+                OpStore,
+                Rest,
+                Meta,
+                Fx,
+            >,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         StackUnderflow,
@@ -210,13 +286,15 @@ where
 }
 
 impl<Value, Addr, RestStack, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
-    StoreStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Array<Value, Array<Addr, RestStack>>
+    StoreStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
+    for Array<Value, Array<Addr, RestStack>>
 where
     Rest: IsList,
     Addr: Eval,
     Evaluate<Addr>: Unsigned,
     RestStack: IsList,
-    Memory: StoreInMemory<Evaluate<Addr>, Value, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>,
+    Memory:
+        StoreInMemory<Evaluate<Addr>, Value, RestStack, Locals, Frames, Labels, Rest, Meta, Fx>,
 {
     type Output = <Memory as StoreInMemory<
         Evaluate<Addr>,

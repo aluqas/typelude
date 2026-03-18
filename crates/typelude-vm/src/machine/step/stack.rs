@@ -15,10 +15,15 @@ impl<Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>
     PopFrame<Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            StackUnderflow,
+            StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
+        >,
 {
-    type Output =
-        <Fx as RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>>>::Output;
+    type Output = <Fx as RaiseTrap<
+        StackUnderflow,
+        StepMachine<Nil, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
+    >>::Output;
 }
 
 impl<Head, Tail, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>
@@ -28,18 +33,32 @@ where
     Tail: IsList,
     Fx: EmitTrace<Inst, Meta>,
 {
-    type Output = Continue<CoreMachine<Tail, Locals, Memory, Frames, Labels, Rest, <Fx as EmitTrace<Inst, Meta>>::OutputMeta, Fx>>;
+    type Output = Continue<
+        CoreMachine<
+            Tail,
+            Locals,
+            Memory,
+            Frames,
+            Labels,
+            Rest,
+            <Fx as EmitTrace<Inst, Meta>>::OutputMeta,
+            Fx,
+        >,
+    >;
 }
 
 pub trait DupFrame<Locals, Memory, Frames, Labels, Rest, Meta, Fx> {
     type Output;
 }
 
-impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx> DupFrame<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
-    for Nil
+impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
+    DupFrame<Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, OpDup, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            StackUnderflow,
+            StepMachine<Nil, Locals, Memory, Frames, Labels, OpDup, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         StackUnderflow,
@@ -72,11 +91,14 @@ pub trait SwapFrame<Locals, Memory, Frames, Labels, Rest, Meta, Fx> {
     type Output;
 }
 
-impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx> SwapFrame<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
-    for Nil
+impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
+    SwapFrame<Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, OpSwap, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            StackUnderflow,
+            StepMachine<Nil, Locals, Memory, Frames, Labels, OpSwap, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         StackUnderflow,
@@ -89,9 +111,9 @@ impl<Head, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
 where
     Rest: IsList,
     Fx: RaiseTrap<
-        StackUnderflow,
-        StepMachine<Array<Head, Nil>, Locals, Memory, Frames, Labels, OpSwap, Rest, Meta, Fx>,
-    >,
+            StackUnderflow,
+            StepMachine<Array<Head, Nil>, Locals, Memory, Frames, Labels, OpSwap, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         StackUnderflow,
@@ -148,7 +170,8 @@ where
     Rest: IsList,
     Stack: PopFrame<Locals, Memory, Frames, Labels, OpPop, Rest, Meta, Fx>,
 {
-    type Output = <Stack as PopFrame<Locals, Memory, Frames, Labels, OpPop, Rest, Meta, Fx>>::Output;
+    type Output =
+        <Stack as PopFrame<Locals, Memory, Frames, Labels, OpPop, Rest, Meta, Fx>>::Output;
 }
 
 impl<Stack, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
@@ -157,7 +180,8 @@ where
     Rest: IsList,
     Stack: PopFrame<Locals, Memory, Frames, Labels, OpDrop, Rest, Meta, Fx>,
 {
-    type Output = <Stack as PopFrame<Locals, Memory, Frames, Labels, OpDrop, Rest, Meta, Fx>>::Output;
+    type Output =
+        <Stack as PopFrame<Locals, Memory, Frames, Labels, OpDrop, Rest, Meta, Fx>>::Output;
 }
 
 impl<Stack, Locals, Memory, Frames, Labels, Rest, Meta, Fx>

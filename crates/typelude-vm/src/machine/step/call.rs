@@ -34,14 +34,14 @@ pub trait ReturnStep<Stack, Locals, Memory, Labels, Rest, Meta, Fx> {
     type Output;
 }
 
-impl<Stack, Locals, Memory, Labels, Rest, Meta, Fx> ReturnStep<Stack, Locals, Memory, Labels, Rest, Meta, Fx>
-    for Nil
+impl<Stack, Locals, Memory, Labels, Rest, Meta, Fx>
+    ReturnStep<Stack, Locals, Memory, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
     Fx: RaiseTrap<
-        ReturnUnderflow,
-        StepMachine<Stack, Locals, Memory, Nil, Labels, OpReturn, Rest, Meta, Fx>,
-    >,
+            ReturnUnderflow,
+            StepMachine<Stack, Locals, Memory, Nil, Labels, OpReturn, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         ReturnUnderflow,
@@ -49,8 +49,19 @@ where
     >>::Output;
 }
 
-impl<Continuation, CallerLocals, CallerLabels, RestFrames, Stack, Locals, Memory, Labels, Rest, Meta, Fx>
-    ReturnStep<Stack, Locals, Memory, Labels, Rest, Meta, Fx>
+impl<
+    Continuation,
+    CallerLocals,
+    CallerLabels,
+    RestFrames,
+    Stack,
+    Locals,
+    Memory,
+    Labels,
+    Rest,
+    Meta,
+    Fx,
+> ReturnStep<Stack, Locals, Memory, Labels, Rest, Meta, Fx>
     for Array<CallFrame<Continuation, CallerLocals, CallerLabels>, RestFrames>
 where
     Rest: IsList,

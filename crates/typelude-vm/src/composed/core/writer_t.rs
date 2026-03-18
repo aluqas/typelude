@@ -118,7 +118,8 @@ where
     <K as TyFn<A>>::Output: RunWriter,
     Bind<M, <<K as TyFn<A>>::Output as RunWriter>::Output, LWriterAppendCont<M, Log1>>: Eval,
 {
-    type Output = Bind<M, <<K as TyFn<A>>::Output as RunWriter>::Output, LWriterAppendCont<M, Log1>>;
+    type Output =
+        Bind<M, <<K as TyFn<A>>::Output as RunWriter>::Output, LWriterAppendCont<M, Log1>>;
 }
 
 impl<W, M, MA, K> RunWriter for WriterBind<W, M, MA, K>

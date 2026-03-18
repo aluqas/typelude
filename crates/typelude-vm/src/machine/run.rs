@@ -17,8 +17,8 @@ pub trait RunMachine {
     type Output;
 }
 
-impl<Stack, Locals, Memory, Frames, Labels, Meta, Fx>
-    RunMachine for Machine<CoreState<Stack, Locals, Memory, Frames, Labels, Nil>, Meta, Fx>
+impl<Stack, Locals, Memory, Frames, Labels, Meta, Fx> RunMachine
+    for Machine<CoreState<Stack, Locals, Memory, Frames, Labels, Nil>, Meta, Fx>
 {
     type Output = Halt<Machine<CoreState<Stack, Locals, Memory, Frames, Labels, Nil>, Meta, Fx>>;
 }
@@ -59,13 +59,19 @@ type RunningMachine<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>
     Machine<CoreState<Stack, Locals, Memory, Frames, Labels, Array<Inst, Rest>>, Meta, Fx>;
 
 type FuelOutput<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx> =
-    <Fx as RunWithFuel<RunningMachine<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>, Inst>>::Output;
+    <Fx as RunWithFuel<
+        RunningMachine<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
+        Inst,
+    >>::Output;
 
 impl<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx> RunMachine
     for RunningMachine<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>
 where
     Rest: typelude_std::std::col::array::IsList,
-    Fx: RunWithFuel<RunningMachine<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>, Inst>,
+    Fx: RunWithFuel<
+            RunningMachine<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>,
+            Inst,
+        >,
 {
     type Output = FuelOutput<Stack, Locals, Memory, Frames, Labels, Inst, Rest, Meta, Fx>;
 }

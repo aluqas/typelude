@@ -1,12 +1,8 @@
-use core::marker::PhantomData;
-
 use crate::machine::{effects::Effects, result::Suspend};
+pub use crate::shared::request::HostRequest;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SuspendIoPolicy;
-
-#[derive(Debug)]
-pub struct HostRequest<Sig, Args>(pub PhantomData<(Sig, Args)>);
 
 pub trait SuspendIo<Request, M> {
     type Output;

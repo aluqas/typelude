@@ -75,13 +75,13 @@ where
             <V as IsLess<NodeValue>>::Output,
         >,
     <() as TreeArrayInsertHelper<
-            V,
-            NodeValue,
-            Left,
-            Right,
-            <V as IsEqual<NodeValue>>::Output,
-            <V as IsLess<NodeValue>>::Output,
-        >>::Output: IsTreeArray,
+        V,
+        NodeValue,
+        Left,
+        Right,
+        <V as IsEqual<NodeValue>>::Output,
+        <V as IsLess<NodeValue>>::Output,
+    >>::Output: IsTreeArray,
 {
     type Output = <() as TreeArrayInsertHelper<
         V,
@@ -113,16 +113,14 @@ impl<V, NodeValue, Left, Right, IsLessResult>
     type Output = True;
 }
 
-impl<V, NodeValue, Left, Right>
-    TreeArrayContainsHelper<V, NodeValue, Left, Right, B0, B1> for ()
+impl<V, NodeValue, Left, Right> TreeArrayContainsHelper<V, NodeValue, Left, Right, B0, B1> for ()
 where
     Left: IsTreeArray + TreeArrayContains<V>,
 {
     type Output = <Left as TreeArrayContains<V>>::Output;
 }
 
-impl<V, NodeValue, Left, Right>
-    TreeArrayContainsHelper<V, NodeValue, Left, Right, B0, B0> for ()
+impl<V, NodeValue, Left, Right> TreeArrayContainsHelper<V, NodeValue, Left, Right, B0, B0> for ()
 where
     Right: IsTreeArray + TreeArrayContains<V>,
 {

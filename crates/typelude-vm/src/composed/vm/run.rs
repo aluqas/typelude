@@ -4,8 +4,8 @@ use typelude_std::core::{Eval, Evaluate, TyFn};
 
 use crate::composed::{
     core::{
-        either_t::ERunEither, id::ERunId, state_t::ERunState, suspend_t::ERunSuspend,
-        writer_t::ERunWriter, Done as SDone, Err as EErr, Ok as EOk, Pair, Yielded,
+        Done as SDone, Err as EErr, Ok as EOk, Pair, Yielded, either_t::ERunEither, id::ERunId,
+        state_t::ERunState, suspend_t::ERunSuspend, writer_t::ERunWriter,
     },
     vm::outcome::{Done, Raised, Suspended},
 };

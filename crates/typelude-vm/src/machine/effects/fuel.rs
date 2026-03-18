@@ -1,7 +1,7 @@
 use typenum::U0;
 
 use crate::machine::{
-    effects::{trap::RaiseTrap, Effects},
+    effects::{Effects, trap::RaiseTrap},
     machine::Machine,
     meta::VmMeta,
     result::Continue,
@@ -27,17 +27,29 @@ impl<TracePolicy, TrapPolicy, IoPolicy, M> BeforeStep<M>
 }
 
 impl<TracePolicy, TrapPolicy, IoPolicy, Core, Log, World>
-    BeforeStep<Machine<Core, VmMeta<Log, U0, World>, Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>>>
-    for Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>
+    BeforeStep<
+        Machine<
+            Core,
+            VmMeta<Log, U0, World>,
+            Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>,
+        >,
+    > for Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>
 where
-    Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>:
-        RaiseTrap<
+    Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>: RaiseTrap<
             OutOfFuel,
-            Machine<Core, VmMeta<Log, U0, World>, Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>>,
+            Machine<
+                Core,
+                VmMeta<Log, U0, World>,
+                Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>,
+            >,
         >,
 {
     type Output = <Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy> as RaiseTrap<
         OutOfFuel,
-        Machine<Core, VmMeta<Log, U0, World>, Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>>,
+        Machine<
+            Core,
+            VmMeta<Log, U0, World>,
+            Effects<TracePolicy, MeteredFuel, TrapPolicy, IoPolicy>,
+        >,
     >>::Output;
 }

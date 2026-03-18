@@ -36,10 +36,16 @@ where
     Rest: IsList + InterpProgram<F>,
     Inst: crate::composed::interpret::InterpInstr<F>,
     F: Monad,
-    Bind<F, <Inst as crate::composed::interpret::InterpInstr<F>>::Output, LProgramThen<Rest, F>>: Eval,
+    Bind<F, <Inst as crate::composed::interpret::InterpInstr<F>>::Output, LProgramThen<Rest, F>>:
+        Eval,
 {
-    type Output =
-        Evaluate<Bind<F, <Inst as crate::composed::interpret::InterpInstr<F>>::Output, LProgramThen<Rest, F>>>;
+    type Output = Evaluate<
+        Bind<
+            F,
+            <Inst as crate::composed::interpret::InterpInstr<F>>::Output,
+            LProgramThen<Rest, F>,
+        >,
+    >;
 }
 
 impl<Prog, F> Eval for EInterpProgram<Prog, F>

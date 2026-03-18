@@ -1,6 +1,7 @@
+use std::collections::HashSet;
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use std::collections::HashSet;
 use syn::{
     Attribute, GenericParam, Generics, Ident, Result, Token, Visibility,
     parse::{Parse, ParseStream},
@@ -42,10 +43,7 @@ impl Parse for TyFnInput {
             } else {
                 let mut bounds = Punctuated::new();
 
-                while !input.peek(token::Brace)
-                    && !input.peek(Token![=>])
-                    && !input.is_empty()
-                {
+                while !input.peek(token::Brace) && !input.peek(Token![=>]) && !input.is_empty() {
                     // Collect tokens for ONE bound until comma or brace/arrow
                     let mut tokens = TokenStream::new();
                     let mut depth = 0;
@@ -133,9 +131,8 @@ impl Parse for TyFnInput {
                 }
             }
 
-            output_type = found_output.ok_or_else(|| {
-                syn::Error::new(input.span(), "missing 'type Output = ...;'")
-            })?;
+            output_type = found_output
+                .ok_or_else(|| syn::Error::new(input.span(), "missing 'type Output = ...;'"))?;
         }
 
         Ok(TyFnInput {
@@ -184,11 +181,7 @@ fn replace_lets_in_path(
     }
 }
 
-fn replace_lets_in_type(
-    ty: &DslType,
-    let_trait: &Ident,
-    let_idents: &HashSet<Ident>,
-) -> DslType {
+fn replace_lets_in_type(ty: &DslType, let_trait: &Ident, let_idents: &HashSet<Ident>) -> DslType {
     use crate::dsl::{DslGenericArguments, DslPath, DslPathSegment};
     match ty {
         DslType::Base(t) => DslType::Base(t.clone()),
@@ -247,10 +240,7 @@ fn replace_lets_in_type(
         } => DslType::MethodCall {
             receiver: Box::new(replace_lets_in_type(receiver, let_trait, let_idents)),
             method: method.clone(),
-            args: args
-                .iter()
-                .map(|a| replace_lets_in_type(a, let_trait, let_idents))
-                .collect(),
+            args: args.iter().map(|a| replace_lets_in_type(a, let_trait, let_idents)).collect(),
         },
         DslType::AssocType {
             receiver,
@@ -266,19 +256,16 @@ fn replace_lets_in_type(
             args,
         } => DslType::QSelf {
             ty: Box::new(replace_lets_in_type(ty, let_trait, let_idents)),
-            trait_path: trait_path.as_ref().map(|p| replace_lets_in_path(p, let_trait, let_idents)),
+            trait_path: trait_path
+                .as_ref()
+                .map(|p| replace_lets_in_path(p, let_trait, let_idents)),
             ident: ident.clone(),
             args: args.as_ref().map(|a| {
-                a.iter()
-                    .map(|t| replace_lets_in_type(t, let_trait, let_idents))
-                    .collect()
+                a.iter().map(|t| replace_lets_in_type(t, let_trait, let_idents)).collect()
             }),
         },
         DslType::Tuple(elems) => DslType::Tuple(
-            elems
-                .iter()
-                .map(|t| replace_lets_in_type(t, let_trait, let_idents))
-                .collect(),
+            elems.iter().map(|t| replace_lets_in_type(t, let_trait, let_idents)).collect(),
         ),
         DslType::Verbatim(t) => DslType::Verbatim(t.clone()),
     }
@@ -331,10 +318,7 @@ impl TyFnInput {
             let let_idents: HashSet<Ident> =
                 self.let_bindings.iter().map(|(id, _)| id.clone()).collect();
 
-            let assoc_decls = self
-                .let_bindings
-                .iter()
-                .map(|(name, _)| quote! { type #name; });
+            let assoc_decls = self.let_bindings.iter().map(|(name, _)| quote! { type #name; });
 
             let assoc_impls = self.let_bindings.iter().map(|(name, ty)| {
                 let replaced = replace_lets_in_type(ty, &let_trait, &let_idents);

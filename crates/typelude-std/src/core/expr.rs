@@ -4,10 +4,7 @@
 
 use std::marker::PhantomData;
 
-use crate::{
-    core::TyFn,
-    Eval, Evaluate,
-};
+use crate::{Eval, Evaluate, core::TyFn};
 
 /// **Identity Evaluator**: Lifts a value `T` into an expression `ELit<T>`.
 ///

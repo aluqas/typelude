@@ -4,6 +4,8 @@
 
 pub mod composed;
 pub mod machine;
+pub mod opcode;
+pub mod shared;
 
 // Re-export typelude-core for internal use consistency if needed
 pub use typelude_std::core;

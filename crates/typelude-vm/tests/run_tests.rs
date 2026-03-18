@@ -7,17 +7,17 @@ use typelude_std::{
 use typelude_vm::machine::{
     core::CoreState,
     effects::{
+        Effects, PureEffects,
         fuel::{MeteredFuel, OutOfFuel},
         io::{HostRequest, SuspendIoPolicy},
         trace::NoTrace,
         trap::TrapAsResult,
-        Effects, PureEffects,
     },
-    run::ERun,
     instr::core::{OpAdd, OpHostCall, OpPush},
     machine::Machine,
     meta::{DefaultMeta, NoWorld, VmMeta},
     result::{Suspend, Trap},
+    run::ERun,
     state::MachineState,
     step::{StackUnderflow, Step},
     trace::TracedMachineState,
@@ -29,7 +29,7 @@ fn pure_machine_run_produces_final_state() {
     type Prog = tyarray![OpPush<ELit<U1>>, OpPush<ELit<U2>>, OpAdd];
     type Initial = MachineState<Nil, Nil, Nil, Nil, Prog>;
     type Final = Evaluate<ERun<ELit<Initial>>>;
-    type Expected = MachineState<tyarray![U3], Nil, Nil, Nil, Nil>;
+    type Expected = MachineState<tyarray![ELit<U3>], Nil, Nil, Nil, Nil>;
 
     assert_type_eq_all!(Final, Expected);
 }
@@ -49,7 +49,14 @@ fn traced_machine_accumulates_history() {
     type Prog = tyarray![OpPush<ELit<U1>>, OpPush<ELit<U2>>, OpAdd];
     type Initial = TracedMachineState<Nil, Nil, Nil, Nil, Prog, Nil>;
     type Final = Evaluate<ERun<ELit<Initial>>>;
-    type Expected = TracedMachineState<tyarray![U3], Nil, Nil, Nil, Nil, tyarray![OpAdd, OpPush<ELit<U2>>, OpPush<ELit<U1>>]>;
+    type Expected = TracedMachineState<
+        tyarray![ELit<U3>],
+        Nil,
+        Nil,
+        Nil,
+        Nil,
+        tyarray![OpAdd, OpPush<ELit<U2>>, OpPush<ELit<U1>>],
+    >;
 
     assert_type_eq_all!(Final, Expected);
 }
@@ -70,11 +77,8 @@ fn host_call_suspends_machine() {
     struct Print;
 
     type Fx = PureEffects;
-    type Initial = Machine<
-        CoreState<Nil, Nil, Nil, Nil, Nil, tyarray![OpHostCall<Print>]>,
-        DefaultMeta,
-        Fx,
-    >;
+    type Initial =
+        Machine<CoreState<Nil, Nil, Nil, Nil, Nil, tyarray![OpHostCall<Print>]>, DefaultMeta, Fx>;
     type StepResult = <OpHostCall<Print> as Step<Initial>>::Output;
     type Expected = Suspend<
         HostRequest<Print, Nil>,

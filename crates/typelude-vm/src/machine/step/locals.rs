@@ -4,7 +4,7 @@ use typelude_std::{
     core::{Eval, Evaluate},
     std::col::array::{Array, IsList, Nil},
 };
-use typenum::{B1, Sub1, UInt, U0, Unsigned};
+use typenum::{B1, Sub1, U0, UInt, Unsigned};
 
 use crate::machine::{
     effects::{EmitTrace, RaiseTrap},
@@ -22,9 +22,9 @@ impl<Idx, Stack, Memory, Frames, Labels, Rest, Meta, Fx>
 where
     Rest: IsList,
     Fx: RaiseTrap<
-        BadLocalIndex<Idx>,
-        StepMachine<Stack, Nil, Memory, Frames, Labels, OpGetLocal<Idx>, Rest, Meta, Fx>,
-    >,
+            BadLocalIndex<Idx>,
+            StepMachine<Stack, Nil, Memory, Frames, Labels, OpGetLocal<Idx>, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         BadLocalIndex<Idx>,
@@ -32,8 +32,8 @@ where
     >>::Output;
 }
 
-impl<Head, Tail, Stack, Memory, Frames, Labels, Rest, Meta, Fx> GetLocalStep<U0, Stack, Memory, Frames, Labels, Rest, Meta, Fx>
-    for Array<Head, Tail>
+impl<Head, Tail, Stack, Memory, Frames, Labels, Rest, Meta, Fx>
+    GetLocalStep<U0, Stack, Memory, Frames, Labels, Rest, Meta, Fx> for Array<Head, Tail>
 where
     Rest: IsList,
     Stack: IsList,
@@ -62,8 +62,16 @@ where
     Sub1<UInt<N, B>>: Unsigned,
     Tail: GetLocalStep<Sub1<UInt<N, B>>, Stack, Memory, Frames, Labels, Rest, Meta, Fx> + IsList,
 {
-    type Output =
-        <Tail as GetLocalStep<Sub1<UInt<N, B>>, Stack, Memory, Frames, Labels, Rest, Meta, Fx>>::Output;
+    type Output = <Tail as GetLocalStep<
+        Sub1<UInt<N, B>>,
+        Stack,
+        Memory,
+        Frames,
+        Labels,
+        Rest,
+        Meta,
+        Fx,
+    >>::Output;
 }
 
 pub trait SetLocalStep<Idx, Value, Memory, Frames, Labels, Rest, Meta, Fx> {
@@ -75,13 +83,33 @@ impl<Idx, Value, Memory, Frames, Labels, Rest, Meta, Fx>
 where
     Rest: IsList,
     Fx: RaiseTrap<
-        BadLocalIndex<Idx>,
-        StepMachine<Array<Value, Nil>, Nil, Memory, Frames, Labels, OpSetLocal<Idx>, Rest, Meta, Fx>,
-    >,
+            BadLocalIndex<Idx>,
+            StepMachine<
+                Array<Value, Nil>,
+                Nil,
+                Memory,
+                Frames,
+                Labels,
+                OpSetLocal<Idx>,
+                Rest,
+                Meta,
+                Fx,
+            >,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         BadLocalIndex<Idx>,
-        StepMachine<Array<Value, Nil>, Nil, Memory, Frames, Labels, OpSetLocal<Idx>, Rest, Meta, Fx>,
+        StepMachine<
+            Array<Value, Nil>,
+            Nil,
+            Memory,
+            Frames,
+            Labels,
+            OpSetLocal<Idx>,
+            Rest,
+            Meta,
+            Fx,
+        >,
     >>::Output;
 }
 
@@ -130,11 +158,13 @@ impl<Head, Stack, Tail, Memory, Frames, Labels, Rest, Meta, Fx>
 where
     Tail: IsList,
 {
-    type Output = Continue<CoreMachine<Stack, Array<Head, Tail>, Memory, Frames, Labels, Rest, Meta, Fx>>;
+    type Output =
+        Continue<CoreMachine<Stack, Array<Head, Tail>, Memory, Frames, Labels, Rest, Meta, Fx>>;
 }
 
 impl<Reason, M, Head, Memory, Frames, Labels, Rest, Meta, Fx>
-    LiftSetLocal<Head, Memory, Frames, Labels, Rest, Meta, Fx> for crate::machine::result::Trap<Reason, M>
+    LiftSetLocal<Head, Memory, Frames, Labels, Rest, Meta, Fx>
+    for crate::machine::result::Trap<Reason, M>
 {
     type Output = crate::machine::result::Trap<Reason, M>;
 }
@@ -152,11 +182,14 @@ pub trait LetStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx> {
     type Output;
 }
 
-impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx> LetStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
-    for Nil
+impl<Locals, Memory, Frames, Labels, Rest, Meta, Fx>
+    LetStep<Locals, Memory, Frames, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<StackUnderflow, StepMachine<Nil, Locals, Memory, Frames, Labels, OpLet, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            StackUnderflow,
+            StepMachine<Nil, Locals, Memory, Frames, Labels, OpLet, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         StackUnderflow,
@@ -200,11 +233,14 @@ pub trait DropLocalStep<Stack, Memory, Frames, Labels, Rest, Meta, Fx> {
     type Output;
 }
 
-impl<Stack, Memory, Frames, Labels, Rest, Meta, Fx> DropLocalStep<Stack, Memory, Frames, Labels, Rest, Meta, Fx>
-    for Nil
+impl<Stack, Memory, Frames, Labels, Rest, Meta, Fx>
+    DropLocalStep<Stack, Memory, Frames, Labels, Rest, Meta, Fx> for Nil
 where
     Rest: IsList,
-    Fx: RaiseTrap<LocalUnderflow, StepMachine<Stack, Nil, Memory, Frames, Labels, OpDropLocal, Rest, Meta, Fx>>,
+    Fx: RaiseTrap<
+            LocalUnderflow,
+            StepMachine<Stack, Nil, Memory, Frames, Labels, OpDropLocal, Rest, Meta, Fx>,
+        >,
 {
     type Output = <Fx as RaiseTrap<
         LocalUnderflow,
@@ -242,8 +278,16 @@ where
     Evaluate<Index>: Unsigned,
     Locals: GetLocalStep<Evaluate<Index>, Stack, Memory, Frames, Labels, Rest, Meta, Fx>,
 {
-    type Output =
-        <Locals as GetLocalStep<Evaluate<Index>, Stack, Memory, Frames, Labels, Rest, Meta, Fx>>::Output;
+    type Output = <Locals as GetLocalStep<
+        Evaluate<Index>,
+        Stack,
+        Memory,
+        Frames,
+        Labels,
+        Rest,
+        Meta,
+        Fx,
+    >>::Output;
 }
 
 impl<Index, Value, RestStack, Locals, Memory, Frames, Labels, Rest, Meta, Fx>
@@ -267,6 +311,14 @@ where
     RestStack: IsList,
     Locals: SetLocalStep<Evaluate<Index>, Value, Memory, Frames, Labels, Rest, Meta, Fx>,
 {
-    type Output =
-        <Locals as SetLocalStep<Evaluate<Index>, Value, Memory, Frames, Labels, Rest, Meta, Fx>>::Output;
+    type Output = <Locals as SetLocalStep<
+        Evaluate<Index>,
+        Value,
+        Memory,
+        Frames,
+        Labels,
+        Rest,
+        Meta,
+        Fx,
+    >>::Output;
 }

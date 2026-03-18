@@ -2,7 +2,9 @@ use core::marker::PhantomData;
 
 use typelude_std::core::{Eval, Evaluate, TyFn};
 
-use crate::composed::core::traits::{Bind, Monad, MonadState, MonadTrans, MonadWriter, Pair, Pure, Unit};
+use crate::composed::core::traits::{
+    Bind, Monad, MonadState, MonadTrans, MonadWriter, Pair, Pure, Unit,
+};
 
 #[derive(Debug)]
 pub struct StateT<S, M>(pub PhantomData<(S, M)>);
