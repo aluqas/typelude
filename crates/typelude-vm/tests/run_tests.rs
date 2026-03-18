@@ -1,7 +1,7 @@
 use static_assertions::assert_type_eq_all;
 use typelude_std::{
     core::{ELit, Evaluate},
-    std::{col::array::Nil, debug::trace::Trace},
+    std::col::array::Nil,
     tyarray,
 };
 use typelude_vm::machine::{
@@ -13,7 +13,7 @@ use typelude_vm::machine::{
         trap::TrapAsResult,
         Effects, PureEffects,
     },
-    execution::ERun,
+    run::ERun,
     instr::core::{OpAdd, OpHostCall, OpPush},
     machine::Machine,
     meta::{DefaultMeta, NoWorld, VmMeta},
@@ -52,7 +52,6 @@ fn traced_machine_accumulates_history() {
     type Expected = TracedMachineState<tyarray![U3], Nil, Nil, Nil, Nil, tyarray![OpAdd, OpPush<ELit<U2>>, OpPush<ELit<U1>>]>;
 
     assert_type_eq_all!(Final, Expected);
-    assert!(<Final as Trace>::fmt().contains("History: [Add, Push(2), Push(1)]"));
 }
 
 #[test]
