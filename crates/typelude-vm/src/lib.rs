@@ -2,10 +2,7 @@
 #![allow(incomplete_features)]
 #![recursion_limit = "65536"]
 
-pub mod composed;
-pub mod machine;
+pub mod core;
 pub mod opcode;
 pub mod shared;
-
-// Re-export typelude-core for internal use consistency if needed
-pub use typelude_std::core;
+pub mod vm;

@@ -7,34 +7,29 @@ use typelude_std::{
     tyarray,
 };
 use typelude_vm::{
-    composed::{
-        core::{
-            Monad, MonadWriter,
-            either_t::ERunEither,
-            id::{ERunId, IdK},
-            state_t::{ERunState, StateT},
-            suspend_t::ERunSuspend,
-            traits::{Done as SDone, Ok, Pair, Pure, Unit},
-            writer_t::{ERunWriter, WriterT},
-        },
-        vm::{
-            effects::{InvalidCondition, StackUnderflow, VmFx, VmLog, VmTraceEvent},
-            outcome::{Done, Raised, Suspended},
-            program::EInterpProgram,
-            run::ERunVm,
-            state::VmState,
-        },
+    core::{
+        Monad, MonadWriter,
+        either_t::ERunEither,
+        id::{ERunId, IdK},
+        state_t::{ERunState, StateT},
+        suspend_t::ERunSuspend,
+        traits::{Done as SDone, Ok, Pair, Pure, Unit},
+        writer_t::{ERunWriter, WriterT},
     },
-    machine::instr::core::{
-        OpAdd, OpGetLocal, OpHostCall, OpIf, OpLet, OpLt, OpPush, OpSetLocal, OpWhile,
+    opcode::{OpAdd, OpGetLocal, OpHostCall, OpIf, OpLet, OpLt, OpPush, OpSetLocal, OpWhile},
+    shared::{request::HostRequest, trap::{InvalidCondition, StackUnderflow}},
+    vm::{
+        effect::{VmLog, VmTraceEvent},
+        run::{
+            composed::{ComposedVmState, DefaultVmFx, EInterpProgram, ERunVm},
+            outcome::{Done, Raised, Suspended},
+        },
     },
 };
 use typenum::{U0, U1, U2, U3, U10, U55, U89, U151, U152};
 
-
-type FibState = VmState<Nil, Nil, Nil, Nil>;
-type FibFinalState =
-    VmState<tyarray![ELit<U55>], tyarray![ELit<U10>, ELit<U89>, ELit<U55>], Nil, Nil>;
+type FibState = ComposedVmState<Nil, Nil, Nil, Nil>;
+type FibFinalState = ComposedVmState<tyarray![ELit<U55>], tyarray![ELit<U10>, ELit<U89>, ELit<U55>], Nil, Nil>;
 type FibCond<N> = tyarray![OpPush<ELit<N>>, OpGetLocal<ELit<U0>>, OpLt];
 type FibBody = tyarray![
     OpGetLocal<ELit<U2>>,
@@ -120,8 +115,8 @@ struct FibDone<N, Value>(core::marker::PhantomData<(N, Value)>);
 fn state_writer_either_suspend_stack_runs() {
     type Base = WriterT<(), IdK>;
     type WithState = StateT<U0, Base>;
-    type WithEither = typelude_vm::composed::core::EitherT<(), WithState>;
-    type WithSuspend = typelude_vm::composed::core::SuspendT<(), WithEither>;
+    type WithEither = typelude_vm::core::EitherT<(), WithState>;
+    type WithSuspend = typelude_vm::core::SuspendT<(), WithEither>;
     type Prog = Pure<WithSuspend, U1>;
 
     type Out = Evaluate<ERunId<ERunWriter<ERunState<U0, ERunEither<ERunSuspend<Prog>>>>>>;
@@ -134,7 +129,7 @@ fn writer_tell_accumulates_log() {
     type F = WriterT<(), IdK>;
     type P = <F as Monad>::Bind<
         <F as MonadWriter<()>>::Tell<U1>,
-        typelude_vm::composed::core::traits::LConst<<F as MonadWriter<()>>::Tell<U2>>,
+        typelude_vm::core::traits::LConst<<F as MonadWriter<()>>::Tell<U2>>,
     >;
     type Out = Evaluate<ERunId<ERunWriter<P>>>;
     type Expected = Pair<Unit, tyarray![U1, U2]>;
@@ -143,13 +138,13 @@ fn writer_tell_accumulates_log() {
 
 #[test]
 fn composed_vm_runs_push_push_add() {
-    type State = VmState<Nil, Nil, Nil, Nil>;
-    type F = VmFx<State>;
+    type State = ComposedVmState<Nil, Nil, Nil, Nil>;
+    type F = DefaultVmFx<State>;
     type Prog = Evaluate<EInterpProgram<tyarray![OpPush<ELit<U1>>, OpPush<ELit<U2>>, OpAdd], F>>;
     type Out = Evaluate<ERunVm<State, Prog>>;
     type Expected = Done<
         Unit,
-        VmState<tyarray![ELit<U3>], Nil, Nil, Nil>,
+        ComposedVmState<tyarray![ELit<U3>], Nil, Nil, Nil>,
         tyarray![
             VmTraceEvent<OpPush<ELit<U1>>>,
             VmTraceEvent<OpPush<ELit<U2>>>,
@@ -161,8 +156,8 @@ fn composed_vm_runs_push_push_add() {
 
 #[test]
 fn composed_vm_traps_on_underflow() {
-    type State = VmState<Nil, Nil, Nil, Nil>;
-    type F = VmFx<State>;
+    type State = ComposedVmState<Nil, Nil, Nil, Nil>;
+    type F = DefaultVmFx<State>;
     type Prog = Evaluate<EInterpProgram<tyarray![OpAdd], F>>;
     type Out = Evaluate<ERunVm<State, Prog>>;
     type Expected = Raised<StackUnderflow, State, tyarray![VmTraceEvent<OpAdd>]>;
@@ -172,29 +167,25 @@ fn composed_vm_traps_on_underflow() {
 #[test]
 fn composed_vm_suspends_on_host_call() {
     struct Print;
-    type State = VmState<Nil, Nil, Nil, Nil>;
-    type F = VmFx<State>;
+    type State = ComposedVmState<Nil, Nil, Nil, Nil>;
+    type F = DefaultVmFx<State>;
     type Prog = Evaluate<EInterpProgram<tyarray![OpHostCall<Print>], F>>;
     type Out = Evaluate<ERunVm<State, Prog>>;
-    type Expected = Suspended<
-        typelude_vm::composed::interpret::HostRequest<Print>,
-        State,
-        tyarray![VmTraceEvent<OpHostCall<Print>>],
-    >;
+    type Expected = Suspended<HostRequest<Print, ()>, State, tyarray![VmTraceEvent<OpHostCall<Print>>]>;
     assert_type_eq_all!(Out, Expected);
 }
 
 #[test]
 fn composed_vm_if_picks_branch() {
-    type State = VmState<tyarray![typenum::B1], Nil, Nil, Nil>;
-    type F = VmFx<State>;
+    type State = ComposedVmState<tyarray![typenum::B1], Nil, Nil, Nil>;
+    type F = DefaultVmFx<State>;
     type Prog = Evaluate<
         EInterpProgram<tyarray![OpIf<tyarray![OpPush<ELit<U1>>], tyarray![OpPush<ELit<U2>>]>], F>,
     >;
     type Out = Evaluate<ERunVm<State, Prog>>;
     type Expected = Done<
         Unit,
-        VmState<tyarray![ELit<U1>], Nil, Nil, Nil>,
+        ComposedVmState<tyarray![ELit<U1>], Nil, Nil, Nil>,
         tyarray![
             VmTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>], tyarray![OpPush<ELit<U2>>]>>,
             VmTraceEvent<OpPush<ELit<U1>>>
@@ -205,8 +196,8 @@ fn composed_vm_if_picks_branch() {
 
 #[test]
 fn composed_vm_if_invalid_condition_traps() {
-    type State = VmState<tyarray![U0], Nil, Nil, Nil>;
-    type F = VmFx<State>;
+    type State = ComposedVmState<tyarray![U0], Nil, Nil, Nil>;
+    type F = DefaultVmFx<State>;
     type Prog = Evaluate<
         EInterpProgram<tyarray![OpIf<tyarray![OpPush<ELit<U1>>], tyarray![OpPush<ELit<U2>>]>], F>,
     >;
@@ -221,7 +212,7 @@ fn composed_vm_if_invalid_condition_traps() {
 
 #[test]
 fn composed_vm_runs_fibonacci_10() {
-    type F = VmFx<FibState>;
+    type F = DefaultVmFx<FibState>;
     type Prog = Evaluate<EInterpProgram<FibProgram10, F>>;
     type Out = Evaluate<ERunVm<FibState, Prog>>;
     type FinalState = <Out as OutcomeState>::Output;
@@ -231,7 +222,7 @@ fn composed_vm_runs_fibonacci_10() {
 
 #[test]
 fn composed_vm_fibonacci_10_trace_has_expected_length() {
-    type F = VmFx<FibState>;
+    type F = DefaultVmFx<FibState>;
     type Prog = Evaluate<EInterpProgram<FibProgram10, F>>;
     type Out = Evaluate<ERunVm<FibState, Prog>>;
     type Trace = <Out as OutcomeTrace>::Output;
@@ -244,7 +235,7 @@ fn composed_vm_fibonacci_10_trace_has_expected_length() {
 fn composed_vm_fibonacci_10_then_host_call_suspends_with_final_state() {
     struct Print;
 
-    type F = VmFx<FibState>;
+    type F = DefaultVmFx<FibState>;
     type Prog = Evaluate<EInterpProgram<FibProgram10WithHost<Print>, F>>;
     type Out = Evaluate<ERunVm<FibState, Prog>>;
     type FinalState = <Out as OutcomeState>::Output;
@@ -253,7 +244,7 @@ fn composed_vm_fibonacci_10_then_host_call_suspends_with_final_state() {
     type TraceLen = Evaluate<ELen<ELit<Trace>>>;
 
     assert_type_eq_all!(FinalState, FibFinalState);
-    assert_type_eq_all!(Request, typelude_vm::composed::interpret::HostRequest<Print>);
+    assert_type_eq_all!(Request, HostRequest<Print, ()>);
     assert_type_eq_all!(TraceLen, U152);
 }
 
@@ -262,10 +253,10 @@ fn composed_vm_fibonacci_10_can_accumulate_log_and_trace() {
     type F = WriterT<VmLog, IdK>;
     type Logged = <F as Monad>::Bind<
         <F as MonadWriter<VmLog>>::Tell<FibStart<U10>>,
-        typelude_vm::composed::core::traits::LConst<
+        typelude_vm::core::traits::LConst<
             <F as Monad>::Bind<
                 <F as MonadWriter<VmLog>>::Tell<FibDone<U10, U55>>,
-                typelude_vm::composed::core::traits::LConst<Pure<F, Unit>>,
+                typelude_vm::core::traits::LConst<Pure<F, Unit>>,
             >,
         >,
     >;

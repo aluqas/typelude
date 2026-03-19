@@ -14,7 +14,7 @@ use crate::dsl::{DslBound, DslType};
 pub struct TyFnInput {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
-    pub struct_token: Token![struct],
+    pub _struct_token: Token![struct],
     pub ident: Ident,
     pub generics: Generics,
     pub where_clause: Option<Punctuated<DslBound, Token![,]>>,
@@ -138,7 +138,7 @@ impl Parse for TyFnInput {
         Ok(TyFnInput {
             attrs,
             vis,
-            struct_token,
+            _struct_token: struct_token,
             ident,
             generics,
             where_clause,

@@ -1,45 +1,25 @@
 #![recursion_limit = "1024"]
+
 use typelude::{
-    eval::{ELit, Evaluate},
-    machine::trace::{ETracedRun, TracedMachineState},
-    program,
-    std::{array::Nil, trace::Trace},
+    Evaluate,
+    core::ELit,
+    std::{col::array::Nil, debug::trace::Trace},
+    tyarray,
+    typenum::{U3, U5},
+    vm::{
+        opcode::{OpAdd, OpPush},
+        vm::{run::direct::ERun, surface::aliases::TracedVm},
+    },
 };
 
 #[test]
 fn test_trace_output() {
-    // A simple program to demonstrate tracing
-    // Push 3, Push 5, Add
-    type Prog = program! {
-        (push 3)
-        (push 5)
-        (add)
-    };
-
-    // Use TracedMachineState instead of MachineState. It requires 6th param History (default Nil if we set it, but we can just pass Nil)
-    // Actually in trace.rs, TracedMachineState has NO default for History.
-    type InitialState = TracedMachineState<Nil, Nil, Nil, Nil, Prog, Nil>;
-    type FinalState = Evaluate<ETracedRun<ELit<InitialState>>>;
+    type Prog = tyarray![OpPush<ELit<U3>>, OpPush<ELit<U5>>, OpAdd];
+    type InitialState = TracedVm<Nil, Nil, Nil, Nil, Nil, Prog, Nil>;
+    type FinalState = Evaluate<ERun<ELit<InitialState>>>;
 
     let trace_output = FinalState::fmt();
 
-    // Print it so we can see it in logs (use --nocapture to view)
-    println!("Trace Output:\n{}", trace_output);
-
-    // Verify it contains expected information
-    // History should contain instructions in reverse order of execution (latest first)
-    // [Add, Push(5), Push(3)]
-
-    // Check Stack: [8]
     assert!(trace_output.contains("Stack: [8]"));
-
-    // Check History content
-    // Note: My Trace implementation for list uses `[A, B, C]`.
-    // History is constructed by appending: `Array<Inst, History>`.
-    // Initial history is `[]`.
-    // 1. Push(3) -> `[Push(3)]`
-    // 2. Push(5) -> `[Push(5), Push(3)]`
-    // 3. Add -> `[Add, Push(5), Push(3)]`
-
     assert!(trace_output.contains("Add, Push(5), Push(3)"));
 }

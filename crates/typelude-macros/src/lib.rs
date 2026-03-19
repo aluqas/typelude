@@ -18,17 +18,11 @@ pub fn program(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         <
             typelude::core::Evaluate<
-                typelude::vm::machine::execution::ERun<
-                    typelude::vm::machine::state::MachineState<
-                        typelude::std::array::Nil,
-                        typelude::std::array::Nil,
-                        typelude::std::array::Nil,
-                        typelude::std::array::Nil,
-                        #prog
-                    >
+                typelude::vm::vm::run::direct::ERun<
+                    typelude::vm::vm::surface::aliases::ProgramVm<#prog>
                 >
             >
-            as typelude::vm::machine::state::GetStack
+            as typelude::vm::vm::state::GetStack
         >::Output
     };
     TokenStream::from(expanded)

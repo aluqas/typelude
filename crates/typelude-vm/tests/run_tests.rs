@@ -4,32 +4,25 @@ use typelude_std::{
     std::col::array::Nil,
     tyarray,
 };
-use typelude_vm::machine::{
-    core::CoreState,
-    effects::{
-        Effects, PureEffects,
-        fuel::{MeteredFuel, OutOfFuel},
-        io::{HostRequest, SuspendIoPolicy},
-        trace::NoTrace,
-        trap::TrapAsResult,
+use typelude_vm::{
+    opcode::{OpAdd, OpHostCall, OpPush},
+    shared::request::HostRequest,
+    vm::{
+        effect::world::NoWorld,
+        run::direct::ERun,
+        state::GetStack,
+        step::{StackUnderflow, Step, Suspend, Trap},
+        surface::aliases::{MeteredVm, ProgramVm, PureVm, TracedVm},
     },
-    instr::core::{OpAdd, OpHostCall, OpPush},
-    machine::Machine,
-    meta::{DefaultMeta, NoWorld, VmMeta},
-    result::{Suspend, Trap},
-    run::ERun,
-    state::MachineState,
-    step::{StackUnderflow, Step},
-    trace::TracedMachineState,
 };
 use typenum::{U0, U1, U2, U3};
 
 #[test]
 fn pure_machine_run_produces_final_state() {
     type Prog = tyarray![OpPush<ELit<U1>>, OpPush<ELit<U2>>, OpAdd];
-    type Initial = MachineState<Nil, Nil, Nil, Nil, Prog>;
+    type Initial = ProgramVm<Prog>;
     type Final = Evaluate<ERun<ELit<Initial>>>;
-    type Expected = MachineState<tyarray![ELit<U3>], Nil, Nil, Nil, Nil>;
+    type Expected = PureVm<tyarray![ELit<U3>], Nil, Nil, Nil>;
 
     assert_type_eq_all!(Final, Expected);
 }
@@ -37,7 +30,7 @@ fn pure_machine_run_produces_final_state() {
 #[test]
 fn stack_underflow_is_trapped() {
     type Prog = tyarray![OpAdd];
-    type Initial = MachineState<Nil, Nil, Nil, Nil, Prog>;
+    type Initial = ProgramVm<Prog>;
     type Final = Evaluate<ERun<ELit<Initial>>>;
     type Expected = Trap<StackUnderflow, Initial>;
 
@@ -47,10 +40,11 @@ fn stack_underflow_is_trapped() {
 #[test]
 fn traced_machine_accumulates_history() {
     type Prog = tyarray![OpPush<ELit<U1>>, OpPush<ELit<U2>>, OpAdd];
-    type Initial = TracedMachineState<Nil, Nil, Nil, Nil, Prog, Nil>;
+    type Initial = TracedVm<Nil, Nil, Nil, Nil, Nil, Prog, Nil>;
     type Final = Evaluate<ERun<ELit<Initial>>>;
-    type Expected = TracedMachineState<
+    type Expected = TracedVm<
         tyarray![ELit<U3>],
+        Nil,
         Nil,
         Nil,
         Nil,
@@ -63,11 +57,10 @@ fn traced_machine_accumulates_history() {
 
 #[test]
 fn metered_effects_trap_when_fuel_is_empty() {
-    type Fx = Effects<NoTrace, MeteredFuel, TrapAsResult, SuspendIoPolicy>;
     type Prog = tyarray![OpPush<ELit<U1>>];
-    type Initial = Machine<CoreState<Nil, Nil, Nil, Nil, Nil, Prog>, VmMeta<Nil, U0, NoWorld>, Fx>;
+    type Initial = MeteredVm<Nil, Nil, Nil, Nil, Nil, Prog, Nil, U0, NoWorld>;
     type Final = Evaluate<ERun<ELit<Initial>>>;
-    type Expected = Trap<OutOfFuel, Initial>;
+    type Expected = Trap<typelude_vm::vm::effect::OutOfFuel, Initial>;
 
     assert_type_eq_all!(Final, Expected);
 }
@@ -76,14 +69,19 @@ fn metered_effects_trap_when_fuel_is_empty() {
 fn host_call_suspends_machine() {
     struct Print;
 
-    type Fx = PureEffects;
-    type Initial =
-        Machine<CoreState<Nil, Nil, Nil, Nil, Nil, tyarray![OpHostCall<Print>]>, DefaultMeta, Fx>;
+    type Initial = PureVm<Nil, Nil, Nil, Nil, Nil, tyarray![OpHostCall<Print>]>;
     type StepResult = <OpHostCall<Print> as Step<Initial>>::Output;
-    type Expected = Suspend<
-        HostRequest<Print, Nil>,
-        Machine<CoreState<Nil, Nil, Nil, Nil, Nil, Nil>, DefaultMeta, Fx>,
-    >;
+    type Expected =
+        Suspend<HostRequest<Print, Nil>, PureVm<Nil, Nil, Nil, Nil, Nil, Nil>>;
 
     assert_type_eq_all!(StepResult, Expected);
+}
+
+#[test]
+fn get_stack_trait_is_available_on_final_vm() {
+    type Prog = tyarray![OpPush<ELit<U1>>, OpPush<ELit<U2>>, OpAdd];
+    type Initial = ProgramVm<Prog>;
+    type Final = Evaluate<ERun<ELit<Initial>>>;
+
+    assert_type_eq_all!(<Final as GetStack>::Output, tyarray![ELit<U3>]);
 }
