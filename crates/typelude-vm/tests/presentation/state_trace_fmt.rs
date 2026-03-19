@@ -6,7 +6,7 @@ use typelude_std::{
 use typelude_vm::vm::surface::aliases::TracedVm;
 
 #[test]
-fn test_traced_machine_state_fmt() {
+fn traced_machine_state_format_is_stable() {
     type Stack = tyarray![U1];
     type Locals = tyarray![U0];
     type Memory = Nil;

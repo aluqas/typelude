@@ -1,10 +1,10 @@
-pub use crate::vm::algebra::effect::trace::{VmTrace, VmTraceEvent};
-
 use typelude_std::std::col::array::{Array, IsList};
 
 use crate::vm::state::VmMeta;
-
-pub use crate::shared::trace_event::TraceEvent;
+pub use crate::{
+    shared::trace_event::TraceEvent,
+    vm::algebra::effect::trace::{VmTrace, VmTraceEvent},
+};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NoTrace;

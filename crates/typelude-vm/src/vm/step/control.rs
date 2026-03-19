@@ -24,6 +24,14 @@ impl ToBranchBool for typelude_std::std::prim::bool::False {
     type Output = typelude_std::std::prim::bool::False;
 }
 
+impl ToBranchBool for typenum::B1 {
+    type Output = typelude_std::std::prim::bool::True;
+}
+
+impl ToBranchBool for typenum::B0 {
+    type Output = typelude_std::std::prim::bool::False;
+}
+
 impl<T> ToBranchBool for ELit<T>
 where
     T: ToBranchBool,

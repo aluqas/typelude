@@ -2,7 +2,7 @@ use typelude_vm::opcode::{OpCall, OpGetLocal, OpIf, OpPush, OpSetLocal, OpWhile}
 use typenum::{U0, U1};
 
 #[test]
-fn test_vm_instruction_trace() {
+fn opcode_debug_names_are_stable() {
     use typelude_std::std::col::array::Nil;
 
     let push = format!("{:?}", OpPush::<U1>::default());

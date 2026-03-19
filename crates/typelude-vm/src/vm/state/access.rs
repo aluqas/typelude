@@ -1,4 +1,4 @@
-use crate::{vm::run::direct::Machine, vm::state::VmState};
+use crate::vm::{run::direct::Machine, state::VmState};
 
 pub trait GetStack {
     type Output;

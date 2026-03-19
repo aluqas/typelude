@@ -29,7 +29,9 @@ impl Parse for ProgramInput {
         while !input.is_empty() {
             instrs.push(input.parse()?);
         }
-        Ok(Self { instrs })
+        Ok(Self {
+            instrs,
+        })
     }
 }
 
@@ -63,27 +65,27 @@ impl Parse for Instruction {
             let op: Ident = content.parse()?;
             let name = op.to_string();
             match name.as_str() {
-            "push" => {
-                if content.peek(LitInt) {
-                    Instruction::PushLiteral(content.parse()?)
-                } else {
-                    Instruction::PushType(content.parse()?)
-                }
-            },
-            "dup" | "swap" | "drop" | "add" | "sub" | "eq" | "neq" | "lt" | "gt" | "not"
-            | "and" | "or" | "return" => Instruction::SimpleOp(op),
-            "call" => Instruction::Call(content.parse()?),
-            "let" => Instruction::Let(content.parse()?),
-            "get" => Instruction::Get(content.parse()?),
-            "set" => Instruction::Set(content.parse()?),
-            "load" => Instruction::Load(content.parse()?),
-            "store" => Instruction::Store(content.parse()?),
-            _ => {
-                return Err(syn::Error::new_spanned(
-                    op,
-                    format!("Unknown instruction: {name}"),
-                ));
-            },
+                "push" => {
+                    if content.peek(LitInt) {
+                        Instruction::PushLiteral(content.parse()?)
+                    } else {
+                        Instruction::PushType(content.parse()?)
+                    }
+                },
+                "dup" | "swap" | "drop" | "add" | "sub" | "eq" | "neq" | "lt" | "gt" | "not"
+                | "and" | "or" | "return" => Instruction::SimpleOp(op),
+                "call" => Instruction::Call(content.parse()?),
+                "let" => Instruction::Let(content.parse()?),
+                "get" => Instruction::Get(content.parse()?),
+                "set" => Instruction::Set(content.parse()?),
+                "load" => Instruction::Load(content.parse()?),
+                "store" => Instruction::Store(content.parse()?),
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        op,
+                        format!("Unknown instruction: {name}"),
+                    ));
+                },
             }
         };
 

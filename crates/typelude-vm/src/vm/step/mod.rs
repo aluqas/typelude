@@ -1,10 +1,11 @@
 use typelude_std::std::prim::option::{None, Some};
 
-use crate::vm::run::direct::Machine;
-use crate::vm::state::VmState;
-pub use crate::vm::step::result::{Continue, Halt, Suspend, Trap};
-pub use crate::shared::trap::{
-    BadLocalIndex, BadMemoryIndex, LocalUnderflow, ReturnUnderflow, StackUnderflow,
+use crate::vm::{run::direct::Machine, state::VmState};
+pub use crate::{
+    shared::trap::{
+        BadLocalIndex, BadMemoryIndex, LocalUnderflow, ReturnUnderflow, StackUnderflow,
+    },
+    vm::step::result::{Continue, Halt, Suspend, Trap},
 };
 
 pub mod call;

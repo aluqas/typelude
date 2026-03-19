@@ -10,7 +10,10 @@ use crate::{
     opcode::{OpDropLocal, OpGetLocal, OpLet, OpSetLocal},
     vm::{
         effect::{EmitTrace, RaiseTrap},
-        step::{BadLocalIndex, Continue, CoreMachine, LocalUnderflow, StackUnderflow, Step, StepMachine},
+        step::{
+            BadLocalIndex, Continue, CoreMachine, LocalUnderflow, StackUnderflow, Step,
+            StepMachine,
+        },
     },
 };
 

@@ -6,13 +6,11 @@ pub mod world;
 
 use core::marker::PhantomData;
 
-use typelude_std::core::Eval;
-
-pub use trace::{EmitTrace, NoTrace, RecordTrace};
-pub use log::VmLog;
-pub use trace::VmTraceEvent;
 pub use io::{HostRequest, SuspendIo, SuspendIoPolicy};
+pub use log::VmLog;
+pub use trace::{EmitTrace, NoTrace, RecordTrace, VmTraceEvent};
 pub use trap::{RaiseTrap, TrapAsResult};
+use typelude_std::core::Eval;
 
 mod io {
     pub use crate::shared::request::HostRequest;

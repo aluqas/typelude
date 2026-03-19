@@ -2,7 +2,10 @@ use core::marker::PhantomData;
 
 use typelude_std::{
     core::{Eval, Evaluate},
-    std::{col::array::{Array, Nil}, debug::trace::Trace},
+    std::{
+        col::array::{Array, Nil},
+        debug::trace::Trace,
+    },
 };
 
 use crate::vm::{

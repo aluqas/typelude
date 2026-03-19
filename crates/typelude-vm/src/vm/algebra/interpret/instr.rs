@@ -784,10 +784,9 @@ macro_rules! impl_stateful_instr {
 impl<V, Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpPush<V>
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
+        + crate::core::MonadWriter<VmTrace>
+        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
     PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpPush<V>>: Sized,
     ModifyVm<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
@@ -838,11 +837,10 @@ impl_stateful_instr!(OpDropLocal, LDropLocal);
 impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpAdd
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>
-            + crate::core::MonadError<VmTrap>,
+    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
+        + crate::core::MonadWriter<VmTrace>
+        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>
+        + crate::core::MonadError<VmTrap>,
     Bind<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
         crate::vm::algebra::effects::GetVm<
@@ -895,11 +893,10 @@ where
 impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpLt
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>
-            + crate::core::MonadError<VmTrap>,
+    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
+        + crate::core::MonadWriter<VmTrace>
+        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>
+        + crate::core::MonadError<VmTrap>,
     Bind<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
         crate::vm::algebra::effects::GetVm<
@@ -952,10 +949,9 @@ where
 impl<Idx, Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpGetLocal<Idx>
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
+        + crate::core::MonadWriter<VmTrace>
+        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
     Then<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
         PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpGetLocal<Idx>>,
@@ -986,10 +982,9 @@ where
 impl<Idx, Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpSetLocal<Idx>
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
+        + crate::core::MonadWriter<VmTrace>
+        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
     Then<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
         PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpSetLocal<Idx>>,
@@ -1020,10 +1015,9 @@ where
 impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpLoad
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
+        + crate::core::MonadWriter<VmTrace>
+        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
     Then<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
         PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpLoad>,
@@ -1050,10 +1044,9 @@ where
 impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpStore
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
+        + crate::core::MonadWriter<VmTrace>
+        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
     Then<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
         PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpStore>,
@@ -1081,10 +1074,9 @@ impl<TargetProg, Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>>
     for OpCall<TargetProg>
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
+        + crate::core::MonadWriter<VmTrace>
+        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
     Then<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
         PushTrace<
@@ -1117,10 +1109,9 @@ where
 impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpReturn
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
+        + crate::core::MonadWriter<VmTrace>
+        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
     Then<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
         PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpReturn>,
@@ -1148,9 +1139,7 @@ impl<Sig, Stack, Locals, Memory, Frames, Trace, Trap, Req>
     InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpHostCall<Sig>
 where
     VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad
-            + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadSuspend<VmRequest>,
+        Monad + crate::core::MonadWriter<VmTrace> + crate::core::MonadSuspend<VmRequest>,
     Then<
         VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
         PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpHostCall<Sig>>,

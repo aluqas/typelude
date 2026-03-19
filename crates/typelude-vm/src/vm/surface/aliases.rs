@@ -1,14 +1,12 @@
 use typelude_std::std::col::array::Nil;
 
-use crate::{
-    vm::{
-        run::direct::Machine,
-        effect::{
-            Effects, MeteredFuel, NoTrace, PureEffects, SuspendIoPolicy, TraceEffects,
-            TrapAsResult, world::NoWorld,
-        },
-        state::{DefaultMeta, NoFuel, VmMeta, VmState},
+use crate::vm::{
+    effect::{
+        Effects, MeteredFuel, NoTrace, PureEffects, SuspendIoPolicy, TraceEffects, TrapAsResult,
+        world::NoWorld,
     },
+    run::direct::Machine,
+    state::{DefaultMeta, NoFuel, VmMeta, VmState},
 };
 
 pub type PureVm<Stack, Locals, Memory, Frames, Labels = Nil, Program = Nil> =

@@ -154,9 +154,8 @@ where
     VmFx<VmState<InitStack, InitLocals, InitMemory, InitFrames>, Trace, Trap, Req>:
         Monad
             + crate::core::MonadWriter<VmTrace>
-            + crate::core::MonadState<
-                VmState<InitStack, InitLocals, InitMemory, InitFrames>,
-            > + crate::core::MonadError<VmTrap>,
+            + crate::core::MonadState<VmState<InitStack, InitLocals, InitMemory, InitFrames>>
+            + crate::core::MonadError<VmTrap>,
     PushTrace<
         VmFx<VmState<InitStack, InitLocals, InitMemory, InitFrames>, Trace, Trap, Req>,
         OpIf<ThenProg, ElseProg>,

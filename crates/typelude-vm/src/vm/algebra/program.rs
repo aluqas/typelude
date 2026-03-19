@@ -36,8 +36,11 @@ where
     Rest: IsList + InterpProgram<F>,
     Inst: crate::vm::algebra::interpret::InterpInstr<F>,
     F: Monad,
-    Bind<F, <Inst as crate::vm::algebra::interpret::InterpInstr<F>>::Output, LProgramThen<Rest, F>>:
-        Eval,
+    Bind<
+        F,
+        <Inst as crate::vm::algebra::interpret::InterpInstr<F>>::Output,
+        LProgramThen<Rest, F>,
+    >: Eval,
 {
     type Output = Evaluate<
         Bind<
