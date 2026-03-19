@@ -3,12 +3,6 @@
 #[path = "integration/support.rs"]
 mod support;
 
-#[path = "integration/parity_control.rs"]
-mod parity_control;
-
-#[path = "integration/parity_effects.rs"]
-mod parity_effects;
-
 #[path = "integration/program_fibonacci.rs"]
 mod program_fibonacci;
 
@@ -23,3 +17,6 @@ mod scenario_trace_semantics;
 
 #[path = "integration/scenario_trap_paths.rs"]
 mod scenario_trap_paths;
+
+#[path = "integration/no_public_reexports.rs"]
+mod no_public_reexports;

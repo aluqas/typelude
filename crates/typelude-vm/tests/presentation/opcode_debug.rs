@@ -1,4 +1,8 @@
-use typelude_vm::opcode::{OpCall, OpGetLocal, OpIf, OpPush, OpSetLocal, OpWhile};
+use typelude_vm::opcode::{
+    control::{OpCall, OpIf, OpWhile},
+    local::{OpGetLocal, OpSetLocal},
+    stack::OpPush,
+};
 use typenum::{U0, U1};
 
 #[test]

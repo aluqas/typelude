@@ -2,89 +2,51 @@ use core::marker::PhantomData;
 
 use typelude_std::{
     core::{ELit, Eval, Evaluate, TyFn},
-    std::col::array::{Array, IsList, Nil},
+    std::col::array::{Array, Concat, IsList, Nil},
 };
 
 use crate::{
-    core::{Bind, Monad},
-    opcode::*,
+    core::traits::{Bind, Monad, MonadError, MonadState, MonadSuspend, MonadWriter},
+    opcode::{
+        control::{OpCall, OpIf, OpReturn, OpWhile},
+        host::OpHostCall,
+        local::{OpDropLocal, OpGetLocal, OpLet, OpSetLocal},
+        memory::{OpLoad, OpStore},
+        numeric::{OpAdd, OpAnd, OpEq, OpGt, OpLt, OpNeq, OpNot, OpOr, OpSub},
+        stack::{OpDrop, OpDup, OpPop, OpPush, OpSwap},
+    },
+    shared::{
+        frame::ReturnFrame,
+        request::HostRequest,
+        trap::{
+            BadLocalIndex, BadMemoryIndex, InvalidCondition, LocalUnderflow, ReturnUnderflow,
+            StackUnderflow,
+        },
+    },
     vm::algebra::{
         effect::{
-            BadLocalIndex, BadMemoryIndex, ModifyVm, PushTrace, ReturnUnderflow, StackUnderflow,
-            Then, ThrowVm, VmFx, VmRequest, VmTrace, VmTrap, YieldVm,
+            io::{VmRequest, YieldVm},
+            stack::VmFx,
+            state_ops::{GetVm, PutVm, Then},
+            trace::{PushTrace, VmTrace},
+            trap::VmTrap,
         },
-        state::{CallFrame, VmState},
+        interpret::{
+            control::LowerWhile,
+            helpers::{
+                condition::{BranchFalse, BranchInvalid, BranchTrue, DecideBranch},
+                local_index::{FoundLocal, GetAt, MissingLocal, SetAt, SetLocalOk},
+                memory_index::{FoundMemory, MemoryGet, MemorySet, MissingMemory, SetMemoryOk},
+                step_result::{LRunFallible, StepErr, StepOk},
+            },
+        },
+        state::VmState,
     },
 };
 
 pub trait InterpInstr<F> {
     type Output;
 }
-
-pub struct StepOk<State>(pub PhantomData<State>);
-pub struct StepErr<Reason>(pub PhantomData<Reason>);
-
-pub struct LPushValue<V>(pub PhantomData<V>);
-
-impl<V, Stack, Locals, Memory, Frames> TyFn<VmState<Stack, Locals, Memory, Frames>>
-    for LPushValue<V>
-where
-    Stack: IsList,
-{
-    type Output = VmState<Array<V, Stack>, Locals, Memory, Frames>;
-}
-
-pub struct LDropTop;
-
-impl<Locals, Memory, Frames> TyFn<VmState<Nil, Locals, Memory, Frames>> for LDropTop {
-    type Output =
-        ThrowVm<VmFx<VmState<Nil, Locals, Memory, Frames>, VmTrace, VmTrap>, StackUnderflow>;
-}
-
-impl<Head, Tail, Locals, Memory, Frames> TyFn<VmState<Array<Head, Tail>, Locals, Memory, Frames>>
-    for LDropTop
-where
-    Tail: IsList,
-{
-    type Output = VmState<Tail, Locals, Memory, Frames>;
-}
-
-pub struct LDupTop;
-
-impl<Locals, Memory, Frames> TyFn<VmState<Nil, Locals, Memory, Frames>> for LDupTop {
-    type Output = ThrowVm<VmFx<VmState<Nil, Locals, Memory, Frames>, VmTrace>, StackUnderflow>;
-}
-
-impl<Head, Tail, Locals, Memory, Frames> TyFn<VmState<Array<Head, Tail>, Locals, Memory, Frames>>
-    for LDupTop
-where
-    Tail: IsList,
-{
-    type Output = VmState<Array<Head, Array<Head, Tail>>, Locals, Memory, Frames>;
-}
-
-pub struct LSwapTop;
-
-impl<Locals, Memory, Frames> TyFn<VmState<Nil, Locals, Memory, Frames>> for LSwapTop {
-    type Output = ThrowVm<VmFx<VmState<Nil, Locals, Memory, Frames>, VmTrace>, StackUnderflow>;
-}
-
-impl<Head, Locals, Memory, Frames> TyFn<VmState<Array<Head, Nil>, Locals, Memory, Frames>>
-    for LSwapTop
-{
-    type Output =
-        ThrowVm<VmFx<VmState<Array<Head, Nil>, Locals, Memory, Frames>, VmTrace>, StackUnderflow>;
-}
-
-impl<A, B, Tail, Locals, Memory, Frames>
-    TyFn<VmState<Array<A, Array<B, Tail>>, Locals, Memory, Frames>> for LSwapTop
-where
-    Tail: IsList,
-{
-    type Output = VmState<Array<B, Array<A, Tail>>, Locals, Memory, Frames>;
-}
-
-pub struct LUnaryNot;
 
 pub trait AsValueExpr {
     type Output;
@@ -134,26 +96,6 @@ impl AsValueExpr for typelude_std::std::prim::bool::True {
 
 impl AsValueExpr for typelude_std::std::prim::bool::False {
     type Output = ELit<typelude_std::std::prim::bool::False>;
-}
-
-impl<Locals, Memory, Frames> TyFn<VmState<Nil, Locals, Memory, Frames>> for LUnaryNot {
-    type Output =
-        ThrowVm<VmFx<VmState<Nil, Locals, Memory, Frames>, VmTrace, VmTrap>, StackUnderflow>;
-}
-
-impl<Val, Tail, Locals, Memory, Frames> TyFn<VmState<Array<Val, Tail>, Locals, Memory, Frames>>
-    for LUnaryNot
-where
-    Tail: IsList,
-    Val: AsValueExpr,
-    typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>: Eval,
-{
-    type Output = VmState<
-        Array<ELit<Evaluate<typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>>>, Tail>,
-        Locals,
-        Memory,
-        Frames,
-    >;
 }
 
 pub trait BinaryResult<Lhs, Rhs> {
@@ -290,490 +232,556 @@ where
     >;
 }
 
+pub struct LPushValue<V>(pub PhantomData<V>);
+pub struct LDropTop<Inst>(pub PhantomData<Inst>);
+pub struct LDupTop;
+pub struct LSwapTop;
+pub struct LUnaryNot;
 pub struct LBinaryStep<Inst>(pub PhantomData<Inst>);
+pub struct LLet;
+pub struct LDropLocal;
+pub struct LGetLocal<Idx>(pub PhantomData<Idx>);
+pub struct LSetLocal<Idx>(pub PhantomData<Idx>);
+pub struct LLoad;
+pub struct LStore;
+pub struct LIf<ThenProg, ElseProg>(pub PhantomData<(ThenProg, ElseProg)>);
+pub struct LWhile<CondProg, BodyProg>(pub PhantomData<(CondProg, BodyProg)>);
+pub struct LCall<TargetProg>(pub PhantomData<TargetProg>);
+pub struct LReturn;
 
-impl<Inst, Locals, Memory, Frames> TyFn<VmState<Nil, Locals, Memory, Frames>>
-    for LBinaryStep<Inst>
-{
-    type Output = StepErr<StackUnderflow>;
-}
-
-impl<Inst, Head, Locals, Memory, Frames> TyFn<VmState<Array<Head, Nil>, Locals, Memory, Frames>>
-    for LBinaryStep<Inst>
-{
-    type Output = StepErr<StackUnderflow>;
-}
-
-impl<Inst, Lhs, Rhs, Tail, Locals, Memory, Frames>
-    TyFn<VmState<Array<Lhs, Array<Rhs, Tail>>, Locals, Memory, Frames>> for LBinaryStep<Inst>
+impl<V, Stack, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpPush<V>, Rest>>> for LPushValue<V>
 where
-    Inst: BinaryResult<Lhs, Rhs>,
+    Rest: IsList,
+    Stack: IsList,
+{
+    type Output = StepOk<VmState<Array<V, Stack>, Locals, Memory, Frames, Rest>>;
+}
+
+impl<Inst, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Nil, Locals, Memory, Frames, Array<Inst, Rest>>> for LDropTop<Inst>
+where
+    Rest: IsList,
+{
+    type Output = StepErr<StackUnderflow>;
+}
+
+impl<Inst, Head, Tail, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Head, Tail>, Locals, Memory, Frames, Array<Inst, Rest>>> for LDropTop<Inst>
+where
     Tail: IsList,
+    Rest: IsList,
+{
+    type Output = StepOk<VmState<Tail, Locals, Memory, Frames, Rest>>;
+}
+
+impl<Locals, Memory, Frames, Rest>
+    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpDup, Rest>>> for LDupTop
+where
+    Rest: IsList,
+{
+    type Output = StepErr<StackUnderflow>;
+}
+
+impl<Head, Tail, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Head, Tail>, Locals, Memory, Frames, Array<OpDup, Rest>>> for LDupTop
+where
+    Tail: IsList,
+    Rest: IsList,
+{
+    type Output = StepOk<VmState<Array<Head, Array<Head, Tail>>, Locals, Memory, Frames, Rest>>;
+}
+
+impl<Locals, Memory, Frames, Rest>
+    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpSwap, Rest>>> for LSwapTop
+where
+    Rest: IsList,
+{
+    type Output = StepErr<StackUnderflow>;
+}
+
+impl<Head, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Head, Nil>, Locals, Memory, Frames, Array<OpSwap, Rest>>> for LSwapTop
+where
+    Rest: IsList,
+{
+    type Output = StepErr<StackUnderflow>;
+}
+
+impl<A, B, Tail, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<A, Array<B, Tail>>, Locals, Memory, Frames, Array<OpSwap, Rest>>> for LSwapTop
+where
+    Tail: IsList,
+    Rest: IsList,
+{
+    type Output = StepOk<VmState<Array<B, Array<A, Tail>>, Locals, Memory, Frames, Rest>>;
+}
+
+impl<Locals, Memory, Frames, Rest>
+    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpNot, Rest>>> for LUnaryNot
+where
+    Rest: IsList,
+{
+    type Output = StepErr<StackUnderflow>;
+}
+
+impl<Val, Tail, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Val, Tail>, Locals, Memory, Frames, Array<OpNot, Rest>>> for LUnaryNot
+where
+    Tail: IsList,
+    Rest: IsList,
+    Val: AsValueExpr,
+    typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>: Eval,
 {
     type Output = StepOk<
-        VmState<Array<<Inst as BinaryResult<Lhs, Rhs>>::Output, Tail>, Locals, Memory, Frames>,
+        VmState<
+            Array<ELit<Evaluate<typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>>>, Tail>,
+            Locals,
+            Memory,
+            Frames,
+            Rest,
+        >,
     >;
 }
 
-pub struct LApplyStep<F, InitState>(pub PhantomData<(F, InitState)>);
-
-impl<F, InitState, NextState> TyFn<StepOk<NextState>> for LApplyStep<F, InitState>
+impl<Inst, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Nil, Locals, Memory, Frames, Array<Inst, Rest>>> for LBinaryStep<Inst>
 where
-    F: crate::core::MonadState<InitState>,
-    crate::vm::algebra::effects::PutVm<F, InitState, NextState>: Sized,
+    Rest: IsList,
 {
-    type Output = crate::vm::algebra::effects::PutVm<F, InitState, NextState>;
+    type Output = StepErr<StackUnderflow>;
 }
 
-impl<F, InitState, Reason> TyFn<StepErr<Reason>> for LApplyStep<F, InitState>
+impl<Inst, Head, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Head, Nil>, Locals, Memory, Frames, Array<Inst, Rest>>> for LBinaryStep<Inst>
 where
-    F: crate::core::MonadError<VmTrap>,
+    Rest: IsList,
 {
-    type Output = ThrowVm<F, Reason>;
+    type Output = StepErr<StackUnderflow>;
 }
 
-pub struct LRunFallible<Func, F, InitState>(pub PhantomData<(Func, F, InitState)>);
-
-impl<Func, F, InitState, CurrentState> TyFn<CurrentState> for LRunFallible<Func, F, InitState>
+impl<Inst, Lhs, Rhs, Tail, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Lhs, Array<Rhs, Tail>>, Locals, Memory, Frames, Array<Inst, Rest>>>
+    for LBinaryStep<Inst>
 where
-    Func: TyFn<CurrentState>,
-    LApplyStep<F, InitState>: TyFn<<Func as TyFn<CurrentState>>::Output>,
-{
-    type Output = <LApplyStep<F, InitState> as TyFn<<Func as TyFn<CurrentState>>::Output>>::Output;
-}
-
-pub trait GetAt<Idx> {
-    type Output;
-}
-
-pub struct FoundLocal<Value>(pub PhantomData<Value>);
-pub struct MissingLocal<Idx>(pub PhantomData<Idx>);
-
-impl<Idx> GetAt<Idx> for Nil {
-    type Output = MissingLocal<Idx>;
-}
-
-impl<Head, Tail> GetAt<typenum::U0> for Array<Head, Tail>
-where
+    Inst: BinaryResult<Lhs, Rhs>,
     Tail: IsList,
+    Rest: IsList,
 {
-    type Output = FoundLocal<Head>;
+    type Output = StepOk<
+        VmState<Array<<Inst as BinaryResult<Lhs, Rhs>>::Output, Tail>, Locals, Memory, Frames, Rest>,
+    >;
 }
 
-impl<Head, Tail, N, B> GetAt<typenum::UInt<N, B>> for Array<Head, Tail>
-where
-    Tail: GetAt<typenum::Sub1<typenum::UInt<N, B>>> + IsList,
-    typenum::UInt<N, B>: core::ops::Sub<typenum::B1>,
-    typenum::Sub1<typenum::UInt<N, B>>: typenum::Unsigned,
-{
-    type Output = <Tail as GetAt<typenum::Sub1<typenum::UInt<N, B>>>>::Output;
+impl<Locals, Memory, Frames, Program> TyFn<VmState<Nil, Locals, Memory, Frames, Program>> for LLet {
+    type Output = StepErr<StackUnderflow>;
 }
 
-pub trait SetAt<Idx, Value> {
-    type Output;
-}
-
-pub struct SetLocalOk<Locals>(pub PhantomData<Locals>);
-
-impl<Idx, Value> SetAt<Idx, Value> for Nil {
-    type Output = MissingLocal<Idx>;
-}
-
-impl<Head, Tail, Value> SetAt<typenum::U0, Value> for Array<Head, Tail>
-where
-    Tail: IsList,
-{
-    type Output = SetLocalOk<Array<Value, Tail>>;
-}
-
-impl<Head, Tail, N, B, Value> SetAt<typenum::UInt<N, B>, Value> for Array<Head, Tail>
-where
-    Tail: SetAt<typenum::Sub1<typenum::UInt<N, B>>, Value> + IsList,
-    typenum::UInt<N, B>: core::ops::Sub<typenum::B1>,
-    typenum::Sub1<typenum::UInt<N, B>>: typenum::Unsigned,
-    <Tail as SetAt<typenum::Sub1<typenum::UInt<N, B>>, Value>>::Output: SetAtTailResult,
-{
-    type Output =
-        <<Tail as SetAt<typenum::Sub1<typenum::UInt<N, B>>, Value>>::Output as SetAtTailResult>::WithHead<Head>;
-}
-
-pub trait SetAtTailResult {
-    type WithHead<Head>;
-}
-
-impl<Locals> SetAtTailResult for SetLocalOk<Locals>
-where
-    Locals: IsList,
-{
-    type WithHead<Head> = SetLocalOk<Array<Head, Locals>>;
-}
-
-impl<Idx> SetAtTailResult for MissingLocal<Idx> {
-    type WithHead<Head> = MissingLocal<Idx>;
-}
-
-pub struct LLet;
-
-impl<Locals, Memory, Frames> TyFn<VmState<Nil, Locals, Memory, Frames>> for LLet {
-    type Output =
-        ThrowVm<VmFx<VmState<Nil, Locals, Memory, Frames>, VmTrace, VmTrap>, StackUnderflow>;
-}
-
-impl<Value, Tail, Locals, Memory, Frames> TyFn<VmState<Array<Value, Tail>, Locals, Memory, Frames>>
-    for LLet
+impl<Value, Tail, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Value, Tail>, Locals, Memory, Frames, Array<OpLet, Rest>>> for LLet
 where
     Tail: IsList,
     Locals: IsList,
+    Rest: IsList,
 {
-    type Output = VmState<Tail, Array<Value, Locals>, Memory, Frames>;
+    type Output = StepOk<VmState<Tail, Array<Value, Locals>, Memory, Frames, Rest>>;
 }
 
-pub struct LDropLocal;
-
-impl<Stack, Memory, Frames> TyFn<VmState<Stack, Nil, Memory, Frames>> for LDropLocal {
-    type Output =
-        ThrowVm<VmFx<VmState<Stack, Nil, Memory, Frames>, VmTrace, VmTrap>, StackUnderflow>;
+impl<Stack, Memory, Frames, Rest>
+    TyFn<VmState<Stack, Nil, Memory, Frames, Array<OpDropLocal, Rest>>> for LDropLocal
+where
+    Rest: IsList,
+{
+    type Output = StepErr<LocalUnderflow>;
 }
 
-impl<Stack, Head, Tail, Memory, Frames> TyFn<VmState<Stack, Array<Head, Tail>, Memory, Frames>>
-    for LDropLocal
+impl<Stack, Head, Tail, Memory, Frames, Rest>
+    TyFn<VmState<Stack, Array<Head, Tail>, Memory, Frames, Array<OpDropLocal, Rest>>> for LDropLocal
 where
     Tail: IsList,
+    Rest: IsList,
 {
-    type Output = VmState<Stack, Tail, Memory, Frames>;
+    type Output = StepOk<VmState<Stack, Tail, Memory, Frames, Rest>>;
 }
 
-pub struct LGetLocal<Idx>(pub PhantomData<Idx>);
+pub type GetAtResult<Locals, Idx, Stack, Memory, Frames, Rest> =
+    EGetAtResult<<Locals as GetAt<Idx>>::Output, Stack, Locals, Memory, Frames, Rest>;
 
-impl<Idx, Stack, Locals, Memory, Frames> TyFn<VmState<Stack, Locals, Memory, Frames>>
-    for LGetLocal<Idx>
-where
-    Stack: IsList,
-    Locals: GetAt<Idx>,
-    GetAtResult<Locals, Idx, Stack, Memory, Frames>: Eval,
-{
-    type Output = Evaluate<GetAtResult<Locals, Idx, Stack, Memory, Frames>>;
-}
-
-pub type GetAtResult<Locals, Idx, Stack, Memory, Frames> =
-    EGetAtResult<<Locals as GetAt<Idx>>::Output, Stack, Locals, Memory, Frames>;
-
-pub struct EGetAtResult<Result, Stack, Locals, Memory, Frames>(
-    pub PhantomData<(Result, Stack, Locals, Memory, Frames)>,
+pub struct EGetAtResult<Result, Stack, Locals, Memory, Frames, Rest>(
+    pub PhantomData<(Result, Stack, Locals, Memory, Frames, Rest)>,
 );
 
-impl<Value, Stack, Locals, Memory, Frames> Eval
-    for EGetAtResult<FoundLocal<Value>, Stack, Locals, Memory, Frames>
+impl<Value, Stack, Locals, Memory, Frames, Rest> Eval
+    for EGetAtResult<FoundLocal<Value>, Stack, Locals, Memory, Frames, Rest>
 where
     Stack: IsList,
-{
-    type Output = VmState<Array<Value, Stack>, Locals, Memory, Frames>;
-}
-
-impl<Idx, Stack, Locals, Memory, Frames> Eval
-    for EGetAtResult<MissingLocal<Idx>, Stack, Locals, Memory, Frames>
-{
-    type Output =
-        ThrowVm<VmFx<VmState<Stack, Locals, Memory, Frames>, VmTrace, VmTrap>, BadLocalIndex<Idx>>;
-}
-
-pub struct LSetLocal<Idx>(pub PhantomData<Idx>);
-
-impl<Idx, Value, Rest, Locals, Memory, Frames>
-    TyFn<VmState<Array<Value, Rest>, Locals, Memory, Frames>> for LSetLocal<Idx>
-where
     Rest: IsList,
-    Locals: SetAt<Idx, Value> + IsList,
-    ESetAtResult<<Locals as SetAt<Idx, Value>>::Output, Rest, Memory, Frames, Idx>: Eval,
 {
-    type Output =
-        Evaluate<ESetAtResult<<Locals as SetAt<Idx, Value>>::Output, Rest, Memory, Frames, Idx>>;
+    type Output = StepOk<VmState<Array<Value, Stack>, Locals, Memory, Frames, Rest>>;
 }
 
-impl<Idx, Locals, Memory, Frames> TyFn<VmState<Nil, Locals, Memory, Frames>> for LSetLocal<Idx> {
-    type Output =
-        ThrowVm<VmFx<VmState<Nil, Locals, Memory, Frames>, VmTrace, VmTrap>, StackUnderflow>;
+impl<Idx, Stack, Locals, Memory, Frames, Rest> Eval
+    for EGetAtResult<MissingLocal<Idx>, Stack, Locals, Memory, Frames, Rest>
+{
+    type Output = StepErr<BadLocalIndex<Idx>>;
 }
 
-pub struct ESetAtResult<Locals, Rest, Memory, Frames, Idx>(
-    pub PhantomData<(Locals, Rest, Memory, Frames, Idx)>,
+impl<Idx, Stack, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpGetLocal<Idx>, Rest>>> for LGetLocal<Idx>
+where
+    Idx: Eval,
+    Stack: IsList,
+    Rest: IsList,
+    Locals: GetAt<Evaluate<Idx>>,
+    GetAtResult<Locals, Evaluate<Idx>, Stack, Memory, Frames, Rest>: Eval,
+{
+    type Output = Evaluate<GetAtResult<Locals, Evaluate<Idx>, Stack, Memory, Frames, Rest>>;
+}
+
+pub struct ESetAtResult<Locals, RestStack, Memory, Frames, Program, Idx>(
+    pub PhantomData<(Locals, RestStack, Memory, Frames, Program, Idx)>,
 );
 
-impl<Locals, Rest, Memory, Frames, Idx> Eval
-    for ESetAtResult<SetLocalOk<Locals>, Rest, Memory, Frames, Idx>
+impl<Locals, RestStack, Memory, Frames, Program, Idx> Eval
+    for ESetAtResult<SetLocalOk<Locals>, RestStack, Memory, Frames, Program, Idx>
 where
     Locals: IsList,
-    Rest: IsList,
+    RestStack: IsList,
+    Program: IsList,
 {
-    type Output = VmState<Rest, Locals, Memory, Frames>;
+    type Output = StepOk<VmState<RestStack, Locals, Memory, Frames, Program>>;
 }
 
-impl<Idx, Rest, Memory, Frames> Eval for ESetAtResult<MissingLocal<Idx>, Rest, Memory, Frames, Idx>
+impl<Idx, RestStack, Memory, Frames, Program> Eval
+    for ESetAtResult<MissingLocal<Idx>, RestStack, Memory, Frames, Program, Idx>
+where
+    RestStack: IsList,
+{
+    type Output = StepErr<BadLocalIndex<Idx>>;
+}
+
+impl<Idx, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpSetLocal<Idx>, Rest>>> for LSetLocal<Idx>
 where
     Rest: IsList,
 {
-    type Output =
-        ThrowVm<VmFx<VmState<Rest, Nil, Memory, Frames>, VmTrace, VmTrap>, BadLocalIndex<Idx>>;
+    type Output = StepErr<StackUnderflow>;
 }
 
-pub trait MemoryGet<Idx> {
-    type Output;
-}
-
-pub struct FoundMemory<Value>(pub PhantomData<Value>);
-pub struct MissingMemory<Idx>(pub PhantomData<Idx>);
-
-impl<Idx> MemoryGet<Idx> for Nil {
-    type Output = MissingMemory<Idx>;
-}
-
-impl<Head, Tail> MemoryGet<typenum::U0> for Array<Head, Tail>
+impl<Idx, Value, RestStack, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Value, RestStack>, Locals, Memory, Frames, Array<OpSetLocal<Idx>, Rest>>>
+    for LSetLocal<Idx>
 where
-    Tail: IsList,
+    Idx: Eval,
+    RestStack: IsList,
+    Rest: IsList,
+    Locals: SetAt<Evaluate<Idx>, Value> + IsList,
+    ESetAtResult<
+        <Locals as SetAt<Evaluate<Idx>, Value>>::Output,
+        RestStack,
+        Memory,
+        Frames,
+        Rest,
+        Evaluate<Idx>,
+    >: Eval,
 {
-    type Output = FoundMemory<Head>;
+    type Output = Evaluate<
+        ESetAtResult<
+            <Locals as SetAt<Evaluate<Idx>, Value>>::Output,
+            RestStack,
+            Memory,
+            Frames,
+            Rest,
+            Evaluate<Idx>,
+        >,
+    >;
 }
 
-impl<Head, Tail, N, B> MemoryGet<typenum::UInt<N, B>> for Array<Head, Tail>
+pub struct ELoadResult<Value, RestStack, Locals, Memory, Frames, Program, Idx>(
+    pub PhantomData<(Value, RestStack, Locals, Memory, Frames, Program, Idx)>,
+);
+
+impl<Value, RestStack, Locals, Memory, Frames, Program, Idx> Eval
+    for ELoadResult<FoundMemory<Value>, RestStack, Locals, Memory, Frames, Program, Idx>
 where
-    Tail: MemoryGet<typenum::Sub1<typenum::UInt<N, B>>> + IsList,
-    typenum::UInt<N, B>: core::ops::Sub<typenum::B1>,
-    typenum::Sub1<typenum::UInt<N, B>>: typenum::Unsigned,
+    RestStack: IsList,
+    Program: IsList,
 {
-    type Output = <Tail as MemoryGet<typenum::Sub1<typenum::UInt<N, B>>>>::Output;
+    type Output = StepOk<VmState<Array<Value, RestStack>, Locals, Memory, Frames, Program>>;
 }
 
-pub trait MemorySet<Idx, Value> {
-    type Output;
-}
-
-pub struct SetMemoryOk<Memory>(pub PhantomData<Memory>);
-
-impl<Idx, Value> MemorySet<Idx, Value> for Nil {
-    type Output = MissingMemory<Idx>;
-}
-
-impl<Head, Tail, Value> MemorySet<typenum::U0, Value> for Array<Head, Tail>
-where
-    Tail: IsList,
+impl<Idx, RestStack, Locals, Memory, Frames, Program> Eval
+    for ELoadResult<MissingMemory<Idx>, RestStack, Locals, Memory, Frames, Program, Idx>
 {
-    type Output = SetMemoryOk<Array<Value, Tail>>;
+    type Output = StepErr<BadMemoryIndex<Idx>>;
 }
 
-impl<Head, Tail, N, B, Value> MemorySet<typenum::UInt<N, B>, Value> for Array<Head, Tail>
-where
-    Tail: MemorySet<typenum::Sub1<typenum::UInt<N, B>>, Value> + IsList,
-    typenum::UInt<N, B>: core::ops::Sub<typenum::B1>,
-    typenum::Sub1<typenum::UInt<N, B>>: typenum::Unsigned,
-    <Tail as MemorySet<typenum::Sub1<typenum::UInt<N, B>>, Value>>::Output: MemorySetTailResult,
-{
-    type Output = <<Tail as MemorySet<typenum::Sub1<typenum::UInt<N, B>>, Value>>::Output as MemorySetTailResult>::WithHead<Head>;
-}
-
-pub trait MemorySetTailResult {
-    type WithHead<Head>;
-}
-
-impl<Memory> MemorySetTailResult for SetMemoryOk<Memory>
-where
-    Memory: IsList,
-{
-    type WithHead<Head> = SetMemoryOk<Array<Head, Memory>>;
-}
-
-impl<Idx> MemorySetTailResult for MissingMemory<Idx> {
-    type WithHead<Head> = MissingMemory<Idx>;
-}
-
-pub struct LLoad;
-
-impl<Locals, Memory, Frames> TyFn<VmState<Nil, Locals, Memory, Frames>> for LLoad {
-    type Output =
-        ThrowVm<VmFx<VmState<Nil, Locals, Memory, Frames>, VmTrace, VmTrap>, StackUnderflow>;
-}
-
-impl<Addr, Rest, Locals, Memory, Frames> TyFn<VmState<Array<Addr, Rest>, Locals, Memory, Frames>>
-    for LLoad
+impl<Locals, Memory, Frames, Rest>
+    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpLoad, Rest>>> for LLoad
 where
     Rest: IsList,
+{
+    type Output = StepErr<StackUnderflow>;
+}
+
+impl<Addr, RestStack, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Addr, RestStack>, Locals, Memory, Frames, Array<OpLoad, Rest>>> for LLoad
+where
     Addr: Eval,
     Evaluate<Addr>: typenum::Unsigned,
+    RestStack: IsList,
+    Rest: IsList,
     Memory: MemoryGet<Evaluate<Addr>>,
     ELoadResult<
         <Memory as MemoryGet<Evaluate<Addr>>>::Output,
-        Rest,
+        RestStack,
         Locals,
         Memory,
         Frames,
+        Rest,
         Evaluate<Addr>,
     >: Eval,
 {
     type Output = Evaluate<
         ELoadResult<
             <Memory as MemoryGet<Evaluate<Addr>>>::Output,
-            Rest,
+            RestStack,
             Locals,
             Memory,
             Frames,
+            Rest,
             Evaluate<Addr>,
         >,
     >;
 }
 
-pub struct ELoadResult<Value, Rest, Locals, Memory, Frames, Idx>(
-    pub PhantomData<(Value, Rest, Locals, Memory, Frames, Idx)>,
+pub struct EStoreResult<Memory, RestStack, Locals, Frames, Program, Idx>(
+    pub PhantomData<(Memory, RestStack, Locals, Frames, Program, Idx)>,
 );
 
-impl<Value, Rest, Locals, Memory, Frames, Idx> Eval
-    for ELoadResult<FoundMemory<Value>, Rest, Locals, Memory, Frames, Idx>
+impl<Memory, RestStack, Locals, Frames, Program, Idx> Eval
+    for EStoreResult<SetMemoryOk<Memory>, RestStack, Locals, Frames, Program, Idx>
+where
+    Memory: IsList,
+    RestStack: IsList,
+    Program: IsList,
+{
+    type Output = StepOk<VmState<RestStack, Locals, Memory, Frames, Program>>;
+}
+
+impl<Idx, RestStack, Locals, Frames, Program> Eval
+    for EStoreResult<MissingMemory<Idx>, RestStack, Locals, Frames, Program, Idx>
+{
+    type Output = StepErr<BadMemoryIndex<Idx>>;
+}
+
+impl<Locals, Memory, Frames, Rest>
+    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpStore, Rest>>> for LStore
 where
     Rest: IsList,
 {
-    type Output = VmState<Array<Value, Rest>, Locals, Memory, Frames>;
+    type Output = StepErr<StackUnderflow>;
 }
 
-impl<Idx, Rest, Locals, Memory, Frames> Eval
-    for ELoadResult<MissingMemory<Idx>, Rest, Locals, Memory, Frames, Idx>
+impl<Value, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Value, Nil>, Locals, Memory, Frames, Array<OpStore, Rest>>> for LStore
+where
+    Rest: IsList,
 {
-    type Output =
-        ThrowVm<VmFx<VmState<Rest, Locals, Memory, Frames>, VmTrace, VmTrap>, BadMemoryIndex<Idx>>;
+    type Output = StepErr<StackUnderflow>;
 }
 
-pub struct LStore;
-
-impl<Locals, Memory, Frames> TyFn<VmState<Nil, Locals, Memory, Frames>> for LStore {
-    type Output =
-        ThrowVm<VmFx<VmState<Nil, Locals, Memory, Frames>, VmTrace, VmTrap>, StackUnderflow>;
-}
-
-impl<Value, Locals, Memory, Frames> TyFn<VmState<Array<Value, Nil>, Locals, Memory, Frames>>
+impl<Value, Addr, RestStack, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Value, Array<Addr, RestStack>>, Locals, Memory, Frames, Array<OpStore, Rest>>>
     for LStore
-{
-    type Output = ThrowVm<
-        VmFx<VmState<Array<Value, Nil>, Locals, Memory, Frames>, VmTrace, VmTrap>,
-        StackUnderflow,
-    >;
-}
-
-impl<Value, Addr, Rest, Locals, Memory, Frames>
-    TyFn<VmState<Array<Value, Array<Addr, Rest>>, Locals, Memory, Frames>> for LStore
 where
-    Rest: IsList,
     Addr: Eval,
     Evaluate<Addr>: typenum::Unsigned,
+    RestStack: IsList,
+    Rest: IsList,
     Memory: MemorySet<Evaluate<Addr>, Value> + IsList,
     EStoreResult<
         <Memory as MemorySet<Evaluate<Addr>, Value>>::Output,
-        Rest,
+        RestStack,
         Locals,
         Frames,
+        Rest,
         Evaluate<Addr>,
     >: Eval,
 {
     type Output = Evaluate<
         EStoreResult<
             <Memory as MemorySet<Evaluate<Addr>, Value>>::Output,
-            Rest,
+            RestStack,
             Locals,
             Frames,
+            Rest,
             Evaluate<Addr>,
         >,
     >;
 }
 
-pub struct EStoreResult<Memory, Rest, Locals, Frames, Idx>(
-    pub PhantomData<(Memory, Rest, Locals, Frames, Idx)>,
-);
-
-impl<Memory, Rest, Locals, Frames, Idx> Eval
-    for EStoreResult<SetMemoryOk<Memory>, Rest, Locals, Frames, Idx>
-where
-    Memory: IsList,
-    Rest: IsList,
-{
-    type Output = VmState<Rest, Locals, Memory, Frames>;
+pub trait SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest> {
+    type Output;
 }
 
-impl<Idx, Rest, Locals, Frames> Eval
-    for EStoreResult<MissingMemory<Idx>, Rest, Locals, Frames, Idx>
+impl<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest>
+    SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest> for BranchTrue
+where
+    Stack: IsList,
+    Rest: IsList,
+    ThenProg: Concat<Rest>,
+{
+    type Output = StepOk<VmState<Stack, Locals, Memory, Frames, <ThenProg as Concat<Rest>>::Output>>;
+}
+
+impl<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest>
+    SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest> for BranchFalse
+where
+    Stack: IsList,
+    Rest: IsList,
+    ElseProg: Concat<Rest>,
+{
+    type Output = StepOk<VmState<Stack, Locals, Memory, Frames, <ElseProg as Concat<Rest>>::Output>>;
+}
+
+impl<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest>
+    SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest> for BranchInvalid
+{
+    type Output = StepErr<InvalidCondition>;
+}
+
+impl<ThenProg, ElseProg, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpIf<ThenProg, ElseProg>, Rest>>>
+    for LIf<ThenProg, ElseProg>
 where
     Rest: IsList,
 {
-    type Output =
-        ThrowVm<VmFx<VmState<Rest, Locals, Nil, Frames>, VmTrace, VmTrap>, BadMemoryIndex<Idx>>;
+    type Output = StepErr<StackUnderflow>;
 }
 
-pub struct LCall<TargetProg>(pub PhantomData<TargetProg>);
-
-impl<TargetProg, Stack, Locals, Memory, Frames> TyFn<VmState<Stack, Locals, Memory, Frames>>
-    for LCall<TargetProg>
+impl<ThenProg, ElseProg, Cond, Stack, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Array<Cond, Stack>, Locals, Memory, Frames, Array<OpIf<ThenProg, ElseProg>, Rest>>>
+    for LIf<ThenProg, ElseProg>
 where
+    Cond: DecideBranch,
+    Stack: IsList,
+    Rest: IsList,
+    <Cond as DecideBranch>::Output:
+        SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest>,
+{
+    type Output = <<Cond as DecideBranch>::Output as SelectBranchResult<
+        ThenProg,
+        ElseProg,
+        Stack,
+        Locals,
+        Memory,
+        Frames,
+        Rest,
+    >>::Output;
+}
+
+impl<CondProg, BodyProg, Stack, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpWhile<CondProg, BodyProg>, Rest>>>
+    for LWhile<CondProg, BodyProg>
+where
+    Stack: IsList,
+    Rest: IsList,
+    OpWhile<CondProg, BodyProg>: LowerWhile<Rest>,
+{
+    type Output = StepOk<
+        VmState<
+            Stack,
+            Locals,
+            Memory,
+            Frames,
+            <OpWhile<CondProg, BodyProg> as LowerWhile<Rest>>::Output,
+        >,
+    >;
+}
+
+impl<TargetProg, Stack, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpCall<TargetProg>, Rest>>> for LCall<TargetProg>
+where
+    Stack: IsList,
+    Locals: IsList,
     Frames: IsList,
+    Rest: IsList,
 {
-    type Output = VmState<Stack, Nil, Memory, Array<CallFrame<Locals, TargetProg>, Frames>>;
+    type Output = StepOk<
+        VmState<Stack, Nil, Memory, Array<ReturnFrame<Locals, Rest>, Frames>, TargetProg>,
+    >;
 }
 
-pub struct LReturn;
-
-impl<Stack, Locals, Memory> TyFn<VmState<Stack, Locals, Memory, Nil>> for LReturn {
-    type Output =
-        ThrowVm<VmFx<VmState<Stack, Locals, Memory, Nil>, VmTrace, VmTrap>, ReturnUnderflow>;
+impl<Stack, Locals, Memory, Rest>
+    TyFn<VmState<Stack, Locals, Memory, Nil, Array<OpReturn, Rest>>> for LReturn
+where
+    Rest: IsList,
+{
+    type Output = StepErr<ReturnUnderflow>;
 }
 
-impl<Stack, Locals, Memory, CallerLocals, Continuation, RestFrames>
-    TyFn<VmState<Stack, Locals, Memory, Array<CallFrame<CallerLocals, Continuation>, RestFrames>>>
+impl<Stack, Locals, Memory, CallerLocals, Continuation, RestFrames, Rest>
+    TyFn<VmState<Stack, Locals, Memory, Array<ReturnFrame<CallerLocals, Continuation>, RestFrames>, Array<OpReturn, Rest>>>
     for LReturn
 where
+    Stack: IsList,
     RestFrames: IsList,
+    Rest: IsList,
 {
-    type Output = VmState<Stack, CallerLocals, Memory, RestFrames>;
+    type Output = StepOk<VmState<Stack, CallerLocals, Memory, RestFrames, Continuation>>;
 }
 
-pub type HostRequest<Sig> = crate::shared::request::HostRequest<Sig, ()>;
+pub struct LHostCall<Sig, F, RootState>(pub PhantomData<(Sig, F, RootState)>);
 
-pub type ComposeInstr<F, Instr, Func> = Then<
-    F,
-    PushTrace<F, Instr>,
-    ModifyVm<F, crate::vm::algebra::state::VmState<(), (), (), ()>, Func>,
->;
+impl<Sig, F, RootState, Stack, Locals, Memory, Frames, Rest>
+    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpHostCall<Sig>, Rest>>>
+    for LHostCall<Sig, F, RootState>
+where
+    F: MonadState<RootState> + MonadSuspend<VmRequest>,
+    Rest: IsList,
+    PutVm<F, RootState, VmState<Stack, Locals, Memory, Frames, Rest>>: Sized,
+    Then<
+        F,
+        PutVm<F, RootState, VmState<Stack, Locals, Memory, Frames, Rest>>,
+        YieldVm<F, HostRequest<Sig, Stack>>,
+    >: Eval,
+{
+    type Output = Evaluate<
+        Then<
+            F,
+            PutVm<F, RootState, VmState<Stack, Locals, Memory, Frames, Rest>>,
+            YieldVm<F, HostRequest<Sig, Stack>>,
+        >,
+    >;
+}
 
-macro_rules! impl_stateful_instr {
+macro_rules! impl_simple_fallible_instr {
     ($inst:ty, $func:ty) => {
-        impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
-            InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for $inst
+        impl<RootState, Trace, Trap, Req> InterpInstr<VmFx<RootState, Trace, Trap, Req>> for $inst
         where
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-                Monad
-                    + crate::core::MonadWriter<VmTrace>
-                    + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
-            PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, $inst>:
-                Sized,
-            ModifyVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-                $func,
-            >: Sized,
+            VmFx<RootState, Trace, Trap, Req>: Monad
+                + MonadWriter<VmTrace>
+                + MonadState<RootState>
+                + MonadError<VmTrap>,
             Then<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, $inst>,
-                ModifyVm<
-                    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                    VmState<Stack, Locals, Memory, Frames>,
-                    $func,
+                VmFx<RootState, Trace, Trap, Req>,
+                PushTrace<VmFx<RootState, Trace, Trap, Req>, $inst>,
+                Bind<
+                    VmFx<RootState, Trace, Trap, Req>,
+                    GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+                    LRunFallible<$func, VmFx<RootState, Trace, Trap, Req>, RootState>,
                 >,
             >: Eval,
         {
             type Output = Evaluate<
                 Then<
-                    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                    PushTrace<
-                        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                        $inst,
-                    >,
-                    ModifyVm<
-                        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                        VmState<Stack, Locals, Memory, Frames>,
-                        $func,
+                    VmFx<RootState, Trace, Trap, Req>,
+                    PushTrace<VmFx<RootState, Trace, Trap, Req>, $inst>,
+                    Bind<
+                        VmFx<RootState, Trace, Trap, Req>,
+                        GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+                        LRunFallible<$func, VmFx<RootState, Trace, Trap, Req>, RootState>,
                     >,
                 >,
             >;
@@ -781,381 +789,243 @@ macro_rules! impl_stateful_instr {
     };
 }
 
-impl<V, Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpPush<V>
+impl<V, RootState, Trace, Trap, Req> InterpInstr<VmFx<RootState, Trace, Trap, Req>> for OpPush<V>
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
-        + crate::core::MonadWriter<VmTrace>
-        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
-    PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpPush<V>>: Sized,
-    ModifyVm<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        VmState<Stack, Locals, Memory, Frames>,
-        LPushValue<V>,
-    >: Sized,
+    VmFx<RootState, Trace, Trap, Req>: Monad
+        + MonadWriter<VmTrace>
+        + MonadState<RootState>
+        + MonadError<VmTrap>,
     Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpPush<V>>,
-        ModifyVm<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-            LPushValue<V>,
-        >,
-    >: Eval,
-{
-    type Output = Evaluate<
-        Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpPush<V>>,
-            ModifyVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-                LPushValue<V>,
-            >,
-        >,
-    >;
-}
-
-impl_stateful_instr!(OpDrop, LDropTop);
-impl_stateful_instr!(OpPop, LDropTop);
-impl_stateful_instr!(OpDup, LDupTop);
-impl_stateful_instr!(OpSwap, LSwapTop);
-impl_stateful_instr!(OpSub, LBinaryStep<OpSub>);
-#[cfg(feature = "nightly")]
-impl_stateful_instr!(OpEq, LBinaryStep<OpEq>);
-#[cfg(feature = "nightly")]
-impl_stateful_instr!(OpNeq, LBinaryStep<OpNeq>);
-impl_stateful_instr!(OpGt, LBinaryStep<OpGt>);
-impl_stateful_instr!(OpAnd, LBinaryStep<OpAnd>);
-impl_stateful_instr!(OpOr, LBinaryStep<OpOr>);
-impl_stateful_instr!(OpNot, LUnaryNot);
-impl_stateful_instr!(OpLet, LLet);
-impl_stateful_instr!(OpDropLocal, LDropLocal);
-// `Dup` and `Swap` use the same state-function alias pattern in tests; v1 keeps
-// them out of the composed comparison set.
-
-impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpAdd
-where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
-        + crate::core::MonadWriter<VmTrace>
-        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>
-        + crate::core::MonadError<VmTrap>,
-    Bind<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        crate::vm::algebra::effects::GetVm<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-        >,
-        LRunFallible<
-            LBinaryStep<OpAdd>,
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-        >,
-    >: Eval,
-    Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpAdd>,
+        VmFx<RootState, Trace, Trap, Req>,
+        PushTrace<VmFx<RootState, Trace, Trap, Req>, OpPush<V>>,
         Bind<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            crate::vm::algebra::effects::GetVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-            >,
-            LRunFallible<
-                LBinaryStep<OpAdd>,
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-            >,
+            VmFx<RootState, Trace, Trap, Req>,
+            GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+            LRunFallible<LPushValue<V>, VmFx<RootState, Trace, Trap, Req>, RootState>,
         >,
     >: Eval,
 {
     type Output = Evaluate<
         Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpAdd>,
+            VmFx<RootState, Trace, Trap, Req>,
+            PushTrace<VmFx<RootState, Trace, Trap, Req>, OpPush<V>>,
             Bind<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                crate::vm::algebra::effects::GetVm<
-                    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                    VmState<Stack, Locals, Memory, Frames>,
-                >,
-                LRunFallible<
-                    LBinaryStep<OpAdd>,
-                    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                    VmState<Stack, Locals, Memory, Frames>,
-                >,
+                VmFx<RootState, Trace, Trap, Req>,
+                GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+                LRunFallible<LPushValue<V>, VmFx<RootState, Trace, Trap, Req>, RootState>,
             >,
         >,
     >;
 }
 
-impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpLt
+impl_simple_fallible_instr!(OpDrop, LDropTop<OpDrop>);
+impl_simple_fallible_instr!(OpPop, LDropTop<OpPop>);
+impl_simple_fallible_instr!(OpDup, LDupTop);
+impl_simple_fallible_instr!(OpSwap, LSwapTop);
+impl_simple_fallible_instr!(OpAdd, LBinaryStep<OpAdd>);
+impl_simple_fallible_instr!(OpSub, LBinaryStep<OpSub>);
+#[cfg(feature = "nightly")]
+impl_simple_fallible_instr!(OpEq, LBinaryStep<OpEq>);
+#[cfg(feature = "nightly")]
+impl_simple_fallible_instr!(OpNeq, LBinaryStep<OpNeq>);
+impl_simple_fallible_instr!(OpLt, LBinaryStep<OpLt>);
+impl_simple_fallible_instr!(OpGt, LBinaryStep<OpGt>);
+impl_simple_fallible_instr!(OpAnd, LBinaryStep<OpAnd>);
+impl_simple_fallible_instr!(OpOr, LBinaryStep<OpOr>);
+impl_simple_fallible_instr!(OpNot, LUnaryNot);
+impl_simple_fallible_instr!(OpLet, LLet);
+impl_simple_fallible_instr!(OpDropLocal, LDropLocal);
+impl_simple_fallible_instr!(OpLoad, LLoad);
+impl_simple_fallible_instr!(OpStore, LStore);
+impl_simple_fallible_instr!(OpReturn, LReturn);
+
+impl<Idx, RootState, Trace, Trap, Req> InterpInstr<VmFx<RootState, Trace, Trap, Req>>
+    for OpGetLocal<Idx>
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
-        + crate::core::MonadWriter<VmTrace>
-        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>
-        + crate::core::MonadError<VmTrap>,
-    Bind<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        crate::vm::algebra::effects::GetVm<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-        >,
-        LRunFallible<
-            LBinaryStep<OpLt>,
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-        >,
-    >: Eval,
+    VmFx<RootState, Trace, Trap, Req>: Monad
+        + MonadWriter<VmTrace>
+        + MonadState<RootState>
+        + MonadError<VmTrap>,
     Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpLt>,
+        VmFx<RootState, Trace, Trap, Req>,
+        PushTrace<VmFx<RootState, Trace, Trap, Req>, OpGetLocal<Idx>>,
         Bind<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            crate::vm::algebra::effects::GetVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-            >,
-            LRunFallible<
-                LBinaryStep<OpLt>,
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-            >,
+            VmFx<RootState, Trace, Trap, Req>,
+            GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+            LRunFallible<LGetLocal<Idx>, VmFx<RootState, Trace, Trap, Req>, RootState>,
         >,
     >: Eval,
 {
     type Output = Evaluate<
         Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpLt>,
+            VmFx<RootState, Trace, Trap, Req>,
+            PushTrace<VmFx<RootState, Trace, Trap, Req>, OpGetLocal<Idx>>,
             Bind<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                crate::vm::algebra::effects::GetVm<
-                    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                    VmState<Stack, Locals, Memory, Frames>,
-                >,
+                VmFx<RootState, Trace, Trap, Req>,
+                GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+                LRunFallible<LGetLocal<Idx>, VmFx<RootState, Trace, Trap, Req>, RootState>,
+            >,
+        >,
+    >;
+}
+
+impl<Idx, RootState, Trace, Trap, Req> InterpInstr<VmFx<RootState, Trace, Trap, Req>>
+    for OpSetLocal<Idx>
+where
+    VmFx<RootState, Trace, Trap, Req>: Monad
+        + MonadWriter<VmTrace>
+        + MonadState<RootState>
+        + MonadError<VmTrap>,
+    Then<
+        VmFx<RootState, Trace, Trap, Req>,
+        PushTrace<VmFx<RootState, Trace, Trap, Req>, OpSetLocal<Idx>>,
+        Bind<
+            VmFx<RootState, Trace, Trap, Req>,
+            GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+            LRunFallible<LSetLocal<Idx>, VmFx<RootState, Trace, Trap, Req>, RootState>,
+        >,
+    >: Eval,
+{
+    type Output = Evaluate<
+        Then<
+            VmFx<RootState, Trace, Trap, Req>,
+            PushTrace<VmFx<RootState, Trace, Trap, Req>, OpSetLocal<Idx>>,
+            Bind<
+                VmFx<RootState, Trace, Trap, Req>,
+                GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+                LRunFallible<LSetLocal<Idx>, VmFx<RootState, Trace, Trap, Req>, RootState>,
+            >,
+        >,
+    >;
+}
+
+impl<ThenProg, ElseProg, RootState, Trace, Trap, Req> InterpInstr<VmFx<RootState, Trace, Trap, Req>>
+    for OpIf<ThenProg, ElseProg>
+where
+    VmFx<RootState, Trace, Trap, Req>: Monad
+        + MonadWriter<VmTrace>
+        + MonadState<RootState>
+        + MonadError<VmTrap>,
+    Then<
+        VmFx<RootState, Trace, Trap, Req>,
+        PushTrace<VmFx<RootState, Trace, Trap, Req>, OpIf<ThenProg, ElseProg>>,
+        Bind<
+            VmFx<RootState, Trace, Trap, Req>,
+            GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+            LRunFallible<LIf<ThenProg, ElseProg>, VmFx<RootState, Trace, Trap, Req>, RootState>,
+        >,
+    >: Eval,
+{
+    type Output = Evaluate<
+        Then<
+            VmFx<RootState, Trace, Trap, Req>,
+            PushTrace<VmFx<RootState, Trace, Trap, Req>, OpIf<ThenProg, ElseProg>>,
+            Bind<
+                VmFx<RootState, Trace, Trap, Req>,
+                GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
                 LRunFallible<
-                    LBinaryStep<OpLt>,
-                    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                    VmState<Stack, Locals, Memory, Frames>,
+                    LIf<ThenProg, ElseProg>,
+                    VmFx<RootState, Trace, Trap, Req>,
+                    RootState,
                 >,
             >,
         >,
     >;
 }
 
-impl<Idx, Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpGetLocal<Idx>
+impl<CondProg, BodyProg, RootState, Trace, Trap, Req>
+    InterpInstr<VmFx<RootState, Trace, Trap, Req>> for OpWhile<CondProg, BodyProg>
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
-        + crate::core::MonadWriter<VmTrace>
-        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<RootState, Trace, Trap, Req>: Monad
+        + MonadWriter<VmTrace>
+        + MonadState<RootState>
+        + MonadError<VmTrap>,
     Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpGetLocal<Idx>>,
-        ModifyVm<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-            LGetLocal<Evaluate<Idx>>,
-        >,
-    >: Eval,
-    Idx: Eval,
-{
-    type Output = Evaluate<
-        Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                OpGetLocal<Idx>,
-            >,
-            ModifyVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-                LGetLocal<Evaluate<Idx>>,
-            >,
-        >,
-    >;
-}
-
-impl<Idx, Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpSetLocal<Idx>
-where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
-        + crate::core::MonadWriter<VmTrace>
-        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
-    Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpSetLocal<Idx>>,
-        ModifyVm<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-            LSetLocal<Evaluate<Idx>>,
-        >,
-    >: Eval,
-    Idx: Eval,
-{
-    type Output = Evaluate<
-        Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                OpSetLocal<Idx>,
-            >,
-            ModifyVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-                LSetLocal<Evaluate<Idx>>,
-            >,
-        >,
-    >;
-}
-
-impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpLoad
-where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
-        + crate::core::MonadWriter<VmTrace>
-        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
-    Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpLoad>,
-        ModifyVm<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-            LLoad,
+        VmFx<RootState, Trace, Trap, Req>,
+        PushTrace<VmFx<RootState, Trace, Trap, Req>, OpWhile<CondProg, BodyProg>>,
+        Bind<
+            VmFx<RootState, Trace, Trap, Req>,
+            GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+            LRunFallible<LWhile<CondProg, BodyProg>, VmFx<RootState, Trace, Trap, Req>, RootState>,
         >,
     >: Eval,
 {
     type Output = Evaluate<
         Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpLoad>,
-            ModifyVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-                LLoad,
+            VmFx<RootState, Trace, Trap, Req>,
+            PushTrace<VmFx<RootState, Trace, Trap, Req>, OpWhile<CondProg, BodyProg>>,
+            Bind<
+                VmFx<RootState, Trace, Trap, Req>,
+                GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+                LRunFallible<
+                    LWhile<CondProg, BodyProg>,
+                    VmFx<RootState, Trace, Trap, Req>,
+                    RootState,
+                >,
             >,
         >,
     >;
 }
 
-impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpStore
-where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
-        + crate::core::MonadWriter<VmTrace>
-        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
-    Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpStore>,
-        ModifyVm<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-            LStore,
-        >,
-    >: Eval,
-{
-    type Output = Evaluate<
-        Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpStore>,
-            ModifyVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-                LStore,
-            >,
-        >,
-    >;
-}
-
-impl<TargetProg, Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>>
+impl<TargetProg, RootState, Trace, Trap, Req> InterpInstr<VmFx<RootState, Trace, Trap, Req>>
     for OpCall<TargetProg>
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
-        + crate::core::MonadWriter<VmTrace>
-        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<RootState, Trace, Trap, Req>: Monad
+        + MonadWriter<VmTrace>
+        + MonadState<RootState>
+        + MonadError<VmTrap>,
     Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            OpCall<TargetProg>,
-        >,
-        ModifyVm<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-            LCall<TargetProg>,
+        VmFx<RootState, Trace, Trap, Req>,
+        PushTrace<VmFx<RootState, Trace, Trap, Req>, OpCall<TargetProg>>,
+        Bind<
+            VmFx<RootState, Trace, Trap, Req>,
+            GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+            LRunFallible<LCall<TargetProg>, VmFx<RootState, Trace, Trap, Req>, RootState>,
         >,
     >: Eval,
 {
     type Output = Evaluate<
         Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                OpCall<TargetProg>,
-            >,
-            ModifyVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-                LCall<TargetProg>,
+            VmFx<RootState, Trace, Trap, Req>,
+            PushTrace<VmFx<RootState, Trace, Trap, Req>, OpCall<TargetProg>>,
+            Bind<
+                VmFx<RootState, Trace, Trap, Req>,
+                GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+                LRunFallible<
+                    LCall<TargetProg>,
+                    VmFx<RootState, Trace, Trap, Req>,
+                    RootState,
+                >,
             >,
         >,
     >;
 }
 
-impl<Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpReturn
+impl<Sig, RootState, Trace, Trap, Req> InterpInstr<VmFx<RootState, Trace, Trap, Req>>
+    for OpHostCall<Sig>
 where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>: Monad
-        + crate::core::MonadWriter<VmTrace>
-        + crate::core::MonadState<VmState<Stack, Locals, Memory, Frames>>,
+    VmFx<RootState, Trace, Trap, Req>: Monad
+        + MonadWriter<VmTrace>
+        + MonadState<RootState>
+        + MonadSuspend<VmRequest>,
     Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpReturn>,
-        ModifyVm<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            VmState<Stack, Locals, Memory, Frames>,
-            LReturn,
+        VmFx<RootState, Trace, Trap, Req>,
+        PushTrace<VmFx<RootState, Trace, Trap, Req>, OpHostCall<Sig>>,
+        Bind<
+            VmFx<RootState, Trace, Trap, Req>,
+            GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+            LHostCall<Sig, VmFx<RootState, Trace, Trap, Req>, RootState>,
         >,
     >: Eval,
 {
     type Output = Evaluate<
         Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpReturn>,
-            ModifyVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                VmState<Stack, Locals, Memory, Frames>,
-                LReturn,
-            >,
-        >,
-    >;
-}
-
-impl<Sig, Stack, Locals, Memory, Frames, Trace, Trap, Req>
-    InterpInstr<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>> for OpHostCall<Sig>
-where
-    VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>:
-        Monad + crate::core::MonadWriter<VmTrace> + crate::core::MonadSuspend<VmRequest>,
-    Then<
-        VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-        PushTrace<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, OpHostCall<Sig>>,
-        YieldVm<VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>, HostRequest<Sig>>,
-    >: Eval,
-{
-    type Output = Evaluate<
-        Then<
-            VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-            PushTrace<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                OpHostCall<Sig>,
-            >,
-            YieldVm<
-                VmFx<VmState<Stack, Locals, Memory, Frames>, Trace, Trap, Req>,
-                HostRequest<Sig>,
+            VmFx<RootState, Trace, Trap, Req>,
+            PushTrace<VmFx<RootState, Trace, Trap, Req>, OpHostCall<Sig>>,
+            Bind<
+                VmFx<RootState, Trace, Trap, Req>,
+                GetVm<VmFx<RootState, Trace, Trap, Req>, RootState>,
+                LHostCall<Sig, VmFx<RootState, Trace, Trap, Req>, RootState>,
             >,
         >,
     >;

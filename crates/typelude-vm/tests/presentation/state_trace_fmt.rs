@@ -3,25 +3,22 @@ use typelude_std::{
     tyarray,
     typenum::{U0, U1},
 };
-use typelude_vm::vm::surface::aliases::TracedVm;
+use typelude_vm::vm::algebra::state::VmState;
 
 #[test]
 fn traced_machine_state_format_is_stable() {
     type Stack = tyarray![U1];
     type Locals = tyarray![U0];
     type Memory = Nil;
-    type History = Nil;
     type CallStack = Nil;
     type Program = Nil;
-    type Labels = Nil;
 
-    type State = TracedVm<Stack, Locals, Memory, CallStack, Labels, Program, History>;
+    type State = VmState<Stack, Locals, Memory, CallStack, Program>;
 
-    let expected = r#"MachineState {
+    let expected = r#"VmState {
   Stack: [1]
   Locals: [0]
   Memory: []
-  History: []
 }"#;
 
     assert_eq!(<State as Trace>::fmt(), expected);

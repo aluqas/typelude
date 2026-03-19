@@ -1,4 +1,4 @@
-use crate::core::{Bind, MonadState, Pure};
+use crate::core::traits::{Bind, MonadState, Pure};
 
 pub type GetVm<F, State> = <F as MonadState<State>>::Get;
 pub type PutVm<F, State, NewState> = <F as MonadState<State>>::Put<NewState>;

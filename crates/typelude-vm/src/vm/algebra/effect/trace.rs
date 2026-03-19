@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use crate::core::MonadWriter;
+use crate::core::traits::MonadWriter;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VmTrace;

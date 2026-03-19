@@ -1,9 +1,14 @@
 use static_assertions::assert_type_eq_all;
 use typelude_std::{core::ELit, tyarray};
-use typelude_vm::opcode::{OpAdd, OpCall, OpGetLocal, OpLet, OpPush, OpReturn};
+use typelude_vm::opcode::{
+    control::{OpCall, OpReturn},
+    local::{OpGetLocal, OpLet},
+    numeric::OpAdd,
+    stack::OpPush,
+};
 use typenum::{U0, U1, U2, U3, U6, U9};
 
-use crate::support::{DirectProgramRun, OutcomeState, StateLocals, StateStack};
+use crate::support::{OutcomeState, ProgramRun, StateLocals, StateStack};
 
 type AddTwoAndReturn = tyarray![OpPush<ELit<U2>>, OpAdd, OpReturn];
 type OuterAddAndReturn = tyarray![OpCall<AddTwoAndReturn>, OpPush<ELit<U3>>, OpAdd, OpReturn];
@@ -15,7 +20,7 @@ type CallerLocalsProgram =
 
 #[test]
 fn nested_call_addition_produces_expected_result() {
-    type DirectOut = DirectProgramRun<NestedCallProgram>;
+    type DirectOut = ProgramRun<NestedCallProgram>;
     type DirectState = <DirectOut as OutcomeState>::Output;
 
     assert_type_eq_all!(<DirectState as StateStack>::Output, tyarray![ELit<U6>]);
@@ -23,7 +28,7 @@ fn nested_call_addition_produces_expected_result() {
 
 #[test]
 fn callee_locals_do_not_leak_back_to_caller() {
-    type DirectOut = DirectProgramRun<CallerLocalsProgram>;
+    type DirectOut = ProgramRun<CallerLocalsProgram>;
     type DirectState = <DirectOut as OutcomeState>::Output;
 
     assert_type_eq_all!(<DirectState as StateLocals>::Output, tyarray![ELit<U1>]);
