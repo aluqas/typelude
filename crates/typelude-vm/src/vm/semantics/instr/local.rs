@@ -22,7 +22,9 @@ pub struct LDropLocal;
 pub struct LGetLocal<Idx>(pub PhantomData<Idx>);
 pub struct LSetLocal<Idx>(pub PhantomData<Idx>);
 
-impl<Locals, Memory, Frames, Program> TyFn<VmState<Nil, Locals, Memory, Frames, Program>> for LLet {
+impl<Locals, Memory, Frames, Program> TyFn<VmState<Nil, Locals, Memory, Frames, Program>>
+    for LLet
+{
     type Output = StepTrap<StackUnderflow>;
 }
 
@@ -45,7 +47,8 @@ where
 }
 
 impl<Stack, Head, Tail, Memory, Frames, Rest>
-    TyFn<VmState<Stack, Array<Head, Tail>, Memory, Frames, Array<OpDropLocal, Rest>>> for LDropLocal
+    TyFn<VmState<Stack, Array<Head, Tail>, Memory, Frames, Array<OpDropLocal, Rest>>>
+    for LDropLocal
 where
     Tail: IsList,
     Rest: IsList,

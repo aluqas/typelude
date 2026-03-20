@@ -9,9 +9,8 @@ use crate::{
     core::{
         either_t::ERunEither,
         id::ERunId,
-        suspend_t::RunSuspend,
         state_t::ERunState,
-        suspend_t::ERunSuspend,
+        suspend_t::{ERunSuspend, RunSuspend},
         traits::{
             Bind, Done as SDone, Err as EErr, Monad, MonadState, Ok as EOk, Pair, Pure, Unit,
             Yielded,
@@ -185,9 +184,7 @@ where
     >;
 }
 
-pub struct LContinue<RootState, Trace, Trap, Req>(
-    pub PhantomData<(RootState, Trace, Trap, Req)>,
-);
+pub struct LContinue<RootState, Trace, Trap, Req>(pub PhantomData<(RootState, Trace, Trap, Req)>);
 
 impl<RootState, Trace, Trap, Req, CurrentState> TyFn<CurrentState>
     for LContinue<RootState, Trace, Trap, Req>
@@ -241,15 +238,7 @@ where
                 Evaluate<State>,
                 ERunEither<
                     ERunSuspend<
-                        Evaluate<
-                            ERunVmAction<
-                                Evaluate<State>,
-                                Evaluate<State>,
-                                Trace,
-                                Trap,
-                                Req,
-                            >,
-                        >,
+                        Evaluate<ERunVmAction<Evaluate<State>, Evaluate<State>, Trace, Trap, Req>>,
                     >,
                 >,
             >,

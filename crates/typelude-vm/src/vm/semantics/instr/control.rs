@@ -66,8 +66,9 @@ where
 }
 
 impl<ThenProg, ElseProg, Cond, Stack, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Array<Cond, Stack>, Locals, Memory, Frames, Array<OpIf<ThenProg, ElseProg>, Rest>>>
-    for LIf<ThenProg, ElseProg>
+    TyFn<
+        VmState<Array<Cond, Stack>, Locals, Memory, Frames, Array<OpIf<ThenProg, ElseProg>, Rest>>,
+    > for LIf<ThenProg, ElseProg>
 where
     Cond: DecideBranch,
     Stack: IsList,
@@ -106,7 +107,8 @@ where
 }
 
 impl<TargetProg, Stack, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpCall<TargetProg>, Rest>>> for LCall<TargetProg>
+    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpCall<TargetProg>, Rest>>>
+    for LCall<TargetProg>
 where
     Stack: IsList,
     Locals: IsList,
@@ -118,8 +120,8 @@ where
     >;
 }
 
-impl<Stack, Locals, Memory, Rest>
-    TyFn<VmState<Stack, Locals, Memory, Nil, Array<OpReturn, Rest>>> for LReturn
+impl<Stack, Locals, Memory, Rest> TyFn<VmState<Stack, Locals, Memory, Nil, Array<OpReturn, Rest>>>
+    for LReturn
 where
     Rest: IsList,
 {
@@ -127,8 +129,15 @@ where
 }
 
 impl<Stack, Locals, Memory, CallerLocals, Continuation, RestFrames, Rest>
-    TyFn<VmState<Stack, Locals, Memory, Array<ReturnFrame<CallerLocals, Continuation>, RestFrames>, Array<OpReturn, Rest>>>
-    for LReturn
+    TyFn<
+        VmState<
+            Stack,
+            Locals,
+            Memory,
+            Array<ReturnFrame<CallerLocals, Continuation>, RestFrames>,
+            Array<OpReturn, Rest>,
+        >,
+    > for LReturn
 where
     Stack: IsList,
     RestFrames: IsList,

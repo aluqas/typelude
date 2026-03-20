@@ -1,9 +1,5 @@
 use static_assertions::assert_type_eq_all;
-use typelude_std::{
-    core::ELit,
-    std::col::array::Nil,
-    tyarray,
-};
+use typelude_std::{core::ELit, std::col::array::Nil, tyarray};
 use typelude_vm::{
     opcode::{
         control::{OpIf, OpReturn},
@@ -16,10 +12,7 @@ use typelude_vm::{
         protocol::trap::{
             BadLocalIndex, BadMemoryIndex, InvalidCondition, ReturnUnderflow, StackUnderflow,
         },
-        runtime::{
-            effects::trace::VmTraceEvent,
-            outcome::Raised,
-        },
+        runtime::{effects::trace::VmTraceEvent, outcome::Raised},
         semantics::state::VmState,
     },
 };
@@ -42,11 +35,8 @@ fn bad_local_index_program_traps() {
     type Prog = tyarray![OpGetLocal<ELit<U0>>];
     type Initial = VmState<Nil, Nil, Nil, Nil, Prog>;
     type Final = ProgramRun<Prog>;
-    type Expected = Raised<
-        BadLocalIndex<U0>,
-        Initial,
-        tyarray![VmTraceEvent<OpGetLocal<ELit<U0>>>],
-    >;
+    type Expected =
+        Raised<BadLocalIndex<U0>, Initial, tyarray![VmTraceEvent<OpGetLocal<ELit<U0>>>]>;
 
     assert_type_eq_all!(Final, Expected);
 }

@@ -47,8 +47,8 @@ where
     type Output = StepContinue<VmState<Tail, Locals, Memory, Frames, Rest>>;
 }
 
-impl<Locals, Memory, Frames, Rest>
-    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpDup, Rest>>> for LDupTop
+impl<Locals, Memory, Frames, Rest> TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpDup, Rest>>>
+    for LDupTop
 where
     Rest: IsList,
 {
@@ -65,8 +65,8 @@ where
         StepContinue<VmState<Array<Head, Array<Head, Tail>>, Locals, Memory, Frames, Rest>>;
 }
 
-impl<Locals, Memory, Frames, Rest>
-    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpSwap, Rest>>> for LSwapTop
+impl<Locals, Memory, Frames, Rest> TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpSwap, Rest>>>
+    for LSwapTop
 where
     Rest: IsList,
 {

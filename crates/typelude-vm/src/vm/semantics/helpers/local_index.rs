@@ -1,8 +1,7 @@
-use core::marker::PhantomData;
-use core::ops::Sub;
+use core::{marker::PhantomData, ops::Sub};
 
 use typelude_std::std::col::array::{Array, IsList, Nil};
-use typenum::{B0, B1, PInt, Sub1, U0, UInt, Unsigned, Z0, NInt};
+use typenum::{B0, B1, NInt, PInt, Sub1, U0, UInt, Unsigned, Z0};
 
 pub trait GetAt<Idx> {
     type Output;

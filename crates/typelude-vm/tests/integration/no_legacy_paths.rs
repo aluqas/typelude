@@ -34,9 +34,5 @@ fn src_and_tests_have_no_legacy_vm_paths() {
     collect_legacy_path_uses(&manifest_root.join("src"), &mut matches);
     collect_legacy_path_uses(&manifest_root.join("tests"), &mut matches);
 
-    assert!(
-        matches.is_empty(),
-        "legacy vm paths remain:\n{}",
-        matches.join("\n")
-    );
+    assert!(matches.is_empty(), "legacy vm paths remain:\n{}", matches.join("\n"));
 }

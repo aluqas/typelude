@@ -29,9 +29,5 @@ fn src_has_no_public_reexports() {
     let src_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     collect_pub_use_lines(&src_root, &mut matches);
 
-    assert!(
-        matches.is_empty(),
-        "public re-exports remain:\n{}",
-        matches.join("\n")
-    );
+    assert!(matches.is_empty(), "public re-exports remain:\n{}", matches.join("\n"));
 }

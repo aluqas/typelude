@@ -10,7 +10,9 @@ use crate::{
     vm::{
         protocol::trap::{BadMemoryIndex, StackUnderflow},
         semantics::{
-            helpers::memory_index::{FoundMemory, MemoryGet, MemorySet, MissingMemory, SetMemoryOk},
+            helpers::memory_index::{
+                FoundMemory, MemoryGet, MemorySet, MissingMemory, SetMemoryOk,
+            },
             state::VmState,
             step::{StepContinue, StepInstr, StepTrap},
         },
@@ -39,8 +41,8 @@ impl<Idx, RestStack, Locals, Memory, Frames, Program> Eval
     type Output = StepTrap<BadMemoryIndex<Idx>>;
 }
 
-impl<Locals, Memory, Frames, Rest>
-    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpLoad, Rest>>> for LLoad
+impl<Locals, Memory, Frames, Rest> TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpLoad, Rest>>>
+    for LLoad
 where
     Rest: IsList,
 {
@@ -97,8 +99,8 @@ impl<Idx, RestStack, Locals, Frames, Program> Eval
     type Output = StepTrap<BadMemoryIndex<Idx>>;
 }
 
-impl<Locals, Memory, Frames, Rest>
-    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpStore, Rest>>> for LStore
+impl<Locals, Memory, Frames, Rest> TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpStore, Rest>>>
+    for LStore
 where
     Rest: IsList,
 {
@@ -114,8 +116,15 @@ where
 }
 
 impl<Value, Addr, RestStack, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Array<Value, Array<Addr, RestStack>>, Locals, Memory, Frames, Array<OpStore, Rest>>>
-    for LStore
+    TyFn<
+        VmState<
+            Array<Value, Array<Addr, RestStack>>,
+            Locals,
+            Memory,
+            Frames,
+            Array<OpStore, Rest>,
+        >,
+    > for LStore
 where
     Addr: Eval,
     RestStack: IsList,

@@ -14,7 +14,8 @@ impl<S, L, M, F, P> Eval for VmState<S, L, M, F, P> {
     type Output = Self;
 }
 
-impl<Stack, Locals, Memory, Frames, Program> Trace for VmState<Stack, Locals, Memory, Frames, Program>
+impl<Stack, Locals, Memory, Frames, Program> Trace
+    for VmState<Stack, Locals, Memory, Frames, Program>
 where
     Stack: Trace,
     Locals: Trace,

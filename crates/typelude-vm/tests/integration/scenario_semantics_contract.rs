@@ -65,13 +65,8 @@ fn store_consumes_value_then_address() {
 
 #[test]
 fn host_call_pure_step_suspends_with_advanced_state() {
-    type Initial = VmState<
-        tyarray![ELit<U5>],
-        Nil,
-        Nil,
-        Nil,
-        tyarray![OpHostCall<Print>, OpPush<ELit<U1>>],
-    >;
+    type Initial =
+        VmState<tyarray![ELit<U5>], Nil, Nil, Nil, tyarray![OpHostCall<Print>, OpPush<ELit<U1>>]>;
     type Actual = Evaluate<<OpHostCall<Print> as StepInstr<Initial>>::Output>;
     type Expected = StepSuspend<
         HostRequest<Print, tyarray![ELit<U5>]>,
@@ -98,13 +93,10 @@ fn while_lowering_matches_runtime_trace_and_result() {
         <<WhileOut as OutcomeState>::Output as StateStack>::Output,
         <<LoweredOut as OutcomeState>::Output as StateStack>::Output
     );
-    assert_type_eq_all!(
-        <WhileOut as OutcomeTrace>::Output,
-        tyarray![
-            VmTraceEvent<OpWhile<Cond, Body>>,
-            VmTraceEvent<OpPush<ELit<False>>>,
-            VmTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
-            VmTraceEvent<OpPush<ELit<U2>>>
-        ]
-    );
+    assert_type_eq_all!(<WhileOut as OutcomeTrace>::Output, tyarray![
+        VmTraceEvent<OpWhile<Cond, Body>>,
+        VmTraceEvent<OpPush<ELit<False>>>,
+        VmTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
+        VmTraceEvent<OpPush<ELit<U2>>>
+    ]);
 }

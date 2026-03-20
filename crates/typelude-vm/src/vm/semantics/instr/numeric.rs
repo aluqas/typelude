@@ -20,8 +20,8 @@ use crate::{
 pub struct LUnaryNot;
 pub struct LBinaryStep<Inst>(pub PhantomData<Inst>);
 
-impl<Locals, Memory, Frames, Rest>
-    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpNot, Rest>>> for LUnaryNot
+impl<Locals, Memory, Frames, Rest> TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpNot, Rest>>>
+    for LUnaryNot
 where
     Rest: IsList,
 {
@@ -38,7 +38,10 @@ where
 {
     type Output = StepContinue<
         VmState<
-            Array<ELit<Evaluate<typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>>>, Tail>,
+            Array<
+                ELit<Evaluate<typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>>>,
+                Tail,
+            >,
             Locals,
             Memory,
             Frames,
@@ -56,7 +59,8 @@ where
 }
 
 impl<Inst, Head, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Array<Head, Nil>, Locals, Memory, Frames, Array<Inst, Rest>>> for LBinaryStep<Inst>
+    TyFn<VmState<Array<Head, Nil>, Locals, Memory, Frames, Array<Inst, Rest>>>
+    for LBinaryStep<Inst>
 where
     Rest: IsList,
 {
@@ -72,7 +76,13 @@ where
     Rest: IsList,
 {
     type Output = StepContinue<
-        VmState<Array<<Inst as BinaryResult<Lhs, Rhs>>::Output, Tail>, Locals, Memory, Frames, Rest>,
+        VmState<
+            Array<<Inst as BinaryResult<Lhs, Rhs>>::Output, Tail>,
+            Locals,
+            Memory,
+            Frames,
+            Rest,
+        >,
     >;
 }
 
