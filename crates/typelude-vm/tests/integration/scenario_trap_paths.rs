@@ -12,13 +12,15 @@ use typelude_vm::{
         numeric::OpAdd,
         stack::OpPush,
     },
-    shared::trap::{
-        BadLocalIndex, BadMemoryIndex, InvalidCondition, ReturnUnderflow, StackUnderflow,
-    },
-    vm::algebra::{
-        effect::trace::VmTraceEvent,
-        outcome::Raised,
-        state::VmState,
+    vm::{
+        protocol::trap::{
+            BadLocalIndex, BadMemoryIndex, InvalidCondition, ReturnUnderflow, StackUnderflow,
+        },
+        runtime::{
+            effects::trace::VmTraceEvent,
+            outcome::Raised,
+        },
+        semantics::state::VmState,
     },
 };
 use typenum::U0;

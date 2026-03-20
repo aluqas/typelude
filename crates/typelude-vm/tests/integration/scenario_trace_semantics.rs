@@ -6,7 +6,7 @@ use typelude_vm::{
         numeric::OpAdd,
         stack::OpPush,
     },
-    vm::algebra::effect::trace::VmTraceEvent,
+    vm::runtime::effects::trace::VmTraceEvent,
 };
 use typenum::{U1, U2, U3, U5};
 

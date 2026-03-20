@@ -8,7 +8,7 @@ use crate::core::{
     traits::Unit,
     writer_t::WriterT,
 };
-use crate::vm::algebra::effect::{io::VmRequest, trace::VmTrace, trap::VmTrap};
+use crate::vm::runtime::effects::{io::VmRequest, trace::VmTrace, trap::VmTrap};
 
 pub type VmFx<State, Trace = VmTrace, Trap = VmTrap, Req = VmRequest> =
     SuspendT<Req, EitherT<Trap, StateT<State, WriterT<Trace, IdK>>>>;

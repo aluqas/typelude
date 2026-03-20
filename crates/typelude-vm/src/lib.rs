@@ -4,5 +4,4 @@
 
 pub mod core;
 pub mod opcode;
-pub mod shared;
 pub mod vm;

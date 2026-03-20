@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 use core::ops::Sub;
 
 use typelude_std::std::col::array::{Array, IsList, Nil};
-use typenum::{B1, Sub1, U0, UInt, Unsigned};
+use typenum::{B0, B1, PInt, Sub1, U0, UInt, Unsigned, Z0, NInt};
 
 pub trait MemoryGet<Idx> {
     type Output;
@@ -34,6 +34,37 @@ where
     type Output = <Tail as MemoryGet<Sub1<UInt<N, B>>>>::Output;
 }
 
+macro_rules! impl_invalid_memory_get {
+    ($($idx:ty),+ $(,)?) => {
+        $(
+            impl<Head, Tail> MemoryGet<$idx> for Array<Head, Tail>
+            where
+                Tail: IsList,
+            {
+                type Output = MissingMemory<$idx>;
+            }
+        )+
+    };
+}
+
+impl_invalid_memory_get!(B0, B1, Z0);
+
+impl<Head, Tail, U> MemoryGet<PInt<U>> for Array<Head, Tail>
+where
+    Tail: IsList,
+    U: Unsigned + typenum::NonZero,
+{
+    type Output = MissingMemory<PInt<U>>;
+}
+
+impl<Head, Tail, U> MemoryGet<NInt<U>> for Array<Head, Tail>
+where
+    Tail: IsList,
+    U: Unsigned + typenum::NonZero,
+{
+    type Output = MissingMemory<NInt<U>>;
+}
+
 pub trait MemorySet<Idx, Value> {
     type Output;
 }
@@ -63,6 +94,37 @@ where
         <<Tail as MemorySet<Sub1<UInt<N, B>>, Value>>::Output as MemorySetTailResult>::WithHead<
             Head,
         >;
+}
+
+macro_rules! impl_invalid_memory_set {
+    ($($idx:ty),+ $(,)?) => {
+        $(
+            impl<Head, Tail, Value> MemorySet<$idx, Value> for Array<Head, Tail>
+            where
+                Tail: IsList,
+            {
+                type Output = MissingMemory<$idx>;
+            }
+        )+
+    };
+}
+
+impl_invalid_memory_set!(B0, B1, Z0);
+
+impl<Head, Tail, Value, U> MemorySet<PInt<U>, Value> for Array<Head, Tail>
+where
+    Tail: IsList,
+    U: Unsigned + typenum::NonZero,
+{
+    type Output = MissingMemory<PInt<U>>;
+}
+
+impl<Head, Tail, Value, U> MemorySet<NInt<U>, Value> for Array<Head, Tail>
+where
+    Tail: IsList,
+    U: Unsigned + typenum::NonZero,
+{
+    type Output = MissingMemory<NInt<U>>;
 }
 
 pub trait MemorySetTailResult {

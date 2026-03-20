@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 use core::ops::Sub;
 
 use typelude_std::std::col::array::{Array, IsList, Nil};
-use typenum::{B1, Sub1, U0, UInt, Unsigned};
+use typenum::{B0, B1, PInt, Sub1, U0, UInt, Unsigned, Z0, NInt};
 
 pub trait GetAt<Idx> {
     type Output;
@@ -34,6 +34,37 @@ where
     type Output = <Tail as GetAt<Sub1<UInt<N, B>>>>::Output;
 }
 
+macro_rules! impl_invalid_get_at {
+    ($($idx:ty),+ $(,)?) => {
+        $(
+            impl<Head, Tail> GetAt<$idx> for Array<Head, Tail>
+            where
+                Tail: IsList,
+            {
+                type Output = MissingLocal<$idx>;
+            }
+        )+
+    };
+}
+
+impl_invalid_get_at!(B0, B1, Z0);
+
+impl<Head, Tail, U> GetAt<PInt<U>> for Array<Head, Tail>
+where
+    Tail: IsList,
+    U: Unsigned + typenum::NonZero,
+{
+    type Output = MissingLocal<PInt<U>>;
+}
+
+impl<Head, Tail, U> GetAt<NInt<U>> for Array<Head, Tail>
+where
+    Tail: IsList,
+    U: Unsigned + typenum::NonZero,
+{
+    type Output = MissingLocal<NInt<U>>;
+}
+
 pub trait SetAt<Idx, Value> {
     type Output;
 }
@@ -61,6 +92,37 @@ where
 {
     type Output =
         <<Tail as SetAt<Sub1<UInt<N, B>>, Value>>::Output as SetAtTailResult>::WithHead<Head>;
+}
+
+macro_rules! impl_invalid_set_at {
+    ($($idx:ty),+ $(,)?) => {
+        $(
+            impl<Head, Tail, Value> SetAt<$idx, Value> for Array<Head, Tail>
+            where
+                Tail: IsList,
+            {
+                type Output = MissingLocal<$idx>;
+            }
+        )+
+    };
+}
+
+impl_invalid_set_at!(B0, B1, Z0);
+
+impl<Head, Tail, Value, U> SetAt<PInt<U>, Value> for Array<Head, Tail>
+where
+    Tail: IsList,
+    U: Unsigned + typenum::NonZero,
+{
+    type Output = MissingLocal<PInt<U>>;
+}
+
+impl<Head, Tail, Value, U> SetAt<NInt<U>, Value> for Array<Head, Tail>
+where
+    Tail: IsList,
+    U: Unsigned + typenum::NonZero,
+{
+    type Output = MissingLocal<NInt<U>>;
 }
 
 pub trait SetAtTailResult {

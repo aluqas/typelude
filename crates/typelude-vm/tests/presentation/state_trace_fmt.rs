@@ -3,7 +3,7 @@ use typelude_std::{
     tyarray,
     typenum::{U0, U1},
 };
-use typelude_vm::vm::algebra::state::VmState;
+use typelude_vm::vm::semantics::state::VmState;
 
 #[test]
 fn traced_machine_state_format_is_stable() {

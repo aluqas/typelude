@@ -2,7 +2,7 @@ use static_assertions::assert_type_eq_all;
 use typelude_std::{core::ELit, std::col::array::Nil, tyarray};
 use typelude_vm::{
     opcode::{memory::{OpLoad, OpStore}, stack::{OpPush, OpSwap}},
-    vm::algebra::state::VmState,
+    vm::semantics::state::VmState,
 };
 use typenum::{U0, U1, U2, U7};
 

@@ -18,17 +18,21 @@ use crate::{
         },
         writer_t::ERunWriter,
     },
-    vm::algebra::{
-        effect::{
-            io::VmRequest,
-            stack::VmFx,
-            state_ops::GetVm,
-            trace::VmTrace,
-            trap::VmTrap,
+    vm::{
+        runtime::{
+            effects::{
+                io::{VmRequest, YieldVm},
+                stack::VmFx,
+                state_ops::{GetVm, PutVm, Then},
+                trace::{PushTrace, VmTrace},
+                trap::{ThrowVm, VmTrap},
+            },
+            outcome::{Done, Raised, Suspended},
         },
-        interpret::instr::InterpInstr,
-        outcome::{Done, Raised, Suspended},
-        state::VmState,
+        semantics::{
+            state::VmState,
+            step::{StepContinue, StepInstr, StepSuspend, StepTrap},
+        },
     },
 };
 
@@ -66,18 +70,42 @@ impl<RootState, Stack, Locals, Memory, Frames, Inst, Rest, Trace, Trap, Req>
     BuildRunAction<RootState, Trace, Trap, Req>
     for VmState<Stack, Locals, Memory, Frames, Array<Inst, Rest>>
 where
-    VmFx<RootState, Trace, Trap, Req>: Monad + MonadState<RootState>,
     Rest: IsList,
-    Inst: InterpInstr<VmFx<RootState, Trace, Trap, Req>>,
+    Inst: StepInstr<VmState<Stack, Locals, Memory, Frames, Array<Inst, Rest>>>,
+    VmFx<RootState, Trace, Trap, Req>: Monad
+        + MonadState<RootState>
+        + crate::core::traits::MonadWriter<Trace>
+        + crate::core::traits::MonadError<Trap>
+        + crate::core::traits::MonadSuspend<Req>,
     Bind<
         VmFx<RootState, Trace, Trap, Req>,
-        <Inst as InterpInstr<VmFx<RootState, Trace, Trap, Req>>>::Output,
+        Bind<
+            VmFx<RootState, Trace, Trap, Req>,
+            PushTrace<VmFx<RootState, Trace, Trap, Req>, Inst, Trace>,
+            LApplyLoggedStep<
+                VmFx<RootState, Trace, Trap, Req>,
+                RootState,
+                Trap,
+                Req,
+                <Inst as StepInstr<VmState<Stack, Locals, Memory, Frames, Array<Inst, Rest>>>>::Output,
+            >,
+        >,
         LResume<RootState, Trace, Trap, Req>,
     >: Eval,
 {
     type Output = Bind<
         VmFx<RootState, Trace, Trap, Req>,
-        <Inst as InterpInstr<VmFx<RootState, Trace, Trap, Req>>>::Output,
+        Bind<
+            VmFx<RootState, Trace, Trap, Req>,
+            PushTrace<VmFx<RootState, Trace, Trap, Req>, Inst, Trace>,
+            LApplyLoggedStep<
+                VmFx<RootState, Trace, Trap, Req>,
+                RootState,
+                Trap,
+                Req,
+                <Inst as StepInstr<VmState<Stack, Locals, Memory, Frames, Array<Inst, Rest>>>>::Output,
+            >,
+        >,
         LResume<RootState, Trace, Trap, Req>,
     >;
 }
@@ -99,6 +127,44 @@ where
 {
     type Output =
         <Evaluate<ERunVmAction<RootState, CurrentState, Trace, Trap, Req>> as RunSuspend>::Output;
+}
+
+pub struct LApplyStep<F, RootState, Trap, Req>(pub PhantomData<(F, RootState, Trap, Req)>);
+
+impl<F, RootState, Trap, Req, NextState> TyFn<StepContinue<NextState>>
+    for LApplyStep<F, RootState, Trap, Req>
+where
+    F: MonadState<RootState>,
+{
+    type Output = PutVm<F, RootState, NextState>;
+}
+
+impl<F, RootState, Trap, Req, Reason> TyFn<StepTrap<Reason>>
+    for LApplyStep<F, RootState, Trap, Req>
+where
+    F: crate::core::traits::MonadError<Trap>,
+{
+    type Output = ThrowVm<F, Reason, Trap>;
+}
+
+impl<F, RootState, Trap, Req, Request, NextState> TyFn<StepSuspend<Request, NextState>>
+    for LApplyStep<F, RootState, Trap, Req>
+where
+    F: MonadState<RootState> + crate::core::traits::MonadSuspend<Req> + Monad,
+    Then<F, PutVm<F, RootState, NextState>, YieldVm<F, Request, Req>>: Sized,
+{
+    type Output = Then<F, PutVm<F, RootState, NextState>, YieldVm<F, Request, Req>>;
+}
+
+pub struct LApplyLoggedStep<F, RootState, Trap, Req, Step>(
+    pub PhantomData<(F, RootState, Trap, Req, Step)>,
+);
+
+impl<F, RootState, Trap, Req, Step, A> TyFn<A> for LApplyLoggedStep<F, RootState, Trap, Req, Step>
+where
+    LApplyStep<F, RootState, Trap, Req>: TyFn<Step>,
+{
+    type Output = <LApplyStep<F, RootState, Trap, Req> as TyFn<Step>>::Output;
 }
 
 pub struct LResume<RootState, Trace, Trap, Req>(pub PhantomData<(RootState, Trace, Trap, Req)>);

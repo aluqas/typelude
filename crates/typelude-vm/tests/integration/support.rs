@@ -6,12 +6,14 @@ use typelude_std::{
 };
 use typelude_vm::{
     opcode::host::OpHostCall,
-    shared::request::HostRequest,
-    vm::algebra::{
-        effect::trace::VmTraceEvent,
-        outcome::{Done, Raised, Suspended},
-        run::ERunVm,
-        state::VmState,
+    vm::{
+        protocol::request::HostRequest,
+        runtime::{
+            effects::trace::VmTraceEvent,
+            outcome::{Done, Raised, Suspended},
+            run::ERunVm,
+        },
+        semantics::state::VmState,
     },
 };
 

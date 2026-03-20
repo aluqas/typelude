@@ -18,5 +18,11 @@ mod scenario_trace_semantics;
 #[path = "integration/scenario_trap_paths.rs"]
 mod scenario_trap_paths;
 
+#[path = "integration/scenario_semantics_contract.rs"]
+mod scenario_semantics_contract;
+
 #[path = "integration/no_public_reexports.rs"]
 mod no_public_reexports;
+
+#[path = "integration/no_legacy_paths.rs"]
+mod no_legacy_paths;

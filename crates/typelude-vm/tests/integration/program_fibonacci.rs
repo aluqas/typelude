@@ -8,8 +8,7 @@ use typelude_vm::{
         numeric::{OpAdd, OpLt},
         stack::OpPush,
     },
-    shared::request::HostRequest,
-    vm::algebra::state::VmState,
+    vm::{protocol::request::HostRequest, semantics::state::VmState},
 };
 use typenum::{U0, U1, U2, U10, U55, U89, U162, U163};
 
