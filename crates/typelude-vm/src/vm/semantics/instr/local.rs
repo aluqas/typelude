@@ -1,3 +1,8 @@
+//! Local instruction semantics.
+//!
+//! Stack top is the array head. `Let` moves the top stack value into local slot `0`; local index
+//! operations resolve from the local head and trap with `BadLocalIndex` when missing.
+
 use core::marker::PhantomData;
 
 use typelude_std::{

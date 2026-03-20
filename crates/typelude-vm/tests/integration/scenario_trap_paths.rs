@@ -12,7 +12,10 @@ use typelude_vm::{
         protocol::trap::{
             BadLocalIndex, BadMemoryIndex, InvalidCondition, ReturnUnderflow, StackUnderflow,
         },
-        runtime::{effects::trace::VmTraceEvent, outcome::Raised},
+        runtime::{
+            effects::trace::{CoreTraceEvent, SourceTraceEvent, TraceBundle},
+            outcome::Raised,
+        },
         semantics::state::VmState,
     },
 };
@@ -25,7 +28,11 @@ fn stack_underflow_program_traps() {
     type Prog = tyarray![OpAdd];
     type Initial = VmState<Nil, Nil, Nil, Nil, Prog>;
     type Final = ProgramRun<Prog>;
-    type Expected = Raised<StackUnderflow, Initial, tyarray![VmTraceEvent<OpAdd>]>;
+    type Expected = Raised<
+        StackUnderflow,
+        Initial,
+        TraceBundle<tyarray![SourceTraceEvent<OpAdd>], tyarray![CoreTraceEvent<OpAdd>]>,
+    >;
 
     assert_type_eq_all!(Final, Expected);
 }
@@ -35,8 +42,14 @@ fn bad_local_index_program_traps() {
     type Prog = tyarray![OpGetLocal<ELit<U0>>];
     type Initial = VmState<Nil, Nil, Nil, Nil, Prog>;
     type Final = ProgramRun<Prog>;
-    type Expected =
-        Raised<BadLocalIndex<U0>, Initial, tyarray![VmTraceEvent<OpGetLocal<ELit<U0>>>]>;
+    type Expected = Raised<
+        BadLocalIndex<U0>,
+        Initial,
+        TraceBundle<
+            tyarray![SourceTraceEvent<OpGetLocal<ELit<U0>>>],
+            tyarray![CoreTraceEvent<OpGetLocal<ELit<U0>>>],
+        >,
+    >;
 
     assert_type_eq_all!(Final, Expected);
 }
@@ -45,7 +58,11 @@ fn bad_local_index_program_traps() {
 fn bad_memory_index_program_traps() {
     type Initial = VmState<tyarray![ELit<U0>], Nil, Nil, Nil, tyarray![OpLoad]>;
     type Final = Run<Initial>;
-    type Expected = Raised<BadMemoryIndex<U0>, Initial, tyarray![VmTraceEvent<OpLoad>]>;
+    type Expected = Raised<
+        BadMemoryIndex<U0>,
+        Initial,
+        TraceBundle<tyarray![SourceTraceEvent<OpLoad>], tyarray![CoreTraceEvent<OpLoad>]>,
+    >;
 
     assert_type_eq_all!(Final, Expected);
 }
@@ -55,7 +72,14 @@ fn return_underflow_program_traps() {
     type Prog = tyarray![OpReturn];
     type Initial = VmState<Nil, Nil, Nil, Nil, Prog>;
     type Final = ProgramRun<Prog>;
-    type Expected = Raised<ReturnUnderflow, Initial, tyarray![VmTraceEvent<OpReturn>]>;
+    type Expected = Raised<
+        ReturnUnderflow,
+        Initial,
+        TraceBundle<
+            tyarray![SourceTraceEvent<OpReturn>],
+            tyarray![CoreTraceEvent<OpReturn>],
+        >,
+    >;
 
     assert_type_eq_all!(Final, Expected);
 }
@@ -68,7 +92,10 @@ fn invalid_if_condition_program_traps() {
     type Expected = Raised<
         InvalidCondition,
         State,
-        tyarray![VmTraceEvent<OpIf<tyarray![OpPush<ELit<U0>>], tyarray![OpPush<ELit<U0>>]>>],
+        TraceBundle<
+            tyarray![SourceTraceEvent<OpIf<tyarray![OpPush<ELit<U0>>], tyarray![OpPush<ELit<U0>>]>>],
+            tyarray![CoreTraceEvent<OpIf<tyarray![OpPush<ELit<U0>>], tyarray![OpPush<ELit<U0>>]>>],
+        >,
     >;
 
     assert_type_eq_all!(Out, Expected);

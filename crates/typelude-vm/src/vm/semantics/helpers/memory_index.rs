@@ -1,8 +1,14 @@
+//! Memory index resolution helpers.
+//!
+//! These helpers classify reads and writes as found/missing so runtime-visible trap semantics stay
+//! explicit instead of collapsing into trait-resolution failures.
+
 use core::{marker::PhantomData, ops::Sub};
 
 use typelude_std::std::col::array::{Array, IsList, Nil};
 use typenum::{B0, B1, NInt, PInt, Sub1, U0, UInt, Unsigned, Z0};
 
+/// Reads a memory slot, classifying missing indices explicitly.
 pub trait MemoryGet<Idx> {
     type Output;
 }
@@ -64,6 +70,7 @@ where
     type Output = MissingMemory<NInt<U>>;
 }
 
+/// Writes a memory slot, classifying missing indices explicitly.
 pub trait MemorySet<Idx, Value> {
     type Output;
 }

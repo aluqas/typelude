@@ -13,8 +13,8 @@ use typelude_vm::{
         stack::OpPush,
     },
     vm::{
-        protocol::request::HostRequest,
-        runtime::effects::trace::VmTraceEvent,
+        protocol::request::{HostRequest, HostSignature},
+        runtime::effects::trace::{CoreTraceEvent, SourceTraceEvent},
         semantics::{
             state::VmState,
             step::{StepInstr, StepSuspend},
@@ -23,9 +23,15 @@ use typelude_vm::{
 };
 use typenum::{U1, U2, U3, U5, U7};
 
-use crate::support::{OutcomeState, OutcomeTrace, ProgramRun, Run, StateMemory, StateStack};
+use crate::support::{
+    OutcomeCoreTrace, OutcomeSourceTrace, OutcomeState, ProgramRun, Run, StateMemory, StateStack,
+};
 
 struct Print;
+
+impl HostSignature for Print {
+    type Response = U1;
+}
 
 #[test]
 fn sub_uses_top_as_lhs() {
@@ -69,7 +75,7 @@ fn host_call_pure_step_suspends_with_advanced_state() {
         VmState<tyarray![ELit<U5>], Nil, Nil, Nil, tyarray![OpHostCall<Print>, OpPush<ELit<U1>>]>;
     type Actual = Evaluate<<OpHostCall<Print> as StepInstr<Initial>>::Output>;
     type Expected = StepSuspend<
-        HostRequest<Print, tyarray![ELit<U5>]>,
+        HostRequest<Print, tyarray![ELit<U5>], U1>,
         VmState<tyarray![ELit<U5>], Nil, Nil, Nil, tyarray![OpPush<ELit<U1>>]>,
     >;
 
@@ -93,10 +99,21 @@ fn while_lowering_matches_runtime_trace_and_result() {
         <<WhileOut as OutcomeState>::Output as StateStack>::Output,
         <<LoweredOut as OutcomeState>::Output as StateStack>::Output
     );
-    assert_type_eq_all!(<WhileOut as OutcomeTrace>::Output, tyarray![
-        VmTraceEvent<OpWhile<Cond, Body>>,
-        VmTraceEvent<OpPush<ELit<False>>>,
-        VmTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
-        VmTraceEvent<OpPush<ELit<U2>>>
-    ]);
+    assert_type_eq_all!(
+        <WhileOut as OutcomeSourceTrace>::Output,
+        tyarray![
+            SourceTraceEvent<OpWhile<Cond, Body>>,
+            SourceTraceEvent<OpPush<ELit<False>>>,
+            SourceTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
+            SourceTraceEvent<OpPush<ELit<U2>>>
+        ]
+    );
+    assert_type_eq_all!(
+        <WhileOut as OutcomeCoreTrace>::Output,
+        tyarray![
+            CoreTraceEvent<OpPush<ELit<False>>>,
+            CoreTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
+            CoreTraceEvent<OpPush<ELit<U2>>>
+        ]
+    );
 }

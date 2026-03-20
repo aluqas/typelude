@@ -1,8 +1,14 @@
+//! Local index resolution helpers.
+//!
+//! These helpers never fail with a trait-resolution error for invalid user indices. They classify
+//! lookups and updates as found/missing so the VM semantics can turn them into `BadLocalIndex`.
+
 use core::{marker::PhantomData, ops::Sub};
 
 use typelude_std::std::col::array::{Array, IsList, Nil};
 use typenum::{B0, B1, NInt, PInt, Sub1, U0, UInt, Unsigned, Z0};
 
+/// Reads a local slot, classifying missing indices explicitly.
 pub trait GetAt<Idx> {
     type Output;
 }
@@ -64,6 +70,7 @@ where
     type Output = MissingLocal<NInt<U>>;
 }
 
+/// Writes a local slot, classifying missing indices explicitly.
 pub trait SetAt<Idx, Value> {
     type Output;
 }

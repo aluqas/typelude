@@ -1,7 +1,12 @@
+//! Numeric and boolean instruction semantics.
+//!
+//! Stack top is the array head. Binary operators consume `lhs` from the top of the stack and
+//! `rhs` from the next slot. Boolean results are normalized to `ELit<True>` or `ELit<False>`.
+
 use core::marker::PhantomData;
 
 use typelude_std::{
-    core::{ELit, Eval, Evaluate, TyFn},
+    core::{Eval, TyFn},
     std::col::array::{Array, IsList, Nil},
 };
 
@@ -10,7 +15,7 @@ use crate::{
     vm::{
         protocol::trap::StackUnderflow,
         semantics::{
-            helpers::value::{AsValueExpr, BinaryResult},
+            helpers::value::{AsValueExpr, BinaryResult, BoolResult},
             state::VmState,
             step::{StepContinue, StepInstr, StepTrap},
         },
@@ -35,11 +40,19 @@ where
     Rest: IsList,
     Val: AsValueExpr,
     typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>: Eval,
+    typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>:
+        BoolResult<typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>>,
 {
     type Output = StepContinue<
         VmState<
             Array<
-                ELit<Evaluate<typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>>>,
+                <
+                    typelude_std::std::ops::ENot<
+                        <Val as AsValueExpr>::Output,
+                    > as BoolResult<
+                        typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>,
+                    >
+                >::Output,
                 Tail,
             >,
             Locals,

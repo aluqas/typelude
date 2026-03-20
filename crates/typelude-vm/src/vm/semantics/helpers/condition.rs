@@ -1,3 +1,5 @@
+//! Condition normalization and branch selection.
+
 use typelude_std::core::ELit;
 
 #[derive(Debug)]
@@ -9,6 +11,7 @@ pub struct BranchFalse;
 #[derive(Debug)]
 pub struct BranchInvalid;
 
+/// Classifies a condition value into taken, untaken, or invalid branch outcomes.
 pub trait DecideBranch {
     type Output;
 }
