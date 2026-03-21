@@ -1,8 +1,6 @@
 //! **Type-Level String Data**
 //!
-//! Re-exports from the `tstr` crate to support type-level strings.
-
-pub use tstr::{TS, ts};
+//! Canonical string data is represented as `Array<Char<_>, ...>`.
 
 use crate::std::reify::Reify;
 
@@ -16,4 +14,30 @@ impl<const C: char> Reify<char> for Char<C> {
 
 impl<const C: char> Reify<u8> for Char<C> {
     const REIFIED: u8 = C as u8;
+}
+
+/// Macro for easily creating type-level character arrays.
+#[macro_export]
+macro_rules! tychars {
+    () => { $crate::model::col::array::Nil };
+    ($ch:literal $(,)?) => {
+        $crate::model::col::array::Array<
+            $crate::model::prim::str::Char<$ch>,
+            $crate::model::col::array::Nil
+        >
+    };
+    ($ch:literal, $($tail:literal),+ $(,)?) => {
+        $crate::model::col::array::Array<
+            $crate::model::prim::str::Char<$ch>,
+            $crate::tychars![$($tail),+]
+        >
+    };
+}
+
+/// Alias of `tychars!` for string-like construction syntax.
+#[macro_export]
+macro_rules! tystr {
+    ($($chars:literal),* $(,)?) => {
+        $crate::tychars![$($chars),*]
+    };
 }

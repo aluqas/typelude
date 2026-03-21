@@ -41,8 +41,8 @@ use crate::{
                 stack::VmFx,
                 state_ops::{GetVm, PutVm, Then},
                 trace::{
-                    AppendTraceBundle, PushCoreTrace, PushSourceTrace, TraceBundle,
-                    VmCoreTrace, VmSourceTrace,
+                    AppendTraceBundle, PushCoreTrace, PushSourceTrace, TraceBundle, VmCoreTrace,
+                    VmSourceTrace,
                 },
                 trap::{ThrowVm, VmTrap},
             },
@@ -73,7 +73,8 @@ pub struct ERunVmStack<State, SourceTrace, CoreTrace, Trap, Req>(
     pub PhantomData<(State, SourceTrace, CoreTrace, Trap, Req)>,
 );
 
-/// Resumes a previously suspended VM by pushing the host response onto the stack and continuing.
+/// Resumes a previously suspended VM by pushing the host response onto the
+/// stack and continuing.
 pub struct EResumeVm<Outcome, Response>(pub PhantomData<(Outcome, Response)>);
 
 pub trait BuildRunAction<RootState, SourceTrace, CoreTrace, Trap, Req> {
@@ -144,15 +145,13 @@ impl<V, RootState, SourceTrace, CoreTrace, Trap, Req>
 impl<Idx, RootState, SourceTrace, CoreTrace, Trap, Req>
     RecordCoreTrace<RootState, SourceTrace, CoreTrace, Trap, Req> for OpGetLocal<Idx>
 {
-    type Output =
-        PushCoreTrace<RootState, OpGetLocal<Idx>, SourceTrace, CoreTrace, Trap, Req>;
+    type Output = PushCoreTrace<RootState, OpGetLocal<Idx>, SourceTrace, CoreTrace, Trap, Req>;
 }
 
 impl<Idx, RootState, SourceTrace, CoreTrace, Trap, Req>
     RecordCoreTrace<RootState, SourceTrace, CoreTrace, Trap, Req> for OpSetLocal<Idx>
 {
-    type Output =
-        PushCoreTrace<RootState, OpSetLocal<Idx>, SourceTrace, CoreTrace, Trap, Req>;
+    type Output = PushCoreTrace<RootState, OpSetLocal<Idx>, SourceTrace, CoreTrace, Trap, Req>;
 }
 
 impl<ThenProg, ElseProg, RootState, SourceTrace, CoreTrace, Trap, Req>
@@ -165,15 +164,13 @@ impl<ThenProg, ElseProg, RootState, SourceTrace, CoreTrace, Trap, Req>
 impl<TargetProg, RootState, SourceTrace, CoreTrace, Trap, Req>
     RecordCoreTrace<RootState, SourceTrace, CoreTrace, Trap, Req> for OpCall<TargetProg>
 {
-    type Output =
-        PushCoreTrace<RootState, OpCall<TargetProg>, SourceTrace, CoreTrace, Trap, Req>;
+    type Output = PushCoreTrace<RootState, OpCall<TargetProg>, SourceTrace, CoreTrace, Trap, Req>;
 }
 
 impl<Sig, RootState, SourceTrace, CoreTrace, Trap, Req>
     RecordCoreTrace<RootState, SourceTrace, CoreTrace, Trap, Req> for OpHostCall<Sig>
 {
-    type Output =
-        PushCoreTrace<RootState, OpHostCall<Sig>, SourceTrace, CoreTrace, Trap, Req>;
+    type Output = PushCoreTrace<RootState, OpHostCall<Sig>, SourceTrace, CoreTrace, Trap, Req>;
 }
 
 impl<CondProg, BodyProg, RootState, SourceTrace, CoreTrace, Trap, Req>
@@ -276,8 +273,7 @@ impl<RootState, CurrentState, SourceTrace, CoreTrace, Trap, Req> RunSuspend
     for ERunVmAction<RootState, CurrentState, SourceTrace, CoreTrace, Trap, Req>
 where
     ERunVmAction<RootState, CurrentState, SourceTrace, CoreTrace, Trap, Req>: Eval,
-    Evaluate<ERunVmAction<RootState, CurrentState, SourceTrace, CoreTrace, Trap, Req>>:
-        RunSuspend,
+    Evaluate<ERunVmAction<RootState, CurrentState, SourceTrace, CoreTrace, Trap, Req>>: RunSuspend,
 {
     type Output = <Evaluate<
         ERunVmAction<RootState, CurrentState, SourceTrace, CoreTrace, Trap, Req>,
@@ -370,14 +366,13 @@ impl<State, Trace, Request> TyFn<EOk<Yielded<Request>>> for LRunEitherOutcome<St
     type Output = Suspended<Request, State, Trace>;
 }
 
-impl<State, SourceTrace, CoreTrace, Result>
-    TyFn<Pair<Result, TraceBundle<SourceTrace, CoreTrace>>> for LRunOutcome<State>
+impl<State, SourceTrace, CoreTrace, Result> TyFn<Pair<Result, TraceBundle<SourceTrace, CoreTrace>>>
+    for LRunOutcome<State>
 where
     LRunEitherOutcome<State, TraceBundle<SourceTrace, CoreTrace>>: TyFn<Result>,
 {
-    type Output = <LRunEitherOutcome<State, TraceBundle<SourceTrace, CoreTrace>> as TyFn<
-        Result,
-    >>::Output;
+    type Output =
+        <LRunEitherOutcome<State, TraceBundle<SourceTrace, CoreTrace>> as TyFn<Result>>::Output;
 }
 
 pub trait BuildOutcome<State> {
@@ -389,9 +384,8 @@ impl<State, Result, EndState, SourceTrace, CoreTrace> BuildOutcome<State>
 where
     LRunOutcome<EndState>: TyFn<Pair<Result, TraceBundle<SourceTrace, CoreTrace>>>,
 {
-    type Output = <LRunOutcome<EndState> as TyFn<
-        Pair<Result, TraceBundle<SourceTrace, CoreTrace>>,
-    >>::Output;
+    type Output =
+        <LRunOutcome<EndState> as TyFn<Pair<Result, TraceBundle<SourceTrace, CoreTrace>>>>::Output;
 }
 
 impl<State, SourceTrace, CoreTrace, Trap, Req> Eval
@@ -464,9 +458,10 @@ where
     ERunVmStack<State, SourceTrace, CoreTrace, Trap, Req>: Eval,
     Evaluate<ERunVmStack<State, SourceTrace, CoreTrace, Trap, Req>>: BuildOutcome<Evaluate<State>>,
 {
-    type Output = <Evaluate<
-        ERunVmStack<State, SourceTrace, CoreTrace, Trap, Req>,
-    > as BuildOutcome<Evaluate<State>>>::Output;
+    type Output =
+        <Evaluate<ERunVmStack<State, SourceTrace, CoreTrace, Trap, Req>> as BuildOutcome<
+            Evaluate<State>,
+        >>::Output;
 }
 
 /// Pushes a host response value onto the stack of a suspended VM state.
@@ -480,13 +475,8 @@ where
     Stack: IsList,
     Response: AsValueExpr,
 {
-    type Output = VmState<
-        Array<<Response as AsValueExpr>::Output, Stack>,
-        Locals,
-        Memory,
-        Frames,
-        Program,
-    >;
+    type Output =
+        VmState<Array<<Response as AsValueExpr>::Output, Stack>, Locals, Memory, Frames, Program>;
 }
 
 /// Appends newly produced traces to a previously suspended outcome.
@@ -494,7 +484,8 @@ pub trait AppendOutcomeTrace<ExistingTrace> {
     type Output;
 }
 
-impl<A, State, NewTrace, ExistingTrace> AppendOutcomeTrace<ExistingTrace> for Done<A, State, NewTrace>
+impl<A, State, NewTrace, ExistingTrace> AppendOutcomeTrace<ExistingTrace>
+    for Done<A, State, NewTrace>
 where
     ExistingTrace: AppendTraceBundle<NewTrace>,
 {
@@ -506,11 +497,7 @@ impl<Reason, State, NewTrace, ExistingTrace> AppendOutcomeTrace<ExistingTrace>
 where
     ExistingTrace: AppendTraceBundle<NewTrace>,
 {
-    type Output = Raised<
-        Reason,
-        State,
-        <ExistingTrace as AppendTraceBundle<NewTrace>>::Output,
-    >;
+    type Output = Raised<Reason, State, <ExistingTrace as AppendTraceBundle<NewTrace>>::Output>;
 }
 
 impl<Request, State, NewTrace, ExistingTrace> AppendOutcomeTrace<ExistingTrace>
@@ -518,11 +505,8 @@ impl<Request, State, NewTrace, ExistingTrace> AppendOutcomeTrace<ExistingTrace>
 where
     ExistingTrace: AppendTraceBundle<NewTrace>,
 {
-    type Output = Suspended<
-        Request,
-        State,
-        <ExistingTrace as AppendTraceBundle<NewTrace>>::Output,
-    >;
+    type Output =
+        Suspended<Request, State, <ExistingTrace as AppendTraceBundle<NewTrace>>::Output>;
 }
 
 impl<Sig, Args, Response, State, ExistingTrace> Eval
@@ -533,7 +517,8 @@ where
     Evaluate<ERunVm<ELit<<State as ResumeState<Response>>::Output>>>:
         AppendOutcomeTrace<ExistingTrace>,
 {
-    type Output = <Evaluate<
-        ERunVm<ELit<<State as ResumeState<Response>>::Output>>,
-    > as AppendOutcomeTrace<ExistingTrace>>::Output;
+    type Output =
+        <Evaluate<ERunVm<ELit<<State as ResumeState<Response>>::Output>>> as AppendOutcomeTrace<
+            ExistingTrace,
+        >>::Output;
 }

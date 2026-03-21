@@ -1,7 +1,8 @@
 //! Stack instruction semantics.
 //!
-//! Stack top is the array head. All stack instructions commit their resulting state on success and
-//! trap with `StackUnderflow` without committing on insufficient input.
+//! Stack top is the array head. All stack instructions commit their resulting
+//! state on success and trap with `StackUnderflow` without committing on
+//! insufficient input.
 
 use core::marker::PhantomData;
 

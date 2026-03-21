@@ -132,22 +132,19 @@ where
     Rhs: AsValueExpr,
     typelude_std::std::ops::EEq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
     typelude_std::std::ops::EEq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<typelude_std::std::ops::EEq<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        >>,
-{
-    type Output = <
-        typelude_std::std::ops::EEq<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        > as BoolResult<
+        BoolResult<
             typelude_std::std::ops::EEq<
                 <Lhs as AsValueExpr>::Output,
                 <Rhs as AsValueExpr>::Output,
             >,
-        >
-    >::Output;
+        >,
+{
+    type Output = <typelude_std::std::ops::EEq<
+        <Lhs as AsValueExpr>::Output,
+        <Rhs as AsValueExpr>::Output,
+    > as BoolResult<
+        typelude_std::std::ops::EEq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
+    >>::Output;
 }
 
 #[cfg(feature = "nightly")]
@@ -157,22 +154,19 @@ where
     Rhs: AsValueExpr,
     typelude_std::std::ops::ENeq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
     typelude_std::std::ops::ENeq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<typelude_std::std::ops::ENeq<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        >>,
-{
-    type Output = <
-        typelude_std::std::ops::ENeq<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        > as BoolResult<
+        BoolResult<
             typelude_std::std::ops::ENeq<
                 <Lhs as AsValueExpr>::Output,
                 <Rhs as AsValueExpr>::Output,
             >,
-        >
-    >::Output;
+        >,
+{
+    type Output = <typelude_std::std::ops::ENeq<
+        <Lhs as AsValueExpr>::Output,
+        <Rhs as AsValueExpr>::Output,
+    > as BoolResult<
+        typelude_std::std::ops::ENeq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
+    >>::Output;
 }
 
 impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpLt
@@ -181,22 +175,19 @@ where
     Rhs: AsValueExpr,
     typelude_std::std::ops::ELt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
     typelude_std::std::ops::ELt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<typelude_std::std::ops::ELt<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        >>,
-{
-    type Output = <
-        typelude_std::std::ops::ELt<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        > as BoolResult<
+        BoolResult<
             typelude_std::std::ops::ELt<
                 <Lhs as AsValueExpr>::Output,
                 <Rhs as AsValueExpr>::Output,
             >,
-        >
-    >::Output;
+        >,
+{
+    type Output = <typelude_std::std::ops::ELt<
+        <Lhs as AsValueExpr>::Output,
+        <Rhs as AsValueExpr>::Output,
+    > as BoolResult<
+        typelude_std::std::ops::ELt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
+    >>::Output;
 }
 
 impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpGt
@@ -205,22 +196,19 @@ where
     Rhs: AsValueExpr,
     typelude_std::std::ops::EGt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
     typelude_std::std::ops::EGt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<typelude_std::std::ops::EGt<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        >>,
-{
-    type Output = <
-        typelude_std::std::ops::EGt<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        > as BoolResult<
+        BoolResult<
             typelude_std::std::ops::EGt<
                 <Lhs as AsValueExpr>::Output,
                 <Rhs as AsValueExpr>::Output,
             >,
-        >
-    >::Output;
+        >,
+{
+    type Output = <typelude_std::std::ops::EGt<
+        <Lhs as AsValueExpr>::Output,
+        <Rhs as AsValueExpr>::Output,
+    > as BoolResult<
+        typelude_std::std::ops::EGt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
+    >>::Output;
 }
 
 impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpAnd
@@ -229,22 +217,19 @@ where
     Rhs: AsValueExpr,
     typelude_std::std::ops::EAnd<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
     typelude_std::std::ops::EAnd<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<typelude_std::std::ops::EAnd<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        >>,
-{
-    type Output = <
-        typelude_std::std::ops::EAnd<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        > as BoolResult<
+        BoolResult<
             typelude_std::std::ops::EAnd<
                 <Lhs as AsValueExpr>::Output,
                 <Rhs as AsValueExpr>::Output,
             >,
-        >
-    >::Output;
+        >,
+{
+    type Output = <typelude_std::std::ops::EAnd<
+        <Lhs as AsValueExpr>::Output,
+        <Rhs as AsValueExpr>::Output,
+    > as BoolResult<
+        typelude_std::std::ops::EAnd<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
+    >>::Output;
 }
 
 impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpOr
@@ -253,20 +238,17 @@ where
     Rhs: AsValueExpr,
     typelude_std::std::ops::EOr<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
     typelude_std::std::ops::EOr<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<typelude_std::std::ops::EOr<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        >>,
-{
-    type Output = <
-        typelude_std::std::ops::EOr<
-            <Lhs as AsValueExpr>::Output,
-            <Rhs as AsValueExpr>::Output,
-        > as BoolResult<
+        BoolResult<
             typelude_std::std::ops::EOr<
                 <Lhs as AsValueExpr>::Output,
                 <Rhs as AsValueExpr>::Output,
             >,
-        >
-    >::Output;
+        >,
+{
+    type Output = <typelude_std::std::ops::EOr<
+        <Lhs as AsValueExpr>::Output,
+        <Rhs as AsValueExpr>::Output,
+    > as BoolResult<
+        typelude_std::std::ops::EOr<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
+    >>::Output;
 }

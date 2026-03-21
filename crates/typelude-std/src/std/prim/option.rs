@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use typelude_std::core::{EApp, ELit, Eval, Evaluate};
+use typelude_std::core::{ECall, ELit, Eval};
 
 use crate::std::prim::bool::{False, True};
 
@@ -68,11 +68,9 @@ pub trait OptionMap<Op> {
 
 impl<T, Op> OptionMap<Op> for Some<T>
 where
-    Op: Eval,
-    EApp<Op, ELit<T>>: Eval,
-    Evaluate<EApp<Op, ELit<T>>>: Eval,
+    ECall<Op, ELit<T>>: Eval,
 {
-    type Output = Some<crate::eval_twice!(EApp<Op, ELit<T>>)>;
+    type Output = Some<crate::core::Evaluate<ECall<Op, ELit<T>>>>;
 }
 
 impl<Op> OptionMap<Op> for None {

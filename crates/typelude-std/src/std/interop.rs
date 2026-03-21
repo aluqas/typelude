@@ -3,10 +3,9 @@
 //! This module defines explicit normalization points into typelude's core IR.
 //! Phase 1 keeps canonical backends:
 //! - Numbers: `typenum`
-//! - Strings: `tstr` / `Char`
+//! - Strings: `Array<Char, ...>`
 //! - Sequences: `Array` / `Nil`
 
-use tstr::{TStr, TStrArg};
 use typenum::{B0, B1, Bit, UInt, UTerm, Unsigned};
 
 use crate::{
@@ -17,7 +16,10 @@ use crate::{
             str::Char,
         },
     },
-    std::traits::Nat,
+    std::{
+        prim::str::IsCharArray,
+        traits::{Nat, ToArray},
+    },
 };
 
 /// Convert an external boolean representation into the core boolean IR.
@@ -59,29 +61,34 @@ impl<U: Unsigned, B: Bit> IntoCoreNat for UInt<U, B> {
 /// Convert an external sequence representation into the core list IR.
 ///
 /// In Phase 1, `Array/Nil` is the canonical sequence backend.
+#[deprecated(since = "0.1.0", note = "Use `std::traits::ToArray` instead")]
 pub trait IntoCoreSeq {
     type Output: IsList;
 }
 
-impl IntoCoreSeq for Nil {
-    type Output = Nil;
-}
-
-impl<Head, Tail: IsList> IntoCoreSeq for Array<Head, Tail> {
-    type Output = Array<Head, Tail>;
+impl<T> IntoCoreSeq for T
+where
+    T: ToArray,
+{
+    type Output = <T as ToArray>::Output;
 }
 
 /// Convert an external string representation into the core string IR.
 ///
-/// In Phase 1, `tstr::TStr<_>` and `Char<_>` are canonical.
+/// In Phase 1, `Array<Char, ...>` is canonical.
+#[deprecated(since = "0.1.0", note = "Use `std::traits::ToChars` instead")]
 pub trait IntoCoreStr {
-    type Output;
+    type Output: IsCharArray;
 }
 
 impl<const C: char> IntoCoreStr for Char<C> {
-    type Output = Char<C>;
+    type Output = Array<Char<C>, Nil>;
 }
 
-impl<S: TStrArg> IntoCoreStr for TStr<S> {
-    type Output = TStr<S>;
+impl IntoCoreStr for Nil {
+    type Output = Nil;
+}
+
+impl<const C: char, Tail: IsCharArray> IntoCoreStr for Array<Char<C>, Tail> {
+    type Output = Array<Char<C>, Tail>;
 }

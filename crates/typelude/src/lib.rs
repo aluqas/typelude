@@ -13,10 +13,12 @@ pub mod core {
     pub use typelude_std::{
         std, // Just in case
         tyarray,
+        tychars,
+        tystr,
     };
     pub use typenum;
 }
 pub use typelude_macros::program;
-pub use typelude_std::{Eval, Evaluate, std, tyarray};
+pub use typelude_std::{Eval, Evaluate, std, tyarray, tychars, tystr};
 pub use typelude_vm as vm;
 pub use typenum;

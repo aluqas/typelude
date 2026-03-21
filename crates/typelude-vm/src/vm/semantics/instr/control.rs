@@ -1,7 +1,8 @@
 //! Control instruction semantics.
 //!
-//! `OpIf` consumes the top condition value and dispatches to a branch program. `OpWhile` records a
-//! surface-level loop step and lowers to `cond ++ if(body ++ while, nil)` for core execution.
+//! `OpIf` consumes the top condition value and dispatches to a branch program.
+//! `OpWhile` records a surface-level loop step and lowers to `cond ++ if(body
+//! ++ while, nil)` for core execution.
 
 use core::marker::PhantomData;
 

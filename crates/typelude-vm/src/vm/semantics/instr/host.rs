@@ -1,8 +1,8 @@
 //! Host instruction semantics.
 //!
-//! `OpHostCall` preserves the current stack as request arguments, commits the advanced program
-//! state, and suspends. Resume pushes the host response onto the stack before continuing from the
-//! remaining program.
+//! `OpHostCall` preserves the current stack as request arguments, commits the
+//! advanced program state, and suspends. Resume pushes the host response onto
+//! the stack before continuing from the remaining program.
 
 use core::marker::PhantomData;
 

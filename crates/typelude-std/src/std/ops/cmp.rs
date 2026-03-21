@@ -41,78 +41,138 @@ where
     type Output = ToBoolOut<<Lhs as IsEqual<Rhs>>::Output>;
 }
 
-// Equality: A == B
-crate::def_expr_via_trait!(
+crate::typelude_macros::ty_fn! {
     /// Equality: A == B -> Bool
-    pub EEq<Lhs, Rhs>
-    args [Lhs, Rhs]
-    where [~Lhs: EqDecide<~Rhs>]
-    => <~Lhs as EqDecide<~Rhs>>::Output
-);
+    pub struct FEq<Lhs>
+    {
+        type Output = FEqCaptured<Lhs>;
+    }
+}
 
-// Inequality: A != B
-crate::def_expr_via_trait!(
+crate::typelude_macros::ty_fn! {
+    /// Equality: A == B -> Bool
+    pub struct FEqCaptured<Lhs, Rhs>
+    where [Lhs: EqDecide<Rhs>]
+    {
+        type Output = <Lhs as EqDecide<Rhs>>::Output;
+    }
+}
+
+pub type EEq<Lhs, Rhs> = crate::core::ECall2<FEq, Lhs, Rhs>;
+
+crate::typelude_macros::ty_fn! {
     /// Inequality: A != B -> Bool
-    pub ENeq<Lhs, Rhs>
-    args [Lhs, Rhs]
-    where [
-        ~Lhs: EqDecide<~Rhs>,
-        <~Lhs as EqDecide<~Rhs>>::Output: Bool
-    ]
-    => <<~Lhs as EqDecide<~Rhs>>::Output as Bool>::Not
-);
+    pub struct FNeq<Lhs>
+    {
+        type Output = FNeqCaptured<Lhs>;
+    }
+}
 
-// Less than: A < B
-crate::def_expr_via_trait!(
+crate::typelude_macros::ty_fn! {
+    /// Inequality: A != B -> Bool
+    pub struct FNeqCaptured<Lhs, Rhs>
+    where [
+        Lhs: EqDecide<Rhs>,
+        <Lhs as EqDecide<Rhs>>::Output: Bool
+    ]
+    {
+        type Output = <<Lhs as EqDecide<Rhs>>::Output as Bool>::Not;
+    }
+}
+
+pub type ENeq<Lhs, Rhs> = crate::core::ECall2<FNeq, Lhs, Rhs>;
+
+crate::typelude_macros::ty_fn! {
     /// Less than: A < B
-    pub ELt<Lhs, Rhs>
-    args [Lhs, Rhs]
-    where [
-        ~Lhs: IsLess<~Rhs>,
-        <~Lhs as IsLess<~Rhs>>::Output: Bit,
-        bool: From<<~Lhs as IsLess<~Rhs>>::Output>
-    ]
-    => ToBoolOut<<~Lhs as IsLess<~Rhs>>::Output>
-);
+    pub struct FLt<Lhs>
+    {
+        type Output = FLtCaptured<Lhs>;
+    }
+}
 
-// Less than or equal: A <= B
-crate::def_expr_via_trait!(
+crate::typelude_macros::ty_fn! {
+    /// Less than: A < B
+    pub struct FLtCaptured<Lhs, Rhs>
+    where [
+        Lhs: IsLess<Rhs>,
+        <Lhs as IsLess<Rhs>>::Output: Bit,
+        bool: From<<Lhs as IsLess<Rhs>>::Output>
+    ]
+    {
+        type Output = ToBoolOut<<Lhs as IsLess<Rhs>>::Output>;
+    }
+}
+
+pub type ELt<Lhs, Rhs> = crate::core::ECall2<FLt, Lhs, Rhs>;
+
+crate::typelude_macros::ty_fn! {
     /// Less than or equal: A <= B
-    pub ELe<Lhs, Rhs>
-    args [Lhs, Rhs]
-    where [
-        ~Lhs: IsLessOrEqual<~Rhs>,
-        <~Lhs as IsLessOrEqual<~Rhs>>::Output: Bit,
-        bool: From<<~Lhs as IsLessOrEqual<~Rhs>>::Output>
-    ]
-    => ToBoolOut<<~Lhs as IsLessOrEqual<~Rhs>>::Output>
-);
+    pub struct FLe<Lhs>
+    {
+        type Output = FLeCaptured<Lhs>;
+    }
+}
 
-// Greater than: A > B
-crate::def_expr_via_trait!(
+crate::typelude_macros::ty_fn! {
+    /// Less than or equal: A <= B
+    pub struct FLeCaptured<Lhs, Rhs>
+    where [
+        Lhs: IsLessOrEqual<Rhs>,
+        <Lhs as IsLessOrEqual<Rhs>>::Output: Bit,
+        bool: From<<Lhs as IsLessOrEqual<Rhs>>::Output>
+    ]
+    {
+        type Output = ToBoolOut<<Lhs as IsLessOrEqual<Rhs>>::Output>;
+    }
+}
+
+pub type ELe<Lhs, Rhs> = crate::core::ECall2<FLe, Lhs, Rhs>;
+
+crate::typelude_macros::ty_fn! {
     /// Greater than: A > B
-    pub EGt<Lhs, Rhs>
-    args [Lhs, Rhs]
-    where [
-        ~Lhs: IsGreater<~Rhs>,
-        <~Lhs as IsGreater<~Rhs>>::Output: Bit,
-        bool: From<<~Lhs as IsGreater<~Rhs>>::Output>
-    ]
-    => ToBoolOut<<~Lhs as IsGreater<~Rhs>>::Output>
-);
+    pub struct FGt<Lhs>
+    {
+        type Output = FGtCaptured<Lhs>;
+    }
+}
 
-// Greater than or equal: A >= B
-crate::def_expr_via_trait!(
-    /// Greater than or equal: A >= B
-    pub EGe<Lhs, Rhs>
-    args [Lhs, Rhs]
+crate::typelude_macros::ty_fn! {
+    /// Greater than: A > B
+    pub struct FGtCaptured<Lhs, Rhs>
     where [
-        ~Lhs: IsGreaterOrEqual<~Rhs>,
-        <~Lhs as IsGreaterOrEqual<~Rhs>>::Output: Bit,
-        bool: From<<~Lhs as IsGreaterOrEqual<~Rhs>>::Output>
+        Lhs: IsGreater<Rhs>,
+        <Lhs as IsGreater<Rhs>>::Output: Bit,
+        bool: From<<Lhs as IsGreater<Rhs>>::Output>
     ]
-    => ToBoolOut<<~Lhs as IsGreaterOrEqual<~Rhs>>::Output>
-);
+    {
+        type Output = ToBoolOut<<Lhs as IsGreater<Rhs>>::Output>;
+    }
+}
+
+pub type EGt<Lhs, Rhs> = crate::core::ECall2<FGt, Lhs, Rhs>;
+
+crate::typelude_macros::ty_fn! {
+    /// Greater than or equal: A >= B
+    pub struct FGe<Lhs>
+    {
+        type Output = FGeCaptured<Lhs>;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Greater than or equal: A >= B
+    pub struct FGeCaptured<Lhs, Rhs>
+    where [
+        Lhs: IsGreaterOrEqual<Rhs>,
+        <Lhs as IsGreaterOrEqual<Rhs>>::Output: Bit,
+        bool: From<<Lhs as IsGreaterOrEqual<Rhs>>::Output>
+    ]
+    {
+        type Output = ToBoolOut<<Lhs as IsGreaterOrEqual<Rhs>>::Output>;
+    }
+}
+
+pub type EGe<Lhs, Rhs> = crate::core::ECall2<FGe, Lhs, Rhs>;
 
 #[cfg(test)]
 mod tests {

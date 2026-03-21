@@ -1,4 +1,5 @@
-//! VM layers: protocol, pure semantics, runtime, and static well-formedness proofs.
+//! VM layers: protocol, pure semantics, runtime, and static well-formedness
+//! proofs.
 
 pub mod protocol;
 pub mod runtime;

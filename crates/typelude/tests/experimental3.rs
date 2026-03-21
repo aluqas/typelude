@@ -1,5 +1,3 @@
-#![feature(specialization)]
-
 use static_assertions::assert_type_eq_all;
 
 struct True;
@@ -22,7 +20,7 @@ impl<Then, Else> IfHelper<False, Then, Else> for () {
 }
 
 trait NandHelper<Lhs: Bool, Rhs: Bool> {
-    type Output: Bool;
+    type Output;
 }
 
 impl NandHelper<True, True> for () {
@@ -41,74 +39,43 @@ impl NandHelper<False, False> for () {
     type Output = True;
 }
 
-trait NotHelper<T: Bool> {
-    type Output: Bool;
+trait NandHelper2<Lhs> {
+    type Output;
 }
 
-impl<T: Bool> NotHelper<T> for ()
-where
-    (): NandHelper<T, T>,
-{
-    type Output = <() as NandHelper<T, T>>::Output;
+impl NandHelper2<True> for True {
+    type Output = False;
 }
 
-trait AndHelper<Lhs: Bool, Rhs: Bool> {
-    type Output: Bool;
+impl NandHelper2<False> for True {
+    type Output = True;
 }
 
-impl<Lhs: Bool, Rhs: Bool> AndHelper<Lhs, Rhs> for ()
-where
-    (): NandHelper<Lhs, Rhs> + NotHelper<Nand<Lhs, Rhs>>,
-    Nand<Lhs, Rhs>: Bool,
-    Not<Nand<Lhs, Rhs>>: Bool,
-{
-    type Output = Not<Nand<Lhs, Rhs>>;
+impl NandHelper2<True> for False {
+    type Output = True;
 }
 
-trait OrHelper<Lhs: Bool, Rhs: Bool> {
-    type Output: Bool;
-}
-
-impl<Lhs: Bool, Rhs: Bool> OrHelper<Lhs, Rhs> for ()
-where
-    (): NotHelper<Lhs> + NotHelper<Rhs> + NandHelper<Not<Lhs>, Not<Rhs>>,
-    Not<Lhs>: Bool,
-    Not<Rhs>: Bool,
-    Nand<Not<Lhs>, Not<Rhs>>: Bool,
-{
-    type Output = Nand<Not<Lhs>, Not<Rhs>>;
+impl NandHelper2<False> for False {
+    type Output = True;
 }
 
 type If<Cond: Bool, Then, Else> = <() as IfHelper<Cond, Then, Else>>::Output;
 
 type Nand<Lhs: Bool, Rhs: Bool> = <() as NandHelper<Lhs, Rhs>>::Output;
-type Not<T: Bool> = <() as NotHelper<T>>::Output;
-type And<Lhs: Bool, Rhs: Bool> = <() as AndHelper<Lhs, Rhs>>::Output;
-type Or<Lhs: Bool, Rhs: Bool> = <() as OrHelper<Lhs, Rhs>>::Output;
 
-trait ExampleWHATTHEFUCKFnHelper<Arg1, Arg2, Arg3, Arg4> {
-    type Output;
-}
+type Not<T: Bool> = Nand<T, T>;
+type And<Lhs: Bool, Rhs: Bool> = Not<Nand<Lhs, Rhs>>;
+type Or<Lhs: Bool, Rhs: Bool> = Nand<Not<Lhs>, Not<Rhs>>;
+type Nor<Lhs: Bool, Rhs: Bool> = Not<Or<Lhs, Rhs>>;
 
-impl<Arg1, Arg2, Arg3, Arg4> ExampleWHATTHEFUCKFnHelper<Arg1, Arg2, Arg3, Arg4> for ()
-where
-    (): NotHelper<Arg1>
-        + OrHelper<Arg2, Arg3>
-        + AndHelper<Not<Arg1>, Or<Arg2, Arg3>>
-        + IfHelper<And<Not<Arg1>, Or<Arg2, Arg3>>, Arg4, Arg2>,
-    Not<Arg1>: Bool,
-    Or<Arg2, Arg3>: Bool,
-    And<Not<Arg1>, Or<Arg2, Arg3>>: Bool,
-    Arg1: Bool,
-    Arg2: Bool,
-    Arg3: Bool,
-    Arg4: Bool,
-{
-    type Output = If<And<Not<Arg1>, Or<Arg2, Arg3>>, Arg4, Arg2>;
-}
+type Xor<Lhs: Bool, Rhs: Bool> = Or<And<Lhs, Not<Rhs>>, And<Not<Lhs>, Rhs>>;
+type Xnor<Lhs: Bool, Rhs: Bool> = Not<Xor<Lhs, Rhs>>;
 
-type ExampleWHATTHEFUCKFn<Arg1, Arg2, Arg3, Arg4> =
-    <() as ExampleWHATTHEFUCKFnHelper<Arg1, Arg2, Arg3, Arg4>>::Output;
+type HalfAdder<Lhs: Bool, Rhs: Bool> = (Xor<Lhs, Rhs>, And<Lhs, Rhs>);
+type FullAdder<Lhs: Bool, Rhs: Bool, CarryIn: Bool> =
+    (Xor<Xor<Lhs, Rhs>, CarryIn>, Or<And<Lhs, Rhs>, And<Or<Lhs, Rhs>, CarryIn>>);
+
+type ExampleWHATTHEFUCKFn<Arg1, Arg2, Arg3, Arg4> = If<And<Not<Arg1>, Or<Arg2, Arg3>>, Arg4, Arg2>;
 
 #[test]
 fn test_if() {
@@ -150,4 +117,6 @@ fn test_or() {
 fn test() {
     assert_type_eq_all!(If<And<True, False>, u32, u64>, u64);
     assert_type_eq_all!(ExampleWHATTHEFUCKFn<True, True, True, False>, True);
+
+    println!("{}", std::any::type_name::<ExampleWHATTHEFUCKFn<True, True, True, False>>());
 }

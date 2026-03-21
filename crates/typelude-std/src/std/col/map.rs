@@ -8,8 +8,12 @@ use typenum::{B0, B1, Bit, IsEqual};
 pub use crate::model::col::map::IsMap as TypeMap;
 // Re-export kernel types for convenience/compatibility if mostly used from here
 pub use crate::model::col::map::{Map, Nil};
+pub use crate::std::traits::{Foldable, ToArray};
 use crate::{
-    model::prim::bool::{False, True},
+    model::{
+        col::array::{Array, Nil as NilArray},
+        prim::bool::{False, True},
+    },
     std::prim::option::{None, Some},
 };
 
@@ -138,6 +142,33 @@ impl<K, V, T: TypeMap + MapValues> MapValues for Map<K, V, T> {
     type Output = crate::model::col::array::Array<V, <T as MapValues>::Output>;
 }
 
+impl ToArray for Nil {
+    type Output = NilArray;
+}
+
+impl<K, V, T> ToArray for Map<K, V, T>
+where
+    T: TypeMap + ToArray,
+{
+    type Output = Array<(K, V), <T as ToArray>::Output>;
+}
+
+impl<Op, Init> Foldable<Op, Init> for Nil
+where
+    NilArray: crate::std::col::array::Foldable<Op, Init>,
+{
+    type Output = <NilArray as crate::std::col::array::Foldable<Op, Init>>::Output;
+}
+
+impl<K, V, T, Op, Init> Foldable<Op, Init> for Map<K, V, T>
+where
+    Map<K, V, T>: ToArray,
+    <Map<K, V, T> as ToArray>::Output: crate::std::col::array::Foldable<Op, Init>,
+{
+    type Output =
+        <<Map<K, V, T> as ToArray>::Output as crate::std::col::array::Foldable<Op, Init>>::Output;
+}
+
 /// Get the size of the map
 pub trait MapLen {
     type Output;
@@ -154,45 +185,104 @@ where
     type Output = <<T as MapLen>::Output as std::ops::Add<typenum::B1>>::Output;
 }
 
-crate::def_expr_via_trait!(
-    /// Get value from map by key
-    pub EMapGet<Map, Key>
-    args [Map, Key]
-    where [~Map: MapGet<~Key>]
-    => <~Map as MapGet<~Key>>::Output
-);
+crate::typelude_macros::ty_fn! {
+    /// Get a value from a map by key.
+    pub struct FMapGet<MapTy>
+    {
+        type Output = FMapGetCaptured<MapTy>;
+    }
+}
 
-crate::def_expr_via_trait!(
-    /// Insert key-value pair into map
-    pub EMapInsert<Map, Key, Value>
-    args [Map, Key, Value]
-    where [~Map: MapInsert<~Key, ~Value>]
-    => <~Map as MapInsert<~Key, ~Value>>::Output
-);
+crate::typelude_macros::ty_fn! {
+    /// Get a value from a map by key.
+    pub struct FMapGetCaptured<MapTy, Key>
+    where [MapTy: MapGet<Key>]
+    {
+        type Output = <MapTy as MapGet<Key>>::Output;
+    }
+}
 
-crate::def_expr_via_trait!(
-    /// Check if map contains key
-    pub EMapContains<Map, Key>
-    args [Map, Key]
-    where [~Map: MapContains<~Key>]
-    => <~Map as MapContains<~Key>>::Output
-);
+crate::typelude_macros::ty_fn! {
+    /// Insert a key-value pair into a map.
+    pub struct FMapInsert<MapTy>
+    {
+        type Output = FMapInsertCaptured1<MapTy>;
+    }
+}
 
-crate::def_expr_via_trait!(
-    /// Get all keys from map
-    pub EMapKeys<Map>
-    args [Map]
-    where [~Map: MapKeys]
-    => <~Map as MapKeys>::Output
-);
+crate::typelude_macros::ty_fn! {
+    /// Insert a key-value pair into a map.
+    pub struct FMapInsertCaptured1<MapTy, Key>
+    {
+        type Output = FMapInsertCaptured2<MapTy, Key>;
+    }
+}
 
-crate::def_expr_via_trait!(
-    /// Get all values from map
-    pub EMapValues<Map>
-    args [Map]
-    where [~Map: MapValues]
-    => <~Map as MapValues>::Output
-);
+crate::typelude_macros::ty_fn! {
+    /// Insert a key-value pair into a map.
+    pub struct FMapInsertCaptured2<MapTy, Key, Value>
+    where [MapTy: MapInsert<Key, Value>]
+    {
+        type Output = <MapTy as MapInsert<Key, Value>>::Output;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Check whether a map contains a key.
+    pub struct FMapContains<MapTy>
+    {
+        type Output = FMapContainsCaptured<MapTy>;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Check whether a map contains a key.
+    pub struct FMapContainsCaptured<MapTy, Key>
+    where [MapTy: MapContains<Key>]
+    {
+        type Output = <MapTy as MapContains<Key>>::Output;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Extract the keys of a map.
+    pub struct FMapKeys<MapTy>
+    where [MapTy: MapKeys]
+    {
+        type Output = <MapTy as MapKeys>::Output;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Extract the values of a map.
+    pub struct FMapValues<MapTy>
+    where [MapTy: MapValues]
+    {
+        type Output = <MapTy as MapValues>::Output;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Get the length of a map.
+    pub struct FMapLen<MapTy>
+    where [MapTy: MapLen]
+    {
+        type Output = <MapTy as MapLen>::Output;
+    }
+}
+
+/// Get value from map by key.
+pub type EMapGet<MapTy, Key> = crate::core::ECall2<FMapGet, MapTy, Key>;
+/// Insert key-value pair into map.
+pub type EMapInsert<MapTy, Key, Value> = crate::core::ECall3<FMapInsert, MapTy, Key, Value>;
+/// Check if map contains key.
+pub type EMapContains<MapTy, Key> = crate::core::ECall2<FMapContains, MapTy, Key>;
+/// Get all keys from map.
+pub type EMapKeys<MapTy> = crate::core::ECall<FMapKeys, MapTy>;
+/// Get all values from map.
+pub type EMapValues<MapTy> = crate::core::ECall<FMapValues, MapTy>;
+/// Get the size of a map.
+pub type EMapLen<MapTy> = crate::core::ECall<FMapLen, MapTy>;
 
 /// Create a type-level map from key-value pairs
 /// Usage: `tymap![(K1, V1), (K2, V2)]`
@@ -218,6 +308,20 @@ mod tests {
         std::prim::option::{None, Some},
     };
 
+    crate::typelude_macros::ty_fn! {
+        struct CountEntries<Acc> {
+            type Output = CountEntriesCaptured<Acc>;
+        }
+    }
+
+    crate::typelude_macros::ty_fn! {
+        struct CountEntriesCaptured<Acc, Entry>
+        where [Acc: std::ops::Add<typenum::B1>]
+        {
+            type Output = typenum::Add1<Acc>;
+        }
+    }
+
     #[test]
     fn test_map_insert_keys_values() {
         // Create map: {U1 => i32, U2 => f64}
@@ -230,6 +334,10 @@ mod tests {
         // Values
         type Values = <Map as MapValues>::Output;
         assert_type_eq_all!(Values, Array<i32, Array<f64, NilArray>>);
+
+        type AsArray = <Map as ToArray>::Output;
+        assert_type_eq_all!(AsArray, Array<(U1, i32), Array<(U2, f64), NilArray>>);
+        assert_type_eq_all!(<Map as Foldable<CountEntries, typenum::U0>>::Output, typenum::U2);
     }
 
     #[test]

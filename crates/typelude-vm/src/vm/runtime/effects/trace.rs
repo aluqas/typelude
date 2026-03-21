@@ -16,7 +16,10 @@ use crate::{
         traits::MonadWriter,
         writer_t::{WriterLift, WriterT},
     },
-    vm::{protocol::trace_event::TraceEvent, runtime::effects::{io::VmRequest, trap::VmTrap}},
+    vm::{
+        protocol::trace_event::TraceEvent,
+        runtime::effects::{io::VmRequest, trap::VmTrap},
+    },
 };
 
 /// Surface opcode trace channel.
@@ -60,7 +63,8 @@ pub type PushCoreTrace<
     >,
 >;
 
-/// Concatenates a newer trace bundle onto an existing trace bundle during resume.
+/// Concatenates a newer trace bundle onto an existing trace bundle during
+/// resume.
 pub trait AppendTraceBundle<Other> {
     type Output;
 }
@@ -73,10 +77,8 @@ where
     CoreA: Concat<CoreB> + IsList,
     CoreB: IsList,
 {
-    type Output = TraceBundle<
-        <SourceA as Concat<SourceB>>::Output,
-        <CoreA as Concat<CoreB>>::Output,
-    >;
+    type Output =
+        TraceBundle<<SourceA as Concat<SourceB>>::Output, <CoreA as Concat<CoreB>>::Output>;
 }
 
 impl<Source, Core> Eval for TraceBundle<Source, Core> {

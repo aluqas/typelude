@@ -1,7 +1,8 @@
 //! Memory instruction semantics.
 //!
-//! `Load` consumes the top address. `Store` consumes the top value first and the next stack slot as
-//! the target address. Invalid addresses trap without committing the step.
+//! `Load` consumes the top address. `Store` consumes the top value first and
+//! the next stack slot as the target address. Invalid addresses trap without
+//! committing the step.
 
 use core::marker::PhantomData;
 

@@ -1,7 +1,8 @@
 //! Local index resolution helpers.
 //!
-//! These helpers never fail with a trait-resolution error for invalid user indices. They classify
-//! lookups and updates as found/missing so the VM semantics can turn them into `BadLocalIndex`.
+//! These helpers never fail with a trait-resolution error for invalid user
+//! indices. They classify lookups and updates as found/missing so the VM
+//! semantics can turn them into `BadLocalIndex`.
 
 use core::{marker::PhantomData, ops::Sub};
 

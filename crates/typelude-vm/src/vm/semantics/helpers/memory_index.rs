@@ -1,7 +1,8 @@
 //! Memory index resolution helpers.
 //!
-//! These helpers classify reads and writes as found/missing so runtime-visible trap semantics stay
-//! explicit instead of collapsing into trait-resolution failures.
+//! These helpers classify reads and writes as found/missing so runtime-visible
+//! trap semantics stay explicit instead of collapsing into trait-resolution
+//! failures.
 
 use core::{marker::PhantomData, ops::Sub};
 

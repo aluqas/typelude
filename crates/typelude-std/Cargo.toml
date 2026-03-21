@@ -16,7 +16,6 @@ hybrid-array = "0.4.5"
 const_panic = "0.2.15"
 derive_more = { version = "2.1.0", features = ["full"] }
 paste = "1.0.15"
-tstr = "0.3.0"
 typelude-macros = { path = "../typelude-macros" }
 # typelude-core = { path = "../typelude-core" }
 

@@ -70,5 +70,11 @@ pub fn impl_eval(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn ty_fn(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as TyFnInput);
-    TokenStream::from(input.expand())
+    TokenStream::from(input.expand_ty_fn())
+}
+
+#[proc_macro]
+pub fn ty_expr(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as TyFnInput);
+    TokenStream::from(input.expand_eval())
 }

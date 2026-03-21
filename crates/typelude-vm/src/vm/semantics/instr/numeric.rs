@@ -1,7 +1,8 @@
 //! Numeric and boolean instruction semantics.
 //!
-//! Stack top is the array head. Binary operators consume `lhs` from the top of the stack and
-//! `rhs` from the next slot. Boolean results are normalized to `ELit<True>` or `ELit<False>`.
+//! Stack top is the array head. Binary operators consume `lhs` from the top of
+//! the stack and `rhs` from the next slot. Boolean results are normalized to
+//! `ELit<True>` or `ELit<False>`.
 
 use core::marker::PhantomData;
 
@@ -46,13 +47,9 @@ where
     type Output = StepContinue<
         VmState<
             Array<
-                <
-                    typelude_std::std::ops::ENot<
-                        <Val as AsValueExpr>::Output,
-                    > as BoolResult<
-                        typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>,
-                    >
-                >::Output,
+                <typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output> as BoolResult<
+                    typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>,
+                >>::Output,
                 Tail,
             >,
             Locals,

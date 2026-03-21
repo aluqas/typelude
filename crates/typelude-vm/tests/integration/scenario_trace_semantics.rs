@@ -10,7 +10,9 @@ use typelude_vm::{
 };
 use typenum::{U1, U2, U3, U5};
 
-use crate::support::{CoreTraceLen, OutcomeCoreTrace, OutcomeSourceTrace, ProgramRun, SourceTraceLen};
+use crate::support::{
+    CoreTraceLen, OutcomeCoreTrace, OutcomeSourceTrace, ProgramRun, SourceTraceLen,
+};
 
 type IfProgram =
     tyarray![OpPush<ELit<True>>, OpIf<tyarray![OpPush<ELit<U1>>], tyarray![OpPush<ELit<U2>>]>];

@@ -61,3 +61,12 @@ where
 {
     type Output = <Evaluate<EApp<Ef, Ea>> as TyFn<A>>::Output;
 }
+
+/// Sugar for calling a first-class type-level function `F` with argument `A`.
+pub type ECall<F, A> = EApp<ELit<F>, A>;
+
+/// Sugar for calling a binary first-class type-level function `F`.
+pub type ECall2<F, A, B> = EApp<ECall<F, A>, B>;
+
+/// Sugar for calling a ternary first-class type-level function `F`.
+pub type ECall3<F, A, B, C> = EApp<ECall2<F, A, B>, C>;

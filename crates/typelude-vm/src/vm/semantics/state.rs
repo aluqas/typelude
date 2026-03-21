@@ -7,10 +7,11 @@ use typelude_std::{
     std::{col::array::Nil, debug::trace::Trace},
 };
 
-/// Full machine snapshot used by the pure semantics and the runtime state effect.
+/// Full machine snapshot used by the pure semantics and the runtime state
+/// effect.
 ///
-/// The stack top is the array head and the remaining `Program` is interpreted as the next
-/// instruction stream to execute.
+/// The stack top is the array head and the remaining `Program` is interpreted
+/// as the next instruction stream to execute.
 #[derive(Debug)]
 pub struct VmState<Stack, Locals, Memory, Frames, Program = Nil>(
     pub PhantomData<(Stack, Locals, Memory, Frames, Program)>,

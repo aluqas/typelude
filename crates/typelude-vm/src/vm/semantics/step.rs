@@ -16,7 +16,8 @@ pub struct StepTrap<Reason>(pub PhantomData<Reason>);
 #[derive(Debug)]
 pub struct StepSuspend<Request, State>(pub PhantomData<(Request, State)>);
 
-/// Pure instruction semantics from a current state to a single small-step result.
+/// Pure instruction semantics from a current state to a single small-step
+/// result.
 pub trait StepInstr<State> {
     type Output;
 }

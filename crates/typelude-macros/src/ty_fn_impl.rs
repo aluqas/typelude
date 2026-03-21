@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
-    Attribute, GenericParam, Generics, Ident, Result, Token, Visibility,
+    Attribute, Error, GenericParam, Generics, Ident, Result, Token, Visibility,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token,
@@ -272,7 +272,7 @@ fn replace_lets_in_type(ty: &DslType, let_trait: &Ident, let_idents: &HashSet<Id
 }
 
 impl TyFnInput {
-    pub fn expand(&self) -> TokenStream {
+    pub fn expand_eval(&self) -> TokenStream {
         let attrs = &self.attrs;
         let vis = &self.vis;
         let ident = &self.ident;
@@ -353,6 +353,116 @@ impl TyFnInput {
         // Impl Eval
         let impl_block = quote! {
             impl #impl_generics typelude_std::core::Eval for #ident #type_generics
+            #dsl_where
+            {
+                type Output = #output_type;
+            }
+        };
+
+        quote! {
+            #struct_def
+            #let_trait_block
+            #let_impl_block
+            #impl_block
+        }
+    }
+
+    pub fn expand_ty_fn(&self) -> TokenStream {
+        let attrs = &self.attrs;
+        let vis = &self.vis;
+        let ident = &self.ident;
+
+        let mut captured_generics = self.generics.clone();
+        let arg_ident = match captured_generics.params.pop() {
+            Some(GenericParam::Type(arg)) => arg.ident,
+            Some(other) => {
+                return Error::new_spanned(
+                    other,
+                    "`ty_fn!` requires the last generic parameter to be the TyFn argument type",
+                )
+                .to_compile_error();
+            },
+            None => {
+                return Error::new_spanned(
+                    ident,
+                    "`ty_fn!` requires at least one type parameter for the TyFn argument",
+                )
+                .to_compile_error();
+            },
+        };
+
+        let (impl_generics, _, _) = self.generics.split_for_impl();
+        let (_, captured_type_generics, _) = captured_generics.split_for_impl();
+
+        let phantom_types: Vec<TokenStream> = captured_generics
+            .params
+            .iter()
+            .filter_map(|p| match p {
+                GenericParam::Type(t) => {
+                    let id = &t.ident;
+                    Some(quote! { #id })
+                },
+                GenericParam::Lifetime(l) => {
+                    let id = &l.lifetime;
+                    Some(quote! { &#id () })
+                },
+                GenericParam::Const(_) => None,
+            })
+            .collect();
+
+        let phantom_type = if phantom_types.is_empty() {
+            quote! { ::std::marker::PhantomData<()> }
+        } else {
+            quote! { ::std::marker::PhantomData<(#(#phantom_types),*)> }
+        };
+
+        let dsl_where = if let Some(bounds) = &self.where_clause {
+            quote! { where #bounds }
+        } else {
+            quote! {}
+        };
+
+        let mut output_type = self.output_type.clone();
+        let mut let_trait_block = quote! {};
+        let mut let_impl_block = quote! {};
+
+        if !self.let_bindings.is_empty() {
+            let let_trait = format_ident!("__TyFnLet_{}", ident);
+            let let_idents: HashSet<Ident> =
+                self.let_bindings.iter().map(|(id, _)| id.clone()).collect();
+
+            let assoc_decls = self.let_bindings.iter().map(|(name, _)| quote! { type #name; });
+            let assoc_impls = self.let_bindings.iter().map(|(name, ty)| {
+                let replaced = replace_lets_in_type(ty, &let_trait, &let_idents);
+                quote! { type #name = #replaced; }
+            });
+
+            output_type = replace_lets_in_type(&output_type, &let_trait, &let_idents);
+
+            let_trait_block = quote! {
+                trait #let_trait {
+                    #(#assoc_decls)*
+                }
+            };
+
+            let_impl_block = quote! {
+                impl #impl_generics #let_trait for #ident #captured_type_generics
+                #dsl_where
+                {
+                    #(#assoc_impls)*
+                }
+            };
+        }
+
+        let struct_def = quote! {
+            #(#attrs)*
+            #vis struct #ident #captured_generics {
+                pub _marker: #phantom_type
+            }
+        };
+
+        let impl_block = quote! {
+            impl #impl_generics typelude_std::core::TyFn<#arg_ident> for #ident #captured_type_generics
             #dsl_where
             {
                 type Output = #output_type;

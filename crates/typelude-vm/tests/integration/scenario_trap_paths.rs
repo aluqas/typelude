@@ -75,10 +75,7 @@ fn return_underflow_program_traps() {
     type Expected = Raised<
         ReturnUnderflow,
         Initial,
-        TraceBundle<
-            tyarray![SourceTraceEvent<OpReturn>],
-            tyarray![CoreTraceEvent<OpReturn>],
-        >,
+        TraceBundle<tyarray![SourceTraceEvent<OpReturn>], tyarray![CoreTraceEvent<OpReturn>]>,
     >;
 
     assert_type_eq_all!(Final, Expected);
@@ -93,7 +90,9 @@ fn invalid_if_condition_program_traps() {
         InvalidCondition,
         State,
         TraceBundle<
-            tyarray![SourceTraceEvent<OpIf<tyarray![OpPush<ELit<U0>>], tyarray![OpPush<ELit<U0>>]>>],
+            tyarray![
+                SourceTraceEvent<OpIf<tyarray![OpPush<ELit<U0>>], tyarray![OpPush<ELit<U0>>]>>
+            ],
             tyarray![CoreTraceEvent<OpIf<tyarray![OpPush<ELit<U0>>], tyarray![OpPush<ELit<U0>>]>>],
         >,
     >;

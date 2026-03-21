@@ -4,6 +4,7 @@
 //! here.
 
 pub use crate::core::TyFn;
+use crate::model::col::array::IsList;
 
 /// Marker trait for Natural Numbers (Unsigned Integers).
 #[diagnostic::on_unimplemented(
@@ -93,4 +94,25 @@ pub trait List {
     type Tail;
     /// Prepend a new element to this list.
     type Cons<NewHead>;
+}
+
+/// Explicit conversion into the canonical `Array/Nil` sequence IR.
+pub trait ToArray {
+    type Output: IsList;
+}
+
+/// Explicit conversion of a type-level string into a character array IR.
+pub trait ToChars {
+    type Output: IsList;
+}
+
+/// Explicit normalization from a character array IR into the canonical string
+/// form.
+pub trait FromChars {
+    type Output;
+}
+
+/// Consumer-side abstraction for structures that can be folded.
+pub trait Foldable<Op, Init> {
+    type Output;
 }

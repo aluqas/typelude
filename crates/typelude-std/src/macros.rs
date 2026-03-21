@@ -4,14 +4,23 @@ macro_rules! define_arith_op {
         $crate::paste::paste! {
             $crate::typelude_macros::ty_fn! {
                 #[doc = $doc]
-                pub struct [<E $op_name>]<Lhs, Rhs>
-                where
-                    Lhs, Rhs,
-                    ~Lhs: $trait<~Rhs>
+                pub struct [<F $op_name>]<Lhs>
                 {
-                    type Output = <~Lhs as $trait<~Rhs>>::Output;
+                    type Output = [<F $op_name Captured>]<Lhs>;
                 }
             }
+
+            $crate::typelude_macros::ty_fn! {
+                #[doc = $doc]
+                pub struct [<F $op_name Captured>]<Lhs, Rhs>
+                where [Lhs: $trait<Rhs>]
+                {
+                    type Output = <Lhs as $trait<Rhs>>::Output;
+                }
+            }
+
+            #[doc = $doc]
+            pub type [<E $op_name>]<Lhs, Rhs> = $crate::core::ECall2<[<F $op_name>], Lhs, Rhs>;
         }
     };
 }
@@ -22,15 +31,23 @@ macro_rules! define_logic_op {
         $crate::paste::paste! {
             $crate::typelude_macros::ty_fn! {
                 #[doc = $doc]
-                pub struct [<E $op_name>]<Lhs, Rhs>
-                where
-                    Lhs, Rhs,
-                    ~Lhs: $trait,
-                    ~Rhs: $trait
+                pub struct [<F $op_name>]<Lhs>
                 {
-                    type Output = <~Lhs as $trait>::$method<~Rhs>;
+                    type Output = [<F $op_name Captured>]<Lhs>;
                 }
             }
+
+            $crate::typelude_macros::ty_fn! {
+                #[doc = $doc]
+                pub struct [<F $op_name Captured>]<Lhs, Rhs>
+                where [Lhs: $trait, Rhs: $trait]
+                {
+                    type Output = <Lhs as $trait>::$method<Rhs>;
+                }
+            }
+
+            #[doc = $doc]
+            pub type [<E $op_name>]<Lhs, Rhs> = $crate::core::ECall2<[<F $op_name>], Lhs, Rhs>;
         }
     };
 }
@@ -41,14 +58,16 @@ macro_rules! define_unary_logic_op {
         $crate::paste::paste! {
             $crate::typelude_macros::ty_fn! {
                 #[doc = $doc]
-                pub struct [<E $op_name>]<Val>
+                pub struct [<F $op_name>]<Val>
                 where
-                    Val,
-                    ~Val: $trait
+                    Val: $trait
                 {
-                    type Output = <~Val as $trait>::$method;
+                    type Output = <Val as $trait>::$method;
                 }
             }
+
+            #[doc = $doc]
+            pub type [<E $op_name>]<Val> = $crate::core::ECall<[<F $op_name>], Val>;
         }
     };
 }
@@ -62,7 +81,7 @@ macro_rules! def_expr_via_trait {
         where [ $($bound:tt)* ]
         => $($out:tt)+
     ) => {
-        $crate::typelude_macros::ty_fn! {
+        $crate::typelude_macros::ty_expr! {
             $(#[$meta])*
             $vis struct $name<$($arg),+>
             where

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__arxiv__search_papers",
+      "WebSearch",
+      "mcp__claude-context__search_code",
+      "mcp__claude-context__index_codebase",
+      "mcp__claude-context__get_indexing_status"
+    ]
+  }
+}

@@ -8,6 +8,7 @@ use typenum::{B0, B1, Bit, IsEqual, IsLess};
 pub use crate::model::col::tree_map::IsTreeMap;
 // Re-export kernel types
 pub use crate::model::col::tree_map::{Nil, TreeMap};
+pub use crate::std::traits::{Foldable, ToArray};
 use crate::{
     model::prim::bool::{False, True},
     std::prim::option::{None, Some},
@@ -290,37 +291,157 @@ where
     >>::Output;
 }
 
-crate::def_expr_via_trait!(
-    /// Insert key-value pair into TreeMap
-    pub ETreeMapInsert<Tree, Key, Value>
-    args [Tree, Key, Value]
-    where [~Tree: TreeMapInsert<~Key, ~Value>]
-    => <~Tree as TreeMapInsert<~Key, ~Value>>::Output
-);
+impl ToArray for Nil {
+    type Output = crate::model::col::array::Nil;
+}
 
-crate::def_expr_via_trait!(
-    /// Get value by key from TreeMap
-    pub ETreeMapGet<Tree, Key>
-    args [Tree, Key]
-    where [~Tree: TreeMapGet<~Key>]
-    => <~Tree as TreeMapGet<~Key>>::Output
-);
+impl<K, V, L: IsTreeMap + TreeMapToList, R: IsTreeMap + TreeMapToList> ToArray
+    for TreeMap<K, V, L, R>
+where
+    TreeMap<K, V, L, R>: TreeMapToList,
+{
+    type Output = <TreeMap<K, V, L, R> as TreeMapToList>::Output;
+}
 
-crate::def_expr_via_trait!(
-    /// Check if TreeMap contains key
-    pub ETreeMapContains<Tree, Key>
-    args [Tree, Key]
-    where [~Tree: TreeMapContains<~Key>]
-    => <~Tree as TreeMapContains<~Key>>::Output
-);
+impl<Op, Init> Foldable<Op, Init> for Nil
+where
+    crate::model::col::array::Nil: crate::std::col::array::Foldable<Op, Init>,
+{
+    type Output =
+        <crate::model::col::array::Nil as crate::std::col::array::Foldable<Op, Init>>::Output;
+}
+
+impl<K, V, L, R, Op, Init> Foldable<Op, Init> for TreeMap<K, V, L, R>
+where
+    TreeMap<K, V, L, R>: ToArray,
+    <TreeMap<K, V, L, R> as ToArray>::Output: crate::std::col::array::Foldable<Op, Init>,
+{
+    type Output = <<TreeMap<K, V, L, R> as ToArray>::Output as crate::std::col::array::Foldable<
+        Op,
+        Init,
+    >>::Output;
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Insert a key-value pair into a TreeMap.
+    pub struct FTreeMapInsert<Tree>
+    {
+        type Output = FTreeMapInsertCaptured1<Tree>;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Insert a key-value pair into a TreeMap.
+    pub struct FTreeMapInsertCaptured1<Tree, Key>
+    {
+        type Output = FTreeMapInsertCaptured2<Tree, Key>;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Insert a key-value pair into a TreeMap.
+    pub struct FTreeMapInsertCaptured2<Tree, Key, Value>
+    where [Tree: TreeMapInsert<Key, Value>]
+    {
+        type Output = <Tree as TreeMapInsert<Key, Value>>::Output;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Get a value by key from a TreeMap.
+    pub struct FTreeMapGet<Tree>
+    {
+        type Output = FTreeMapGetCaptured<Tree>;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Get a value by key from a TreeMap.
+    pub struct FTreeMapGetCaptured<Tree, Key>
+    where [Tree: TreeMapGet<Key>]
+    {
+        type Output = <Tree as TreeMapGet<Key>>::Output;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Check whether a TreeMap contains a key.
+    pub struct FTreeMapContains<Tree>
+    {
+        type Output = FTreeMapContainsCaptured<Tree>;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Check whether a TreeMap contains a key.
+    pub struct FTreeMapContainsCaptured<Tree, Key>
+    where [Tree: TreeMapContains<Key>]
+    {
+        type Output = <Tree as TreeMapContains<Key>>::Output;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Get the minimum key-value pair of a TreeMap.
+    pub struct FTreeMapMin<Tree>
+    where [Tree: TreeMapMin]
+    {
+        type Output = <Tree as TreeMapMin>::Output;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Get the maximum key-value pair of a TreeMap.
+    pub struct FTreeMapMax<Tree>
+    where [Tree: TreeMapMax]
+    {
+        type Output = <Tree as TreeMapMax>::Output;
+    }
+}
+
+crate::typelude_macros::ty_fn! {
+    /// Convert a TreeMap into a sorted array of pairs.
+    pub struct FTreeMapToList<Tree>
+    where [Tree: TreeMapToList]
+    {
+        type Output = <Tree as TreeMapToList>::Output;
+    }
+}
+
+/// Insert key-value pair into TreeMap.
+pub type ETreeMapInsert<Tree, Key, Value> = crate::core::ECall3<FTreeMapInsert, Tree, Key, Value>;
+/// Get value by key from TreeMap.
+pub type ETreeMapGet<Tree, Key> = crate::core::ECall2<FTreeMapGet, Tree, Key>;
+/// Check if TreeMap contains key.
+pub type ETreeMapContains<Tree, Key> = crate::core::ECall2<FTreeMapContains, Tree, Key>;
+/// Get the minimum key-value pair in a TreeMap.
+pub type ETreeMapMin<Tree> = crate::core::ECall<FTreeMapMin, Tree>;
+/// Get the maximum key-value pair in a TreeMap.
+pub type ETreeMapMax<Tree> = crate::core::ECall<FTreeMapMax, Tree>;
+/// Convert a TreeMap into a sorted array of pairs.
+pub type ETreeMapToList<Tree> = crate::core::ECall<FTreeMapToList, Tree>;
 
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typenum::{U1, U2, U3, U5};
+    use typenum::{U0, U1, U2, U3, U5};
 
     use super::*;
     use crate::model::col::array::{Array as ArrayData, Nil as NilArray};
+
+    crate::typelude_macros::ty_fn! {
+        struct CountEntries<Acc> {
+            type Output = CountEntriesCaptured<Acc>;
+        }
+    }
+
+    crate::typelude_macros::ty_fn! {
+        struct CountEntriesCaptured<Acc, Entry>
+        where [Acc: std::ops::Add<typenum::B1>]
+        {
+            type Output = typenum::Add1<Acc>;
+        }
+    }
 
     #[test]
     fn test_insert() {
@@ -379,6 +500,10 @@ mod tests {
         type Tree2 = TreeMap<U2, char, TreeMap<U1, i32, Nil, Nil>, Nil>;
         type List2 = <Tree2 as TreeMapToList>::Output;
         assert_type_eq_all!(List2, ArrayData<(U1, i32), ArrayData<(U2, char), NilArray>>);
+
+        type AsArray = <Tree2 as ToArray>::Output;
+        assert_type_eq_all!(AsArray, ArrayData<(U1, i32), ArrayData<(U2, char), NilArray>>);
+        assert_type_eq_all!(<Tree2 as Foldable<CountEntries, U0>>::Output, U2);
     }
 
     #[test]
