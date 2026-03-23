@@ -5,7 +5,7 @@ use quote::{format_ident, quote};
 use syn::{
     Attribute, Error, GenericParam, Generics, Ident, Result, Token, Visibility,
     parse::{Parse, ParseStream},
-    punctuated::Punctuated,
+    punctuated::{Pair, Punctuated},
     token,
 };
 
@@ -374,8 +374,9 @@ impl TyFnInput {
 
         let mut captured_generics = self.generics.clone();
         let arg_ident = match captured_generics.params.pop() {
-            Some(GenericParam::Type(arg)) => arg.ident,
-            Some(other) => {
+            Some(Pair::Punctuated(GenericParam::Type(arg), _))
+            | Some(Pair::End(GenericParam::Type(arg))) => arg.ident,
+            Some(Pair::Punctuated(other, _)) | Some(Pair::End(other)) => {
                 return Error::new_spanned(
                     other,
                     "`ty_fn!` requires the last generic parameter to be the TyFn argument type",

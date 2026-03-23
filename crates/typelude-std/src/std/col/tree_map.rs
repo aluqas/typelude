@@ -311,7 +311,7 @@ where
         <crate::model::col::array::Nil as crate::std::col::array::Foldable<Op, Init>>::Output;
 }
 
-impl<K, V, L, R, Op, Init> Foldable<Op, Init> for TreeMap<K, V, L, R>
+impl<K, V, L: IsTreeMap, R: IsTreeMap, Op, Init> Foldable<Op, Init> for TreeMap<K, V, L, R>
 where
     TreeMap<K, V, L, R>: ToArray,
     <TreeMap<K, V, L, R> as ToArray>::Output: crate::std::col::array::Foldable<Op, Init>,

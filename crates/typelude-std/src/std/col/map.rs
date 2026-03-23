@@ -160,7 +160,7 @@ where
     type Output = <NilArray as crate::std::col::array::Foldable<Op, Init>>::Output;
 }
 
-impl<K, V, T, Op, Init> Foldable<Op, Init> for Map<K, V, T>
+impl<K, V, T: TypeMap, Op, Init> Foldable<Op, Init> for Map<K, V, T>
 where
     Map<K, V, T>: ToArray,
     <Map<K, V, T> as ToArray>::Output: crate::std::col::array::Foldable<Op, Init>,

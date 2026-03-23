@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn test_exprs() {
-        use crate::core::ELit;
+        use crate::core::{ELit, Evaluate};
         type S = ELit<Some<U42>>;
         type N = ELit<None>;
 

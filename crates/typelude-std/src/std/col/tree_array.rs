@@ -238,7 +238,7 @@ where
         <crate::model::col::array::Nil as crate::std::col::array::Foldable<Op, Init>>::Output;
 }
 
-impl<V, L, R, Op, Init> Foldable<Op, Init> for TreeArray<V, L, R>
+impl<V, L: IsTreeArray, R: IsTreeArray, Op, Init> Foldable<Op, Init> for TreeArray<V, L, R>
 where
     TreeArray<V, L, R>: ToArray,
     <TreeArray<V, L, R> as ToArray>::Output: crate::std::col::array::Foldable<Op, Init>,
@@ -324,7 +324,7 @@ pub type ETreeArrayToList<Tree> = crate::core::ECall<FTreeArrayToList, Tree>;
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typenum::{U0, U1, U2, U3, U5, U8};
+    use typenum::{U0, U1, U2, U3, U5, U9};
 
     use super::*;
     use crate::model::col::array::{Array as ArrayData, Nil as NilArray};
@@ -379,7 +379,7 @@ mod tests {
         assert_type_eq_all!(<Tree2 as Foldable<crate::std::ops::FAdd, U0>>::Output, U3);
 
         type Tree3 = TreeArray<U3, TreeArray<U1, Nil, Nil>, TreeArray<U5, Nil, Nil>>;
-        assert_type_eq_all!(<Tree3 as Foldable<crate::std::ops::FAdd, U0>>::Output, U8);
+        assert_type_eq_all!(<Tree3 as Foldable<crate::std::ops::FAdd, U0>>::Output, U9);
     }
 
     #[test]

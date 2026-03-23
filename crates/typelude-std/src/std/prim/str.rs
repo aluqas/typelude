@@ -80,6 +80,7 @@ where
     Char<LC>: EqDecide<Char<RC>>,
     <Char<LC> as EqDecide<Char<RC>>>::Output: Bool,
     LTail: StrEq<RTail>,
+    <<Char<LC> as EqDecide<Char<RC>>>::Output as Bool>::And<<LTail as StrEq<RTail>>::Output>: Bool,
 {
     type Output =
         <<Char<LC> as EqDecide<Char<RC>>>::Output as Bool>::And<<LTail as StrEq<RTail>>::Output>;
