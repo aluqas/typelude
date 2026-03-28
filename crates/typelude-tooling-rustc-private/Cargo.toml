@@ -1,0 +1,21 @@
+[package]
+name = "typelude-tooling-rustc-private"
+version = "0.1.0"
+edition = "2021"
+description = "rustc_private driver for typelude — captures trait resolution proof trees directly"
+
+# This is a rustc driver binary, not a library.
+[[bin]]
+name = "typelude-rustc-driver"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+typelude-tooling-core = { path = "../typelude-tooling-core" }
+
+# rustc_private crates are accessed via `extern crate` and linked against
+# the compiler's sysroot — no explicit dep entries needed.
+
+[package.metadata.rust-analyzer]
+rustc_private = true

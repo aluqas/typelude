@@ -5,6 +5,11 @@
 /// **Marker Trait**
 ///
 /// Represents that a type is a Boolean.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not a typelude Bool",
+    label = "expected True or False",
+    note = "Cond must evaluate to `True` or `False` — use `True` or `False` from typelude_std"
+)]
 pub trait IsBool {}
 
 /// Type-level `true`

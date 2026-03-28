@@ -40,10 +40,12 @@ pub trait MapGetHelper<Key, NodeKey, NodeValue, Tail, IsEq> {
     type Output;
 }
 
+#[diagnostic::do_not_recommend]
 impl<Key, NodeKey, NodeValue, Tail> MapGetHelper<Key, NodeKey, NodeValue, Tail, B1> for () {
     type Output = Some<NodeValue>;
 }
 
+#[diagnostic::do_not_recommend]
 impl<Key, NodeKey, NodeValue, Tail> MapGetHelper<Key, NodeKey, NodeValue, Tail, B0> for ()
 where
     Tail: TypeMap + MapGet<Key>,
@@ -96,10 +98,12 @@ pub trait MapContainsHelper<Key, NodeKey, Tail, IsEq> {
     type Output;
 }
 
+#[diagnostic::do_not_recommend]
 impl<Key, NodeKey, Tail> MapContainsHelper<Key, NodeKey, Tail, B1> for () {
     type Output = True;
 }
 
+#[diagnostic::do_not_recommend]
 impl<Key, NodeKey, Tail> MapContainsHelper<Key, NodeKey, Tail, B0> for ()
 where
     Tail: TypeMap + MapContains<Key>,

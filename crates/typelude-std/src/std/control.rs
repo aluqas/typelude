@@ -49,6 +49,7 @@ pub trait EWhileHelper<Pred, Step, State> {
     type Output;
 }
 
+#[diagnostic::do_not_recommend]
 impl<Pred, Step, State> EWhileHelper<Pred, Step, State> for False
 where
     State: Eval,
@@ -56,6 +57,7 @@ where
     type Output = Evaluate<State>;
 }
 
+#[diagnostic::do_not_recommend]
 impl<Pred, Step, State> EWhileHelper<Pred, Step, State> for True
 where
     State: Eval,

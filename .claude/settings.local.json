@@ -5,7 +5,9 @@
       "WebSearch",
       "mcp__claude-context__search_code",
       "mcp__claude-context__index_codebase",
-      "mcp__claude-context__get_indexing_status"
+      "mcp__claude-context__get_indexing_status",
+      "Bash(cargo test:*)",
+      "Bash(cargo run:*)"
     ]
   }
 }

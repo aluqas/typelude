@@ -107,12 +107,14 @@ macro_rules! helper_if {
             type Output;
         }
 
+        #[diagnostic::do_not_recommend]
         impl< $($gen),+ > $name < $($gen),+ > for $true_ty
         $( where $($wtrue)* )?
         {
             type Output = $true_out;
         }
 
+        #[diagnostic::do_not_recommend]
         impl< $($gen),+ > $name < $($gen),+ > for $false_ty
         $( where $($wfalse)* )?
         {
@@ -134,12 +136,14 @@ macro_rules! helper_bit {
             type Output;
         }
 
+        #[diagnostic::do_not_recommend]
         impl< $($gen),+ > $name < $($gen),+ , typenum::B1 > for $self_ty
         $( where $($w1)* )?
         {
             type Output = $out1;
         }
 
+        #[diagnostic::do_not_recommend]
         impl< $($gen),+ > $name < $($gen),+ , typenum::B0 > for $self_ty
         $( where $($w0)* )?
         {
@@ -158,18 +162,21 @@ macro_rules! helper_bit {
             type Output;
         }
 
+        #[diagnostic::do_not_recommend]
         impl< $($gen),+ , $b2 > $name < $($gen),+ , typenum::B1, $b2 > for $self_ty
         $( where $($w1)* )?
         {
             type Output = $out1;
         }
 
+        #[diagnostic::do_not_recommend]
         impl< $($gen),+ > $name < $($gen),+ , typenum::B0, typenum::B1 > for $self_ty
         $( where $($w2)* )?
         {
             type Output = $out2;
         }
 
+        #[diagnostic::do_not_recommend]
         impl< $($gen),+ > $name < $($gen),+ , typenum::B0, typenum::B0 > for $self_ty
         $( where $($w3)* )?
         {
@@ -191,12 +198,14 @@ macro_rules! helper_list {
             type Output;
         }
 
+        #[diagnostic::do_not_recommend]
         impl< $($gen),+ > $name < $($gen),+ > for $base_ty
         $( where $($wbase)* )?
         {
             type Output = $base_out;
         }
 
+        #[diagnostic::do_not_recommend]
         impl< $($gen),+ , $head, $tail > $name < $($gen),+ > for $step_ty
         $( where $($wstep)* )?
         {

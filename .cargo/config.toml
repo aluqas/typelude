@@ -1,12 +1,15 @@
 [build]
+incremental = false # fibonacciが50GBになります
 rustflags = [
-    "-Z",
-    "verbose-internals",
-    "-Z",
-    "macro-backtrace",
-    "-Z",
-    "write-long-types-to-disk=yes",
-    # "--diagnostic-width=120", # Uncomment if you have a wide terminal
+  "-Z",
+  "verbose-internals",
+  "-Z",
+  "macro-backtrace",
+  "-Z",
+  "write-long-types-to-disk=yes",
+  # "-Z",
+  # "no-embed-metadata",
+  # "--diagnostic-width=120", # Uncomment if you have a wide terminal
 ]
 
 [alias]
