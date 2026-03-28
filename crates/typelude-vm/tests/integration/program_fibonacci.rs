@@ -75,11 +75,10 @@ type FibHostOutState = <FibHostOut as OutcomeState>::Output;
 #[test]
 fn fibonacci_10_composed_final_state_is_stable() {
     assert_type_eq_all!(<FibOutState as StateStack>::Output, tyarray![ELit<U55>]);
-    assert_type_eq_all!(<FibOutState as StateLocals>::Output, tyarray![
-        ELit<U10>,
-        ELit<U89>,
-        ELit<U55>
-    ]);
+    assert_type_eq_all!(
+        <FibOutState as StateLocals>::Output,
+        tyarray![ELit<U10>, ELit<U89>, ELit<U55>]
+    );
     assert_type_eq_all!(FibOutState, FibFinalState);
 }
 

@@ -1,12 +1,13 @@
 use std::collections::BTreeMap;
 
 use typelude_tooling_core::{
-    CandidateId, EventId, GoalId, HookId, ItemId, RunId, TraceEvent, TraceEventKind,
+    CandidateId, DiagId, EventId, GoalId, HookId, RunId, SubjectId, SubjectKind, TraceEvent,
+    TraceEventKind,
 };
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct CollectStats {
-    pub item_count: usize,
+    pub subject_count: usize,
     pub goal_count: usize,
     pub candidate_count: usize,
     pub diagnostic_count: usize,
@@ -51,10 +52,12 @@ pub fn emit_raw(event: &TraceEvent) {
 pub trait TraceEventExt {
     fn with_run_id(self, run_id: RunId) -> Self;
     fn with_hook_id(self, hook_id: HookId) -> Self;
-    fn with_item_id(self, item_id: ItemId) -> Self;
+    fn with_subject(self, subject_id: SubjectId, subject_kind: SubjectKind) -> Self;
+    fn with_parent_subject_id(self, parent_subject_id: SubjectId) -> Self;
     fn with_goal_id(self, goal_id: GoalId) -> Self;
     fn with_parent_goal_id(self, parent_goal_id: GoalId) -> Self;
     fn with_candidate_id(self, candidate_id: CandidateId) -> Self;
+    fn with_diagnostic_id(self, diagnostic_id: DiagId) -> Self;
     fn with_detail(self, detail: impl Into<String>) -> Self;
     fn with_metadata(self, key: impl Into<String>, value: impl Into<String>) -> Self;
 }
@@ -70,8 +73,14 @@ impl TraceEventExt for TraceEvent {
         self
     }
 
-    fn with_item_id(mut self, item_id: ItemId) -> Self {
-        self.item_id = Some(item_id);
+    fn with_subject(mut self, subject_id: SubjectId, subject_kind: SubjectKind) -> Self {
+        self.subject_id = Some(subject_id);
+        self.subject_kind = Some(subject_kind);
+        self
+    }
+
+    fn with_parent_subject_id(mut self, parent_subject_id: SubjectId) -> Self {
+        self.parent_subject_id = Some(parent_subject_id);
         self
     }
 
@@ -87,6 +96,11 @@ impl TraceEventExt for TraceEvent {
 
     fn with_candidate_id(mut self, candidate_id: CandidateId) -> Self {
         self.candidate_id = Some(candidate_id);
+        self
+    }
+
+    fn with_diagnostic_id(mut self, diagnostic_id: DiagId) -> Self {
+        self.diagnostic_id = Some(diagnostic_id);
         self
     }
 
@@ -106,7 +120,7 @@ impl TraceEventExt for TraceEvent {
 
 #[cfg(test)]
 mod tests {
-    use typelude_tooling_core::{HookId, RunId, TraceEventKind};
+    use typelude_tooling_core::{HookId, RunId, SubjectId, SubjectKind, TraceEventKind};
 
     use super::{EventEmitter, TraceEventExt};
 
@@ -115,9 +129,11 @@ mod tests {
         let mut emitter = EventEmitter::new(RunId::new(1));
         let event = emitter
             .emit(TraceEventKind::RunStarted, "start")
-            .with_hook_id(HookId::TraitSolve);
+            .with_hook_id(HookId::TraitSolve)
+            .with_subject(SubjectId::new(7), SubjectKind::Predicate);
         assert_eq!(event.id.value(), 1);
         assert_eq!(event.run_id, Some(RunId::new(1)));
         assert_eq!(event.hook_id, Some(HookId::TraitSolve));
+        assert_eq!(event.subject_id, Some(SubjectId::new(7)));
     }
 }

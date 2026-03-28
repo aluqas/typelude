@@ -163,8 +163,9 @@ fn extract_backticked_symbol(input: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{RustcDiagnosticsCollector, RustcDiagnosticsConfig};
     use typelude_tooling_core::DiagnosticKind;
+
+    use super::{RustcDiagnosticsCollector, RustcDiagnosticsConfig};
 
     const JSON_DIAG: &str = r#"{"$message_type":"diagnostic","message":"expected a typelude Boolish value","code":{"code":"E0277"},"level":"error","spans":[{"file_name":"/tmp/file.rs","line_start":15,"line_end":15,"column_start":18,"column_end":19,"label":"this type does not implement Boolish"}],"children":[{"message":"the trait `Boolish` is not implemented for `X`","level":"help"},{"message":"Boolish is required here","level":"note"}],"rendered":"rendered text"}"#;
 

@@ -1,10 +1,12 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::{
-    ids::{CandidateId, DiagId, EventId, GoalId, HookId, ItemId, RunId, SpanId, TraceId},
     ToolingResult,
+    ids::{CandidateId, DiagId, EventId, GoalId, HookId, RunId, SpanId, SubjectId, TraceId},
+    subject::SubjectKind,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -12,7 +14,7 @@ use crate::{
 pub enum TraceEventKind {
     RunStarted,
     RunFinished,
-    ItemDiscovered,
+    SubjectDiscovered,
     GoalDiscovered,
     GoalEntered,
     GoalExited,
@@ -42,7 +44,9 @@ pub struct TraceEvent {
     pub id: EventId,
     pub run_id: Option<RunId>,
     pub hook_id: Option<HookId>,
-    pub item_id: Option<ItemId>,
+    pub subject_id: Option<SubjectId>,
+    pub parent_subject_id: Option<SubjectId>,
+    pub subject_kind: Option<SubjectKind>,
     pub goal_id: Option<GoalId>,
     pub parent_goal_id: Option<GoalId>,
     pub candidate_id: Option<CandidateId>,
@@ -76,7 +80,7 @@ impl Trace {
     pub fn from_json_lines(id: TraceId, input: &str) -> ToolingResult<Self> {
         let mut trace = Self::new(id);
         for line in input.lines().map(str::trim).filter(|line| !line.is_empty()) {
-            if let Ok(event) = serde_json::from_str::<TraceEvent>(line) {
+            if let Some(event) = parse_event_line(line) {
                 trace.push(event);
             }
         }
@@ -92,6 +96,16 @@ impl Trace {
     }
 }
 
+fn parse_event_line(line: &str) -> Option<TraceEvent> {
+    if let Ok(event) = serde_json::from_str::<TraceEvent>(line) {
+        return Some(event);
+    }
+
+    let value = serde_json::from_str::<Value>(line).ok()?;
+    let message = value.get("message")?;
+    serde_json::from_value::<TraceEvent>(message.clone()).ok()
+}
+
 impl TraceEvent {
     #[must_use]
     pub fn new(id: EventId, kind: TraceEventKind, title: impl Into<String>) -> Self {
@@ -99,7 +113,9 @@ impl TraceEvent {
             id,
             run_id: None,
             hook_id: None,
-            item_id: None,
+            subject_id: None,
+            parent_subject_id: None,
+            subject_kind: None,
             goal_id: None,
             parent_goal_id: None,
             candidate_id: None,
@@ -132,16 +148,13 @@ mod tests {
     #[test]
     fn trace_json_lines_roundtrip() {
         let mut trace = Trace::new(TraceId::new(7));
-        trace.push(TraceEvent::new(
-            EventId::new(1),
-            TraceEventKind::RunStarted,
-            "run-start",
-        ));
-        trace.push(TraceEvent::new(
-            EventId::new(2),
-            TraceEventKind::GoalEntered,
-            "goal",
-        ));
+        let mut start = TraceEvent::new(EventId::new(1), TraceEventKind::RunStarted, "run-start");
+        start.subject_kind = Some(crate::SubjectKind::Legacy);
+        trace.push(start);
+        let mut goal = TraceEvent::new(EventId::new(2), TraceEventKind::GoalEntered, "goal");
+        goal.subject_id = Some(crate::SubjectId::new(9));
+        goal.subject_kind = Some(crate::SubjectKind::Predicate);
+        trace.push(goal);
 
         let lines = trace.to_json_lines().expect("trace should render as json lines");
         let parsed = Trace::from_json_lines(TraceId::new(7), &lines).expect("trace should parse");
@@ -149,5 +162,16 @@ mod tests {
         assert_eq!(parsed.events.len(), 2);
         assert_eq!(parsed.events[0].kind, TraceEventKind::RunStarted);
         assert_eq!(parsed.events[1].kind, TraceEventKind::GoalEntered);
+        assert_eq!(parsed.events[1].subject_id, Some(crate::SubjectId::new(9)));
+    }
+
+    #[test]
+    fn trace_parses_cargo_compiler_message_wrappers() {
+        let line = r#"{"reason":"compiler-message","message":{"id":1,"run_id":null,"hook_id":null,"subject_id":9,"parent_subject_id":null,"subject_kind":"predicate","goal_id":null,"parent_goal_id":null,"candidate_id":null,"diagnostic_id":null,"span_id":null,"kind":"goal_entered","title":"goal","detail":null,"metadata":{}}}"#;
+        let parsed =
+            Trace::from_json_lines(TraceId::new(9), line).expect("wrapped trace should parse");
+        assert_eq!(parsed.events.len(), 1);
+        assert_eq!(parsed.events[0].kind, TraceEventKind::GoalEntered);
+        assert_eq!(parsed.events[0].subject_id, Some(crate::SubjectId::new(9)));
     }
 }

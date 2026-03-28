@@ -52,11 +52,8 @@ impl TypeludeDiagnosticEnricher {
         };
 
         let fallback = extract_from_message(&diagnostic.message);
-        let raw = capability
-            .required
-            .as_deref()
-            .or_else(|| fallback.as_deref())
-            .unwrap_or("unknown");
+        let raw =
+            capability.required.as_deref().or_else(|| fallback.as_deref()).unwrap_or("unknown");
 
         let kind = classify_capability(raw);
 

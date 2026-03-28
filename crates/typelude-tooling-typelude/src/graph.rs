@@ -1,9 +1,14 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use typelude_tooling_core::{
-    CandidateId, GoalId, Graph, GraphEdge, GraphNode, GraphNodeKind, NodeId, Trace,
-    TraceEventKind,
+    CandidateId, GoalId, Graph, GraphEdge, GraphNode, GraphNodeKind, NodeId, SubjectId, Trace,
+    TraceEvent, TraceEventKind,
 };
+
+const SUBJECT_NODE_BASE: u64 = 1_000_000_000;
+const GOAL_NODE_BASE: u64 = 2_000_000_000;
+const CANDIDATE_NODE_BASE: u64 = 3_000_000_000;
+const EVENT_NODE_BASE: u64 = 4_000_000_000;
 
 #[derive(Debug, Default)]
 pub struct TraceGraphBuilder;
@@ -17,42 +22,62 @@ impl TraceGraphBuilder {
     #[must_use]
     pub fn build(&self, trace: &Trace) -> Graph {
         let mut graph = Graph::default();
+        let mut subject_nodes = BTreeMap::<SubjectId, NodeId>::new();
         let mut goal_nodes = BTreeMap::<GoalId, NodeId>::new();
         let mut candidate_nodes = BTreeMap::<CandidateId, NodeId>::new();
 
         for event in &trace.events {
             match event.kind {
+                TraceEventKind::SubjectDiscovered => {
+                    let Some(subject_id) = event.subject_id else {
+                        continue;
+                    };
+                    let node_id =
+                        ensure_subject_node(&mut graph, &mut subject_nodes, subject_id, event);
+                    if let Some(parent_subject_id) = event.parent_subject_id {
+                        let parent_id = ensure_subject_placeholder(
+                            &mut graph,
+                            &mut subject_nodes,
+                            parent_subject_id,
+                        );
+                        graph.edges.push(make_edge(parent_id, node_id, "subject"));
+                    }
+                },
                 TraceEventKind::GoalDiscovered
                 | TraceEventKind::GoalEntered
                 | TraceEventKind::GoalStarted => {
                     let Some(goal_id) = event.goal_id else {
                         continue;
                     };
-                    if goal_nodes.contains_key(&goal_id) {
-                        continue;
-                    }
-
-                    let node_id = NodeId::new(goal_id.value());
-                    graph.nodes.push(GraphNode {
-                        id: node_id,
-                        kind: GraphNodeKind::Goal,
-                        label: event.title.clone(),
-                        span_id: event.span_id,
-                        metadata: event.metadata.clone(),
+                    let node_id = *goal_nodes.entry(goal_id).or_insert_with(|| {
+                        let node_id = goal_node_id(goal_id);
+                        graph.nodes.push(GraphNode {
+                            id: node_id,
+                            kind: GraphNodeKind::Goal,
+                            label: event.title.clone(),
+                            span_id: event.span_id,
+                            metadata: event.metadata.clone(),
+                        });
+                        node_id
                     });
-                    goal_nodes.insert(goal_id, node_id);
 
                     if let Some(parent_goal_id) = event.parent_goal_id {
-                        graph
-                            .edges
-                            .push(make_edge(NodeId::new(parent_goal_id.value()), node_id, "nested"));
+                        graph.edges.push(make_edge(
+                            goal_node_id(parent_goal_id),
+                            node_id,
+                            "nested",
+                        ));
+                    } else if let Some(subject_id) = event.subject_id {
+                        let subject_node_id =
+                            ensure_subject_placeholder(&mut graph, &mut subject_nodes, subject_id);
+                        graph.edges.push(make_edge(subject_node_id, node_id, "goal"));
                     }
-                }
+                },
                 TraceEventKind::NestedObligation => {
                     let Some(parent_goal_id) = event.parent_goal_id.or(event.goal_id) else {
                         continue;
                     };
-                    let node_id = NodeId::new(event.id.value());
+                    let node_id = event_node_id(event.id.value());
                     graph.nodes.push(GraphNode {
                         id: node_id,
                         kind: GraphNodeKind::Goal,
@@ -61,11 +86,11 @@ impl TraceGraphBuilder {
                         metadata: event.metadata.clone(),
                     });
                     graph.edges.push(make_edge(
-                        NodeId::new(parent_goal_id.value()),
+                        goal_node_id(parent_goal_id),
                         node_id,
                         "obligation",
                     ));
-                }
+                },
                 TraceEventKind::CandidateDiscovered
                 | TraceEventKind::CandidateTried
                 | TraceEventKind::CandidateResult
@@ -78,7 +103,7 @@ impl TraceGraphBuilder {
                         continue;
                     };
                     let node_id = *candidate_nodes.entry(candidate_id).or_insert_with(|| {
-                        let node_id = NodeId::new(candidate_id.value());
+                        let node_id = candidate_node_id(candidate_id);
                         graph.nodes.push(GraphNode {
                             id: node_id,
                             kind: GraphNodeKind::Candidate,
@@ -89,19 +114,16 @@ impl TraceGraphBuilder {
                         node_id
                     });
                     graph.edges.push(make_edge(
-                        NodeId::new(goal_id.value()),
+                        goal_node_id(goal_id),
                         node_id,
                         candidate_edge_label(&event.kind),
                     ));
-                }
+                },
                 TraceEventKind::BranchChosen
                 | TraceEventKind::AliasExpanded
                 | TraceEventKind::Normalization
                 | TraceEventKind::ErrorRaised => {
-                    let Some(parent_goal_id) = event.goal_id.or(event.parent_goal_id) else {
-                        continue;
-                    };
-                    let node_id = NodeId::new(event.id.value());
+                    let node_id = event_node_id(event.id.value());
                     graph.nodes.push(GraphNode {
                         id: node_id,
                         kind: GraphNodeKind::Expression,
@@ -109,13 +131,23 @@ impl TraceGraphBuilder {
                         span_id: event.span_id,
                         metadata: event.metadata.clone(),
                     });
-                    graph.edges.push(make_edge(
-                        NodeId::new(parent_goal_id.value()),
-                        node_id,
-                        expression_edge_label(&event.kind),
-                    ));
-                }
-                _ => {}
+                    if let Some(parent_goal_id) = event.goal_id.or(event.parent_goal_id) {
+                        graph.edges.push(make_edge(
+                            goal_node_id(parent_goal_id),
+                            node_id,
+                            expression_edge_label(&event.kind),
+                        ));
+                    } else if let Some(subject_id) = event.subject_id {
+                        let subject_node_id =
+                            ensure_subject_placeholder(&mut graph, &mut subject_nodes, subject_id);
+                        graph.edges.push(make_edge(
+                            subject_node_id,
+                            node_id,
+                            expression_edge_label(&event.kind),
+                        ));
+                    }
+                },
+                _ => {},
             }
         }
 
@@ -128,10 +160,8 @@ impl TraceGraphBuilder {
         let mut stack: Vec<(usize, NodeId)> = Vec::new();
 
         for event in &trace.events {
-            let Some(depth) = event
-                .metadata
-                .get("depth")
-                .and_then(|value| value.parse::<usize>().ok())
+            let Some(depth) =
+                event.metadata.get("depth").and_then(|value| value.parse::<usize>().ok())
             else {
                 continue;
             };
@@ -150,9 +180,11 @@ impl TraceGraphBuilder {
             });
 
             if let Some((_, parent_id)) = stack.last().copied() {
-                graph
-                    .edges
-                    .push(make_edge(parent_id, node_id, expression_edge_label(&event.kind)));
+                graph.edges.push(make_edge(
+                    parent_id,
+                    node_id,
+                    expression_edge_label(&event.kind),
+                ));
             }
 
             stack.push((depth, node_id));
@@ -182,7 +214,11 @@ impl TraceGraphBuilder {
         }
 
         let mut keep = seeds.clone();
-        let limit = if max_depth == 0 { usize::MAX } else { max_depth };
+        let limit = if max_depth == 0 {
+            usize::MAX
+        } else {
+            max_depth
+        };
         let mut queue: VecDeque<(NodeId, usize)> =
             seeds.into_iter().map(|node_id| (node_id, 0)).collect();
 
@@ -268,6 +304,43 @@ impl TraceGraphBuilder {
     }
 }
 
+fn ensure_subject_node(
+    graph: &mut Graph,
+    subject_nodes: &mut BTreeMap<SubjectId, NodeId>,
+    subject_id: SubjectId,
+    event: &TraceEvent,
+) -> NodeId {
+    *subject_nodes.entry(subject_id).or_insert_with(|| {
+        let node_id = subject_node_id(subject_id);
+        graph.nodes.push(GraphNode {
+            id: node_id,
+            kind: GraphNodeKind::Semantic,
+            label: event.title.clone(),
+            span_id: event.span_id,
+            metadata: event.metadata.clone(),
+        });
+        node_id
+    })
+}
+
+fn ensure_subject_placeholder(
+    graph: &mut Graph,
+    subject_nodes: &mut BTreeMap<SubjectId, NodeId>,
+    subject_id: SubjectId,
+) -> NodeId {
+    *subject_nodes.entry(subject_id).or_insert_with(|| {
+        let node_id = subject_node_id(subject_id);
+        graph.nodes.push(GraphNode {
+            id: node_id,
+            kind: GraphNodeKind::Semantic,
+            label: format!("subject:{}", subject_id.value()),
+            span_id: None,
+            metadata: BTreeMap::new(),
+        });
+        node_id
+    })
+}
+
 fn make_edge(from: NodeId, to: NodeId, label: &str) -> GraphEdge {
     GraphEdge {
         from,
@@ -275,6 +348,22 @@ fn make_edge(from: NodeId, to: NodeId, label: &str) -> GraphEdge {
         label: String::from(label),
         metadata: BTreeMap::new(),
     }
+}
+
+const fn subject_node_id(subject_id: SubjectId) -> NodeId {
+    NodeId::new(SUBJECT_NODE_BASE + subject_id.value())
+}
+
+const fn goal_node_id(goal_id: GoalId) -> NodeId {
+    NodeId::new(GOAL_NODE_BASE + goal_id.value())
+}
+
+const fn candidate_node_id(candidate_id: CandidateId) -> NodeId {
+    NodeId::new(CANDIDATE_NODE_BASE + candidate_id.value())
+}
+
+const fn event_node_id(event_id: u64) -> NodeId {
+    NodeId::new(EVENT_NODE_BASE + event_id)
 }
 
 fn candidate_edge_label(kind: &TraceEventKind) -> &'static str {
@@ -308,16 +397,19 @@ fn legacy_node_kind(kind: &TraceEventKind) -> GraphNodeKind {
         | TraceEventKind::CandidateResult
         | TraceEventKind::CandidateChosen
         | TraceEventKind::CandidateRejected => GraphNodeKind::Candidate,
-        TraceEventKind::AliasExpanded | TraceEventKind::Normalization | TraceEventKind::BranchChosen => {
-            GraphNodeKind::Expression
-        }
+        TraceEventKind::AliasExpanded
+        | TraceEventKind::Normalization
+        | TraceEventKind::BranchChosen => GraphNodeKind::Expression,
         _ => GraphNodeKind::Goal,
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use typelude_tooling_core::{CandidateId, EventId, GoalId, Trace, TraceEvent, TraceEventKind, TraceId};
+    use typelude_tooling_core::{
+        CandidateId, EventId, GoalId, SubjectId, SubjectKind, Trace, TraceEvent, TraceEventKind,
+        TraceId,
+    };
 
     use super::TraceGraphBuilder;
 
@@ -328,47 +420,65 @@ mod tests {
     #[test]
     fn builds_nested_goal_graph() {
         let mut trace = Trace::new(TraceId::new(1));
-        let mut outer = make_event(1, TraceEventKind::GoalEntered, "outer");
+        let mut outer_subject = make_event(1, TraceEventKind::SubjectDiscovered, "predicate");
+        outer_subject.subject_id = Some(SubjectId::new(1));
+        outer_subject.subject_kind = Some(SubjectKind::Predicate);
+        let mut outer = make_event(2, TraceEventKind::GoalEntered, "outer");
         outer.goal_id = Some(GoalId::new(1));
-        let mut inner = make_event(2, TraceEventKind::GoalEntered, "inner");
+        outer.subject_id = Some(SubjectId::new(1));
+        let mut inner = make_event(3, TraceEventKind::GoalEntered, "inner");
         inner.goal_id = Some(GoalId::new(2));
         inner.parent_goal_id = Some(GoalId::new(1));
+        inner.subject_id = Some(SubjectId::new(1));
+        trace.push(outer_subject);
         trace.push(outer);
         trace.push(inner);
 
         let graph = TraceGraphBuilder::new().build(&trace);
-        assert_eq!(graph.nodes.len(), 2);
-        assert_eq!(graph.edges.len(), 1);
-        assert_eq!(graph.edges[0].label, "nested");
+        assert_eq!(graph.nodes.len(), 3);
+        assert_eq!(graph.edges.len(), 2);
+        assert!(graph.edges.iter().any(|edge| edge.label == "goal"));
+        assert!(graph.edges.iter().any(|edge| edge.label == "nested"));
     }
 
     #[test]
     fn candidate_nodes_are_wired_to_parent() {
         let mut trace = Trace::new(TraceId::new(1));
-        let mut goal = make_event(1, TraceEventKind::GoalEntered, "goal");
+        let mut subject = make_event(1, TraceEventKind::SubjectDiscovered, "predicate");
+        subject.subject_id = Some(SubjectId::new(1));
+        subject.subject_kind = Some(SubjectKind::Predicate);
+        let mut goal = make_event(2, TraceEventKind::GoalEntered, "goal");
         goal.goal_id = Some(GoalId::new(1));
-        let mut candidate = make_event(2, TraceEventKind::CandidateDiscovered, "impl A");
+        goal.subject_id = Some(SubjectId::new(1));
+        let mut candidate = make_event(3, TraceEventKind::CandidateDiscovered, "impl A");
         candidate.goal_id = Some(GoalId::new(1));
         candidate.candidate_id = Some(CandidateId::new(1));
+        candidate.subject_id = Some(SubjectId::new(1));
+        trace.push(subject);
         trace.push(goal);
         trace.push(candidate);
 
         let graph = TraceGraphBuilder::new().build(&trace);
-        assert_eq!(graph.nodes.len(), 2);
-        assert_eq!(graph.edges.len(), 1);
-        assert_eq!(graph.edges[0].label, "candidate");
+        assert_eq!(graph.nodes.len(), 3);
+        assert_eq!(graph.edges.len(), 2);
+        assert!(graph.edges.iter().any(|edge| edge.label == "candidate"));
     }
 
     #[test]
     fn to_mermaid_renders_valid_structure() {
         let mut trace = Trace::new(TraceId::new(1));
-        let mut event = make_event(1, TraceEventKind::GoalEntered, "EIf");
+        let mut subject = make_event(1, TraceEventKind::SubjectDiscovered, "predicate");
+        subject.subject_id = Some(SubjectId::new(1));
+        subject.subject_kind = Some(SubjectKind::Predicate);
+        let mut event = make_event(2, TraceEventKind::GoalEntered, "EIf");
         event.goal_id = Some(GoalId::new(1));
+        event.subject_id = Some(SubjectId::new(1));
+        trace.push(subject);
         trace.push(event);
 
         let graph = TraceGraphBuilder::new().build(&trace);
         let mermaid = TraceGraphBuilder::new().to_mermaid(&graph);
         assert!(mermaid.starts_with("flowchart TD\n"));
-        assert!(mermaid.contains("n1"));
+        assert!(mermaid.contains("n1000000001"));
     }
 }

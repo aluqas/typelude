@@ -9,15 +9,16 @@ use std::{
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 use typelude_tooling_core::{
-    HookId, RenderMode, ToolingError, ToolingResult, Trace, TraceEventKind, TraceId,
+    GoalTree, HookId, RenderMode, SolveSummary, ToolingError, ToolingResult, Trace,
+    TraceEventKind, TraceId,
 };
 use typelude_tooling_rustc::{
     MirArtifactCollector, MirArtifactConfig, RustcDiagnosticsCollector, RustcDiagnosticsConfig,
     SelfProfileCollector, SelfProfileConfig, TimePassesCollector, TypeSizesCollector,
 };
 use typelude_tooling_typelude::{
-    GraphAnalysis, TraceGraphBuilder, TypeExpr, TypeludeDiagnosticEnricher, TypeludeMetricEnricher,
-    TypeludeRenderer,
+    GraphAnalysis, TraceGraphBuilder, TypeExpr, TypeludeDiagnosticEnricher,
+    TypeludeMetricEnricher, TypeludeRenderer,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -82,8 +83,24 @@ pub enum Commands {
         toolchain: String,
         #[arg(long, value_enum)]
         hook: Vec<HookArg>,
+        #[arg(long)]
+        subject_filter: Option<String>,
+        #[arg(long, default_value_t = true)]
+        rebuild_driver: bool,
     },
     Trace {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
+        output: OutputModeArg,
+    },
+    SolveTree {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long, value_enum, default_value_t = OutputModeArg::Json)]
+        output: OutputModeArg,
+    },
+    SolveSummary {
         #[arg(long)]
         input: PathBuf,
         #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
@@ -156,11 +173,30 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
             manifest_path,
             toolchain,
             hook,
-        } => run_collect(output, &cargo_subcommand, package, manifest_path, &toolchain, &hook),
+            subject_filter,
+            rebuild_driver,
+        } => run_collect(
+            output,
+            &cargo_subcommand,
+            package,
+            manifest_path,
+            &toolchain,
+            &hook,
+            subject_filter,
+            rebuild_driver,
+        ),
         Commands::Trace {
             input,
             output,
         } => run_trace(input, output),
+        Commands::SolveTree {
+            input,
+            output,
+        } => run_solve_tree(input, output),
+        Commands::SolveSummary {
+            input,
+            output,
+        } => run_solve_summary(input, output),
         Commands::Diag {
             input,
             trace_input,
@@ -177,7 +213,9 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
             self_profile_root,
             mir_root,
             output,
-        } => run_profile(trace_input, time_passes, type_sizes, self_profile_root, mir_root, output),
+        } => {
+            run_profile(trace_input, time_passes, type_sizes, self_profile_root, mir_root, output)
+        },
         Commands::Doctor {
             output,
         } => run_doctor(output),
@@ -205,8 +243,10 @@ fn run_collect(
     manifest_path: Option<PathBuf>,
     toolchain: &str,
     hooks: &[HookArg],
+    subject_filter: Option<String>,
+    rebuild_driver: bool,
 ) -> ToolingResult<String> {
-    let driver_path = ensure_driver(toolchain)?;
+    let driver_path = ensure_driver(toolchain, rebuild_driver)?;
     let mut command = Command::new("cargo");
     command.arg(format!("+{toolchain}")).arg(cargo_subcommand).arg("--quiet");
     if let Some(package) = package {
@@ -217,6 +257,9 @@ fn run_collect(
     }
     command.env("RUSTC_WRAPPER", driver_path);
     command.env("TYPELUDE_TOOLING_SUMMARY_ONLY", "0");
+    if let Some(subject_filter) = &subject_filter {
+        command.env("TYPELUDE_TOOLING_SUBJECT_FILTER", subject_filter);
+    }
     if !hooks.is_empty() {
         let enabled = hooks.iter().map(|hook| hook.as_env()).collect::<Vec<_>>().join(",");
         command.env("TYPELUDE_TOOLING_HOOKS", enabled);
@@ -230,8 +273,10 @@ fn run_collect(
         )));
     }
 
+    let stdout = String::from_utf8_lossy(&result.stdout);
     let stderr = String::from_utf8_lossy(&result.stderr);
-    let trace = Trace::from_json_lines(TraceId::new(1), &stderr)?;
+    let combined = format!("{stdout}\n{stderr}");
+    let trace = Trace::from_json_lines(TraceId::new(1), &combined)?;
     if trace.events.is_empty() {
         return Err(ToolingError::Parse(String::from(
             "no trace events were collected from rustc_private output",
@@ -245,10 +290,11 @@ fn run_collect(
         hooks.iter().map(|hook| format!("{:?}", hook.hook_id())).collect::<Vec<_>>().join(", ")
     };
     Ok(format!(
-        "collected {} events into {} using hooks: {}",
+        "collected {} events into {} using hooks: {} subject_filter={}",
         trace.events.len(),
         output.display(),
-        hooks_text
+        hooks_text,
+        subject_filter.unwrap_or_else(|| String::from("<none>"))
     ))
 }
 
@@ -257,6 +303,25 @@ fn run_trace(input: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
     match output {
         OutputModeArg::Text => Ok(render_trace_text(&trace)),
         OutputModeArg::Json => Ok(serde_json::to_string_pretty(&trace)?),
+    }
+}
+
+fn run_solve_tree(input: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
+    let trace = read_trace(&input)?;
+    let tree = GoalTree::from_trace(&trace)?;
+    match output {
+        OutputModeArg::Text => Ok(render_solve_tree_text(&tree)),
+        OutputModeArg::Json => Ok(serde_json::to_string_pretty(&tree)?),
+    }
+}
+
+fn run_solve_summary(input: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
+    let trace = read_trace(&input)?;
+    let tree = GoalTree::from_trace(&trace)?;
+    let summary: SolveSummary = tree.summarize(&trace);
+    match output {
+        OutputModeArg::Text => Ok(GoalTree::render_summary_text(&summary)),
+        OutputModeArg::Json => Ok(serde_json::to_string_pretty(&summary)?),
     }
 }
 
@@ -280,10 +345,9 @@ fn run_diag(
             .count();
         if diagnostic_count > 0 {
             for diagnostic in &mut diagnostics {
-                diagnostic.metadata.insert(
-                    String::from("trace_diagnostics"),
-                    diagnostic_count.to_string(),
-                );
+                diagnostic
+                    .metadata
+                    .insert(String::from("trace_diagnostics"), diagnostic_count.to_string());
             }
         }
     }
@@ -401,7 +465,11 @@ fn run_analyze(
             if !critical.is_empty() {
                 lines.push(format!(
                     "critical_path={}",
-                    critical.iter().map(|id| id.value().to_string()).collect::<Vec<_>>().join(" -> ")
+                    critical
+                        .iter()
+                        .map(|id| id.value().to_string())
+                        .collect::<Vec<_>>()
+                        .join(" -> ")
                 ));
             }
             if !hot.is_empty() {
@@ -414,7 +482,7 @@ fn run_analyze(
                 ));
             }
             Ok(lines.join("\n"))
-        }
+        },
         OutputModeArg::Json => Ok(serde_json::to_string_pretty(&AnalyzeOutput {
             node_count: summary.node_count,
             edge_count: summary.edge_count,
@@ -451,6 +519,8 @@ fn run_doctor(output: OutputModeArg) -> ToolingResult<String> {
         supported_flags: vec![
             String::from("collect"),
             String::from("trace"),
+            String::from("solve-tree"),
+            String::from("solve-summary"),
             String::from("graph"),
             String::from("analyze"),
             String::from("-Z dump-mir=all"),
@@ -472,21 +542,22 @@ fn run_doctor(output: OutputModeArg) -> ToolingResult<String> {
     }
 }
 
-fn build_graph(input: Option<&Path>, expr: Option<&str>) -> ToolingResult<typelude_tooling_core::Graph> {
+fn build_graph(
+    input: Option<&Path>,
+    expr: Option<&str>,
+) -> ToolingResult<typelude_tooling_core::Graph> {
     match (input, expr) {
         (Some(path), None) => {
             let trace = read_trace(path)?;
             Ok(TraceGraphBuilder::new().build(&trace))
-        }
+        },
         (None, Some(expr)) => {
             let type_expr = TypeExpr::parse(expr).ok_or_else(|| {
                 ToolingError::Parse(String::from("could not parse type expression"))
             })?;
             Ok(type_expr.lift().to_graph())
-        }
-        _ => Err(ToolingError::Parse(String::from(
-            "provide exactly one of --input or --expr",
-        ))),
+        },
+        _ => Err(ToolingError::Parse(String::from("provide exactly one of --input or --expr"))),
     }
 }
 
@@ -507,8 +578,11 @@ fn render_trace_text(trace: &Trace) -> String {
             if let Some(candidate_id) = event.candidate_id {
                 prefix.push_str(&format!(" cand={}", candidate_id.value()));
             }
-            if let Some(item_id) = event.item_id {
-                prefix.push_str(&format!(" item={}", item_id.value()));
+            if let Some(subject_id) = event.subject_id {
+                prefix.push_str(&format!(" subject={}", subject_id.value()));
+            }
+            if let Some(parent_subject_id) = event.parent_subject_id {
+                prefix.push_str(&format!(" parent_subject={}", parent_subject_id.value()));
             }
             if let Some(parent_goal_id) = event.parent_goal_id {
                 prefix.push_str(&format!(" parent={}", parent_goal_id.value()));
@@ -521,6 +595,45 @@ fn render_trace_text(trace: &Trace) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn render_solve_tree_text(tree: &GoalTree) -> String {
+    let mut lines = Vec::new();
+    lines.push(format!("trace_id={}", tree.trace_id.value()));
+    for subject in &tree.subjects {
+        lines.push(format!(
+            "subject #{} {:?} :: {}",
+            subject.id.value(),
+            subject.kind,
+            subject.label
+        ));
+        for root in &subject.roots {
+            render_goal(root, 1, &mut lines);
+        }
+    }
+    lines.join("\n")
+}
+
+fn render_goal(goal: &typelude_tooling_core::GoalTreeGoal, depth: usize, lines: &mut Vec<String>) {
+    let indent = "  ".repeat(depth);
+    lines.push(format!(
+        "{indent}goal #{} result={} depth={} :: {}",
+        goal.id.value(),
+        goal.result,
+        goal.depth,
+        goal.predicate
+    ));
+    for candidate in &goal.candidates {
+        lines.push(format!(
+            "{indent}  candidate #{} kind={} result={}",
+            candidate.id.value(),
+            candidate.kind,
+            candidate.result
+        ));
+    }
+    for child in &goal.children {
+        render_goal(child, depth + 1, lines);
+    }
 }
 
 fn render_diagnostics_text(
@@ -561,26 +674,18 @@ fn render_profile_text(
     lines.join("\n")
 }
 
-fn ensure_driver(toolchain: &str) -> ToolingResult<PathBuf> {
+fn ensure_driver(toolchain: &str, rebuild: bool) -> ToolingResult<PathBuf> {
     let path = driver_path();
-    if path.exists() {
+    if path.exists() && !rebuild {
         return Ok(path);
     }
 
     let status = Command::new("cargo")
         .arg(format!("+{toolchain}"))
-        .args([
-            "build",
-            "-p",
-            "typelude-tooling-rustc-private",
-            "--bin",
-            "typelude-rustc-driver",
-        ])
+        .args(["build", "-p", "typelude-tooling-rustc-private", "--bin", "typelude-rustc-driver"])
         .status()?;
     if !status.success() {
-        return Err(ToolingError::Command(String::from(
-            "failed to build typelude-rustc-driver",
-        )));
+        return Err(ToolingError::Command(String::from("failed to build typelude-rustc-driver")));
     }
     Ok(driver_path())
 }
@@ -590,9 +695,7 @@ fn driver_path() -> PathBuf {
     let target_dir = std::env::var_os("CARGO_TARGET_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| workspace_root.join("target"));
-    target_dir
-        .join("debug")
-        .join(format!("typelude-rustc-driver{}", std::env::consts::EXE_SUFFIX))
+    target_dir.join("debug").join(format!("typelude-rustc-driver{}", std::env::consts::EXE_SUFFIX))
 }
 
 fn workspace_root() -> PathBuf {
@@ -658,12 +761,16 @@ struct AnalyzeOutput {
 
 #[cfg(test)]
 mod tests {
-    use clap::Parser;
     use std::{
         fs,
         time::{SystemTime, UNIX_EPOCH},
     };
-    use typelude_tooling_core::{EventId, GoalId, Trace, TraceEvent, TraceEventKind, TraceId};
+
+    use clap::Parser;
+    use typelude_tooling_core::{
+        CandidateId, EventId, GoalId, SubjectId, SubjectKind, Trace, TraceEvent, TraceEventKind,
+        TraceId,
+    };
 
     use super::{Cli, OutputModeArg, run};
 
@@ -675,9 +782,56 @@ mod tests {
 
     fn write_trace_fixture(path: &std::path::Path) {
         let mut trace = Trace::new(TraceId::new(1));
-        let mut event = TraceEvent::new(EventId::new(1), TraceEventKind::GoalEntered, "EIf");
-        event.goal_id = Some(GoalId::new(1));
-        trace.push(event);
+        let mut subject =
+            TraceEvent::new(EventId::new(1), TraceEventKind::SubjectDiscovered, "RunWriter");
+        subject.subject_id = Some(SubjectId::new(1));
+        subject.subject_kind = Some(SubjectKind::Predicate);
+        subject.metadata.insert(
+            String::from("owner_path"),
+            String::from("typelude_vm::core::writer_t::RunWriter"),
+        );
+        trace.push(subject);
+
+        let mut goal =
+            TraceEvent::new(EventId::new(2), TraceEventKind::GoalEntered, "<T as Eval>");
+        goal.subject_id = Some(SubjectId::new(1));
+        goal.subject_kind = Some(SubjectKind::Predicate);
+        goal.goal_id = Some(GoalId::new(1));
+        trace.push(goal);
+
+        let mut candidate =
+            TraceEvent::new(EventId::new(3), TraceEventKind::CandidateResult, "ImplCandidate");
+        candidate.subject_id = Some(SubjectId::new(1));
+        candidate.subject_kind = Some(SubjectKind::Predicate);
+        candidate.goal_id = Some(GoalId::new(1));
+        candidate.candidate_id = Some(CandidateId::new(1));
+        candidate.detail = Some(String::from("Ok(())"));
+        trace.push(candidate);
+
+        let mut nested =
+            TraceEvent::new(EventId::new(4), TraceEventKind::GoalEntered, "<U as Eval>");
+        nested.subject_id = Some(SubjectId::new(1));
+        nested.subject_kind = Some(SubjectKind::Predicate);
+        nested.goal_id = Some(GoalId::new(2));
+        nested.parent_goal_id = Some(GoalId::new(1));
+        trace.push(nested);
+
+        let mut nested_exit =
+            TraceEvent::new(EventId::new(5), TraceEventKind::GoalExited, "<U as Eval>");
+        nested_exit.subject_id = Some(SubjectId::new(1));
+        nested_exit.subject_kind = Some(SubjectKind::Predicate);
+        nested_exit.goal_id = Some(GoalId::new(2));
+        nested_exit.parent_goal_id = Some(GoalId::new(1));
+        nested_exit.detail = Some(String::from("NoSolution"));
+        trace.push(nested_exit);
+
+        let mut goal_exit =
+            TraceEvent::new(EventId::new(6), TraceEventKind::GoalExited, "<T as Eval>");
+        goal_exit.subject_id = Some(SubjectId::new(1));
+        goal_exit.subject_kind = Some(SubjectKind::Predicate);
+        goal_exit.goal_id = Some(GoalId::new(1));
+        goal_exit.detail = Some(String::from("Ok(())"));
+        trace.push(goal_exit);
         fs::write(path, trace.to_json_lines().expect("trace fixture should render"))
             .expect("trace fixture should be written");
     }
@@ -696,6 +850,42 @@ mod tests {
         ]);
         let output = run(cli).expect("trace command should run");
         assert!(output.contains("GoalEntered"));
+        fs::remove_file(input).expect("trace fixture should be removed");
+    }
+
+    #[test]
+    fn renders_solve_tree_output() {
+        let input = unique_path("typelude-solve-tree");
+        write_trace_fixture(&input);
+        let cli = Cli::parse_from([
+            "typelude-tooling-cli",
+            "solve-tree",
+            "--input",
+            input.to_str().expect("path should be valid utf-8"),
+            "--output",
+            "text",
+        ]);
+        let output = run(cli).expect("solve-tree command should run");
+        assert!(output.contains("subject #1"));
+        assert!(output.contains("candidate #1"));
+        fs::remove_file(input).expect("trace fixture should be removed");
+    }
+
+    #[test]
+    fn renders_solve_summary_output() {
+        let input = unique_path("typelude-solve-summary");
+        write_trace_fixture(&input);
+        let cli = Cli::parse_from([
+            "typelude-tooling-cli",
+            "solve-summary",
+            "--input",
+            input.to_str().expect("path should be valid utf-8"),
+            "--output",
+            "text",
+        ]);
+        let output = run(cli).expect("solve-summary command should run");
+        assert!(output.contains("subjects=1"));
+        assert!(output.contains("result.no_solution=1"));
         fs::remove_file(input).expect("trace fixture should be removed");
     }
 
@@ -747,7 +937,7 @@ mod tests {
             "text",
         ]);
         let output = run(cli).expect("profile command should run");
-        assert!(output.contains("semantic_step_count=1"));
+        assert!(output.contains("semantic_step_count=6"));
         fs::remove_file(trace_input).expect("trace fixture should be removed");
     }
 

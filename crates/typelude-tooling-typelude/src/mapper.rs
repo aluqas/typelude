@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use serde::Serialize;
-use typelude_tooling_core::{EventId, NodeId, Trace};
+use typelude_tooling_core::{EventId, NodeId, SubjectKind, Trace, TraceEventKind};
 
 use crate::naming::compress_symbol_name;
 
@@ -42,6 +42,15 @@ impl SemanticMapper {
         trace
             .events
             .iter()
+            .filter(|event| match event.kind {
+                TraceEventKind::RunStarted
+                | TraceEventKind::RunFinished
+                | TraceEventKind::Info => false,
+                TraceEventKind::SubjectDiscovered => {
+                    matches!(event.subject_kind, Some(SubjectKind::Predicate))
+                },
+                _ => true,
+            })
             .enumerate()
             .map(|(index, event)| SemanticNode {
                 id: NodeId::new(index as u64 + 1),
@@ -80,21 +89,31 @@ fn classify_semantic_kind(label: &str) -> SemanticNodeKind {
 
 #[cfg(test)]
 mod tests {
-    use typelude_tooling_core::{EventId, Trace, TraceEvent, TraceEventKind, TraceId};
+    use typelude_tooling_core::{
+        EventId, SubjectId, SubjectKind, Trace, TraceEvent, TraceEventKind, TraceId,
+    };
 
     use super::{SemanticMapper, SemanticNodeKind};
 
     #[test]
     fn maps_key_typelude_nodes() {
         let mut trace = Trace::new(TraceId::new(1));
-        for (id, title) in [(1, "EIf"), (2, "EWhile"), (3, "EGet"), (4, "EMap")] {
-            trace.push(TraceEvent::new(EventId::new(id), TraceEventKind::GoalEntered, title));
+        let mut subject =
+            TraceEvent::new(EventId::new(1), TraceEventKind::SubjectDiscovered, "Pred");
+        subject.subject_id = Some(SubjectId::new(1));
+        subject.subject_kind = Some(SubjectKind::Predicate);
+        trace.push(subject);
+        for (id, title) in [(2, "EIf"), (3, "EWhile"), (4, "EGet"), (5, "EMap")] {
+            let mut event = TraceEvent::new(EventId::new(id), TraceEventKind::GoalEntered, title);
+            event.subject_id = Some(SubjectId::new(1));
+            event.subject_kind = Some(SubjectKind::Predicate);
+            trace.push(event);
         }
 
         let nodes = SemanticMapper::new().map_trace(&trace);
-        assert_eq!(nodes[0].kind, SemanticNodeKind::If);
-        assert_eq!(nodes[1].kind, SemanticNodeKind::While);
-        assert_eq!(nodes[2].kind, SemanticNodeKind::Get);
-        assert_eq!(nodes[3].kind, SemanticNodeKind::Map);
+        assert_eq!(nodes[1].kind, SemanticNodeKind::If);
+        assert_eq!(nodes[2].kind, SemanticNodeKind::While);
+        assert_eq!(nodes[3].kind, SemanticNodeKind::Get);
+        assert_eq!(nodes[4].kind, SemanticNodeKind::Map);
     }
 }

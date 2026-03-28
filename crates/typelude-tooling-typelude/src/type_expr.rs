@@ -109,10 +109,7 @@ fn parse_expr(input: &str) -> TypeExpr {
         // Has angle brackets — generic
         let lt = input.find('<').unwrap();
         let name = input[..lt].trim().to_owned();
-        let args = split_top_level(inner)
-            .into_iter()
-            .map(|a| parse_expr(a.trim()))
-            .collect();
+        let args = split_top_level(inner).into_iter().map(|a| parse_expr(a.trim())).collect();
         TypeExpr::Generic {
             name,
             args,
@@ -214,9 +211,7 @@ fn lift_to_semantic(expr: &TypeExpr) -> SemanticExpr {
                 init: Box::new(lift_to_semantic(&args[1])),
                 list: Box::new(lift_to_semantic(&args[2])),
             },
-            "ELit" if args.len() == 1 => {
-                SemanticExpr::Lit(Box::new(lift_to_semantic(&args[0])))
-            },
+            "ELit" if args.len() == 1 => SemanticExpr::Lit(Box::new(lift_to_semantic(&args[0]))),
             "Array" if args.len() == 2 => SemanticExpr::Array {
                 head: Box::new(lift_to_semantic(&args[0])),
                 tail: Box::new(lift_to_semantic(&args[1])),
@@ -234,11 +229,7 @@ fn format_generic(name: &str, args: &[TypeExpr]) -> String {
     if args.is_empty() {
         return name.to_owned();
     }
-    let inner = args
-        .iter()
-        .map(format_type_expr)
-        .collect::<Vec<_>>()
-        .join(", ");
+    let inner = args.iter().map(format_type_expr).collect::<Vec<_>>().join(", ");
     format!("{name}<{inner}>")
 }
 

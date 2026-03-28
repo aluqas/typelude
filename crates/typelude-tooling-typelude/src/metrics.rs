@@ -40,11 +40,8 @@ impl TypeludeMetricEnricher {
         let re_eval_count = repeated_titles(trace) as f64;
 
         // ② branch counts
-        let branch_total = trace
-            .events
-            .iter()
-            .filter(|e| e.kind == TraceEventKind::BranchChosen)
-            .count() as f64;
+        let branch_total =
+            trace.events.iter().filter(|e| e.kind == TraceEventKind::BranchChosen).count() as f64;
         let true_branches = trace
             .events
             .iter()
@@ -57,18 +54,16 @@ impl TypeludeMetricEnricher {
         let false_branches = branch_total - true_branches;
 
         // ③ cache hit rate
-        let cache_hits = trace
-            .events
-            .iter()
-            .filter(|e| e.kind == TraceEventKind::CacheHit)
-            .count() as f64;
-        let cache_misses = trace
-            .events
-            .iter()
-            .filter(|e| e.kind == TraceEventKind::CacheMiss)
-            .count() as f64;
+        let cache_hits =
+            trace.events.iter().filter(|e| e.kind == TraceEventKind::CacheHit).count() as f64;
+        let cache_misses =
+            trace.events.iter().filter(|e| e.kind == TraceEventKind::CacheMiss).count() as f64;
         let total_cache = cache_hits + cache_misses;
-        let cache_hit_rate = if total_cache > 0.0 { cache_hits / total_cache } else { 0.0 };
+        let cache_hit_rate = if total_cache > 0.0 {
+            cache_hits / total_cache
+        } else {
+            0.0
+        };
 
         vec![
             MetricRecord::new(MetricKind::StepCount, "semantic_step_count", step_count),
@@ -79,17 +74,20 @@ impl TypeludeMetricEnricher {
             MetricRecord::new(MetricKind::BranchCount, "branch_true", true_branches),
             MetricRecord::new(MetricKind::BranchCount, "branch_false", false_branches),
             {
-                let mut m = MetricRecord::new(MetricKind::StepCount, "cache_hit_count", cache_hits);
+                let mut m =
+                    MetricRecord::new(MetricKind::StepCount, "cache_hit_count", cache_hits);
                 m.unit = Some(String::from("hits"));
                 m
             },
             {
-                let mut m = MetricRecord::new(MetricKind::StepCount, "cache_miss_count", cache_misses);
+                let mut m =
+                    MetricRecord::new(MetricKind::StepCount, "cache_miss_count", cache_misses);
                 m.unit = Some(String::from("misses"));
                 m
             },
             {
-                let mut m = MetricRecord::new(MetricKind::StepCount, "cache_hit_rate", cache_hit_rate);
+                let mut m =
+                    MetricRecord::new(MetricKind::StepCount, "cache_hit_rate", cache_hit_rate);
                 m.unit = Some(String::from("ratio"));
                 m
             },
@@ -112,7 +110,11 @@ impl TypeludeMetricEnricher {
         kind_counts
             .into_iter()
             .map(|(kind, count)| {
-                MetricRecord::new(MetricKind::StepCount, format!("node.{kind}.count"), count as f64)
+                MetricRecord::new(
+                    MetricKind::StepCount,
+                    format!("node.{kind}.count"),
+                    count as f64,
+                )
             })
             .collect()
     }

@@ -40,12 +40,7 @@ impl<'a> GraphAnalysis<'a> {
     pub fn roots(&self) -> Vec<NodeId> {
         let targets: std::collections::BTreeSet<NodeId> =
             self.graph.edges.iter().map(|e| e.to).collect();
-        self.graph
-            .nodes
-            .iter()
-            .filter(|n| !targets.contains(&n.id))
-            .map(|n| n.id)
-            .collect()
+        self.graph.nodes.iter().filter(|n| !targets.contains(&n.id)).map(|n| n.id).collect()
     }
 
     /// Longest path (in edges) from any root to any leaf.
@@ -157,12 +152,7 @@ impl<'a> GraphAnalysis<'a> {
         depth
     }
 
-    fn longest_path_from(
-        &self,
-        id: NodeId,
-        best: &mut Vec<NodeId>,
-        current: &mut Vec<NodeId>,
-    ) {
+    fn longest_path_from(&self, id: NodeId, best: &mut Vec<NodeId>, current: &mut Vec<NodeId>) {
         if current.contains(&id) {
             // cycle — stop
             return;
@@ -235,7 +225,7 @@ mod tests {
         let analysis = GraphAnalysis::new(&graph);
         let roots = analysis.roots();
         assert_eq!(roots.len(), 1);
-        assert_eq!(roots[0].value(), 1);
+        assert_eq!(roots[0], graph.nodes[0].id);
     }
 
     #[test]
@@ -262,7 +252,7 @@ mod tests {
         let analysis = GraphAnalysis::new(&graph);
         let hot = analysis.hot_nodes(1);
         assert_eq!(hot.len(), 1);
-        assert_eq!(hot[0].0.value(), 1);
+        assert_eq!(hot[0].0, graph.nodes[0].id);
         assert_eq!(hot[0].1, 1);
     }
 

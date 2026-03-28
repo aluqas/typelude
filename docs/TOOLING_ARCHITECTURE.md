@@ -6,7 +6,7 @@ typelude 向けの debug / diagnostics / profiling / graph tooling を、共通�
 
 単発ツールを個別に作るのではなく、次の4層で積み上げる。
 
-1. `collectors`
+1. `analysis frontends`
 2. `core model`
 3. `typelude adapter`
 4. `products`
@@ -16,7 +16,7 @@ typelude 向けの debug / diagnostics / profiling / graph tooling を、共通�
 ```text
 rustc_private / rustc artifacts
         ↓
-    collectors
+analysis frontends
         ↓
     core model
         ↓
@@ -27,23 +27,28 @@ rustc_private / rustc artifacts
 
 狙い:
 
-- 先に `rustc_private` collector を本線として固定する
+- 先に `rustc_private` analysis engine を本線として固定する
 - `RUSTC_LOG` は互換 backend に落とす
 - typelude-specific な処理を低レベル収集から分離する
 
-## 2. Collectors
+## 2. Analysis Frontends
 
-collector は「取るだけ」に徹する。
-この層では typelude の意味論をできるだけ持ち込まない。
+frontend は compiler session の上で task を実行する。
+この層では typelude の意味論をできるだけ持ち込まず、
+`subject` と raw event を吐くことに徹する。
 
 候補:
 
-- `rustc_private` proof-tree collector
-- diagnostics JSON collector
-- MIR collector
-- self-profile collector
-- source collector
-- legacy `RUSTC_LOG` collector
+- `rustc_private` analysis engine
+  - `session`
+  - `subject`
+  - `task`
+  - `emit`
+  - `frontends`
+- diagnostics JSON parser
+- MIR parser
+- self-profile parser
+- legacy `RUSTC_LOG` compatibility frontend
 
 入力源:
 
@@ -54,12 +59,12 @@ collector は「取るだけ」に徹する。
 - `rustc_trait_selection::solve::inspect`
 - source code / spans
 
-責務:
+`rustc_private` 本線の責務:
 
-- raw 出力を読む
-- source span や target 名を拾う
-- 最小限の parse をする
-- core model に流し込める形へ変換する
+- compiler session を立ち上げる
+- `ResolvedSubject` を解決する
+- `AnalysisTask` を実行する
+- core event schema に直接出力する
 
 ## 3. Core Model
 
@@ -135,15 +140,28 @@ product や typelude adapter は collector に直接依存しない。
 - `cache_hit_rate`
 - `wall_time`
 
-### 3.5 shared ids
+### 3.5 shared ids / subjects
 
 最初に安定化したい要素:
 
 - `TraceId`
 - `NodeId`
+- `SubjectId`
 - `GoalId`
 - `SpanId`
 - `TypeId`
+
+`item` を主軸にはせず、`subject` を分析対象の単位にする。
+
+候補:
+
+- `Item`
+- `Impl`
+- `AssocItem`
+- `Predicate`
+- `Goal`
+- `Diagnostic`
+- `Legacy`
 
 ## 4. Typelude Adapter
 
@@ -214,7 +232,7 @@ product や typelude adapter は collector に直接依存しない。
 
 1. `diagnostic IR` + typelude-aware diagnostics
 2. pretty / render
-3. `rustc_private` collector を core event schema に揃える
+3. `rustc_private` analysis engine を core event schema に揃える
 4. `semantic mapper`
 5. CLI collect/trace
 6. `metric enricher`
@@ -226,7 +244,7 @@ product や typelude adapter は collector に直接依存しない。
 この順の利点:
 
 - 最初に UX が改善する
-- `RUSTC_LOG` を暫定 backend にできる
+- `RUSTC_LOG` を互換 backend にできる
 - 後から `solve::inspect` に差し替えても上位層を壊しにくい
 
 ## 7. crate 分割案
@@ -252,7 +270,10 @@ nightly / unstable 依存を隔離したい場合:
   - `rustc_driver`
   - `rustc_interface`
   - `solve::inspect`
-  - hook registry
+  - `AnalysisSession`
+  - `ResolvedSubject`
+  - `AnalysisTask`
+  - collect frontend
   - raw event emission
 
 ## 8. 境界の切り方

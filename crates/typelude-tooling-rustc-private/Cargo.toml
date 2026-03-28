@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 description = "rustc_private driver for typelude — captures trait resolution proof trees directly"
 
-# This is a rustc driver binary, not a library.
 [[bin]]
 name = "typelude-rustc-driver"
 path = "src/main.rs"
