@@ -34,7 +34,7 @@ pub enum QueryMatchKind {
 
 impl QueryMatchKind {
     pub fn from_env(value: Option<&str>) -> Self {
-        match value.unwrap_or("suffix") {
+        match value.unwrap_or("exact") {
             "substring" => Self::Substring,
             "exact" => Self::Exact,
             "def_id" => Self::DefId,

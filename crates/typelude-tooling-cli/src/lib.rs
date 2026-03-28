@@ -164,7 +164,7 @@ pub enum Commands {
     SolveOwner {
         #[arg(long)]
         owner: String,
-        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Suffix)]
+        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Exact)]
         owner_match: OwnerMatchArg,
         #[arg(long)]
         package: Option<String>,
@@ -200,7 +200,7 @@ pub enum Commands {
     SolveImpl {
         #[arg(long)]
         owner: String,
-        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Suffix)]
+        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Exact)]
         owner_match: OwnerMatchArg,
         #[arg(long)]
         package: Option<String>,
@@ -236,7 +236,7 @@ pub enum Commands {
     SolveAssocItem {
         #[arg(long)]
         owner: String,
-        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Suffix)]
+        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Exact)]
         owner_match: OwnerMatchArg,
         #[arg(long)]
         package: Option<String>,
