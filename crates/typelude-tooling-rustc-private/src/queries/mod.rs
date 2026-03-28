@@ -1,11 +1,11 @@
 mod explicit_predicate;
 mod owner;
 
-use crate::{error::AnalysisResult, session::AnalysisSession};
-
 pub(crate) use explicit_predicate::run_owner_predicates;
 pub use explicit_predicate::{SolveExplicitPredicateQuery, solve_explicit_predicate};
 pub use owner::{QueryTargetKind, ResolveOwnerQuery};
+
+use crate::{error::AnalysisResult, session::AnalysisSession};
 
 pub struct QueryContext<'a, 's, 'tcx> {
     session: &'a mut AnalysisSession<'s, 'tcx>,

@@ -1,7 +1,8 @@
+use typelude_tooling_core::HookId;
+
 use crate::{
     error::AnalysisResult, hooks::Hook, session::AnalysisSession, subjects::ResolvedSubject,
 };
-use typelude_tooling_core::HookId;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ItemStructureHook;

@@ -99,21 +99,15 @@ fn while_lowering_matches_runtime_trace_and_result() {
         <<WhileOut as OutcomeState>::Output as StateStack>::Output,
         <<LoweredOut as OutcomeState>::Output as StateStack>::Output
     );
-    assert_type_eq_all!(
-        <WhileOut as OutcomeSourceTrace>::Output,
-        tyarray![
-            SourceTraceEvent<OpWhile<Cond, Body>>,
-            SourceTraceEvent<OpPush<ELit<False>>>,
-            SourceTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
-            SourceTraceEvent<OpPush<ELit<U2>>>
-        ]
-    );
-    assert_type_eq_all!(
-        <WhileOut as OutcomeCoreTrace>::Output,
-        tyarray![
-            CoreTraceEvent<OpPush<ELit<False>>>,
-            CoreTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
-            CoreTraceEvent<OpPush<ELit<U2>>>
-        ]
-    );
+    assert_type_eq_all!(<WhileOut as OutcomeSourceTrace>::Output, tyarray![
+        SourceTraceEvent<OpWhile<Cond, Body>>,
+        SourceTraceEvent<OpPush<ELit<False>>>,
+        SourceTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
+        SourceTraceEvent<OpPush<ELit<U2>>>
+    ]);
+    assert_type_eq_all!(<WhileOut as OutcomeCoreTrace>::Output, tyarray![
+        CoreTraceEvent<OpPush<ELit<False>>>,
+        CoreTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
+        CoreTraceEvent<OpPush<ELit<U2>>>
+    ]);
 }

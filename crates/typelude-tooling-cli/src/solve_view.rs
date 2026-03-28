@@ -926,13 +926,10 @@ mod tests {
     #[test]
     fn filters_tree_by_result() {
         let tree = sample_tree();
-        let filtered = filter_goal_tree(
-            &tree,
-            &SolveFilters {
-                result: Some(SolveResultArg::NoSolution),
-                ..SolveFilters::default()
-            },
-        );
+        let filtered = filter_goal_tree(&tree, &SolveFilters {
+            result: Some(SolveResultArg::NoSolution),
+            ..SolveFilters::default()
+        });
         assert_eq!(filtered.subjects.len(), 1);
         assert_eq!(filtered.subjects[0].roots.len(), 1);
     }
@@ -963,14 +960,11 @@ mod tests {
 
     #[test]
     fn raw_override_keeps_original_text() {
-        let rendered = render_solve_tree_text(
-            &sample_tree(),
-            SolveRenderOptions {
-                compact: CompactModeArg::Basic,
-                show_raw_kind: true,
-                show_full_predicate: true,
-            },
-        );
+        let rendered = render_solve_tree_text(&sample_tree(), SolveRenderOptions {
+            compact: CompactModeArg::Basic,
+            show_raw_kind: true,
+            show_full_predicate: true,
+        });
         assert!(rendered.contains("Binder { value: TraitPredicate"));
         assert!(rendered.contains("TraitCandidate { source: ParamEnv"));
     }

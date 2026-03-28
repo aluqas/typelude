@@ -1453,24 +1453,13 @@ mod tests {
 
     #[test]
     fn parses_solve_impl_and_assoc_item_commands() {
-        let solve_impl = Cli::parse_from([
-            "typelude-tooling-cli",
-            "solve-impl",
-            "--owner",
-            "RunWriter",
-        ]);
+        let solve_impl =
+            Cli::parse_from(["typelude-tooling-cli", "solve-impl", "--owner", "RunWriter"]);
         assert!(matches!(solve_impl.command, super::Commands::SolveImpl { .. }));
 
-        let solve_assoc = Cli::parse_from([
-            "typelude-tooling-cli",
-            "solve-assoc-item",
-            "--owner",
-            "OpIf",
-        ]);
-        assert!(matches!(
-            solve_assoc.command,
-            super::Commands::SolveAssocItem { .. }
-        ));
+        let solve_assoc =
+            Cli::parse_from(["typelude-tooling-cli", "solve-assoc-item", "--owner", "OpIf"]);
+        assert!(matches!(solve_assoc.command, super::Commands::SolveAssocItem { .. }));
     }
 
     #[test]

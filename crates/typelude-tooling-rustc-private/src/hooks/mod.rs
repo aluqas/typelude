@@ -2,13 +2,12 @@ mod diagnostics;
 mod item_structure;
 mod trait_solve;
 
-use typelude_tooling_core::HookId;
-
-use crate::{error::AnalysisResult, session::AnalysisSession};
-
 pub use diagnostics::{DiagnosticsHook, emit_diagnostics_notice};
 pub use item_structure::ItemStructureHook;
 pub use trait_solve::{SweepExplicitPredicatesHook, TraitSolveHook};
+use typelude_tooling_core::HookId;
+
+use crate::{error::AnalysisResult, session::AnalysisSession};
 
 pub trait Hook<'tcx> {
     fn run(&self, session: &mut AnalysisSession<'_, 'tcx>) -> AnalysisResult<()>;

@@ -383,9 +383,8 @@ fn top_entries(counts: BTreeMap<String, usize>, limit: usize) -> Vec<SolveSummar
 
 #[cfg(test)]
 mod tests {
-    use crate::{CandidateId, EventId, GoalId, SubjectId, SubjectKind, TraceEvent};
-
     use super::*;
+    use crate::{CandidateId, EventId, GoalId, SubjectId, SubjectKind, TraceEvent};
 
     fn push_subject(trace: &mut Trace, id: u64, label: &str) {
         let mut subject =
