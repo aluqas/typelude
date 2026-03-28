@@ -8,7 +8,7 @@ use crate::{error::AnalysisResult, session::AnalysisSession};
 
 pub use diagnostics::{DiagnosticsHook, emit_diagnostics_notice};
 pub use item_structure::ItemStructureHook;
-pub use trait_solve::{SweepExplicitPredicatesHook, TraitSolveHook, solve_explicit_predicate};
+pub use trait_solve::{SweepExplicitPredicatesHook, TraitSolveHook};
 
 pub trait Hook<'tcx> {
     fn run(&self, session: &mut AnalysisSession<'_, 'tcx>) -> AnalysisResult<()>;

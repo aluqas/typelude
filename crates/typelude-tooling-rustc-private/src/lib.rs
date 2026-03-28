@@ -20,7 +20,7 @@ pub mod session;
 pub mod subjects;
 
 use emit::{TraceEventExt, emit_raw};
-use frontends::{CollectConfig, run_collect_frontend};
+use frontends::{CollectConfig, run_collect_frontend, run_owner_query_frontend};
 use rustc_driver::Callbacks;
 use rustc_interface::Config;
 use typelude_tooling_core::{EventId, TraceEvent, TraceEventKind};
@@ -48,7 +48,12 @@ impl Callbacks for TypeludeCallbacks {
         _compiler: &rustc_interface::interface::Compiler,
         tcx: rustc_middle::ty::TyCtxt<'_>,
     ) -> rustc_driver::Compilation {
-        if let Err(error) = run_collect_frontend(tcx, &self.collect_config) {
+        let result = if let Some(owner) = std::env::var("TYPELUDE_TOOLING_QUERY_OWNER").ok() {
+            run_owner_query_frontend(tcx, &self.collect_config, &owner)
+        } else {
+            run_collect_frontend(tcx, &self.collect_config)
+        };
+        if let Err(error) = result {
             let event = TraceEvent::new(EventId::new(0), TraceEventKind::Info, "analysis_error")
                 .with_detail(error.to_string());
             emit_raw(&event);

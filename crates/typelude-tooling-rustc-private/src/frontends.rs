@@ -7,6 +7,7 @@ use crate::{
     emit::{CollectStats, EventEmitter, TraceEventExt},
     error::AnalysisResult,
     hooks::HookRegistry,
+    queries::{Query, QueryContext, ResolveOwnerQuery},
     session::{AnalysisConfig, AnalysisSession},
 };
 
@@ -52,6 +53,33 @@ pub fn run_collect_frontend(
     tcx: TyCtxt<'_>,
     config: &CollectConfig,
 ) -> AnalysisResult<CollectStats> {
+    run_with_session(tcx, config, |session| {
+        for hook_id in &config.enabled {
+            HookRegistry::run(*hook_id, session)?;
+        }
+        Ok(())
+    })
+}
+
+pub fn run_owner_query_frontend(
+    tcx: TyCtxt<'_>,
+    config: &CollectConfig,
+    owner: &str,
+) -> AnalysisResult<CollectStats> {
+    run_with_session(tcx, config, |session| {
+        let query = ResolveOwnerQuery {
+            owner: owner.to_owned(),
+        };
+        let mut context = QueryContext::new(session);
+        query.run(&mut context)
+    })
+}
+
+fn run_with_session(
+    tcx: TyCtxt<'_>,
+    config: &CollectConfig,
+    run: impl for<'s, 'tcx> FnOnce(&mut AnalysisSession<'s, 'tcx>) -> AnalysisResult<()>,
+) -> AnalysisResult<CollectStats> {
     let start = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_nanos() as u64)
@@ -74,9 +102,7 @@ pub fn run_collect_frontend(
     emitter.write(&start_event);
 
     let mut session = AnalysisSession::new(tcx, &mut emitter, config);
-    for hook_id in &config.enabled {
-        HookRegistry::run(*hook_id, &mut session)?;
-    }
+    run(&mut session)?;
 
     let end_event = session
         .emitter

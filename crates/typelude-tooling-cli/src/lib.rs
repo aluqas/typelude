@@ -1,5 +1,7 @@
 //! CLI product layer for typelude tooling.
 
+mod solve_view;
+
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -19,6 +21,11 @@ use typelude_tooling_rustc::{
 use typelude_tooling_typelude::{
     GraphAnalysis, TraceGraphBuilder, TypeExpr, TypeludeDiagnosticEnricher,
     TypeludeMetricEnricher, TypeludeRenderer,
+};
+
+use crate::solve_view::{
+    SolveFilters, SolveResultArg, SolveViewArg, diff_summaries, filter_goal_tree,
+    render_diff_text, render_solve_tree_text, render_summary_text, summarize_filtered_tree,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -99,10 +106,58 @@ pub enum Commands {
         input: PathBuf,
         #[arg(long, value_enum, default_value_t = OutputModeArg::Json)]
         output: OutputModeArg,
+        #[arg(long, value_enum)]
+        result: Option<SolveResultArg>,
+        #[arg(long)]
+        candidate_kind: Option<String>,
+        #[arg(long)]
+        max_depth: Option<usize>,
+        #[arg(long)]
+        subject: Option<String>,
     },
     SolveSummary {
         #[arg(long)]
         input: PathBuf,
+        #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
+        output: OutputModeArg,
+        #[arg(long, value_enum)]
+        result: Option<SolveResultArg>,
+        #[arg(long)]
+        candidate_kind: Option<String>,
+        #[arg(long)]
+        max_depth: Option<usize>,
+        #[arg(long)]
+        subject: Option<String>,
+    },
+    SolveOwner {
+        #[arg(long)]
+        owner: String,
+        #[arg(long)]
+        package: Option<String>,
+        #[arg(long)]
+        manifest_path: Option<PathBuf>,
+        #[arg(long, default_value = "nightly")]
+        toolchain: String,
+        #[arg(long, value_enum, default_value_t = SolveViewArg::Summary)]
+        view: SolveViewArg,
+        #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
+        output: OutputModeArg,
+        #[arg(long, default_value_t = true)]
+        rebuild_driver: bool,
+        #[arg(long, value_enum)]
+        result: Option<SolveResultArg>,
+        #[arg(long)]
+        candidate_kind: Option<String>,
+        #[arg(long)]
+        max_depth: Option<usize>,
+        #[arg(long)]
+        subject: Option<String>,
+    },
+    SolveDiff {
+        #[arg(long)]
+        left: PathBuf,
+        #[arg(long)]
+        right: PathBuf,
         #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
         output: OutputModeArg,
     },
@@ -192,11 +247,69 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         Commands::SolveTree {
             input,
             output,
-        } => run_solve_tree(input, output),
+            result,
+            candidate_kind,
+            max_depth,
+            subject,
+        } => run_solve_tree(
+            input,
+            output,
+            SolveFilters {
+                result,
+                candidate_kind,
+                max_depth,
+                subject,
+            },
+        ),
         Commands::SolveSummary {
             input,
             output,
-        } => run_solve_summary(input, output),
+            result,
+            candidate_kind,
+            max_depth,
+            subject,
+        } => run_solve_summary(
+            input,
+            output,
+            SolveFilters {
+                result,
+                candidate_kind,
+                max_depth,
+                subject,
+            },
+        ),
+        Commands::SolveOwner {
+            owner,
+            package,
+            manifest_path,
+            toolchain,
+            view,
+            output,
+            rebuild_driver,
+            result,
+            candidate_kind,
+            max_depth,
+            subject,
+        } => run_solve_owner(
+            &owner,
+            package,
+            manifest_path,
+            &toolchain,
+            view,
+            output,
+            rebuild_driver,
+            SolveFilters {
+                result,
+                candidate_kind,
+                max_depth,
+                subject,
+            },
+        ),
+        Commands::SolveDiff {
+            left,
+            right,
+            output,
+        } => run_solve_diff(left, right, output),
         Commands::Diag {
             input,
             trace_input,
@@ -246,6 +359,42 @@ fn run_collect(
     subject_filter: Option<String>,
     rebuild_driver: bool,
 ) -> ToolingResult<String> {
+    let trace = collect_trace(
+        cargo_subcommand,
+        package,
+        manifest_path,
+        toolchain,
+        hooks,
+        subject_filter.clone(),
+        rebuild_driver,
+        None,
+    )?;
+    fs::write(&output, trace.to_json_lines()?)?;
+
+    let hooks_text = if hooks.is_empty() {
+        String::from("default")
+    } else {
+        hooks.iter().map(|hook| format!("{:?}", hook.hook_id())).collect::<Vec<_>>().join(", ")
+    };
+    Ok(format!(
+        "collected {} events into {} using hooks: {} subject_filter={}",
+        trace.events.len(),
+        output.display(),
+        hooks_text,
+        subject_filter.unwrap_or_else(|| String::from("<none>"))
+    ))
+}
+
+fn collect_trace(
+    cargo_subcommand: &str,
+    package: Option<String>,
+    manifest_path: Option<PathBuf>,
+    toolchain: &str,
+    hooks: &[HookArg],
+    subject_filter: Option<String>,
+    rebuild_driver: bool,
+    owner_query: Option<&str>,
+) -> ToolingResult<Trace> {
     let driver_path = ensure_driver(toolchain, rebuild_driver)?;
     let mut command = Command::new("cargo");
     command.arg(format!("+{toolchain}")).arg(cargo_subcommand).arg("--quiet");
@@ -259,6 +408,9 @@ fn run_collect(
     command.env("TYPELUDE_TOOLING_SUMMARY_ONLY", "0");
     if let Some(subject_filter) = &subject_filter {
         command.env("TYPELUDE_TOOLING_SUBJECT_FILTER", subject_filter);
+    }
+    if let Some(owner_query) = owner_query {
+        command.env("TYPELUDE_TOOLING_QUERY_OWNER", owner_query);
     }
     if !hooks.is_empty() {
         let enabled = hooks.iter().map(|hook| hook.as_env()).collect::<Vec<_>>().join(",");
@@ -282,20 +434,7 @@ fn run_collect(
             "no trace events were collected from rustc_private output",
         )));
     }
-    fs::write(&output, trace.to_json_lines()?)?;
-
-    let hooks_text = if hooks.is_empty() {
-        String::from("default")
-    } else {
-        hooks.iter().map(|hook| format!("{:?}", hook.hook_id())).collect::<Vec<_>>().join(", ")
-    };
-    Ok(format!(
-        "collected {} events into {} using hooks: {} subject_filter={}",
-        trace.events.len(),
-        output.display(),
-        hooks_text,
-        subject_filter.unwrap_or_else(|| String::from("<none>"))
-    ))
+    Ok(trace)
 }
 
 fn run_trace(input: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
@@ -306,22 +445,78 @@ fn run_trace(input: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
     }
 }
 
-fn run_solve_tree(input: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
+fn run_solve_tree(
+    input: PathBuf,
+    output: OutputModeArg,
+    filters: SolveFilters,
+) -> ToolingResult<String> {
     let trace = read_trace(&input)?;
-    let tree = GoalTree::from_trace(&trace)?;
+    let tree = filter_goal_tree(&GoalTree::from_trace(&trace)?, &filters);
     match output {
         OutputModeArg::Text => Ok(render_solve_tree_text(&tree)),
         OutputModeArg::Json => Ok(serde_json::to_string_pretty(&tree)?),
     }
 }
 
-fn run_solve_summary(input: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
+fn run_solve_summary(
+    input: PathBuf,
+    output: OutputModeArg,
+    filters: SolveFilters,
+) -> ToolingResult<String> {
     let trace = read_trace(&input)?;
-    let tree = GoalTree::from_trace(&trace)?;
-    let summary: SolveSummary = tree.summarize(&trace);
+    let tree = filter_goal_tree(&GoalTree::from_trace(&trace)?, &filters);
+    let summary: SolveSummary =
+        summarize_filtered_tree(&tree, filtered_unsupported_count(&trace, &tree));
     match output {
-        OutputModeArg::Text => Ok(GoalTree::render_summary_text(&summary)),
+        OutputModeArg::Text => Ok(render_summary_text(&summary)),
         OutputModeArg::Json => Ok(serde_json::to_string_pretty(&summary)?),
+    }
+}
+
+fn run_solve_owner(
+    owner: &str,
+    package: Option<String>,
+    manifest_path: Option<PathBuf>,
+    toolchain: &str,
+    view: SolveViewArg,
+    output: OutputModeArg,
+    rebuild_driver: bool,
+    filters: SolveFilters,
+) -> ToolingResult<String> {
+    let trace = collect_trace(
+        "check",
+        package,
+        manifest_path,
+        toolchain,
+        &[HookArg::TraitSolve],
+        None,
+        rebuild_driver,
+        Some(owner),
+    )?;
+    let tree = filter_goal_tree(&GoalTree::from_trace(&trace)?, &filters);
+    match (view, output) {
+        (SolveViewArg::Tree, OutputModeArg::Text) => Ok(render_solve_tree_text(&tree)),
+        (SolveViewArg::Tree, OutputModeArg::Json) => Ok(serde_json::to_string_pretty(&tree)?),
+        (SolveViewArg::Summary, OutputModeArg::Text) => {
+            let summary =
+                summarize_filtered_tree(&tree, filtered_unsupported_count(&trace, &tree));
+            Ok(render_summary_text(&summary))
+        },
+        (SolveViewArg::Summary, OutputModeArg::Json) => {
+            let summary =
+                summarize_filtered_tree(&tree, filtered_unsupported_count(&trace, &tree));
+            Ok(serde_json::to_string_pretty(&summary)?)
+        },
+    }
+}
+
+fn run_solve_diff(left: PathBuf, right: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
+    let left = read_summary_or_trace(&left)?;
+    let right = read_summary_or_trace(&right)?;
+    let diff = diff_summaries(&left, &right);
+    match output {
+        OutputModeArg::Text => Ok(render_diff_text(&diff)),
+        OutputModeArg::Json => Ok(serde_json::to_string_pretty(&diff)?),
     }
 }
 
@@ -521,6 +716,8 @@ fn run_doctor(output: OutputModeArg) -> ToolingResult<String> {
             String::from("trace"),
             String::from("solve-tree"),
             String::from("solve-summary"),
+            String::from("solve-owner"),
+            String::from("solve-diff"),
             String::from("graph"),
             String::from("analyze"),
             String::from("-Z dump-mir=all"),
@@ -566,6 +763,80 @@ fn read_trace(path: impl AsRef<Path>) -> ToolingResult<Trace> {
     Trace::from_json_lines(TraceId::new(1), &input)
 }
 
+fn read_summary_or_trace(path: impl AsRef<Path>) -> ToolingResult<SolveSummary> {
+    let input = fs::read_to_string(path)?;
+    if let Ok(summary) = serde_json::from_str::<SolveSummary>(&input) {
+        return Ok(summary);
+    }
+    if let Some(summary) = parse_summary_text(&input) {
+        return Ok(summary);
+    }
+
+    let trace = Trace::from_json_lines(TraceId::new(1), &input)?;
+    let tree = GoalTree::from_trace(&trace)?;
+    Ok(tree.summarize(&trace))
+}
+
+fn parse_summary_text(input: &str) -> Option<SolveSummary> {
+    let mut values = std::collections::BTreeMap::<String, String>::new();
+    let mut top_predicates = Vec::new();
+    let mut top_candidate_kinds = Vec::new();
+    let mut section = None::<&str>;
+    for line in input.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        if line == "top_predicates:" {
+            section = Some("predicates");
+            continue;
+        }
+        if line == "top_candidate_kinds:" {
+            section = Some("candidate_kinds");
+            continue;
+        }
+        if let Some((key, value)) = line.split_once('=') {
+            values.insert(key.to_owned(), value.to_owned());
+            section = None;
+            continue;
+        }
+        if let Some((count, label)) = line.split_once(" :: ") {
+            let entry = typelude_tooling_core::SolveSummaryEntry {
+                label: label.to_owned(),
+                count: count.parse().ok()?,
+            };
+            match section {
+                Some("predicates") => top_predicates.push(entry),
+                Some("candidate_kinds") => top_candidate_kinds.push(entry),
+                _ => return None,
+            }
+        }
+    }
+    Some(SolveSummary {
+        subjects: values.get("subjects")?.parse().ok()?,
+        root_goals: values.get("root_goals")?.parse().ok()?,
+        goals: values.get("goals")?.parse().ok()?,
+        candidates: values.get("candidates")?.parse().ok()?,
+        max_goal_depth: values.get("max_goal_depth")?.parse().ok()?,
+        avg_candidates_per_goal: values.get("avg_candidates_per_goal")?.parse().ok()?,
+        result_ok: values.get("result.ok")?.parse().ok()?,
+        result_no_solution: values.get("result.no_solution")?.parse().ok()?,
+        result_ambiguous: values.get("result.ambiguous")?.parse().ok()?,
+        result_unsupported: values.get("result.unsupported")?.parse().ok()?,
+        top_predicates,
+        top_candidate_kinds,
+    })
+}
+
+fn filtered_unsupported_count(trace: &Trace, tree: &GoalTree) -> usize {
+    let subject_ids =
+        tree.subjects.iter().map(|subject| subject.id).collect::<std::collections::BTreeSet<_>>();
+    trace
+        .events
+        .iter()
+        .filter(|event| event.kind == TraceEventKind::ErrorRaised)
+        .filter(|event| {
+            event.subject_id.is_some_and(|subject_id| subject_ids.contains(&subject_id))
+        })
+        .count()
+}
+
 fn render_trace_text(trace: &Trace) -> String {
     trace
         .events
@@ -595,45 +866,6 @@ fn render_trace_text(trace: &Trace) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
-}
-
-fn render_solve_tree_text(tree: &GoalTree) -> String {
-    let mut lines = Vec::new();
-    lines.push(format!("trace_id={}", tree.trace_id.value()));
-    for subject in &tree.subjects {
-        lines.push(format!(
-            "subject #{} {:?} :: {}",
-            subject.id.value(),
-            subject.kind,
-            subject.label
-        ));
-        for root in &subject.roots {
-            render_goal(root, 1, &mut lines);
-        }
-    }
-    lines.join("\n")
-}
-
-fn render_goal(goal: &typelude_tooling_core::GoalTreeGoal, depth: usize, lines: &mut Vec<String>) {
-    let indent = "  ".repeat(depth);
-    lines.push(format!(
-        "{indent}goal #{} result={} depth={} :: {}",
-        goal.id.value(),
-        goal.result,
-        goal.depth,
-        goal.predicate
-    ));
-    for candidate in &goal.candidates {
-        lines.push(format!(
-            "{indent}  candidate #{} kind={} result={}",
-            candidate.id.value(),
-            candidate.kind,
-            candidate.result
-        ));
-    }
-    for child in &goal.children {
-        render_goal(child, depth + 1, lines);
-    }
 }
 
 fn render_diagnostics_text(
@@ -887,6 +1119,48 @@ mod tests {
         assert!(output.contains("subjects=1"));
         assert!(output.contains("result.no_solution=1"));
         fs::remove_file(input).expect("trace fixture should be removed");
+    }
+
+    #[test]
+    fn filters_solve_tree_by_result() {
+        let input = unique_path("typelude-solve-tree-filter");
+        write_trace_fixture(&input);
+        let cli = Cli::parse_from([
+            "typelude-tooling-cli",
+            "solve-tree",
+            "--input",
+            input.to_str().expect("path should be valid utf-8"),
+            "--output",
+            "text",
+            "--result",
+            "no-solution",
+        ]);
+        let output = run(cli).expect("filtered solve-tree should run");
+        assert!(output.contains("<U as Eval>"));
+        assert!(output.contains("result=NoSolution"));
+        fs::remove_file(input).expect("trace fixture should be removed");
+    }
+
+    #[test]
+    fn diffs_summaries_from_trace_inputs() {
+        let left = unique_path("typelude-solve-diff-left");
+        let right = unique_path("typelude-solve-diff-right");
+        write_trace_fixture(&left);
+        write_trace_fixture(&right);
+        let cli = Cli::parse_from([
+            "typelude-tooling-cli",
+            "solve-diff",
+            "--left",
+            left.to_str().expect("path should be valid utf-8"),
+            "--right",
+            right.to_str().expect("path should be valid utf-8"),
+            "--output",
+            "text",
+        ]);
+        let output = run(cli).expect("solve-diff should run");
+        assert!(output.contains("goals: left=2 right=2 delta=+0"));
+        fs::remove_file(left).expect("left trace should be removed");
+        fs::remove_file(right).expect("right trace should be removed");
     }
 
     #[test]
