@@ -58,6 +58,14 @@ enum QueryKindArg {
     AssocItem,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum OwnerMatchArg {
+    Substring,
+    Suffix,
+    Exact,
+    DefId,
+}
+
 impl HookArg {
     fn as_env(self) -> &'static str {
         match self {
@@ -156,6 +164,8 @@ pub enum Commands {
     SolveOwner {
         #[arg(long)]
         owner: String,
+        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Suffix)]
+        owner_match: OwnerMatchArg,
         #[arg(long)]
         package: Option<String>,
         #[arg(long)]
@@ -190,6 +200,8 @@ pub enum Commands {
     SolveImpl {
         #[arg(long)]
         owner: String,
+        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Suffix)]
+        owner_match: OwnerMatchArg,
         #[arg(long)]
         package: Option<String>,
         #[arg(long)]
@@ -224,6 +236,8 @@ pub enum Commands {
     SolveAssocItem {
         #[arg(long)]
         owner: String,
+        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Suffix)]
+        owner_match: OwnerMatchArg,
         #[arg(long)]
         package: Option<String>,
         #[arg(long)]
@@ -412,6 +426,7 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         ),
         Commands::SolveOwner {
             owner,
+            owner_match,
             package,
             manifest_path,
             toolchain,
@@ -430,6 +445,7 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         } => run_solve_query(
             QueryKindArg::Owner,
             &owner,
+            owner_match,
             package,
             manifest_path,
             &toolchain,
@@ -452,6 +468,7 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         ),
         Commands::SolveImpl {
             owner,
+            owner_match,
             package,
             manifest_path,
             toolchain,
@@ -470,6 +487,7 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         } => run_solve_query(
             QueryKindArg::Impl,
             &owner,
+            owner_match,
             package,
             manifest_path,
             &toolchain,
@@ -492,6 +510,7 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         ),
         Commands::SolveAssocItem {
             owner,
+            owner_match,
             package,
             manifest_path,
             toolchain,
@@ -510,6 +529,7 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         } => run_solve_query(
             QueryKindArg::AssocItem,
             &owner,
+            owner_match,
             package,
             manifest_path,
             &toolchain,
@@ -610,6 +630,7 @@ fn run_collect(
         rebuild_driver,
         None,
         None,
+        None,
     )?;
     fs::write(&output, trace.to_json_lines()?)?;
 
@@ -637,6 +658,7 @@ fn collect_trace(
     rebuild_driver: bool,
     owner_query: Option<&str>,
     query_kind: Option<QueryKindArg>,
+    query_match: Option<OwnerMatchArg>,
 ) -> ToolingResult<Trace> {
     let driver_path = ensure_driver(toolchain, rebuild_driver)?;
     let mut command = Command::new("cargo");
@@ -662,6 +684,15 @@ fn collect_trace(
             QueryKindArg::AssocItem => "assoc_item",
         };
         command.env("TYPELUDE_TOOLING_QUERY_KIND", value);
+    }
+    if let Some(query_match) = query_match {
+        let value = match query_match {
+            OwnerMatchArg::Substring => "substring",
+            OwnerMatchArg::Suffix => "suffix",
+            OwnerMatchArg::Exact => "exact",
+            OwnerMatchArg::DefId => "def_id",
+        };
+        command.env("TYPELUDE_TOOLING_QUERY_MATCH", value);
     }
     if !hooks.is_empty() {
         let enabled = hooks.iter().map(|hook| hook.as_env()).collect::<Vec<_>>().join(",");
@@ -733,6 +764,7 @@ fn run_solve_summary(
 fn run_solve_query(
     query_kind: QueryKindArg,
     owner: &str,
+    owner_match: OwnerMatchArg,
     package: Option<String>,
     manifest_path: Option<PathBuf>,
     toolchain: &str,
@@ -754,6 +786,7 @@ fn run_solve_query(
         rebuild_driver,
         Some(owner),
         Some(query_kind),
+        Some(owner_match),
     )?;
     let tree = filter_goal_tree(&GoalTree::from_trace(&trace)?, &filters);
     let unsupported = filtered_unsupported_count(&trace, &tree);
@@ -1048,6 +1081,8 @@ fn read_analysis_or_trace(path: impl AsRef<Path>, top: usize) -> ToolingResult<S
             summary,
             predicate_distribution: Vec::new(),
             candidate_kind_distribution: Vec::new(),
+            predicate_family_distribution: Vec::new(),
+            candidate_family_distribution: Vec::new(),
             top_roots: Vec::new(),
         });
     }
@@ -1056,6 +1091,8 @@ fn read_analysis_or_trace(path: impl AsRef<Path>, top: usize) -> ToolingResult<S
             summary,
             predicate_distribution: Vec::new(),
             candidate_kind_distribution: Vec::new(),
+            predicate_family_distribution: Vec::new(),
+            candidate_family_distribution: Vec::new(),
             top_roots: Vec::new(),
         });
     }

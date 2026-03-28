@@ -7,7 +7,7 @@ use crate::{
     emit::{CollectStats, EventEmitter, TraceEventExt},
     error::AnalysisResult,
     hooks::HookRegistry,
-    queries::{Query, QueryContext, QueryTargetKind, ResolveOwnerQuery},
+    queries::{Query, QueryContext, QueryMatchKind, QueryTargetKind, ResolveOwnerQuery},
     session::{AnalysisConfig, AnalysisSession},
 };
 
@@ -66,11 +66,13 @@ pub fn run_owner_query_frontend(
     config: &CollectConfig,
     owner: &str,
     target_kind: QueryTargetKind,
+    match_kind: QueryMatchKind,
 ) -> AnalysisResult<CollectStats> {
     run_with_session(tcx, config, |session| {
         let query = ResolveOwnerQuery {
             owner: owner.to_owned(),
             target_kind,
+            match_kind,
         };
         let mut context = QueryContext::new(session);
         query.run(&mut context)

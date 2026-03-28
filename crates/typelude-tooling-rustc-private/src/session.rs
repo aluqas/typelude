@@ -114,9 +114,12 @@ impl<'a, 'tcx> AnalysisSession<'a, 'tcx> {
             subject.parent(self.tcx).map(|parent| self.ensure_subject(hook_id, parent));
         let subject_id = SubjectId::new(self.next_subject_id);
         self.next_subject_id += 1;
-        self.subjects.insert(key, SubjectRecord {
-            id: subject_id,
-        });
+        self.subjects.insert(
+            key,
+            SubjectRecord {
+                id: subject_id,
+            },
+        );
         self.stats.subject_count += 1;
 
         if self.can_emit() {

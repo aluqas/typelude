@@ -3,7 +3,7 @@ mod owner;
 
 pub(crate) use explicit_predicate::run_owner_predicates;
 pub use explicit_predicate::{SolveExplicitPredicateQuery, solve_explicit_predicate};
-pub use owner::{QueryTargetKind, ResolveOwnerQuery};
+pub use owner::{QueryMatchKind, QueryTargetKind, ResolveOwnerQuery};
 
 use crate::{error::AnalysisResult, session::AnalysisSession};
 

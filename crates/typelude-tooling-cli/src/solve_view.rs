@@ -74,13 +74,28 @@ pub struct RootHotspot {
     pub goal_count: usize,
     pub candidate_count: usize,
     pub max_depth: usize,
+    #[serde(default)]
+    pub unique_predicates: usize,
+    #[serde(default)]
+    pub unique_candidate_kinds: usize,
+    #[serde(default)]
+    pub dominant_predicate_family: String,
+    #[serde(default)]
+    pub dominant_candidate_family: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveAnalysis {
     pub summary: SolveSummary,
+    #[serde(default)]
     pub predicate_distribution: Vec<LabelCount>,
+    #[serde(default)]
     pub candidate_kind_distribution: Vec<LabelCount>,
+    #[serde(default)]
+    pub predicate_family_distribution: Vec<LabelCount>,
+    #[serde(default)]
+    pub candidate_family_distribution: Vec<LabelCount>,
+    #[serde(default)]
     pub top_roots: Vec<RootHotspot>,
 }
 
@@ -128,6 +143,8 @@ pub struct SolveAnalysisDiff {
     pub summary_delta: SolveSummaryDelta,
     pub predicate_distribution_delta: Vec<LabelDelta>,
     pub candidate_kind_distribution_delta: Vec<LabelDelta>,
+    pub predicate_family_distribution_delta: Vec<LabelDelta>,
+    pub candidate_family_distribution_delta: Vec<LabelDelta>,
     pub root_delta: Vec<RootHotspotDelta>,
 }
 
@@ -162,6 +179,8 @@ pub fn build_solve_analysis(
 ) -> SolveAnalysis {
     let mut predicate_counts = BTreeMap::<String, usize>::new();
     let mut candidate_counts = BTreeMap::<String, usize>::new();
+    let mut predicate_family_counts = BTreeMap::<String, usize>::new();
+    let mut candidate_family_counts = BTreeMap::<String, usize>::new();
     let mut result_ok = 0_usize;
     let mut result_no_solution = 0_usize;
     let mut result_ambiguous = 0_usize;
@@ -178,6 +197,8 @@ pub fn build_solve_analysis(
                 root,
                 &mut predicate_counts,
                 &mut candidate_counts,
+                &mut predicate_family_counts,
+                &mut candidate_family_counts,
                 &mut result_ok,
                 &mut result_no_solution,
                 &mut result_ambiguous,
@@ -221,6 +242,8 @@ pub fn build_solve_analysis(
         summary,
         predicate_distribution: top_counts(predicate_counts, top_n),
         candidate_kind_distribution: top_counts(candidate_counts, top_n),
+        predicate_family_distribution: top_counts(predicate_family_counts, top_n),
+        candidate_family_distribution: top_counts(candidate_family_counts, top_n),
         top_roots,
     }
 }
@@ -304,11 +327,25 @@ pub fn render_analysis_text(analysis: &SolveAnalysis, options: SolveRenderOption
         }
     }
 
+    if !analysis.predicate_family_distribution.is_empty() {
+        lines.push(String::from("predicate_families:"));
+        for entry in &analysis.predicate_family_distribution {
+            lines.push(format!("{} :: {}", entry.count, entry.label));
+        }
+    }
+
+    if !analysis.candidate_family_distribution.is_empty() {
+        lines.push(String::from("candidate_kind_families:"));
+        for entry in &analysis.candidate_family_distribution {
+            lines.push(format!("{} :: {}", entry.count, entry.label));
+        }
+    }
+
     if !analysis.top_roots.is_empty() {
         lines.push(String::from("top_roots:"));
         for root in &analysis.top_roots {
             lines.push(format!(
-                "{} :: goal={} result={} goals={} candidates={} max_depth={}",
+                "{} :: goal={} result={} goals={} candidates={} max_depth={} unique_predicates={} unique_candidate_kinds={} dominant_predicate_family={} dominant_candidate_family={}",
                 maybe_compact_predicate(
                     &format!("{}::{}", root.subject_label, root.predicate),
                     options
@@ -317,7 +354,11 @@ pub fn render_analysis_text(analysis: &SolveAnalysis, options: SolveRenderOption
                 compact_result(&root.result, options.compact),
                 root.goal_count,
                 root.candidate_count,
-                root.max_depth
+                root.max_depth,
+                root.unique_predicates,
+                root.unique_candidate_kinds,
+                root.dominant_predicate_family,
+                root.dominant_candidate_family,
             ));
         }
     }
@@ -353,6 +394,14 @@ pub fn diff_analysis(left: &SolveAnalysis, right: &SolveAnalysis) -> SolveAnalys
         candidate_kind_distribution_delta: diff_label_counts(
             &left.candidate_kind_distribution,
             &right.candidate_kind_distribution,
+        ),
+        predicate_family_distribution_delta: diff_label_counts(
+            &left.predicate_family_distribution,
+            &right.predicate_family_distribution,
+        ),
+        candidate_family_distribution_delta: diff_label_counts(
+            &left.candidate_family_distribution,
+            &right.candidate_family_distribution,
         ),
         root_delta: diff_roots(&left.top_roots, &right.top_roots),
     }
@@ -455,6 +504,24 @@ pub fn render_diff_text(
                 ));
             }
         }
+        if !diff.predicate_family_distribution_delta.is_empty() {
+            lines.push(String::from("predicate_families:"));
+            for entry in &diff.predicate_family_distribution_delta {
+                lines.push(format!(
+                    "{} :: left={} right={} delta={:+}",
+                    entry.label, entry.left, entry.right, entry.delta
+                ));
+            }
+        }
+        if !diff.candidate_family_distribution_delta.is_empty() {
+            lines.push(String::from("candidate_kind_families:"));
+            for entry in &diff.candidate_family_distribution_delta {
+                lines.push(format!(
+                    "{} :: left={} right={} delta={:+}",
+                    entry.label, entry.left, entry.right, entry.delta
+                ));
+            }
+        }
         if !diff.root_delta.is_empty() {
             lines.push(String::from("top_roots:"));
             for entry in &diff.root_delta {
@@ -485,7 +552,9 @@ pub fn compact_candidate_kind(raw: &str, mode: CompactModeArg) -> String {
     match mode {
         CompactModeArg::Off => raw.to_string(),
         CompactModeArg::Basic => compact_candidate_kind_basic(raw),
-        CompactModeArg::Aggressive => compact_length(&compact_candidate_kind_basic(raw), 120),
+        CompactModeArg::Aggressive => {
+            compact_length(&compact_path_segments(&compact_candidate_kind_basic(raw), 3), 120)
+        },
     }
 }
 
@@ -514,15 +583,7 @@ fn maybe_compact_predicate(raw: &str, options: SolveRenderOptions) -> String {
 }
 
 fn compact_candidate_kind_basic(raw: &str) -> String {
-    if raw.contains("TraitCandidate") && raw.contains("ParamEnv") {
-        String::from("TraitCandidate::ParamEnv")
-    } else if raw.contains("TraitCandidate") && raw.contains("Impl") {
-        String::from("TraitCandidate::Impl")
-    } else if let Some(head) = raw.split(" {").next() {
-        head.split_whitespace().next().unwrap_or(raw).to_string()
-    } else {
-        raw.to_string()
-    }
+    candidate_family(raw)
 }
 
 fn compact_predicate_basic(raw: &str) -> String {
@@ -530,11 +591,9 @@ fn compact_predicate_basic(raw: &str) -> String {
     if let Some(stripped) = text.strip_prefix("Binder { value: ") {
         text = stripped.strip_suffix(", bound_vars: [] }").unwrap_or(stripped);
     }
-    for head in ["TraitPredicate(", "AliasRelate(", "NormalizesTo("] {
-        if text.contains(head) {
-            let prefix = head.trim_end_matches('(');
-            return format!("{prefix}(...)");
-        }
+    let family = predicate_family(text);
+    if family != "Other" {
+        return format!("{family}(...)");
     }
     text.to_string()
 }
@@ -570,6 +629,55 @@ fn compact_path_segments(text: &str, keep: usize) -> String {
         parts[parts.len() - keep..].join("::")
     } else {
         text.to_string()
+    }
+}
+
+fn predicate_family(raw: &str) -> String {
+    let text = unwrap_binder(raw);
+    for family in [
+        "TraitPredicate",
+        "AliasRelate",
+        "NormalizesTo",
+        "Subtype",
+        "Projection",
+        "RegionOutlives",
+        "TypeOutlives",
+        "ConstArgHasType",
+        "WellFormed",
+    ] {
+        if text.contains(&format!("{family}(")) {
+            return family.to_string();
+        }
+    }
+    if let Some((head, _)) = text.split_once('(') {
+        let head = head.trim();
+        if !head.is_empty() {
+            return head.to_string();
+        }
+    }
+    String::from("Other")
+}
+
+fn candidate_family(raw: &str) -> String {
+    if raw.contains("TraitCandidate") && raw.contains("ParamEnv") {
+        String::from("TraitCandidate::ParamEnv")
+    } else if raw.contains("TraitCandidate") && raw.contains("Impl") {
+        String::from("TraitCandidate::Impl")
+    } else if raw.contains("TraitCandidate") {
+        String::from("TraitCandidate")
+    } else if let Some(head) = raw.split(" {").next() {
+        head.split_whitespace().next().unwrap_or(raw).to_string()
+    } else {
+        raw.to_string()
+    }
+}
+
+fn unwrap_binder(raw: &str) -> &str {
+    let text = raw.trim();
+    if let Some(stripped) = text.strip_prefix("Binder { value: ") {
+        stripped.strip_suffix(", bound_vars: [] }").unwrap_or(stripped)
+    } else {
+        text
     }
 }
 
@@ -643,6 +751,8 @@ fn walk_goal(
     goal: &GoalTreeGoal,
     predicate_counts: &mut BTreeMap<String, usize>,
     candidate_counts: &mut BTreeMap<String, usize>,
+    predicate_family_counts: &mut BTreeMap<String, usize>,
+    candidate_family_counts: &mut BTreeMap<String, usize>,
     result_ok: &mut usize,
     result_no_solution: &mut usize,
     result_ambiguous: &mut usize,
@@ -653,6 +763,7 @@ fn walk_goal(
     *goal_count += 1;
     *max_goal_depth = (*max_goal_depth).max(goal.depth);
     *predicate_counts.entry(goal.predicate.clone()).or_default() += 1;
+    *predicate_family_counts.entry(predicate_family(&goal.predicate)).or_default() += 1;
 
     let result = goal.result.to_ascii_lowercase();
     if result.contains("no_solution") || result.contains("nosolution") {
@@ -666,6 +777,7 @@ fn walk_goal(
     for candidate in &goal.candidates {
         *candidate_count += 1;
         *candidate_counts.entry(candidate.kind.clone()).or_default() += 1;
+        *candidate_family_counts.entry(candidate_family(&candidate.kind)).or_default() += 1;
     }
 
     for child in &goal.children {
@@ -673,6 +785,8 @@ fn walk_goal(
             child,
             predicate_counts,
             candidate_counts,
+            predicate_family_counts,
+            candidate_family_counts,
             result_ok,
             result_no_solution,
             result_ambiguous,
@@ -687,7 +801,20 @@ fn root_hotspot(subject: &GoalTreeSubject, root: &GoalTreeGoal) -> RootHotspot {
     let mut goal_count = 0;
     let mut candidate_count = 0;
     let mut max_depth = 0;
-    collect_root_stats(root, &mut goal_count, &mut candidate_count, &mut max_depth);
+    let mut predicate_counts = BTreeMap::<String, usize>::new();
+    let mut candidate_kind_counts = BTreeMap::<String, usize>::new();
+    let mut predicate_family_counts = BTreeMap::<String, usize>::new();
+    let mut candidate_family_counts = BTreeMap::<String, usize>::new();
+    collect_root_stats(
+        root,
+        &mut goal_count,
+        &mut candidate_count,
+        &mut max_depth,
+        &mut predicate_counts,
+        &mut candidate_kind_counts,
+        &mut predicate_family_counts,
+        &mut candidate_family_counts,
+    );
     RootHotspot {
         subject_label: subject.label.clone(),
         goal_id: root.id.value(),
@@ -696,6 +823,10 @@ fn root_hotspot(subject: &GoalTreeSubject, root: &GoalTreeGoal) -> RootHotspot {
         goal_count,
         candidate_count,
         max_depth,
+        unique_predicates: predicate_counts.len(),
+        unique_candidate_kinds: candidate_kind_counts.len(),
+        dominant_predicate_family: dominant_label(&predicate_family_counts),
+        dominant_candidate_family: dominant_label(&candidate_family_counts),
     }
 }
 
@@ -704,13 +835,40 @@ fn collect_root_stats(
     goal_count: &mut usize,
     candidate_count: &mut usize,
     max_depth: &mut usize,
+    predicate_counts: &mut BTreeMap<String, usize>,
+    candidate_kind_counts: &mut BTreeMap<String, usize>,
+    predicate_family_counts: &mut BTreeMap<String, usize>,
+    candidate_family_counts: &mut BTreeMap<String, usize>,
 ) {
     *goal_count += 1;
     *candidate_count += goal.candidates.len();
     *max_depth = (*max_depth).max(goal.depth);
-    for child in &goal.children {
-        collect_root_stats(child, goal_count, candidate_count, max_depth);
+    *predicate_counts.entry(goal.predicate.clone()).or_default() += 1;
+    *predicate_family_counts.entry(predicate_family(&goal.predicate)).or_default() += 1;
+    for candidate in &goal.candidates {
+        *candidate_kind_counts.entry(candidate.kind.clone()).or_default() += 1;
+        *candidate_family_counts.entry(candidate_family(&candidate.kind)).or_default() += 1;
     }
+    for child in &goal.children {
+        collect_root_stats(
+            child,
+            goal_count,
+            candidate_count,
+            max_depth,
+            predicate_counts,
+            candidate_kind_counts,
+            predicate_family_counts,
+            candidate_family_counts,
+        );
+    }
+}
+
+fn dominant_label(counts: &BTreeMap<String, usize>) -> String {
+    counts
+        .iter()
+        .max_by(|left, right| left.1.cmp(right.1).then_with(|| right.0.cmp(left.0)))
+        .map(|(label, _)| label.clone())
+        .unwrap_or_else(|| String::from("None"))
 }
 
 fn to_summary_entries(counts: &BTreeMap<String, usize>, limit: usize) -> Vec<SolveSummaryEntry> {
@@ -926,10 +1084,13 @@ mod tests {
     #[test]
     fn filters_tree_by_result() {
         let tree = sample_tree();
-        let filtered = filter_goal_tree(&tree, &SolveFilters {
-            result: Some(SolveResultArg::NoSolution),
-            ..SolveFilters::default()
-        });
+        let filtered = filter_goal_tree(
+            &tree,
+            &SolveFilters {
+                result: Some(SolveResultArg::NoSolution),
+                ..SolveFilters::default()
+            },
+        );
         assert_eq!(filtered.subjects.len(), 1);
         assert_eq!(filtered.subjects[0].roots.len(), 1);
     }
@@ -940,6 +1101,8 @@ mod tests {
         assert_eq!(analysis.summary.subjects, 1);
         assert_eq!(analysis.top_roots.len(), 1);
         assert_eq!(analysis.top_roots[0].goal_count, 2);
+        assert!(!analysis.top_roots[0].dominant_predicate_family.is_empty());
+        assert_eq!(analysis.candidate_family_distribution[0].label, "TraitCandidate::ParamEnv");
     }
 
     #[test]
@@ -959,12 +1122,27 @@ mod tests {
     }
 
     #[test]
+    fn family_helpers_normalize_solver_shapes() {
+        assert_eq!(
+            predicate_family("Binder { value: AliasRelate(<T as Foo>, Bar), bound_vars: [] }"),
+            "AliasRelate"
+        );
+        assert_eq!(
+            candidate_family("TraitCandidate { source: ParamEnv(ImplSource) }"),
+            "TraitCandidate::ParamEnv"
+        );
+    }
+
+    #[test]
     fn raw_override_keeps_original_text() {
-        let rendered = render_solve_tree_text(&sample_tree(), SolveRenderOptions {
-            compact: CompactModeArg::Basic,
-            show_raw_kind: true,
-            show_full_predicate: true,
-        });
+        let rendered = render_solve_tree_text(
+            &sample_tree(),
+            SolveRenderOptions {
+                compact: CompactModeArg::Basic,
+                show_raw_kind: true,
+                show_full_predicate: true,
+            },
+        );
         assert!(rendered.contains("Binder { value: TraitPredicate"));
         assert!(rendered.contains("TraitCandidate { source: ParamEnv"));
     }
