@@ -5,7 +5,7 @@ use crate::{error::AnalysisResult, session::AnalysisSession};
 
 pub(crate) use explicit_predicate::run_owner_predicates;
 pub use explicit_predicate::{SolveExplicitPredicateQuery, solve_explicit_predicate};
-pub use owner::ResolveOwnerQuery;
+pub use owner::{QueryTargetKind, ResolveOwnerQuery};
 
 pub struct QueryContext<'a, 's, 'tcx> {
     session: &'a mut AnalysisSession<'s, 'tcx>,

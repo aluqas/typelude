@@ -2,6 +2,8 @@
 
 typelude 向けの debug / diagnostics / profiling / graph tooling を、共通基盤から段階的に積み上げるための大まかな設計メモ。
 
+現在の実装状態は [TOOLING_IMPLEMENTATION.md](/Users/saqula/Documents/02_codes/github.com/aluqas/typelude/docs/TOOLING_IMPLEMENTATION.md) を参照。
+
 ## 1. 基本方針
 
 単発ツールを個別に作るのではなく、次の4層で積み上げる。

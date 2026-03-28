@@ -24,8 +24,9 @@ use typelude_tooling_typelude::{
 };
 
 use crate::solve_view::{
-    SolveFilters, SolveResultArg, SolveViewArg, diff_summaries, filter_goal_tree,
-    render_diff_text, render_solve_tree_text, render_summary_text, summarize_filtered_tree,
+    CompactModeArg, SolveAnalysis, SolveDiffViewArg, SolveFilters, SolveRenderOptions,
+    SolveResultArg, SolveViewArg, build_solve_analysis, diff_analysis, filter_goal_tree,
+    render_analysis_text, render_diff_text, render_solve_tree_text, render_summary_text,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -48,6 +49,13 @@ pub enum HookArg {
     TraitSolve,
     Diagnostics,
     ItemStructure,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum QueryKindArg {
+    Owner,
+    Impl,
+    AssocItem,
 }
 
 impl HookArg {
@@ -106,6 +114,12 @@ pub enum Commands {
         input: PathBuf,
         #[arg(long, value_enum, default_value_t = OutputModeArg::Json)]
         output: OutputModeArg,
+        #[arg(long, value_enum, default_value_t = CompactModeArg::Basic)]
+        compact: CompactModeArg,
+        #[arg(long, default_value_t = false)]
+        show_raw_kind: bool,
+        #[arg(long, default_value_t = false)]
+        show_full_predicate: bool,
         #[arg(long, value_enum)]
         result: Option<SolveResultArg>,
         #[arg(long)]
@@ -120,6 +134,16 @@ pub enum Commands {
         input: PathBuf,
         #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
         output: OutputModeArg,
+        #[arg(long, value_enum, default_value_t = CompactModeArg::Basic)]
+        compact: CompactModeArg,
+        #[arg(long, default_value_t = false)]
+        show_raw_kind: bool,
+        #[arg(long, default_value_t = false)]
+        show_full_predicate: bool,
+        #[arg(long, default_value_t = false)]
+        include_distribution: bool,
+        #[arg(long, default_value_t = 10)]
+        top: usize,
         #[arg(long, value_enum)]
         result: Option<SolveResultArg>,
         #[arg(long)]
@@ -142,6 +166,84 @@ pub enum Commands {
         view: SolveViewArg,
         #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
         output: OutputModeArg,
+        #[arg(long, value_enum, default_value_t = CompactModeArg::Basic)]
+        compact: CompactModeArg,
+        #[arg(long, default_value_t = false)]
+        show_raw_kind: bool,
+        #[arg(long, default_value_t = false)]
+        show_full_predicate: bool,
+        #[arg(long, default_value_t = false)]
+        include_distribution: bool,
+        #[arg(long, default_value_t = 10)]
+        top: usize,
+        #[arg(long, default_value_t = true)]
+        rebuild_driver: bool,
+        #[arg(long, value_enum)]
+        result: Option<SolveResultArg>,
+        #[arg(long)]
+        candidate_kind: Option<String>,
+        #[arg(long)]
+        max_depth: Option<usize>,
+        #[arg(long)]
+        subject: Option<String>,
+    },
+    SolveImpl {
+        #[arg(long)]
+        owner: String,
+        #[arg(long)]
+        package: Option<String>,
+        #[arg(long)]
+        manifest_path: Option<PathBuf>,
+        #[arg(long, default_value = "nightly")]
+        toolchain: String,
+        #[arg(long, value_enum, default_value_t = SolveViewArg::Summary)]
+        view: SolveViewArg,
+        #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
+        output: OutputModeArg,
+        #[arg(long, value_enum, default_value_t = CompactModeArg::Basic)]
+        compact: CompactModeArg,
+        #[arg(long, default_value_t = false)]
+        show_raw_kind: bool,
+        #[arg(long, default_value_t = false)]
+        show_full_predicate: bool,
+        #[arg(long, default_value_t = false)]
+        include_distribution: bool,
+        #[arg(long, default_value_t = 10)]
+        top: usize,
+        #[arg(long, default_value_t = true)]
+        rebuild_driver: bool,
+        #[arg(long, value_enum)]
+        result: Option<SolveResultArg>,
+        #[arg(long)]
+        candidate_kind: Option<String>,
+        #[arg(long)]
+        max_depth: Option<usize>,
+        #[arg(long)]
+        subject: Option<String>,
+    },
+    SolveAssocItem {
+        #[arg(long)]
+        owner: String,
+        #[arg(long)]
+        package: Option<String>,
+        #[arg(long)]
+        manifest_path: Option<PathBuf>,
+        #[arg(long, default_value = "nightly")]
+        toolchain: String,
+        #[arg(long, value_enum, default_value_t = SolveViewArg::Summary)]
+        view: SolveViewArg,
+        #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
+        output: OutputModeArg,
+        #[arg(long, value_enum, default_value_t = CompactModeArg::Basic)]
+        compact: CompactModeArg,
+        #[arg(long, default_value_t = false)]
+        show_raw_kind: bool,
+        #[arg(long, default_value_t = false)]
+        show_full_predicate: bool,
+        #[arg(long, default_value_t = false)]
+        include_distribution: bool,
+        #[arg(long, default_value_t = 10)]
+        top: usize,
         #[arg(long, default_value_t = true)]
         rebuild_driver: bool,
         #[arg(long, value_enum)]
@@ -160,6 +262,16 @@ pub enum Commands {
         right: PathBuf,
         #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
         output: OutputModeArg,
+        #[arg(long, value_enum, default_value_t = CompactModeArg::Basic)]
+        compact: CompactModeArg,
+        #[arg(long, default_value_t = false)]
+        show_raw_kind: bool,
+        #[arg(long, default_value_t = false)]
+        show_full_predicate: bool,
+        #[arg(long, value_enum, default_value_t = SolveDiffViewArg::All)]
+        view: SolveDiffViewArg,
+        #[arg(long, default_value_t = 10)]
+        top: usize,
     },
     Diag {
         #[arg(long)]
@@ -247,6 +359,9 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         Commands::SolveTree {
             input,
             output,
+            compact,
+            show_raw_kind,
+            show_full_predicate,
             result,
             candidate_kind,
             max_depth,
@@ -254,6 +369,11 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         } => run_solve_tree(
             input,
             output,
+            SolveRenderOptions {
+                compact,
+                show_raw_kind,
+                show_full_predicate,
+            },
             SolveFilters {
                 result,
                 candidate_kind,
@@ -264,6 +384,11 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         Commands::SolveSummary {
             input,
             output,
+            compact,
+            show_raw_kind,
+            show_full_predicate,
+            include_distribution,
+            top,
             result,
             candidate_kind,
             max_depth,
@@ -271,6 +396,13 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
         } => run_solve_summary(
             input,
             output,
+            SolveRenderOptions {
+                compact,
+                show_raw_kind,
+                show_full_predicate,
+            },
+            include_distribution,
+            top,
             SolveFilters {
                 result,
                 candidate_kind,
@@ -285,18 +417,111 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
             toolchain,
             view,
             output,
+            compact,
+            show_raw_kind,
+            show_full_predicate,
+            include_distribution,
+            top,
             rebuild_driver,
             result,
             candidate_kind,
             max_depth,
             subject,
-        } => run_solve_owner(
+        } => run_solve_query(
+            QueryKindArg::Owner,
             &owner,
             package,
             manifest_path,
             &toolchain,
             view,
             output,
+            SolveRenderOptions {
+                compact,
+                show_raw_kind,
+                show_full_predicate,
+            },
+            include_distribution,
+            top,
+            rebuild_driver,
+            SolveFilters {
+                result,
+                candidate_kind,
+                max_depth,
+                subject,
+            },
+        ),
+        Commands::SolveImpl {
+            owner,
+            package,
+            manifest_path,
+            toolchain,
+            view,
+            output,
+            compact,
+            show_raw_kind,
+            show_full_predicate,
+            include_distribution,
+            top,
+            rebuild_driver,
+            result,
+            candidate_kind,
+            max_depth,
+            subject,
+        } => run_solve_query(
+            QueryKindArg::Impl,
+            &owner,
+            package,
+            manifest_path,
+            &toolchain,
+            view,
+            output,
+            SolveRenderOptions {
+                compact,
+                show_raw_kind,
+                show_full_predicate,
+            },
+            include_distribution,
+            top,
+            rebuild_driver,
+            SolveFilters {
+                result,
+                candidate_kind,
+                max_depth,
+                subject,
+            },
+        ),
+        Commands::SolveAssocItem {
+            owner,
+            package,
+            manifest_path,
+            toolchain,
+            view,
+            output,
+            compact,
+            show_raw_kind,
+            show_full_predicate,
+            include_distribution,
+            top,
+            rebuild_driver,
+            result,
+            candidate_kind,
+            max_depth,
+            subject,
+        } => run_solve_query(
+            QueryKindArg::AssocItem,
+            &owner,
+            package,
+            manifest_path,
+            &toolchain,
+            view,
+            output,
+            SolveRenderOptions {
+                compact,
+                show_raw_kind,
+                show_full_predicate,
+            },
+            include_distribution,
+            top,
             rebuild_driver,
             SolveFilters {
                 result,
@@ -309,7 +534,23 @@ pub fn run(cli: Cli) -> ToolingResult<String> {
             left,
             right,
             output,
-        } => run_solve_diff(left, right, output),
+            compact,
+            show_raw_kind,
+            show_full_predicate,
+            view,
+            top,
+        } => run_solve_diff(
+            left,
+            right,
+            output,
+            SolveRenderOptions {
+                compact,
+                show_raw_kind,
+                show_full_predicate,
+            },
+            view,
+            top,
+        ),
         Commands::Diag {
             input,
             trace_input,
@@ -368,6 +609,7 @@ fn run_collect(
         subject_filter.clone(),
         rebuild_driver,
         None,
+        None,
     )?;
     fs::write(&output, trace.to_json_lines()?)?;
 
@@ -394,6 +636,7 @@ fn collect_trace(
     subject_filter: Option<String>,
     rebuild_driver: bool,
     owner_query: Option<&str>,
+    query_kind: Option<QueryKindArg>,
 ) -> ToolingResult<Trace> {
     let driver_path = ensure_driver(toolchain, rebuild_driver)?;
     let mut command = Command::new("cargo");
@@ -411,6 +654,14 @@ fn collect_trace(
     }
     if let Some(owner_query) = owner_query {
         command.env("TYPELUDE_TOOLING_QUERY_OWNER", owner_query);
+    }
+    if let Some(query_kind) = query_kind {
+        let value = match query_kind {
+            QueryKindArg::Owner => "owner",
+            QueryKindArg::Impl => "impl",
+            QueryKindArg::AssocItem => "assoc_item",
+        };
+        command.env("TYPELUDE_TOOLING_QUERY_KIND", value);
     }
     if !hooks.is_empty() {
         let enabled = hooks.iter().map(|hook| hook.as_env()).collect::<Vec<_>>().join(",");
@@ -448,12 +699,13 @@ fn run_trace(input: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
 fn run_solve_tree(
     input: PathBuf,
     output: OutputModeArg,
+    render: SolveRenderOptions,
     filters: SolveFilters,
 ) -> ToolingResult<String> {
     let trace = read_trace(&input)?;
     let tree = filter_goal_tree(&GoalTree::from_trace(&trace)?, &filters);
     match output {
-        OutputModeArg::Text => Ok(render_solve_tree_text(&tree)),
+        OutputModeArg::Text => Ok(render_solve_tree_text(&tree, render)),
         OutputModeArg::Json => Ok(serde_json::to_string_pretty(&tree)?),
     }
 }
@@ -461,25 +713,34 @@ fn run_solve_tree(
 fn run_solve_summary(
     input: PathBuf,
     output: OutputModeArg,
+    render: SolveRenderOptions,
+    include_distribution: bool,
+    top: usize,
     filters: SolveFilters,
 ) -> ToolingResult<String> {
     let trace = read_trace(&input)?;
     let tree = filter_goal_tree(&GoalTree::from_trace(&trace)?, &filters);
-    let summary: SolveSummary =
-        summarize_filtered_tree(&tree, filtered_unsupported_count(&trace, &tree));
-    match output {
-        OutputModeArg::Text => Ok(render_summary_text(&summary)),
-        OutputModeArg::Json => Ok(serde_json::to_string_pretty(&summary)?),
+    let unsupported = filtered_unsupported_count(&trace, &tree);
+    let analysis = build_solve_analysis(&tree, unsupported, top);
+    match (output, include_distribution) {
+        (OutputModeArg::Text, false) => Ok(render_summary_text(&analysis.summary, render)),
+        (OutputModeArg::Text, true) => Ok(render_analysis_text(&analysis, render)),
+        (OutputModeArg::Json, false) => Ok(serde_json::to_string_pretty(&analysis.summary)?),
+        (OutputModeArg::Json, true) => Ok(serde_json::to_string_pretty(&analysis)?),
     }
 }
 
-fn run_solve_owner(
+fn run_solve_query(
+    query_kind: QueryKindArg,
     owner: &str,
     package: Option<String>,
     manifest_path: Option<PathBuf>,
     toolchain: &str,
     view: SolveViewArg,
     output: OutputModeArg,
+    render: SolveRenderOptions,
+    include_distribution: bool,
+    top: usize,
     rebuild_driver: bool,
     filters: SolveFilters,
 ) -> ToolingResult<String> {
@@ -492,30 +753,42 @@ fn run_solve_owner(
         None,
         rebuild_driver,
         Some(owner),
+        Some(query_kind),
     )?;
     let tree = filter_goal_tree(&GoalTree::from_trace(&trace)?, &filters);
+    let unsupported = filtered_unsupported_count(&trace, &tree);
+    let analysis = build_solve_analysis(&tree, unsupported, top);
     match (view, output) {
-        (SolveViewArg::Tree, OutputModeArg::Text) => Ok(render_solve_tree_text(&tree)),
+        (SolveViewArg::Tree, OutputModeArg::Text) => Ok(render_solve_tree_text(&tree, render)),
         (SolveViewArg::Tree, OutputModeArg::Json) => Ok(serde_json::to_string_pretty(&tree)?),
+        (SolveViewArg::Summary, OutputModeArg::Text) if include_distribution => {
+            Ok(render_analysis_text(&analysis, render))
+        },
         (SolveViewArg::Summary, OutputModeArg::Text) => {
-            let summary =
-                summarize_filtered_tree(&tree, filtered_unsupported_count(&trace, &tree));
-            Ok(render_summary_text(&summary))
+            Ok(render_summary_text(&analysis.summary, render))
+        },
+        (SolveViewArg::Summary, OutputModeArg::Json) if include_distribution => {
+            Ok(serde_json::to_string_pretty(&analysis)?)
         },
         (SolveViewArg::Summary, OutputModeArg::Json) => {
-            let summary =
-                summarize_filtered_tree(&tree, filtered_unsupported_count(&trace, &tree));
-            Ok(serde_json::to_string_pretty(&summary)?)
+            Ok(serde_json::to_string_pretty(&analysis.summary)?)
         },
     }
 }
 
-fn run_solve_diff(left: PathBuf, right: PathBuf, output: OutputModeArg) -> ToolingResult<String> {
-    let left = read_summary_or_trace(&left)?;
-    let right = read_summary_or_trace(&right)?;
-    let diff = diff_summaries(&left, &right);
+fn run_solve_diff(
+    left: PathBuf,
+    right: PathBuf,
+    output: OutputModeArg,
+    render: SolveRenderOptions,
+    view: SolveDiffViewArg,
+    top: usize,
+) -> ToolingResult<String> {
+    let left = read_analysis_or_trace(&left, top)?;
+    let right = read_analysis_or_trace(&right, top)?;
+    let diff = diff_analysis(&left, &right);
     match output {
-        OutputModeArg::Text => Ok(render_diff_text(&diff)),
+        OutputModeArg::Text => Ok(render_diff_text(&diff, view, render)),
         OutputModeArg::Json => Ok(serde_json::to_string_pretty(&diff)?),
     }
 }
@@ -717,6 +990,8 @@ fn run_doctor(output: OutputModeArg) -> ToolingResult<String> {
             String::from("solve-tree"),
             String::from("solve-summary"),
             String::from("solve-owner"),
+            String::from("solve-impl"),
+            String::from("solve-assoc-item"),
             String::from("solve-diff"),
             String::from("graph"),
             String::from("analyze"),
@@ -763,18 +1038,31 @@ fn read_trace(path: impl AsRef<Path>) -> ToolingResult<Trace> {
     Trace::from_json_lines(TraceId::new(1), &input)
 }
 
-fn read_summary_or_trace(path: impl AsRef<Path>) -> ToolingResult<SolveSummary> {
+fn read_analysis_or_trace(path: impl AsRef<Path>, top: usize) -> ToolingResult<SolveAnalysis> {
     let input = fs::read_to_string(path)?;
+    if let Ok(analysis) = serde_json::from_str::<SolveAnalysis>(&input) {
+        return Ok(analysis);
+    }
     if let Ok(summary) = serde_json::from_str::<SolveSummary>(&input) {
-        return Ok(summary);
+        return Ok(SolveAnalysis {
+            summary,
+            predicate_distribution: Vec::new(),
+            candidate_kind_distribution: Vec::new(),
+            top_roots: Vec::new(),
+        });
     }
     if let Some(summary) = parse_summary_text(&input) {
-        return Ok(summary);
+        return Ok(SolveAnalysis {
+            summary,
+            predicate_distribution: Vec::new(),
+            candidate_kind_distribution: Vec::new(),
+            top_roots: Vec::new(),
+        });
     }
 
     let trace = Trace::from_json_lines(TraceId::new(1), &input)?;
     let tree = GoalTree::from_trace(&trace)?;
-    Ok(tree.summarize(&trace))
+    Ok(build_solve_analysis(&tree, filtered_unsupported_count(&trace, &tree), top))
 }
 
 fn parse_summary_text(input: &str) -> Option<SolveSummary> {
@@ -1161,6 +1449,47 @@ mod tests {
         assert!(output.contains("goals: left=2 right=2 delta=+0"));
         fs::remove_file(left).expect("left trace should be removed");
         fs::remove_file(right).expect("right trace should be removed");
+    }
+
+    #[test]
+    fn parses_solve_impl_and_assoc_item_commands() {
+        let solve_impl = Cli::parse_from([
+            "typelude-tooling-cli",
+            "solve-impl",
+            "--owner",
+            "RunWriter",
+        ]);
+        assert!(matches!(solve_impl.command, super::Commands::SolveImpl { .. }));
+
+        let solve_assoc = Cli::parse_from([
+            "typelude-tooling-cli",
+            "solve-assoc-item",
+            "--owner",
+            "OpIf",
+        ]);
+        assert!(matches!(
+            solve_assoc.command,
+            super::Commands::SolveAssocItem { .. }
+        ));
+    }
+
+    #[test]
+    fn solve_tree_json_keeps_raw_predicate() {
+        let input = unique_path("typelude-solve-tree-json");
+        write_trace_fixture(&input);
+        let cli = Cli::parse_from([
+            "typelude-tooling-cli",
+            "solve-tree",
+            "--input",
+            input.to_str().expect("path should be valid utf-8"),
+            "--output",
+            "json",
+            "--compact",
+            "aggressive",
+        ]);
+        let output = run(cli).expect("solve-tree json should run");
+        assert!(output.contains("<T as Eval>"));
+        fs::remove_file(input).expect("trace fixture should be removed");
     }
 
     #[test]

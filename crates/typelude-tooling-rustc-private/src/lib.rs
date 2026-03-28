@@ -21,6 +21,7 @@ pub mod subjects;
 
 use emit::{TraceEventExt, emit_raw};
 use frontends::{CollectConfig, run_collect_frontend, run_owner_query_frontend};
+use queries::QueryTargetKind;
 use rustc_driver::Callbacks;
 use rustc_interface::Config;
 use typelude_tooling_core::{EventId, TraceEvent, TraceEventKind};
@@ -49,7 +50,10 @@ impl Callbacks for TypeludeCallbacks {
         tcx: rustc_middle::ty::TyCtxt<'_>,
     ) -> rustc_driver::Compilation {
         let result = if let Some(owner) = std::env::var("TYPELUDE_TOOLING_QUERY_OWNER").ok() {
-            run_owner_query_frontend(tcx, &self.collect_config, &owner)
+            let target_kind = QueryTargetKind::from_env(
+                std::env::var("TYPELUDE_TOOLING_QUERY_KIND").ok().as_deref(),
+            );
+            run_owner_query_frontend(tcx, &self.collect_config, &owner, target_kind)
         } else {
             run_collect_frontend(tcx, &self.collect_config)
         };

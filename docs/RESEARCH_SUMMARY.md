@@ -7,6 +7,9 @@ typelude のデバッグ・診断・可視化・支援ツールに関する調�
 - [ECOSYSTEM.md](/Users/saqula/Documents/02_codes/github.com/aluqas/typelude/docs/ECOSYSTEM.md)
 - [RUSTC_TOOLING.md](/Users/saqula/Documents/02_codes/github.com/aluqas/typelude/docs/RUSTC_TOOLING.md)
 - [TOOLING_ARCHITECTURE.md](/Users/saqula/Documents/02_codes/github.com/aluqas/typelude/docs/TOOLING_ARCHITECTURE.md)
+- [TOOLING_IMPLEMENTATION.md](/Users/saqula/Documents/02_codes/github.com/aluqas/typelude/docs/TOOLING_IMPLEMENTATION.md)
+
+実装済みの状態は [TOOLING_IMPLEMENTATION.md](/Users/saqula/Documents/02_codes/github.com/aluqas/typelude/docs/TOOLING_IMPLEMENTATION.md) を起点に追う。
 
 ## 1. 結論
 
