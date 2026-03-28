@@ -15,8 +15,8 @@ impl TypeludeMetricEnricher {
 
     /// Derive global summary metrics from a [`Trace`].
     ///
-    /// Returns step count, obligation count, recursion depth, re-evaluation
-    /// count, branch counts, and cache hit rate.
+    /// Returns step count, obligation count, goal nesting depth, and
+    /// re-evaluation count.
     #[must_use]
     pub fn enrich_trace(&self, trace: &Trace) -> Vec<MetricRecord> {
         let step_count = trace.events.len() as f64;
@@ -30,67 +30,18 @@ impl TypeludeMetricEnricher {
                     TraceEventKind::GoalDiscovered
                         | TraceEventKind::GoalEntered
                         | TraceEventKind::GoalExited
-                        | TraceEventKind::GoalStarted
-                        | TraceEventKind::GoalFinished
                 )
             })
             .count() as f64;
 
-        let recursion_depth = max_recursion_depth(trace);
+        let recursion_depth = max_goal_nesting_depth(trace);
         let re_eval_count = repeated_titles(trace) as f64;
-
-        // ② branch counts
-        let branch_total =
-            trace.events.iter().filter(|e| e.kind == TraceEventKind::BranchChosen).count() as f64;
-        let true_branches = trace
-            .events
-            .iter()
-            .filter(|e| {
-                e.kind == TraceEventKind::BranchChosen
-                    && (e.title.contains("True")
-                        || e.detail.as_deref().is_some_and(|d| d.contains("true")))
-            })
-            .count() as f64;
-        let false_branches = branch_total - true_branches;
-
-        // ③ cache hit rate
-        let cache_hits =
-            trace.events.iter().filter(|e| e.kind == TraceEventKind::CacheHit).count() as f64;
-        let cache_misses =
-            trace.events.iter().filter(|e| e.kind == TraceEventKind::CacheMiss).count() as f64;
-        let total_cache = cache_hits + cache_misses;
-        let cache_hit_rate = if total_cache > 0.0 {
-            cache_hits / total_cache
-        } else {
-            0.0
-        };
 
         vec![
             MetricRecord::new(MetricKind::StepCount, "semantic_step_count", step_count),
             MetricRecord::new(MetricKind::ObligationCount, "obligation_count", obligation_count),
             MetricRecord::new(MetricKind::RecursionDepth, "recursion_depth_max", recursion_depth),
             MetricRecord::new(MetricKind::ReEvaluationCount, "re_evaluation_count", re_eval_count),
-            MetricRecord::new(MetricKind::BranchCount, "branch_total", branch_total),
-            MetricRecord::new(MetricKind::BranchCount, "branch_true", true_branches),
-            MetricRecord::new(MetricKind::BranchCount, "branch_false", false_branches),
-            {
-                let mut m =
-                    MetricRecord::new(MetricKind::StepCount, "cache_hit_count", cache_hits);
-                m.unit = Some(String::from("hits"));
-                m
-            },
-            {
-                let mut m =
-                    MetricRecord::new(MetricKind::StepCount, "cache_miss_count", cache_misses);
-                m.unit = Some(String::from("misses"));
-                m
-            },
-            {
-                let mut m =
-                    MetricRecord::new(MetricKind::StepCount, "cache_hit_rate", cache_hit_rate);
-                m.unit = Some(String::from("ratio"));
-                m
-            },
         ]
     }
 
@@ -135,19 +86,12 @@ fn semantic_node_kind_name(kind: &SemanticNodeKind) -> &'static str {
     }
 }
 
-fn max_recursion_depth(trace: &Trace) -> f64 {
-    let mut current = 0_u64;
+fn max_goal_nesting_depth(trace: &Trace) -> f64 {
     let mut max = 0_u64;
     for event in &trace.events {
-        match event.kind {
-            TraceEventKind::RecursionEntered => {
-                current += 1;
-                max = max.max(current);
-            },
-            TraceEventKind::RecursionExited => {
-                current = current.saturating_sub(1);
-            },
-            _ => {},
+        if matches!(event.kind, TraceEventKind::GoalDiscovered | TraceEventKind::GoalEntered) {
+            let depth = u64::from(event.parent_goal_id.is_some());
+            max = max.max(depth);
         }
     }
     max as f64
@@ -187,59 +131,18 @@ mod tests {
     #[test]
     fn derives_semantic_metrics() {
         let mut trace = Trace::new(TraceId::new(1));
-        for (id, kind, title) in [
-            (1, TraceEventKind::GoalEntered, "EIf"),
-            (2, TraceEventKind::RecursionEntered, "EWhile"),
-            (3, TraceEventKind::RecursionExited, "EWhile"),
-            (4, TraceEventKind::GoalExited, "EIf"),
-            (5, TraceEventKind::GoalEntered, "EIf"),
-        ] {
-            trace.push(make_event(id, kind, title));
-        }
+        trace.push(make_event(1, TraceEventKind::GoalEntered, "EIf"));
+        let mut nested = make_event(2, TraceEventKind::GoalEntered, "EWhile");
+        nested.parent_goal_id = Some(typelude_tooling_core::GoalId::new(1));
+        trace.push(nested);
+        trace.push(make_event(3, TraceEventKind::GoalExited, "EWhile"));
+        trace.push(make_event(4, TraceEventKind::GoalExited, "EIf"));
+        trace.push(make_event(5, TraceEventKind::GoalEntered, "EIf"));
 
         let metrics = TypeludeMetricEnricher::new().enrich_trace(&trace);
         assert_eq!(metrics[0].value, 5.0); // step_count
         assert_eq!(metrics[2].value, 1.0); // recursion_depth_max
         assert_eq!(metrics[3].value, 3.0); // re_evaluation_count
-    }
-
-    // ② branch counts
-    #[test]
-    fn counts_branch_events() {
-        let mut trace = Trace::new(TraceId::new(1));
-        trace.push(make_event(1, TraceEventKind::BranchChosen, "EIf:True"));
-        trace.push(make_event(2, TraceEventKind::BranchChosen, "EIf:False"));
-        trace.push(make_event(3, TraceEventKind::BranchChosen, "EIf:True"));
-
-        let metrics = TypeludeMetricEnricher::new().enrich_trace(&trace);
-        let branch_total = metrics.iter().find(|m| m.name == "branch_total").unwrap();
-        let branch_true = metrics.iter().find(|m| m.name == "branch_true").unwrap();
-        let branch_false = metrics.iter().find(|m| m.name == "branch_false").unwrap();
-
-        assert_eq!(branch_total.value, 3.0);
-        assert_eq!(branch_true.value, 2.0);
-        assert_eq!(branch_false.value, 1.0);
-    }
-
-    // ③ cache hit rate
-    #[test]
-    fn computes_cache_hit_rate() {
-        let mut trace = Trace::new(TraceId::new(1));
-        trace.push(make_event(1, TraceEventKind::CacheHit, "goal"));
-        trace.push(make_event(2, TraceEventKind::CacheHit, "goal"));
-        trace.push(make_event(3, TraceEventKind::CacheMiss, "goal"));
-
-        let metrics = TypeludeMetricEnricher::new().enrich_trace(&trace);
-        let rate = metrics.iter().find(|m| m.name == "cache_hit_rate").unwrap();
-        assert!((rate.value - 2.0 / 3.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn cache_hit_rate_zero_when_no_cache_events() {
-        let trace = Trace::new(TraceId::new(1));
-        let metrics = TypeludeMetricEnricher::new().enrich_trace(&trace);
-        let rate = metrics.iter().find(|m| m.name == "cache_hit_rate").unwrap();
-        assert_eq!(rate.value, 0.0);
     }
 
     // ① per-node metrics

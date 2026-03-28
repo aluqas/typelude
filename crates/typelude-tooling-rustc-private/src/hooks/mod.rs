@@ -25,7 +25,6 @@ impl HookRegistry {
             HookId::ItemStructure => ItemStructureHook.run(session),
             HookId::TraitSolve => TraitSolveHook.run(session),
             HookId::Diagnostics => DiagnosticsHook.run(session),
-            HookId::LegacyRustcLog => Ok(()),
         }
     }
 }

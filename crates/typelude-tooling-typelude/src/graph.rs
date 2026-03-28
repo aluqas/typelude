@@ -43,9 +43,7 @@ impl TraceGraphBuilder {
                         graph.edges.push(make_edge(parent_id, node_id, "subject"));
                     }
                 },
-                TraceEventKind::GoalDiscovered
-                | TraceEventKind::GoalEntered
-                | TraceEventKind::GoalStarted => {
+                TraceEventKind::GoalDiscovered | TraceEventKind::GoalEntered => {
                     let Some(goal_id) = event.goal_id else {
                         continue;
                     };
@@ -73,29 +71,9 @@ impl TraceGraphBuilder {
                         graph.edges.push(make_edge(subject_node_id, node_id, "goal"));
                     }
                 },
-                TraceEventKind::NestedObligation => {
-                    let Some(parent_goal_id) = event.parent_goal_id.or(event.goal_id) else {
-                        continue;
-                    };
-                    let node_id = event_node_id(event.id.value());
-                    graph.nodes.push(GraphNode {
-                        id: node_id,
-                        kind: GraphNodeKind::Goal,
-                        label: event.title.clone(),
-                        span_id: event.span_id,
-                        metadata: event.metadata.clone(),
-                    });
-                    graph.edges.push(make_edge(
-                        goal_node_id(parent_goal_id),
-                        node_id,
-                        "obligation",
-                    ));
-                },
                 TraceEventKind::CandidateDiscovered
                 | TraceEventKind::CandidateTried
-                | TraceEventKind::CandidateResult
-                | TraceEventKind::CandidateChosen
-                | TraceEventKind::CandidateRejected => {
+                | TraceEventKind::CandidateResult => {
                     let Some(goal_id) = event.goal_id else {
                         continue;
                     };
@@ -119,10 +97,7 @@ impl TraceGraphBuilder {
                         candidate_edge_label(&event.kind),
                     ));
                 },
-                TraceEventKind::BranchChosen
-                | TraceEventKind::AliasExpanded
-                | TraceEventKind::Normalization
-                | TraceEventKind::ErrorRaised => {
+                TraceEventKind::ErrorRaised => {
                     let node_id = event_node_id(event.id.value());
                     graph.nodes.push(GraphNode {
                         id: node_id,
@@ -149,45 +124,6 @@ impl TraceGraphBuilder {
                 },
                 _ => {},
             }
-        }
-
-        graph
-    }
-
-    #[must_use]
-    pub fn build_legacy_from_depth(&self, trace: &Trace) -> Graph {
-        let mut graph = Graph::default();
-        let mut stack: Vec<(usize, NodeId)> = Vec::new();
-
-        for event in &trace.events {
-            let Some(depth) =
-                event.metadata.get("depth").and_then(|value| value.parse::<usize>().ok())
-            else {
-                continue;
-            };
-
-            while stack.last().is_some_and(|(stack_depth, _)| *stack_depth >= depth) {
-                stack.pop();
-            }
-
-            let node_id = NodeId::new(event.id.value());
-            graph.nodes.push(GraphNode {
-                id: node_id,
-                kind: legacy_node_kind(&event.kind),
-                label: event.title.clone(),
-                span_id: event.span_id,
-                metadata: event.metadata.clone(),
-            });
-
-            if let Some((_, parent_id)) = stack.last().copied() {
-                graph.edges.push(make_edge(
-                    parent_id,
-                    node_id,
-                    expression_edge_label(&event.kind),
-                ));
-            }
-
-            stack.push((depth, node_id));
         }
 
         graph
@@ -370,37 +306,16 @@ fn candidate_edge_label(kind: &TraceEventKind) -> &'static str {
     match kind {
         TraceEventKind::CandidateDiscovered => "candidate",
         TraceEventKind::CandidateResult => "result",
-        TraceEventKind::CandidateChosen => "chosen",
-        TraceEventKind::CandidateRejected => "rejected",
         _ => "tried",
     }
 }
 
 fn expression_edge_label(kind: &TraceEventKind) -> &'static str {
     match kind {
-        TraceEventKind::AliasExpanded => "alias",
-        TraceEventKind::Normalization => "normalize",
-        TraceEventKind::BranchChosen => "branch",
         TraceEventKind::ErrorRaised => "error",
         TraceEventKind::CandidateDiscovered => "candidate",
         TraceEventKind::CandidateResult => "result",
-        TraceEventKind::CandidateChosen => "chosen",
-        TraceEventKind::CandidateRejected => "rejected",
         _ => "nested",
-    }
-}
-
-fn legacy_node_kind(kind: &TraceEventKind) -> GraphNodeKind {
-    match kind {
-        TraceEventKind::CandidateDiscovered
-        | TraceEventKind::CandidateTried
-        | TraceEventKind::CandidateResult
-        | TraceEventKind::CandidateChosen
-        | TraceEventKind::CandidateRejected => GraphNodeKind::Candidate,
-        TraceEventKind::AliasExpanded
-        | TraceEventKind::Normalization
-        | TraceEventKind::BranchChosen => GraphNodeKind::Expression,
-        _ => GraphNodeKind::Goal,
     }
 }
 

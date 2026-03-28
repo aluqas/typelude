@@ -27,7 +27,6 @@ pub enum HookId {
     TraitSolve,
     Diagnostics,
     ItemStructure,
-    LegacyRustcLog,
 }
 
 define_id!(RunId);
