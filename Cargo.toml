@@ -6,6 +6,7 @@ members = [
     "crates/typelude-vm",
     "crates/typelude-macros",
     "crates/typelude-tooling-core",
+    "crates/typelude-tooling-semantic-api",
     "crates/typelude-tooling-rustc",
     "crates/typelude-tooling-typelude",
     "crates/typelude-tooling-cli",

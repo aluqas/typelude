@@ -650,6 +650,7 @@ dependencies = [
  "serde_json",
  "typelude-tooling-core",
  "typelude-tooling-rustc",
+ "typelude-tooling-semantic-api",
  "typelude-tooling-typelude",
 ]
 
@@ -680,12 +681,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "typelude-tooling-semantic-api"
+version = "0.1.0"
+dependencies = [
+ "typelude-tooling-core",
+]
+
+[[package]]
 name = "typelude-tooling-typelude"
 version = "0.1.0"
 dependencies = [
  "serde",
  "typelude-std",
  "typelude-tooling-core",
+ "typelude-tooling-semantic-api",
  "typelude-vm",
 ]
 

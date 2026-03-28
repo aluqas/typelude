@@ -11,6 +11,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 typelude-std = { path = "../typelude-std", default-features = false, features = ["nightly"] }
 typelude-vm = { path = "../typelude-vm", default-features = false, features = ["nightly"] }
 typelude-tooling-core = { path = "../typelude-tooling-core" }
+typelude-tooling-semantic-api = { path = "../typelude-tooling-semantic-api" }
 
 [lints.rust]
 unsafe_code = "deny"

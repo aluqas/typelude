@@ -1,6 +1,6 @@
-use typelude_tooling_core::{HookId, TraceEventKind};
+use typelude_tooling_core::{DiagnosticEmitted, DiagnosticRecord, HookId, TracePayload};
 
-use crate::{emit::TraceEventExt, error::AnalysisResult, hooks::Hook, session::AnalysisSession};
+use crate::{error::AnalysisResult, hooks::Hook, session::AnalysisSession};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct DiagnosticsHook;
@@ -19,13 +19,15 @@ pub fn emit_diagnostics_notice(session: &mut AnalysisSession<'_, '_>) {
     }
     let diag_id = session.alloc_diag_id();
     session.stats.diagnostic_count += 1;
-    let event = session
+    session
         .emitter
-        .emit(TraceEventKind::Info, "diagnostics frontend active")
-        .with_hook_id(HookId::Diagnostics)
-        .with_diagnostic_id(diag_id)
-        .with_detail(
-            "compiler diagnostics remain available through typelude-tooling-rustc artifacts",
-        );
-    session.emitter.write(&event);
+        .write_payload(TracePayload::DiagnosticEmitted(DiagnosticEmitted {
+            hook_id: Some(HookId::Diagnostics),
+            diagnostic_id: diag_id,
+            subject_id: None,
+            goal_id: None,
+            record: DiagnosticRecord::tooling_notice(
+                "compiler diagnostics remain available through typelude-tooling-rustc artifacts",
+            ),
+        }));
 }

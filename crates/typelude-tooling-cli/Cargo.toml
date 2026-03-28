@@ -12,6 +12,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 typelude-tooling-core = { path = "../typelude-tooling-core" }
 typelude-tooling-rustc = { path = "../typelude-tooling-rustc" }
+typelude-tooling-semantic-api = { path = "../typelude-tooling-semantic-api" }
 typelude-tooling-typelude = { path = "../typelude-tooling-typelude" }
 
 [lints.rust]

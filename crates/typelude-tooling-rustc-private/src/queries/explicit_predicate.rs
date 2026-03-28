@@ -8,10 +8,13 @@ use rustc_middle::{
 use rustc_trait_selection::solve::inspect::{
     InferCtxtProofTreeExt, InspectCandidate, InspectConfig, InspectGoal, ProofTreeVisitor,
 };
-use typelude_tooling_core::{HookId, SubjectId, SubjectKind, TraceEventKind};
+use typelude_tooling_core::{
+    CandidateDiscovered, CandidateKind, CandidateResult, CandidateTried, ErrorRaised,
+    GoalDiscovered, GoalEntered, GoalExited, GoalResult, HookId, PredicateRepr, SemanticTag,
+    SubjectId, TracePayload,
+};
 
 use crate::{
-    emit::TraceEventExt,
     error::{AnalysisError, AnalysisResult},
     queries::{Query, QueryContext},
     session::AnalysisSession,
@@ -121,14 +124,13 @@ fn emit_unsupported(session: &mut AnalysisSession<'_, '_>, subject_id: SubjectId
         session.record_drop();
         return;
     }
-    let event = session
-        .emitter
-        .emit(TraceEventKind::ErrorRaised, "unsupported_goal")
-        .with_hook_id(HookId::TraitSolve)
-        .with_subject(subject_id, SubjectKind::Predicate)
-        .with_detail(detail)
-        .with_metadata("result", "unsupported");
-    session.emitter.write(&event);
+    session.emitter.write_payload(TracePayload::ErrorRaised(ErrorRaised {
+        hook_id: Some(HookId::TraitSolve),
+        subject_id: Some(subject_id),
+        goal_id: None,
+        result: GoalResult::Unsupported,
+        message: detail,
+    }));
 }
 
 fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
@@ -167,37 +169,45 @@ impl<'v, 'c, 'tcx> ProofTreeCollector<'v, 'c, 'tcx> {
 
         let candidate_id = self.session.alloc_candidate_id();
         self.session.stats.candidate_count += 1;
+        let candidate_kind = lower_candidate_kind(&format!("{:?}", candidate.kind()));
+        let semantic_tags = semantic_tags_for_candidate(&candidate_kind);
+        let metadata = BTreeMap::from([(
+            String::from("raw_candidate_kind"),
+            format!("{:?}", candidate.kind()),
+        )]);
 
-        let discovered = self
-            .session
-            .emitter
-            .emit(TraceEventKind::CandidateDiscovered, format!("{:?}", candidate.kind()))
-            .with_hook_id(HookId::TraitSolve)
-            .with_subject(self.subject_id, SubjectKind::Predicate)
-            .with_goal_id(goal_id)
-            .with_candidate_id(candidate_id);
-        self.session.emitter.write(&discovered);
+        self.session.emitter.write_payload(TracePayload::CandidateDiscovered(
+            CandidateDiscovered {
+                hook_id: HookId::TraitSolve,
+                subject_id: self.subject_id,
+                goal_id,
+                candidate_id,
+                candidate_kind: candidate_kind.clone(),
+                semantic_tags: semantic_tags.clone(),
+                metadata: metadata.clone(),
+            },
+        ));
 
-        let tried = self
-            .session
-            .emitter
-            .emit(TraceEventKind::CandidateTried, format!("{:?}", candidate.kind()))
-            .with_hook_id(HookId::TraitSolve)
-            .with_subject(self.subject_id, SubjectKind::Predicate)
-            .with_goal_id(goal_id)
-            .with_candidate_id(candidate_id);
-        self.session.emitter.write(&tried);
+        self.session.emitter.write_payload(TracePayload::CandidateTried(CandidateTried {
+            hook_id: HookId::TraitSolve,
+            subject_id: self.subject_id,
+            goal_id,
+            candidate_id,
+            candidate_kind: candidate_kind.clone(),
+            semantic_tags: semantic_tags.clone(),
+            metadata: metadata.clone(),
+        }));
 
-        let result = self
-            .session
-            .emitter
-            .emit(TraceEventKind::CandidateResult, format!("{:?}", candidate.kind()))
-            .with_hook_id(HookId::TraitSolve)
-            .with_subject(self.subject_id, SubjectKind::Predicate)
-            .with_goal_id(goal_id)
-            .with_candidate_id(candidate_id)
-            .with_detail(format!("{:?}", candidate.result()));
-        self.session.emitter.write(&result);
+        self.session.emitter.write_payload(TracePayload::CandidateResult(CandidateResult {
+            hook_id: HookId::TraitSolve,
+            subject_id: self.subject_id,
+            goal_id,
+            candidate_id,
+            candidate_kind,
+            result: lower_goal_result(&format!("{:?}", candidate.result())),
+            semantic_tags,
+            metadata,
+        }));
 
         candidate.visit_nested_no_probe(self);
     }
@@ -217,8 +227,8 @@ impl<'tcx> ProofTreeVisitor<'tcx> for ProofTreeCollector<'_, '_, 'tcx> {
     }
 
     fn visit_goal(&mut self, goal: &InspectGoal<'_, 'tcx>) -> Self::Result {
-        let predicate = format!("{:?}", goal.goal().predicate);
-        if !self.session.focus_matches(&predicate) {
+        let predicate_debug = format!("{:?}", goal.goal().predicate);
+        if !self.session.focus_matches(&predicate_debug) {
             return;
         }
         if !self.session.can_emit() {
@@ -229,32 +239,28 @@ impl<'tcx> ProofTreeVisitor<'tcx> for ProofTreeCollector<'_, '_, 'tcx> {
         let goal_id = self.session.alloc_goal_id();
         let parent_goal_id = self.stack.last().copied();
         let candidates = goal.candidates();
+        let predicate = lower_predicate_repr(&predicate_debug);
+        let semantic_tags = semantic_tags_for_predicate(&predicate);
         self.session.stats.goal_count += 1;
 
-        let mut discovered = self
-            .session
-            .emitter
-            .emit(TraceEventKind::GoalDiscovered, predicate.clone())
-            .with_hook_id(HookId::TraitSolve)
-            .with_subject(self.subject_id, SubjectKind::Predicate)
-            .with_goal_id(goal_id)
-            .with_metadata("candidate_count", candidates.len().to_string());
-        if let Some(parent) = parent_goal_id {
-            discovered = discovered.with_parent_goal_id(parent);
-        }
-        self.session.emitter.write(&discovered);
+        self.session.emitter.write_payload(TracePayload::GoalDiscovered(GoalDiscovered {
+            hook_id: HookId::TraitSolve,
+            subject_id: self.subject_id,
+            goal_id,
+            parent_goal_id,
+            predicate: predicate.clone(),
+            candidate_count: candidates.len(),
+            semantic_tags: semantic_tags.clone(),
+        }));
 
-        let mut entered = self
-            .session
-            .emitter
-            .emit(TraceEventKind::GoalEntered, predicate)
-            .with_hook_id(HookId::TraitSolve)
-            .with_subject(self.subject_id, SubjectKind::Predicate)
-            .with_goal_id(goal_id);
-        if let Some(parent) = parent_goal_id {
-            entered = entered.with_parent_goal_id(parent);
-        }
-        self.session.emitter.write(&entered);
+        self.session.emitter.write_payload(TracePayload::GoalEntered(GoalEntered {
+            hook_id: HookId::TraitSolve,
+            subject_id: self.subject_id,
+            goal_id,
+            parent_goal_id,
+            predicate: predicate.clone(),
+            semantic_tags: semantic_tags.clone(),
+        }));
 
         self.stack.push(goal_id);
         for candidate in &candidates {
@@ -262,14 +268,154 @@ impl<'tcx> ProofTreeVisitor<'tcx> for ProofTreeCollector<'_, '_, 'tcx> {
         }
         self.stack.pop();
 
-        let exited = self
-            .session
-            .emitter
-            .emit(TraceEventKind::GoalExited, format!("{:?}", goal.goal().predicate))
-            .with_hook_id(HookId::TraitSolve)
-            .with_subject(self.subject_id, SubjectKind::Predicate)
-            .with_goal_id(goal_id)
-            .with_detail(format!("{:?}", goal.result()));
-        self.session.emitter.write(&exited);
+        self.session.emitter.write_payload(TracePayload::GoalExited(GoalExited {
+            hook_id: HookId::TraitSolve,
+            subject_id: self.subject_id,
+            goal_id,
+            parent_goal_id,
+            predicate,
+            result: lower_goal_result(&format!("{:?}", goal.result())),
+            semantic_tags,
+        }));
     }
+}
+
+use std::collections::BTreeMap;
+
+fn lower_predicate_repr(raw: &str) -> PredicateRepr {
+    let text = raw.trim();
+    if text.contains("AliasRelate(") {
+        let inner = text
+            .split_once("AliasRelate(")
+            .and_then(|(_, rest)| rest.rsplit_once(')'))
+            .map(|(body, _)| body)
+            .unwrap_or_default();
+        if let Some((lhs, rhs)) = split_top_level_once(inner) {
+            return PredicateRepr::AliasRelate {
+                lhs: lhs.to_string(),
+                rhs: rhs.to_string(),
+            };
+        }
+    }
+    if text.contains("NormalizesTo(") {
+        let inner = text
+            .split_once("NormalizesTo(")
+            .and_then(|(_, rest)| rest.rsplit_once(')'))
+            .map(|(body, _)| body)
+            .unwrap_or_default();
+        if let Some((alias, target)) = split_top_level_once(inner) {
+            return PredicateRepr::NormalizesTo {
+                alias: alias.to_string(),
+                target: target.to_string(),
+            };
+        }
+    }
+    if text.contains("TraitPredicate(") {
+        let trait_path = if let Some(start) = text.find("TraitPredicate(") {
+            let inner = &text[start + "TraitPredicate(".len()..];
+            inner.split_once(')').map_or(inner, |(body, _)| body).to_string()
+        } else {
+            text.to_string()
+        };
+        return PredicateRepr::TraitPredicate {
+            trait_path,
+            self_ty: String::from("<unknown>"),
+            args: Vec::new(),
+        };
+    }
+    if text.is_empty() {
+        PredicateRepr::Unknown
+    } else {
+        PredicateRepr::DebugText(text.to_string())
+    }
+}
+
+fn lower_candidate_kind(raw: &str) -> CandidateKind {
+    let lower = raw.to_ascii_lowercase();
+    if lower.contains("paramenv") {
+        CandidateKind::ParamEnv
+    } else if lower.contains("impl") {
+        CandidateKind::Impl
+    } else if lower.contains("builtin") {
+        CandidateKind::Builtin
+    } else if lower.contains("aliasrelate") {
+        CandidateKind::AliasRelate
+    } else if lower.contains("normalize") {
+        CandidateKind::Normalize
+    } else {
+        CandidateKind::Unknown(raw.to_string())
+    }
+}
+
+fn lower_goal_result(raw: &str) -> GoalResult {
+    let lower = raw.to_ascii_lowercase();
+    if lower.contains("no_solution") || lower.contains("nosolution") {
+        GoalResult::NoSolution
+    } else if lower.contains("ambiguous") {
+        GoalResult::Ambiguous
+    } else if lower.contains("unsupported") {
+        GoalResult::Unsupported
+    } else if lower.contains("ok") || lower.contains("yes") {
+        GoalResult::Success
+    } else {
+        GoalResult::Error
+    }
+}
+
+fn semantic_tags_for_predicate(predicate: &PredicateRepr) -> Vec<SemanticTag> {
+    let text = predicate.debug_text();
+    let mut tags = Vec::new();
+    if text.contains("EIf") {
+        tags.push(SemanticTag::BranchLike);
+    }
+    if text.contains("EWhile") {
+        tags.push(SemanticTag::LoopLike);
+    }
+    if text.contains("EGet") {
+        tags.push(SemanticTag::LookupLike);
+    }
+    if text.contains("EMap") {
+        tags.push(SemanticTag::MapLike);
+    }
+    if text.contains("EApp") {
+        tags.push(SemanticTag::ApplyLike);
+    }
+    if text.contains("Helper") {
+        tags.push(SemanticTag::HelperDispatchLike);
+    }
+    if text.contains("Op") {
+        tags.push(SemanticTag::VmOpLike);
+    }
+    if tags.is_empty() {
+        tags.push(SemanticTag::EvalLike);
+    }
+    tags
+}
+
+fn semantic_tags_for_candidate(candidate_kind: &CandidateKind) -> Vec<SemanticTag> {
+    match candidate_kind {
+        CandidateKind::AliasRelate => vec![SemanticTag::HelperDispatchLike],
+        CandidateKind::Normalize => vec![SemanticTag::EvalLike],
+        CandidateKind::ParamEnv | CandidateKind::Impl | CandidateKind::Builtin => {
+            vec![SemanticTag::EvalLike]
+        },
+        CandidateKind::Unknown(_) => vec![SemanticTag::Unknown],
+    }
+}
+
+fn split_top_level_once(input: &str) -> Option<(&str, &str)> {
+    let mut depth = 0_i32;
+    for (index, ch) in input.char_indices() {
+        match ch {
+            '<' | '(' | '[' | '{' => depth += 1,
+            '>' | ')' | ']' | '}' => depth -= 1,
+            ',' if depth == 0 => {
+                let lhs = input[..index].trim();
+                let rhs = input[index + 1..].trim();
+                return Some((lhs, rhs));
+            },
+            _ => {},
+        }
+    }
+    None
 }

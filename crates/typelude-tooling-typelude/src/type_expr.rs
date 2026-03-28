@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use typelude_tooling_core::{Graph, GraphEdge, GraphNode, GraphNodeKind, NodeId};
+use typelude_tooling_core::{Graph, GraphEdge, GraphEdgeKind, GraphNode, GraphNodeKind, NodeId};
 
 /// A parsed typelude type expression tree.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -343,6 +343,7 @@ fn push_node(graph: &mut Graph, id: NodeId, kind: GraphNodeKind, label: &str) {
         kind,
         label: label.to_owned(),
         span_id: None,
+        semantic_tags: Vec::new(),
         metadata: BTreeMap::new(),
     });
 }
@@ -358,6 +359,7 @@ fn wire_child(
     graph.edges.push(GraphEdge {
         from: parent,
         to: child_id,
+        kind: GraphEdgeKind::Semantic,
         label: edge_label.to_owned(),
         metadata: BTreeMap::new(),
     });

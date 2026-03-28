@@ -3,7 +3,8 @@ use std::collections::BTreeMap;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use typelude_tooling_core::{
-    GoalTree, GoalTreeGoal, GoalTreeSubject, SolveSummary, SolveSummaryEntry,
+    CandidateKind, GoalResult, GoalTree, GoalTreeGoal, GoalTreeSubject, PredicateRepr,
+    SolveSummary, SolveSummaryEntry,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -615,6 +616,10 @@ fn compact_result(raw: &str, mode: CompactModeArg) -> String {
     }
 }
 
+fn compact_goal_result(result: GoalResult, mode: CompactModeArg) -> String {
+    compact_result(result.label(), mode)
+}
+
 fn compact_length(text: &str, limit: usize) -> String {
     if text.len() <= limit {
         text.to_string()
@@ -709,15 +714,16 @@ fn filter_goal(goal: &GoalTreeGoal, filters: &SolveFilters) -> Option<GoalTreeGo
                 .candidate_kind
                 .as_ref()
                 .map(|needle| {
-                    candidate.kind.to_ascii_lowercase().contains(&needle.to_ascii_lowercase())
+                    candidate_kind_text(&candidate.kind)
+                        .to_ascii_lowercase()
+                        .contains(&needle.to_ascii_lowercase())
                 })
                 .unwrap_or(true)
         })
         .cloned()
         .collect::<Vec<_>>();
 
-    let result_matches =
-        filters.result.map(|filter| result_matches(filter, &goal.result)).unwrap_or(true);
+    let result_matches = filters.result.map(|filter| result_matches(filter, goal.result)).unwrap_or(true);
     let candidate_matches = filters.candidate_kind.is_none() || !candidates.is_empty();
 
     if (result_matches && candidate_matches) || !children.is_empty() {
@@ -725,8 +731,9 @@ fn filter_goal(goal: &GoalTreeGoal, filters: &SolveFilters) -> Option<GoalTreeGo
             id: goal.id,
             parent_goal_id: goal.parent_goal_id,
             predicate: goal.predicate.clone(),
-            result: goal.result.clone(),
+            result: goal.result,
             depth: goal.depth,
+            semantic_tags: goal.semantic_tags.clone(),
             candidates,
             children,
         })
@@ -735,15 +742,12 @@ fn filter_goal(goal: &GoalTreeGoal, filters: &SolveFilters) -> Option<GoalTreeGo
     }
 }
 
-fn result_matches(filter: SolveResultArg, value: &str) -> bool {
-    let lower = value.to_ascii_lowercase();
+fn result_matches(filter: SolveResultArg, value: GoalResult) -> bool {
     match filter {
-        SolveResultArg::Ok => lower.contains("ok"),
-        SolveResultArg::NoSolution => {
-            lower.contains("no_solution") || lower.contains("nosolution")
-        },
-        SolveResultArg::Ambiguous => lower.contains("ambiguous"),
-        SolveResultArg::Unsupported => lower.contains("unsupported"),
+        SolveResultArg::Ok => matches!(value, GoalResult::Success),
+        SolveResultArg::NoSolution => matches!(value, GoalResult::NoSolution),
+        SolveResultArg::Ambiguous => matches!(value, GoalResult::Ambiguous),
+        SolveResultArg::Unsupported => matches!(value, GoalResult::Unsupported | GoalResult::Error),
     }
 }
 
@@ -762,22 +766,22 @@ fn walk_goal(
 ) {
     *goal_count += 1;
     *max_goal_depth = (*max_goal_depth).max(goal.depth);
-    *predicate_counts.entry(goal.predicate.clone()).or_default() += 1;
-    *predicate_family_counts.entry(predicate_family(&goal.predicate)).or_default() += 1;
+    let predicate = predicate_text(&goal.predicate);
+    *predicate_counts.entry(predicate.clone()).or_default() += 1;
+    *predicate_family_counts.entry(predicate_family(&predicate)).or_default() += 1;
 
-    let result = goal.result.to_ascii_lowercase();
-    if result.contains("no_solution") || result.contains("nosolution") {
-        *result_no_solution += 1;
-    } else if result.contains("ambiguous") {
-        *result_ambiguous += 1;
-    } else if result.contains("ok") {
-        *result_ok += 1;
+    match goal.result {
+        GoalResult::Success => *result_ok += 1,
+        GoalResult::NoSolution => *result_no_solution += 1,
+        GoalResult::Ambiguous => *result_ambiguous += 1,
+        GoalResult::Unsupported | GoalResult::Error => {},
     }
 
     for candidate in &goal.candidates {
         *candidate_count += 1;
-        *candidate_counts.entry(candidate.kind.clone()).or_default() += 1;
-        *candidate_family_counts.entry(candidate_family(&candidate.kind)).or_default() += 1;
+        let kind = candidate_kind_text(&candidate.kind);
+        *candidate_counts.entry(kind.clone()).or_default() += 1;
+        *candidate_family_counts.entry(candidate_family(&kind)).or_default() += 1;
     }
 
     for child in &goal.children {
@@ -818,8 +822,8 @@ fn root_hotspot(subject: &GoalTreeSubject, root: &GoalTreeGoal) -> RootHotspot {
     RootHotspot {
         subject_label: subject.label.clone(),
         goal_id: root.id.value(),
-        predicate: root.predicate.clone(),
-        result: root.result.clone(),
+        predicate: predicate_text(&root.predicate),
+        result: String::from(root.result.label()),
         goal_count,
         candidate_count,
         max_depth,
@@ -843,11 +847,13 @@ fn collect_root_stats(
     *goal_count += 1;
     *candidate_count += goal.candidates.len();
     *max_depth = (*max_depth).max(goal.depth);
-    *predicate_counts.entry(goal.predicate.clone()).or_default() += 1;
-    *predicate_family_counts.entry(predicate_family(&goal.predicate)).or_default() += 1;
+    let predicate = predicate_text(&goal.predicate);
+    *predicate_counts.entry(predicate.clone()).or_default() += 1;
+    *predicate_family_counts.entry(predicate_family(&predicate)).or_default() += 1;
     for candidate in &goal.candidates {
-        *candidate_kind_counts.entry(candidate.kind.clone()).or_default() += 1;
-        *candidate_family_counts.entry(candidate_family(&candidate.kind)).or_default() += 1;
+        let kind = candidate_kind_text(&candidate.kind);
+        *candidate_kind_counts.entry(kind.clone()).or_default() += 1;
+        *candidate_family_counts.entry(candidate_family(&kind)).or_default() += 1;
     }
     for child in &goal.children {
         collect_root_stats(
@@ -869,6 +875,14 @@ fn dominant_label(counts: &BTreeMap<String, usize>) -> String {
         .max_by(|left, right| left.1.cmp(right.1).then_with(|| right.0.cmp(left.0)))
         .map(|(label, _)| label.clone())
         .unwrap_or_else(|| String::from("None"))
+}
+
+fn predicate_text(predicate: &PredicateRepr) -> String {
+    predicate.debug_text()
+}
+
+fn candidate_kind_text(kind: &CandidateKind) -> String {
+    kind.label()
 }
 
 fn to_summary_entries(counts: &BTreeMap<String, usize>, limit: usize) -> Vec<SolveSummaryEntry> {
@@ -988,16 +1002,16 @@ fn render_goal(
     lines.push(format!(
         "{indent}goal #{} result={} depth={} :: {}",
         goal.id.value(),
-        compact_result(&goal.result, options.compact),
+        compact_goal_result(goal.result, options.compact),
         goal.depth,
-        maybe_compact_predicate(&goal.predicate, options)
+        maybe_compact_predicate(&predicate_text(&goal.predicate), options)
     ));
     for candidate in &goal.candidates {
         lines.push(format!(
             "{indent}  candidate #{} kind={} result={}",
             candidate.id.value(),
-            maybe_compact_candidate_kind(&candidate.kind, options),
-            compact_result(&candidate.result, options.compact)
+            maybe_compact_candidate_kind(&candidate_kind_text(&candidate.kind), options),
+            compact_goal_result(candidate.result, options.compact)
         ));
     }
     for child in &goal.children {
@@ -1028,23 +1042,30 @@ mod tests {
                 roots: vec![GoalTreeGoal {
                     id: GoalId::new(1),
                     parent_goal_id: None,
-                    predicate: String::from(
+                    predicate: PredicateRepr::DebugText(String::from(
                         "Binder { value: TraitPredicate(<very::long::path::T as Eval>, polarity:Positive), bound_vars: [] }",
-                    ),
-                    result: String::from("NoSolution"),
+                    )),
+                    result: GoalResult::NoSolution,
                     depth: 0,
+                    semantic_tags: Vec::new(),
                     candidates: vec![GoalTreeCandidate {
                         id: CandidateId::new(1),
-                        kind: String::from("TraitCandidate { source: ParamEnv(ImplSource) }"),
-                        result: String::from("Ok(Yes)"),
+                        kind: CandidateKind::Unknown(String::from(
+                            "TraitCandidate { source: ParamEnv(ImplSource) }",
+                        )),
+                        result: GoalResult::Success,
+                        semantic_tags: Vec::new(),
                         metadata: BTreeMap::new(),
                     }],
                     children: vec![GoalTreeGoal {
                         id: GoalId::new(2),
                         parent_goal_id: Some(GoalId::new(1)),
-                        predicate: String::from("NormalizesTo(very::long::assoc::Type)"),
-                        result: String::from("Ok(Certainty::Yes)"),
+                        predicate: PredicateRepr::DebugText(String::from(
+                            "NormalizesTo(very::long::assoc::Type)",
+                        )),
+                        result: GoalResult::Success,
                         depth: 1,
+                        semantic_tags: Vec::new(),
                         candidates: vec![],
                         children: vec![],
                     }],

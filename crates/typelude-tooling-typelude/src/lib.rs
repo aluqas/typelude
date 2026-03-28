@@ -10,6 +10,12 @@ pub mod naming;
 pub mod render;
 pub mod type_expr;
 
+use typelude_tooling_core::{
+    CandidateKind, DiagnosticRecord, GoalTreeCandidate, GoalTreeGoal, GraphNode, MetricRecord,
+    PredicateRepr, RenderMode, RenderedText, SemanticTag, Trace,
+};
+use typelude_tooling_semantic_api::SemanticExtension;
+
 pub use analysis::{GraphAnalysis, GraphSummary, KindDistribution};
 pub use caps::{CapabilityKind, normalize_capability_name};
 pub use diagnostics::TypeludeDiagnosticEnricher;
@@ -19,3 +25,90 @@ pub use metrics::TypeludeMetricEnricher;
 pub use naming::compress_symbol_name;
 pub use render::TypeludeRenderer;
 pub use type_expr::{SemanticExpr, TypeExpr};
+
+#[derive(Debug, Default)]
+pub struct TypeludeExtension;
+
+impl SemanticExtension for TypeludeExtension {
+    fn normalize_symbol(&self, symbol: &str) -> String {
+        compress_symbol_name(symbol)
+    }
+
+    fn classify_predicate(&self, predicate: &PredicateRepr) -> Vec<SemanticTag> {
+        let text = predicate.debug_text();
+        let mut tags = Vec::new();
+        if text.contains("EIf") {
+            tags.push(SemanticTag::BranchLike);
+        }
+        if text.contains("EWhile") {
+            tags.push(SemanticTag::LoopLike);
+        }
+        if text.contains("EGet") {
+            tags.push(SemanticTag::LookupLike);
+        }
+        if text.contains("EMap") {
+            tags.push(SemanticTag::MapLike);
+        }
+        if text.contains("EApp") {
+            tags.push(SemanticTag::ApplyLike);
+        }
+        if text.contains("Helper") {
+            tags.push(SemanticTag::HelperDispatchLike);
+        }
+        if text.contains("Op") {
+            tags.push(SemanticTag::VmOpLike);
+        }
+        if tags.is_empty() {
+            tags.push(SemanticTag::EvalLike);
+        }
+        tags
+    }
+
+    fn classify_candidate(&self, candidate: &CandidateKind) -> Vec<SemanticTag> {
+        match candidate {
+            CandidateKind::AliasRelate => vec![SemanticTag::HelperDispatchLike],
+            CandidateKind::Normalize => vec![SemanticTag::EvalLike],
+            CandidateKind::ParamEnv | CandidateKind::Impl | CandidateKind::Builtin => {
+                vec![SemanticTag::EvalLike]
+            },
+            CandidateKind::Unknown(text) if text.contains("Op") => vec![SemanticTag::VmOpLike],
+            CandidateKind::Unknown(_) => vec![SemanticTag::Unknown],
+        }
+    }
+
+    fn semantic_tags_for_goal(&self, goal: &GoalTreeGoal) -> Vec<SemanticTag> {
+        if goal.semantic_tags.is_empty() {
+            self.classify_predicate(&goal.predicate)
+        } else {
+            goal.semantic_tags.clone()
+        }
+    }
+
+    fn semantic_tags_for_candidate(&self, candidate: &GoalTreeCandidate) -> Vec<SemanticTag> {
+        if candidate.semantic_tags.is_empty() {
+            self.classify_candidate(&candidate.kind)
+        } else {
+            candidate.semantic_tags.clone()
+        }
+    }
+
+    fn render_type(&self, input: &str, mode: RenderMode) -> RenderedText {
+        TypeludeRenderer::new().render_type_expression(input, mode)
+    }
+
+    fn enrich_diagnostic(&self, diagnostic: &DiagnosticRecord) -> DiagnosticRecord {
+        TypeludeDiagnosticEnricher::new().enrich(diagnostic)
+    }
+
+    fn explain_diagnostic(&self, diagnostic: &DiagnosticRecord) -> Option<String> {
+        TypeludeDiagnosticEnricher::new().explain_failure(diagnostic)
+    }
+
+    fn enrich_graph_node(&self, node: &GraphNode) -> GraphNode {
+        node.clone()
+    }
+
+    fn enrich_metrics(&self, trace: &Trace) -> Vec<MetricRecord> {
+        TypeludeMetricEnricher::new().enrich_trace(trace)
+    }
+}

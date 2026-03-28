@@ -1,10 +1,10 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rustc_middle::ty::TyCtxt;
-use typelude_tooling_core::{HookId, RunId, TraceEventKind};
+use typelude_tooling_core::{HookId, RunFinished, RunId, RunStarted, TracePayload};
 
 use crate::{
-    emit::{CollectStats, EventEmitter, TraceEventExt},
+    emit::{CollectStats, EventEmitter},
     error::AnalysisResult,
     hooks::HookRegistry,
     queries::{Query, QueryContext, QueryMatchKind, QueryTargetKind, ResolveOwnerQuery},
@@ -93,31 +93,25 @@ fn run_with_session(
     let rustc_version = rustc_version();
 
     let mut emitter = EventEmitter::new(run_id);
-    let start_event = emitter
-        .emit(TraceEventKind::RunStarted, crate_name.clone())
-        .with_detail("rustc_private analysis session started")
-        .with_metadata("rustc_version", rustc_version)
-        .with_metadata(
-            "subject_filter",
-            config.subject_filter.clone().unwrap_or_else(|| String::from("<none>")),
-        )
-        .with_metadata("max_events", config.max_events.to_string())
-        .with_metadata("max_depth", config.max_depth.to_string());
-    emitter.write(&start_event);
+    emitter.write_payload(TracePayload::RunStarted(RunStarted {
+        crate_name: crate_name.clone(),
+        rustc_version,
+        subject_filter: config.subject_filter.clone(),
+        max_events: config.max_events,
+        max_depth: config.max_depth,
+    }));
 
     let mut session = AnalysisSession::new(tcx, &mut emitter, config);
     run(&mut session)?;
 
-    let end_event = session
-        .emitter
-        .emit(TraceEventKind::RunFinished, crate_name)
-        .with_detail("rustc_private analysis session finished")
-        .with_metadata("goal_count", session.stats.goal_count.to_string())
-        .with_metadata("candidate_count", session.stats.candidate_count.to_string())
-        .with_metadata("subject_count", session.stats.subject_count.to_string())
-        .with_metadata("diagnostic_count", session.stats.diagnostic_count.to_string())
-        .with_metadata("dropped_count", session.stats.dropped_count.to_string());
-    session.emitter.write(&end_event);
+    session.emitter.write_payload(TracePayload::RunFinished(RunFinished {
+        crate_name,
+        goal_count: session.stats.goal_count,
+        candidate_count: session.stats.candidate_count,
+        subject_count: session.stats.subject_count,
+        diagnostic_count: session.stats.diagnostic_count,
+        dropped_count: session.stats.dropped_count,
+    }));
 
     Ok(session.stats)
 }

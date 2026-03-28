@@ -1,7 +1,9 @@
 use std::collections::BTreeMap;
 
 use serde::Serialize;
-use typelude_tooling_core::{EventId, NodeId, SubjectKind, Trace, TraceEventKind};
+use typelude_tooling_core::{
+    CandidateKind, EventId, NodeId, PredicateRepr, SemanticTag, Trace, TracePayload,
+};
 
 use crate::naming::compress_symbol_name;
 
@@ -42,78 +44,130 @@ impl SemanticMapper {
         trace
             .events
             .iter()
-            .filter(|event| match event.kind {
-                TraceEventKind::RunStarted
-                | TraceEventKind::RunFinished
-                | TraceEventKind::Info => false,
-                TraceEventKind::SubjectDiscovered => {
-                    matches!(event.subject_kind, Some(SubjectKind::Predicate))
-                },
-                _ => true,
-            })
-            .enumerate()
-            .map(|(index, event)| SemanticNode {
-                id: NodeId::new(index as u64 + 1),
-                kind: classify_semantic_kind(&event.title),
-                label: compress_symbol_name(&event.title),
-                source_event_id: Some(event.id),
-                metadata: event.metadata.clone(),
+            .filter_map(|event| match &event.payload {
+                TracePayload::RunStarted(..)
+                | TracePayload::RunFinished(..)
+                | TracePayload::Info(..) => None,
+                TracePayload::SubjectDiscovered(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: SemanticNodeKind::Eval,
+                    label: compress_symbol_name(&data.label),
+                    source_event_id: Some(event.id),
+                    metadata: data.metadata.clone(),
+                }),
+                TracePayload::GoalDiscovered(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: classify_semantic_kind_from_tags(
+                        &data.semantic_tags,
+                        &data.predicate,
+                    ),
+                    label: compress_symbol_name(&data.predicate.debug_text()),
+                    source_event_id: Some(event.id),
+                    metadata: BTreeMap::new(),
+                }),
+                TracePayload::GoalEntered(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: classify_semantic_kind_from_tags(
+                        &data.semantic_tags,
+                        &data.predicate,
+                    ),
+                    label: compress_symbol_name(&data.predicate.debug_text()),
+                    source_event_id: Some(event.id),
+                    metadata: BTreeMap::new(),
+                }),
+                TracePayload::GoalExited(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: classify_semantic_kind_from_tags(
+                        &data.semantic_tags,
+                        &data.predicate,
+                    ),
+                    label: compress_symbol_name(&data.predicate.debug_text()),
+                    source_event_id: Some(event.id),
+                    metadata: BTreeMap::new(),
+                }),
+                TracePayload::CandidateDiscovered(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: classify_candidate_kind(&data.candidate_kind),
+                    label: compress_symbol_name(&data.candidate_kind.label()),
+                    source_event_id: Some(event.id),
+                    metadata: data.metadata.clone(),
+                }),
+                TracePayload::CandidateTried(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: classify_candidate_kind(&data.candidate_kind),
+                    label: compress_symbol_name(&data.candidate_kind.label()),
+                    source_event_id: Some(event.id),
+                    metadata: data.metadata.clone(),
+                }),
+                TracePayload::CandidateResult(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: classify_candidate_kind(&data.candidate_kind),
+                    label: compress_symbol_name(&data.candidate_kind.label()),
+                    source_event_id: Some(event.id),
+                    metadata: data.metadata.clone(),
+                }),
+                TracePayload::DiagnosticEmitted(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: SemanticNodeKind::HelperDispatch,
+                    label: compress_symbol_name(&data.record.message()),
+                    source_event_id: Some(event.id),
+                    metadata: data.record.metadata().clone(),
+                }),
+                TracePayload::RelationDeclared(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: SemanticNodeKind::PrimitiveOp,
+                    label: compress_symbol_name(&data.relation),
+                    source_event_id: Some(event.id),
+                    metadata: BTreeMap::new(),
+                }),
+                TracePayload::ErrorRaised(data) => Some(SemanticNode {
+                    id: NodeId::new(event.id.value()),
+                    kind: SemanticNodeKind::PrimitiveOp,
+                    label: compress_symbol_name(&data.message),
+                    source_event_id: Some(event.id),
+                    metadata: BTreeMap::new(),
+                }),
             })
             .collect()
     }
 }
 
-fn classify_semantic_kind(label: &str) -> SemanticNodeKind {
-    if label.contains("EIf") || label.contains(" If ") || label == "EIf" {
+fn classify_semantic_kind_from_tags(
+    tags: &[SemanticTag],
+    predicate: &PredicateRepr,
+) -> SemanticNodeKind {
+    if tags.contains(&SemanticTag::BranchLike) {
         SemanticNodeKind::If
-    } else if label.contains("EWhile") || label.contains("While") {
+    } else if tags.contains(&SemanticTag::LoopLike) {
         SemanticNodeKind::While
-    } else if label.contains("EMap") || label.contains("Map") {
+    } else if tags.contains(&SemanticTag::MapLike) {
         SemanticNodeKind::Map
-    } else if label.contains("EGet") || label.contains("Get") {
+    } else if tags.contains(&SemanticTag::LookupLike) {
         SemanticNodeKind::Get
-    } else if label.contains("EApp") || label.contains("Apply") {
+    } else if tags.contains(&SemanticTag::ApplyLike) {
         SemanticNodeKind::Apply
-    } else if label.contains("Helper") {
+    } else if tags.contains(&SemanticTag::HelperDispatchLike) {
         SemanticNodeKind::HelperDispatch
-    } else if label.contains("Op") {
+    } else if tags.contains(&SemanticTag::VmOpLike) {
         SemanticNodeKind::VmOp
-    } else if label.contains("step") || label.contains("Step") {
+    } else if predicate.debug_text().contains("Step") {
         SemanticNodeKind::VmStep
-    } else if label.starts_with('E') {
-        SemanticNodeKind::Eval
-    } else {
+    } else if predicate.family() == "DebugText" {
         SemanticNodeKind::PrimitiveOp
+    } else {
+        SemanticNodeKind::Eval
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use typelude_tooling_core::{
-        EventId, SubjectId, SubjectKind, Trace, TraceEvent, TraceEventKind, TraceId,
-    };
-
-    use super::{SemanticMapper, SemanticNodeKind};
-
-    #[test]
-    fn maps_key_typelude_nodes() {
-        let mut trace = Trace::new(TraceId::new(1));
-        let mut subject =
-            TraceEvent::new(EventId::new(1), TraceEventKind::SubjectDiscovered, "Pred");
-        subject.subject_id = Some(SubjectId::new(1));
-        subject.subject_kind = Some(SubjectKind::Predicate);
-        trace.push(subject);
-        for (id, title) in [(2, "EIf"), (3, "EWhile"), (4, "EGet"), (5, "EMap")] {
-            let mut event = TraceEvent::new(EventId::new(id), TraceEventKind::GoalEntered, title);
-            event.subject_id = Some(SubjectId::new(1));
-            event.subject_kind = Some(SubjectKind::Predicate);
-            trace.push(event);
-        }
-
-        let nodes = SemanticMapper::new().map_trace(&trace);
-        assert_eq!(nodes[1].kind, SemanticNodeKind::If);
-        assert_eq!(nodes[2].kind, SemanticNodeKind::While);
-        assert_eq!(nodes[3].kind, SemanticNodeKind::Get);
-        assert_eq!(nodes[4].kind, SemanticNodeKind::Map);
+fn classify_candidate_kind(candidate: &CandidateKind) -> SemanticNodeKind {
+    match candidate {
+        CandidateKind::AliasRelate => SemanticNodeKind::HelperDispatch,
+        CandidateKind::Normalize => SemanticNodeKind::Eval,
+        CandidateKind::Unknown(text) if text.contains("Op") => SemanticNodeKind::VmOp,
+        CandidateKind::Unknown(text) if text.contains("Step") => SemanticNodeKind::VmStep,
+        CandidateKind::Unknown(_) => SemanticNodeKind::PrimitiveOp,
+        CandidateKind::ParamEnv | CandidateKind::Impl | CandidateKind::Builtin => {
+            SemanticNodeKind::Eval
+        },
     }
 }

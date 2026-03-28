@@ -19,17 +19,17 @@ impl TypeludeDiagnosticEnricher {
     pub fn enrich(&self, diagnostic: &DiagnosticRecord) -> DiagnosticRecord {
         let mut enriched = diagnostic.clone();
 
-        if let DiagnosticKind::CapabilityFailure(capability) = &diagnostic.kind {
+        if let DiagnosticKind::CapabilityFailure(capability) = diagnostic.kind() {
             let normalized = capability
                 .required
                 .as_deref()
                 .map(normalize_capability_name)
-                .or_else(|| extract_capability_from_text(&diagnostic.message));
+                .or_else(|| extract_capability_from_text(&diagnostic.message()));
 
-            enriched.kind = DiagnosticKind::CapabilityFailure(CapabilityFailure {
+            enriched.data.normalized = DiagnosticKind::CapabilityFailure(CapabilityFailure {
                 required: normalized.clone(),
                 actual: capability.actual.clone(),
-                context: capability.context.clone().or_else(|| Some(diagnostic.message.clone())),
+                context: capability.context.clone().or_else(|| Some(diagnostic.message())),
             });
 
             if let Some(required) = normalized {
@@ -47,11 +47,11 @@ impl TypeludeDiagnosticEnricher {
     /// failure kind cannot be mapped to a known typelude construct.
     #[must_use]
     pub fn explain_failure(&self, diagnostic: &DiagnosticRecord) -> Option<String> {
-        let DiagnosticKind::CapabilityFailure(capability) = &diagnostic.kind else {
+        let DiagnosticKind::CapabilityFailure(capability) = diagnostic.kind() else {
             return None;
         };
 
-        let fallback = extract_from_message(&diagnostic.message);
+        let fallback = extract_from_message(&diagnostic.message());
         let raw =
             capability.required.as_deref().or_else(|| fallback.as_deref()).unwrap_or("unknown");
 
@@ -150,14 +150,19 @@ mod tests {
 
     fn make_capability_record(required: &str, message: &str) -> DiagnosticRecord {
         DiagnosticRecord {
-            kind: DiagnosticKind::CapabilityFailure(CapabilityFailure {
-                required: Some(required.to_owned()),
-                actual: None,
-                context: None,
-            }),
+            data: typelude_tooling_core::DiagnosticData {
+                raw: typelude_tooling_core::RawCompilerDiagnostic {
+                    code: Some(String::from("E0277")),
+                    message: message.to_owned(),
+                    rendered: None,
+                },
+                normalized: DiagnosticKind::CapabilityFailure(CapabilityFailure {
+                    required: Some(required.to_owned()),
+                    actual: None,
+                    context: None,
+                }),
+            },
             level: DiagnosticLevel::Error,
-            code: Some(String::from("E0277")),
-            message: message.to_owned(),
             primary_span: None,
             related_spans: Vec::new(),
             notes: Vec::new(),
@@ -210,10 +215,15 @@ mod tests {
     #[test]
     fn returns_none_for_non_capability_diagnostic() {
         let record = DiagnosticRecord {
-            kind: DiagnosticKind::CompilerDiagnostic,
+            data: typelude_tooling_core::DiagnosticData {
+                raw: typelude_tooling_core::RawCompilerDiagnostic {
+                    code: Some(String::from("E0308")),
+                    message: String::from("mismatched types"),
+                    rendered: None,
+                },
+                normalized: DiagnosticKind::CompilerDiagnostic,
+            },
             level: DiagnosticLevel::Error,
-            code: Some(String::from("E0308")),
-            message: String::from("mismatched types"),
             primary_span: None,
             related_spans: Vec::new(),
             notes: Vec::new(),

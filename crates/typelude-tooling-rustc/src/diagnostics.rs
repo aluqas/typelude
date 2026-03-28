@@ -2,8 +2,8 @@ use std::{collections::BTreeMap, fs, path::Path};
 
 use serde_json::Value;
 use typelude_tooling_core::{
-    CapabilityFailure, DiagnosticKind, DiagnosticLevel, DiagnosticRecord, SourceLocation,
-    SourceOrigin, SourceSpan, SpanId, ToolingResult,
+    CapabilityFailure, DiagnosticData, DiagnosticKind, DiagnosticLevel, DiagnosticRecord,
+    RawCompilerDiagnostic, SourceLocation, SourceOrigin, SourceSpan, SpanId, ToolingResult,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -96,10 +96,18 @@ fn parse_diagnostic(value: &Value) -> DiagnosticRecord {
     }
 
     DiagnosticRecord {
-        kind,
+        data: DiagnosticData {
+            raw: RawCompilerDiagnostic {
+                code,
+                message,
+                rendered: value
+                    .get("rendered")
+                    .and_then(Value::as_str)
+                    .map(String::from),
+            },
+            normalized: kind,
+        },
         level,
-        code,
-        message,
         primary_span,
         related_spans: spans.clone(),
         notes,
@@ -175,7 +183,7 @@ mod tests {
         let diagnostics = collector.collect_from_str(JSON_DIAG).expect("diagnostics should parse");
 
         assert_eq!(diagnostics.len(), 1);
-        match &diagnostics[0].kind {
+        match diagnostics[0].kind() {
             DiagnosticKind::CapabilityFailure(capability) => {
                 assert_eq!(capability.required.as_deref(), Some("Boolish"));
             },

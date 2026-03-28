@@ -79,7 +79,7 @@ impl<'a> GraphAnalysis<'a> {
             *counts.entry(edge.from).or_insert(0) += 1;
         }
         let mut entries: Vec<(NodeId, usize)> = counts.into_iter().collect();
-        entries.sort_by(|a, b| b.1.cmp(&a.1));
+        entries.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
         entries.truncate(top_n);
         entries
     }
@@ -197,24 +197,53 @@ impl<'a> GraphAnalysis<'a> {
 
 #[cfg(test)]
 mod tests {
-    use typelude_tooling_core::{EventId, Trace, TraceEvent, TraceEventKind, TraceId};
+    use std::collections::BTreeMap;
+
+    use typelude_tooling_core::{
+        EventId, GoalDiscovered, GoalId, HookId, PredicateRepr, SubjectDiscovered, SubjectId,
+        SubjectKind, Trace, TraceEvent, TraceId, TracePayload,
+    };
 
     use super::GraphAnalysis;
     use crate::graph::TraceGraphBuilder;
 
-    fn make_event(id: u64, kind: TraceEventKind, title: &str) -> TraceEvent {
-        TraceEvent::new(EventId::new(id), kind, title)
-    }
-
     fn linear_trace() -> Trace {
         let mut trace = Trace::new(TraceId::new(1));
-        let mut outer = make_event(1, TraceEventKind::GoalEntered, "outer");
-        outer.goal_id = Some(typelude_tooling_core::GoalId::new(1));
-        let mut inner = make_event(2, TraceEventKind::GoalEntered, "inner");
-        inner.goal_id = Some(typelude_tooling_core::GoalId::new(2));
-        inner.parent_goal_id = Some(typelude_tooling_core::GoalId::new(1));
-        trace.push(outer);
-        trace.push(inner);
+        trace.push(TraceEvent::new(
+            EventId::new(1),
+            TracePayload::SubjectDiscovered(SubjectDiscovered {
+                hook_id: HookId::TraitSolve,
+                subject_id: SubjectId::new(1),
+                parent_subject_id: None,
+                subject_kind: SubjectKind::Predicate,
+                label: String::from("subject"),
+                metadata: BTreeMap::new(),
+            }),
+        ));
+        trace.push(TraceEvent::new(
+            EventId::new(2),
+            TracePayload::GoalDiscovered(GoalDiscovered {
+                hook_id: HookId::TraitSolve,
+                subject_id: SubjectId::new(1),
+                goal_id: GoalId::new(1),
+                parent_goal_id: None,
+                predicate: PredicateRepr::DebugText(String::from("outer")),
+                candidate_count: 0,
+                semantic_tags: Vec::new(),
+            }),
+        ));
+        trace.push(TraceEvent::new(
+            EventId::new(3),
+            TracePayload::GoalDiscovered(GoalDiscovered {
+                hook_id: HookId::TraitSolve,
+                subject_id: SubjectId::new(1),
+                goal_id: GoalId::new(2),
+                parent_goal_id: Some(GoalId::new(1)),
+                predicate: PredicateRepr::DebugText(String::from("inner")),
+                candidate_count: 0,
+                semantic_tags: Vec::new(),
+            }),
+        ));
         trace
     }
 
@@ -233,7 +262,7 @@ mod tests {
         let trace = linear_trace();
         let graph = TraceGraphBuilder::new().build(&trace);
         let analysis = GraphAnalysis::new(&graph);
-        assert_eq!(analysis.max_depth(), 1);
+        assert_eq!(analysis.max_depth(), 2);
     }
 
     #[test]
@@ -242,7 +271,7 @@ mod tests {
         let graph = TraceGraphBuilder::new().build(&trace);
         let analysis = GraphAnalysis::new(&graph);
         let path = analysis.critical_path();
-        assert_eq!(path.len(), 2);
+        assert_eq!(path.len(), 3);
     }
 
     #[test]
@@ -278,10 +307,10 @@ mod tests {
         let graph = TraceGraphBuilder::new().build(&trace);
         let analysis = GraphAnalysis::new(&graph);
         let summary = analysis.summarize();
-        assert_eq!(summary.node_count, 2);
-        assert_eq!(summary.edge_count, 1);
+        assert_eq!(summary.node_count, 3);
+        assert_eq!(summary.edge_count, 2);
         assert_eq!(summary.root_count, 1);
-        assert_eq!(summary.max_depth, 1);
+        assert_eq!(summary.max_depth, 2);
         assert!(!summary.has_cycles);
     }
 }

@@ -1,10 +1,12 @@
 use std::collections::BTreeMap;
 
 use rustc_middle::ty::TyCtxt;
-use typelude_tooling_core::{CandidateId, DiagId, GoalId, HookId, SubjectId, TraceEventKind};
+use typelude_tooling_core::{
+    CandidateId, DiagId, GoalId, HookId, SubjectDiscovered, SubjectId, TracePayload,
+};
 
 use crate::{
-    emit::{CollectStats, EventEmitter, TraceEventExt},
+    emit::{CollectStats, EventEmitter},
     filters::{FocusFilter, SubjectFilter},
     subjects::ResolvedSubject,
 };
@@ -120,18 +122,14 @@ impl<'a, 'tcx> AnalysisSession<'a, 'tcx> {
         self.stats.subject_count += 1;
 
         if self.can_emit() {
-            let mut event = self
-                .emitter
-                .emit(TraceEventKind::SubjectDiscovered, subject.label(self.tcx))
-                .with_hook_id(hook_id)
-                .with_subject(subject_id, subject.kind());
-            if let Some(parent_subject_id) = parent_subject_id {
-                event = event.with_parent_subject_id(parent_subject_id);
-            }
-            for (key, value) in subject.metadata(self.tcx) {
-                event = event.with_metadata(key, value);
-            }
-            self.emitter.write(&event);
+            self.emitter.write_payload(TracePayload::SubjectDiscovered(SubjectDiscovered {
+                hook_id,
+                subject_id,
+                parent_subject_id,
+                subject_kind: subject.kind(),
+                label: subject.label(self.tcx),
+                metadata: subject.metadata(self.tcx),
+            }));
         } else {
             self.record_drop();
         }

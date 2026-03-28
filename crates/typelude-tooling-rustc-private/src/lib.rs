@@ -19,12 +19,12 @@ pub mod queries;
 pub mod session;
 pub mod subjects;
 
-use emit::{TraceEventExt, emit_raw};
+use emit::emit_raw;
 use frontends::{CollectConfig, run_collect_frontend, run_owner_query_frontend};
 use queries::{QueryMatchKind, QueryTargetKind};
 use rustc_driver::Callbacks;
 use rustc_interface::Config;
-use typelude_tooling_core::{EventId, TraceEvent, TraceEventKind};
+use typelude_tooling_core::{ErrorRaised, GoalResult, TraceEvent, TracePayload};
 
 struct TypeludeCallbacks {
     collect_config: CollectConfig,
@@ -61,8 +61,16 @@ impl Callbacks for TypeludeCallbacks {
             run_collect_frontend(tcx, &self.collect_config)
         };
         if let Err(error) = result {
-            let event = TraceEvent::new(EventId::new(0), TraceEventKind::Info, "analysis_error")
-                .with_detail(error.to_string());
+            let event = TraceEvent::new(
+                typelude_tooling_core::EventId::new(0),
+                TracePayload::ErrorRaised(ErrorRaised {
+                    hook_id: None,
+                    subject_id: None,
+                    goal_id: None,
+                    result: GoalResult::Error,
+                    message: error.to_string(),
+                }),
+            );
             emit_raw(&event);
         }
         rustc_driver::Compilation::Continue

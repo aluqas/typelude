@@ -18,9 +18,9 @@ use typelude_tooling_rustc::{
     MirArtifactCollector, MirArtifactConfig, RustcDiagnosticsCollector, RustcDiagnosticsConfig,
     SelfProfileCollector, SelfProfileConfig, TimePassesCollector, TypeSizesCollector,
 };
+use typelude_tooling_semantic_api::SemanticExtension;
 use typelude_tooling_typelude::{
-    GraphAnalysis, TraceGraphBuilder, TypeExpr, TypeludeDiagnosticEnricher,
-    TypeludeMetricEnricher, TypeludeRenderer,
+    GraphAnalysis, TraceGraphBuilder, TypeExpr, TypeludeExtension,
 };
 
 use crate::solve_view::{
@@ -831,18 +831,18 @@ fn run_diag(
     trace_input: Option<PathBuf>,
     output: OutputModeArg,
 ) -> ToolingResult<String> {
-    let enricher = TypeludeDiagnosticEnricher::new();
+    let extension = TypeludeExtension;
     let mut diagnostics = RustcDiagnosticsCollector::new(RustcDiagnosticsConfig)
         .collect_from_path(input)?
         .into_iter()
-        .map(|diagnostic| enricher.enrich(&diagnostic))
+        .map(|diagnostic| extension.enrich_diagnostic(&diagnostic))
         .collect::<Vec<_>>();
     if let Some(trace_input) = trace_input {
         let trace = read_trace(&trace_input)?;
         let diagnostic_count = trace
             .events
             .iter()
-            .filter(|event| event.kind == TraceEventKind::DiagnosticEmitted)
+            .filter(|event| event.kind() == TraceEventKind::DiagnosticEmitted)
             .count();
         if diagnostic_count > 0 {
             for diagnostic in &mut diagnostics {
@@ -854,7 +854,7 @@ fn run_diag(
     }
     let explanations = diagnostics
         .iter()
-        .map(|diagnostic| enricher.explain_failure(diagnostic))
+        .map(|diagnostic| extension.explain_diagnostic(diagnostic))
         .collect::<Vec<_>>();
 
     match output {
@@ -867,7 +867,7 @@ fn run_diag(
 }
 
 fn run_render(value: &str, output: OutputModeArg) -> ToolingResult<String> {
-    let rendered = TypeludeRenderer::new().render_type_expression(value, output.into());
+    let rendered = TypeludeExtension.render_type(value, output.into());
     match output {
         OutputModeArg::Text => Ok(rendered.text),
         OutputModeArg::Json => Ok(serde_json::to_string_pretty(&rendered)?),
@@ -887,7 +887,7 @@ fn run_profile(
 
     if let Some(trace_input) = trace_input {
         let trace = read_trace(&trace_input)?;
-        metrics.extend(TypeludeMetricEnricher::new().enrich_trace(&trace));
+        metrics.extend(TypeludeExtension.enrich_metrics(&trace));
     }
     if let Some(path) = time_passes {
         metrics.extend(TimePassesCollector::new().collect_from_str(&fs::read_to_string(path)?)?);
@@ -1155,9 +1155,9 @@ fn filtered_unsupported_count(trace: &Trace, tree: &GoalTree) -> usize {
     trace
         .events
         .iter()
-        .filter(|event| event.kind == TraceEventKind::ErrorRaised)
+        .filter(|event| event.kind() == TraceEventKind::ErrorRaised)
         .filter(|event| {
-            event.subject_id.is_some_and(|subject_id| subject_ids.contains(&subject_id))
+            event.subject_id().is_some_and(|subject_id| subject_ids.contains(&subject_id))
         })
         .count()
 }
@@ -1167,26 +1167,26 @@ fn render_trace_text(trace: &Trace) -> String {
         .events
         .iter()
         .map(|event| {
-            let mut prefix = format!("{:?}", event.kind);
-            if let Some(goal_id) = event.goal_id {
+            let mut prefix = format!("{:?}", event.kind());
+            if let Some(goal_id) = event.goal_id() {
                 prefix.push_str(&format!(" goal={}", goal_id.value()));
             }
-            if let Some(candidate_id) = event.candidate_id {
+            if let Some(candidate_id) = event.candidate_id() {
                 prefix.push_str(&format!(" cand={}", candidate_id.value()));
             }
-            if let Some(subject_id) = event.subject_id {
+            if let Some(subject_id) = event.subject_id() {
                 prefix.push_str(&format!(" subject={}", subject_id.value()));
             }
-            if let Some(parent_subject_id) = event.parent_subject_id {
+            if let Some(parent_subject_id) = event.parent_subject_id() {
                 prefix.push_str(&format!(" parent_subject={}", parent_subject_id.value()));
             }
-            if let Some(parent_goal_id) = event.parent_goal_id {
+            if let Some(parent_goal_id) = event.parent_goal_id() {
                 prefix.push_str(&format!(" parent={}", parent_goal_id.value()));
             }
-            if let Some(detail) = &event.detail {
-                format!("{prefix} :: {} :: {detail}", event.title)
+            if let Some(detail) = event.detail() {
+                format!("{prefix} :: {} :: {detail}", event.title())
             } else {
-                format!("{prefix} :: {}", event.title)
+                format!("{prefix} :: {}", event.title())
             }
         })
         .collect::<Vec<_>>()
@@ -1201,8 +1201,8 @@ fn render_diagnostics_text(
         .iter()
         .zip(explanations.iter())
         .map(|(diagnostic, explanation)| {
-            let code = diagnostic.code.as_deref().unwrap_or("no-code");
-            let mut line = format!("{code}: {}", diagnostic.message);
+            let code = diagnostic.code().unwrap_or("no-code");
+            let mut line = format!("{code}: {}", diagnostic.message());
             if let Some(exp) = explanation {
                 line.push('\n');
                 for text_line in exp.lines() {
@@ -1319,14 +1319,16 @@ struct AnalyzeOutput {
 #[cfg(test)]
 mod tests {
     use std::{
+        collections::BTreeMap,
         fs,
         time::{SystemTime, UNIX_EPOCH},
     };
 
     use clap::Parser;
     use typelude_tooling_core::{
-        CandidateId, EventId, GoalId, SubjectId, SubjectKind, Trace, TraceEvent, TraceEventKind,
-        TraceId,
+        CandidateId, CandidateKind, CandidateResult, EventId, GoalEntered, GoalExited, GoalId,
+        GoalResult, HookId, PredicateRepr, SubjectDiscovered, SubjectId, SubjectKind, Trace,
+        TraceEvent, TracePayload, TraceId,
     };
 
     use super::{Cli, OutputModeArg, run};
@@ -1339,56 +1341,84 @@ mod tests {
 
     fn write_trace_fixture(path: &std::path::Path) {
         let mut trace = Trace::new(TraceId::new(1));
-        let mut subject =
-            TraceEvent::new(EventId::new(1), TraceEventKind::SubjectDiscovered, "RunWriter");
-        subject.subject_id = Some(SubjectId::new(1));
-        subject.subject_kind = Some(SubjectKind::Predicate);
-        subject.metadata.insert(
-            String::from("owner_path"),
-            String::from("typelude_vm::core::writer_t::RunWriter"),
-        );
-        trace.push(subject);
+        trace.push(TraceEvent::new(
+            EventId::new(1),
+            TracePayload::SubjectDiscovered(SubjectDiscovered {
+                hook_id: HookId::TraitSolve,
+                subject_id: SubjectId::new(1),
+                parent_subject_id: None,
+                subject_kind: SubjectKind::Predicate,
+                label: String::from("RunWriter"),
+                metadata: BTreeMap::from([(
+                    String::from("owner_path"),
+                    String::from("typelude_vm::core::writer_t::RunWriter"),
+                )]),
+            }),
+        ));
 
-        let mut goal =
-            TraceEvent::new(EventId::new(2), TraceEventKind::GoalEntered, "<T as Eval>");
-        goal.subject_id = Some(SubjectId::new(1));
-        goal.subject_kind = Some(SubjectKind::Predicate);
-        goal.goal_id = Some(GoalId::new(1));
-        trace.push(goal);
+        trace.push(TraceEvent::new(
+            EventId::new(2),
+            TracePayload::GoalEntered(GoalEntered {
+                hook_id: HookId::TraitSolve,
+                subject_id: SubjectId::new(1),
+                goal_id: GoalId::new(1),
+                parent_goal_id: None,
+                predicate: PredicateRepr::DebugText(String::from("<T as Eval>")),
+                semantic_tags: Vec::new(),
+            }),
+        ));
 
-        let mut candidate =
-            TraceEvent::new(EventId::new(3), TraceEventKind::CandidateResult, "ImplCandidate");
-        candidate.subject_id = Some(SubjectId::new(1));
-        candidate.subject_kind = Some(SubjectKind::Predicate);
-        candidate.goal_id = Some(GoalId::new(1));
-        candidate.candidate_id = Some(CandidateId::new(1));
-        candidate.detail = Some(String::from("Ok(())"));
-        trace.push(candidate);
+        trace.push(TraceEvent::new(
+            EventId::new(3),
+            TracePayload::CandidateResult(CandidateResult {
+                hook_id: HookId::TraitSolve,
+                subject_id: SubjectId::new(1),
+                goal_id: GoalId::new(1),
+                candidate_id: CandidateId::new(1),
+                candidate_kind: CandidateKind::Impl,
+                result: GoalResult::Success,
+                semantic_tags: Vec::new(),
+                metadata: BTreeMap::new(),
+            }),
+        ));
 
-        let mut nested =
-            TraceEvent::new(EventId::new(4), TraceEventKind::GoalEntered, "<U as Eval>");
-        nested.subject_id = Some(SubjectId::new(1));
-        nested.subject_kind = Some(SubjectKind::Predicate);
-        nested.goal_id = Some(GoalId::new(2));
-        nested.parent_goal_id = Some(GoalId::new(1));
-        trace.push(nested);
+        trace.push(TraceEvent::new(
+            EventId::new(4),
+            TracePayload::GoalEntered(GoalEntered {
+                hook_id: HookId::TraitSolve,
+                subject_id: SubjectId::new(1),
+                goal_id: GoalId::new(2),
+                parent_goal_id: Some(GoalId::new(1)),
+                predicate: PredicateRepr::DebugText(String::from("<U as Eval>")),
+                semantic_tags: Vec::new(),
+            }),
+        ));
 
-        let mut nested_exit =
-            TraceEvent::new(EventId::new(5), TraceEventKind::GoalExited, "<U as Eval>");
-        nested_exit.subject_id = Some(SubjectId::new(1));
-        nested_exit.subject_kind = Some(SubjectKind::Predicate);
-        nested_exit.goal_id = Some(GoalId::new(2));
-        nested_exit.parent_goal_id = Some(GoalId::new(1));
-        nested_exit.detail = Some(String::from("NoSolution"));
-        trace.push(nested_exit);
+        trace.push(TraceEvent::new(
+            EventId::new(5),
+            TracePayload::GoalExited(GoalExited {
+                hook_id: HookId::TraitSolve,
+                subject_id: SubjectId::new(1),
+                goal_id: GoalId::new(2),
+                parent_goal_id: Some(GoalId::new(1)),
+                predicate: PredicateRepr::DebugText(String::from("<U as Eval>")),
+                result: GoalResult::NoSolution,
+                semantic_tags: Vec::new(),
+            }),
+        ));
 
-        let mut goal_exit =
-            TraceEvent::new(EventId::new(6), TraceEventKind::GoalExited, "<T as Eval>");
-        goal_exit.subject_id = Some(SubjectId::new(1));
-        goal_exit.subject_kind = Some(SubjectKind::Predicate);
-        goal_exit.goal_id = Some(GoalId::new(1));
-        goal_exit.detail = Some(String::from("Ok(())"));
-        trace.push(goal_exit);
+        trace.push(TraceEvent::new(
+            EventId::new(6),
+            TracePayload::GoalExited(GoalExited {
+                hook_id: HookId::TraitSolve,
+                subject_id: SubjectId::new(1),
+                goal_id: GoalId::new(1),
+                parent_goal_id: None,
+                predicate: PredicateRepr::DebugText(String::from("<T as Eval>")),
+                result: GoalResult::Success,
+                semantic_tags: Vec::new(),
+            }),
+        ));
         fs::write(path, trace.to_json_lines().expect("trace fixture should render"))
             .expect("trace fixture should be written");
     }
@@ -1462,7 +1492,7 @@ mod tests {
         ]);
         let output = run(cli).expect("filtered solve-tree should run");
         assert!(output.contains("<U as Eval>"));
-        assert!(output.contains("result=NoSolution"));
+        assert!(output.contains("result=no_solution"));
         fs::remove_file(input).expect("trace fixture should be removed");
     }
 
