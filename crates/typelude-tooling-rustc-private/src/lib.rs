@@ -12,10 +12,12 @@ extern crate rustc_trait_selection;
 
 pub mod emit;
 pub mod error;
+pub mod filters;
 pub mod frontends;
+pub mod hooks;
+pub mod queries;
 pub mod session;
-pub mod subject;
-pub mod task;
+pub mod subjects;
 
 use emit::{TraceEventExt, emit_raw};
 use frontends::{CollectConfig, run_collect_frontend};

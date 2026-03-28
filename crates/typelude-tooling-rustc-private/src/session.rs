@@ -5,7 +5,8 @@ use typelude_tooling_core::{CandidateId, DiagId, GoalId, HookId, SubjectId, Trac
 
 use crate::{
     emit::{CollectStats, EventEmitter, TraceEventExt},
-    subject::ResolvedSubject,
+    filters::{FocusFilter, SubjectFilter},
+    subjects::ResolvedSubject,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,24 +62,12 @@ impl<'a, 'tcx> AnalysisSession<'a, 'tcx> {
 
     #[must_use]
     pub fn focus_matches(&self, value: &str) -> bool {
-        self.config
-            .focus
-            .as_ref()
-            .map(|focus| value.to_ascii_lowercase().contains(&focus.to_ascii_lowercase()))
-            .unwrap_or(true)
+        FocusFilter::new(self.config.focus.clone()).matches(value)
     }
 
     #[must_use]
     pub fn subject_matches(&self, label: &str, metadata: &BTreeMap<String, String>) -> bool {
-        self.config
-            .subject_filter
-            .as_ref()
-            .map(|filter| {
-                let filter = filter.to_ascii_lowercase();
-                label.to_ascii_lowercase().contains(&filter)
-                    || metadata.values().any(|value| value.to_ascii_lowercase().contains(&filter))
-            })
-            .unwrap_or(true)
+        SubjectFilter::new(self.config.subject_filter.clone()).matches(label, metadata)
     }
 
     #[must_use]

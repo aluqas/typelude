@@ -14,63 +14,18 @@ use typelude_tooling_core::{HookId, SubjectId, SubjectKind, TraceEventKind};
 use crate::{
     emit::TraceEventExt,
     error::{AnalysisError, AnalysisResult},
+    hooks::Hook,
+    queries::{Query, QueryContext, SolveExplicitPredicateQuery},
     session::AnalysisSession,
-    subject::ResolvedSubject,
+    subjects::ResolvedSubject,
 };
 
-pub trait AnalysisTask<'tcx> {
-    fn run(&self, session: &mut AnalysisSession<'_, 'tcx>) -> AnalysisResult<()>;
-}
-
 #[derive(Debug, Default, Clone, Copy)]
-pub struct DiscoverItemSubjectsTask;
+pub struct TraitSolveHook;
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct SweepExplicitPredicatesTask;
+pub type SweepExplicitPredicatesHook = TraitSolveHook;
 
-#[derive(Debug, Clone, Copy)]
-pub struct SolveExplicitPredicateTask<'tcx> {
-    pub subject: ResolvedSubject<'tcx>,
-    pub subject_id: SubjectId,
-}
-
-impl<'tcx> AnalysisTask<'tcx> for DiscoverItemSubjectsTask {
-    fn run(&self, session: &mut AnalysisSession<'_, 'tcx>) -> AnalysisResult<()> {
-        let crate_items = session.tcx.hir_crate_items(());
-        for item_id in crate_items.free_items() {
-            if !session.can_emit() {
-                session.record_drop();
-                break;
-            }
-
-            let item = session.tcx.hir_item(item_id);
-            let def_id = item_id.owner_id.def_id;
-            let subject = match item.kind {
-                rustc_hir::ItemKind::Impl(..) => ResolvedSubject::Impl(def_id),
-                _ => ResolvedSubject::Item(def_id),
-            };
-            if subject_matches_filter(session, subject) {
-                session.ensure_subject(HookId::ItemStructure, subject);
-            }
-
-            if let rustc_hir::ItemKind::Impl(impl_data) = item.kind {
-                for impl_item_id in impl_data.items {
-                    if !session.can_emit() {
-                        session.record_drop();
-                        break;
-                    }
-                    let subject = ResolvedSubject::AssocItem(impl_item_id.owner_id.def_id);
-                    if subject_matches_filter(session, subject) {
-                        session.ensure_subject(HookId::ItemStructure, subject);
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
-impl<'tcx> AnalysisTask<'tcx> for SweepExplicitPredicatesTask {
+impl<'tcx> Hook<'tcx> for TraitSolveHook {
     fn run(&self, session: &mut AnalysisSession<'_, 'tcx>) -> AnalysisResult<()> {
         let crate_items = session.tcx.hir_crate_items(());
         for item_id in crate_items.free_items() {
@@ -106,35 +61,37 @@ impl<'tcx> AnalysisTask<'tcx> for SweepExplicitPredicatesTask {
     }
 }
 
-impl<'tcx> AnalysisTask<'tcx> for SolveExplicitPredicateTask<'tcx> {
-    fn run(&self, session: &mut AnalysisSession<'_, 'tcx>) -> AnalysisResult<()> {
-        let ResolvedSubject::ExplicitPredicate {
-            clause,
-            owner,
-            ..
-        } = self.subject
-        else {
-            return Err(AnalysisError::new(
-                "SolveExplicitPredicateTask requires an explicit predicate subject",
-            ));
-        };
+pub fn solve_explicit_predicate<'tcx>(
+    session: &mut AnalysisSession<'_, 'tcx>,
+    subject: ResolvedSubject<'tcx>,
+    subject_id: SubjectId,
+) -> AnalysisResult<()> {
+    let ResolvedSubject::ExplicitPredicate {
+        clause,
+        owner,
+        ..
+    } = subject
+    else {
+        return Err(AnalysisError::new(
+            "SolveExplicitPredicateHook requires an explicit predicate subject",
+        ));
+    };
 
-        let infcx = session.tcx.infer_ctxt().build(TypingMode::non_body_analysis());
-        let goal = Goal {
-            param_env: session.tcx.param_env(owner),
-            predicate: clause.upcast(session.tcx),
-        };
-        let mut visitor = ProofTreeCollector::new(session, self.subject_id);
-        let result = catch_unwind(AssertUnwindSafe(|| {
-            infcx.probe(|_| {
-                infcx.visit_proof_tree(goal, &mut visitor);
-            });
-        }));
-        if let Err(payload) = result {
-            emit_unsupported(visitor.session, self.subject_id, panic_message(payload));
-        }
-        Ok(())
+    let infcx = session.tcx.infer_ctxt().build(TypingMode::non_body_analysis());
+    let goal = Goal {
+        param_env: session.tcx.param_env(owner),
+        predicate: clause.upcast(session.tcx),
+    };
+    let mut visitor = ProofTreeCollector::new(session, subject_id);
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        infcx.probe(|_| {
+            infcx.visit_proof_tree(goal, &mut visitor);
+        });
+    }));
+    if let Err(payload) = result {
+        emit_unsupported(visitor.session, subject_id, panic_message(payload));
     }
+    Ok(())
 }
 
 fn solve_owner_predicates<'tcx>(
@@ -166,17 +123,21 @@ fn solve_owner_predicates<'tcx>(
         if !predicate_matches && !owner_matches {
             continue;
         }
+
         let owner_subject_id = *owner_subject_id
             .get_or_insert_with(|| session.ensure_subject(HookId::TraitSolve, owner_subject));
         let predicate_subject_id = session.ensure_subject(HookId::TraitSolve, predicate_subject);
         if predicate_subject_id == owner_subject_id {
             continue;
         }
-        SolveExplicitPredicateTask {
+
+        let query = SolveExplicitPredicateQuery {
             subject: predicate_subject,
             subject_id: predicate_subject_id,
-        }
-        .run(session)?;
+            runner: solve_explicit_predicate,
+        };
+        let mut context = QueryContext::new(session);
+        query.run(&mut context)?;
     }
 
     Ok(())
@@ -346,5 +307,15 @@ impl<'tcx> ProofTreeVisitor<'tcx> for ProofTreeCollector<'_, '_, 'tcx> {
             .with_goal_id(goal_id)
             .with_detail(format!("{:?}", goal.result()));
         self.session.emitter.write(&exited);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SweepExplicitPredicatesHook, TraitSolveHook};
+
+    #[test]
+    fn sweep_alias_matches_trait_solve_type() {
+        let _sweep: SweepExplicitPredicatesHook = TraitSolveHook;
     }
 }

@@ -6,8 +6,8 @@ use typelude_tooling_core::{HookId, RunId, TraceEventKind};
 use crate::{
     emit::{CollectStats, EventEmitter, TraceEventExt},
     error::AnalysisResult,
+    hooks::HookRegistry,
     session::{AnalysisConfig, AnalysisSession},
-    task::{AnalysisTask, DiscoverItemSubjectsTask, SweepExplicitPredicatesTask},
 };
 
 pub type CollectConfig = AnalysisConfig;
@@ -75,12 +75,7 @@ pub fn run_collect_frontend(
 
     let mut session = AnalysisSession::new(tcx, &mut emitter, config);
     for hook_id in &config.enabled {
-        match hook_id {
-            HookId::ItemStructure => DiscoverItemSubjectsTask.run(&mut session)?,
-            HookId::TraitSolve => SweepExplicitPredicatesTask.run(&mut session)?,
-            HookId::Diagnostics => emit_diagnostics_notice(&mut session),
-            HookId::LegacyRustcLog => {},
-        }
+        HookRegistry::run(*hook_id, &mut session)?;
     }
 
     let end_event = session
@@ -96,25 +91,6 @@ pub fn run_collect_frontend(
 
     Ok(session.stats)
 }
-
-fn emit_diagnostics_notice(session: &mut AnalysisSession<'_, '_>) {
-    if !session.can_emit() {
-        session.record_drop();
-        return;
-    }
-    let diag_id = session.alloc_diag_id();
-    session.stats.diagnostic_count += 1;
-    let event = session
-        .emitter
-        .emit(TraceEventKind::Info, "diagnostics frontend active")
-        .with_hook_id(HookId::Diagnostics)
-        .with_diagnostic_id(diag_id)
-        .with_detail(
-            "compiler diagnostics remain available through typelude-tooling-rustc artifacts",
-        );
-    session.emitter.write(&event);
-}
-
 fn rustc_version() -> String {
     option_env!("CFG_VERSION").map(str::to_owned).unwrap_or_else(|| String::from("unknown"))
 }
