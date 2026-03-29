@@ -10,12 +10,6 @@ pub mod naming;
 pub mod render;
 pub mod type_expr;
 
-use typelude_tooling_core::{
-    CandidateKind, DiagnosticRecord, GoalTreeCandidate, GoalTreeGoal, GraphNode, MetricRecord,
-    PredicateRepr, RenderMode, RenderedText, SemanticTag, Trace,
-};
-use typelude_tooling_semantic_api::SemanticExtension;
-
 pub use analysis::{GraphAnalysis, GraphSummary, KindDistribution};
 pub use caps::{CapabilityKind, normalize_capability_name};
 pub use diagnostics::TypeludeDiagnosticEnricher;
@@ -25,6 +19,11 @@ pub use metrics::TypeludeMetricEnricher;
 pub use naming::compress_symbol_name;
 pub use render::TypeludeRenderer;
 pub use type_expr::{SemanticExpr, TypeExpr};
+use typelude_tooling_core::{
+    CandidateKind, DiagnosticRecord, GoalTreeCandidate, GoalTreeGoal, GraphNode, MetricRecord,
+    PredicateRepr, RenderMode, RenderedText, SemanticTag, Trace,
+};
+use typelude_tooling_semantic_api::SemanticExtension;
 
 #[derive(Debug, Default)]
 pub struct TypeludeExtension;

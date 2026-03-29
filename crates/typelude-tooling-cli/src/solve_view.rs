@@ -723,7 +723,8 @@ fn filter_goal(goal: &GoalTreeGoal, filters: &SolveFilters) -> Option<GoalTreeGo
         .cloned()
         .collect::<Vec<_>>();
 
-    let result_matches = filters.result.map(|filter| result_matches(filter, goal.result)).unwrap_or(true);
+    let result_matches =
+        filters.result.map(|filter| result_matches(filter, goal.result)).unwrap_or(true);
     let candidate_matches = filters.candidate_kind.is_none() || !candidates.is_empty();
 
     if (result_matches && candidate_matches) || !children.is_empty() {
@@ -747,7 +748,9 @@ fn result_matches(filter: SolveResultArg, value: GoalResult) -> bool {
         SolveResultArg::Ok => matches!(value, GoalResult::Success),
         SolveResultArg::NoSolution => matches!(value, GoalResult::NoSolution),
         SolveResultArg::Ambiguous => matches!(value, GoalResult::Ambiguous),
-        SolveResultArg::Unsupported => matches!(value, GoalResult::Unsupported | GoalResult::Error),
+        SolveResultArg::Unsupported => {
+            matches!(value, GoalResult::Unsupported | GoalResult::Error)
+        },
     }
 }
 

@@ -30,8 +30,12 @@ impl TraceGraphBuilder {
         for event in &trace.events {
             match &event.payload {
                 TracePayload::SubjectDiscovered(data) => {
-                    let node_id =
-                        ensure_subject_node(&mut graph, &mut subject_nodes, data.subject_id, event);
+                    let node_id = ensure_subject_node(
+                        &mut graph,
+                        &mut subject_nodes,
+                        data.subject_id,
+                        event,
+                    );
                     if let Some(parent_subject_id) = data.parent_subject_id {
                         let parent_id = ensure_subject_placeholder(
                             &mut graph,
@@ -75,8 +79,11 @@ impl TraceGraphBuilder {
                             "nested",
                         );
                     } else {
-                        let subject_node_id =
-                            ensure_subject_placeholder(&mut graph, &mut subject_nodes, data.subject_id);
+                        let subject_node_id = ensure_subject_placeholder(
+                            &mut graph,
+                            &mut subject_nodes,
+                            data.subject_id,
+                        );
                         push_edge(
                             &mut graph,
                             &mut seen_edges,

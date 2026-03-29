@@ -19,9 +19,7 @@ use typelude_tooling_rustc::{
     SelfProfileCollector, SelfProfileConfig, TimePassesCollector, TypeSizesCollector,
 };
 use typelude_tooling_semantic_api::SemanticExtension;
-use typelude_tooling_typelude::{
-    GraphAnalysis, TraceGraphBuilder, TypeExpr, TypeludeExtension,
-};
+use typelude_tooling_typelude::{GraphAnalysis, TraceGraphBuilder, TypeExpr, TypeludeExtension};
 
 use crate::solve_view::{
     CompactModeArg, SolveAnalysis, SolveDiffViewArg, SolveFilters, SolveRenderOptions,
@@ -1328,7 +1326,7 @@ mod tests {
     use typelude_tooling_core::{
         CandidateId, CandidateKind, CandidateResult, EventId, GoalEntered, GoalExited, GoalId,
         GoalResult, HookId, PredicateRepr, SubjectDiscovered, SubjectId, SubjectKind, Trace,
-        TraceEvent, TracePayload, TraceId,
+        TraceEvent, TraceId, TracePayload,
     };
 
     use super::{Cli, OutputModeArg, run};

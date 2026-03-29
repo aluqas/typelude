@@ -30,7 +30,8 @@ impl EventEmitter {
 
     pub fn emit(&mut self, payload: TracePayload) -> TraceEvent {
         self.next_event_id += 1;
-        let mut event = TraceEvent::new(typelude_tooling_core::EventId::new(self.next_event_id), payload);
+        let mut event =
+            TraceEvent::new(typelude_tooling_core::EventId::new(self.next_event_id), payload);
         event.run_id = Some(self.run_id);
         event
     }

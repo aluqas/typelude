@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CandidateId, CandidateKind, GoalId, GoalResult, PredicateRepr, SubjectId, SubjectKind,
-    ToolingError, ToolingResult, Trace, TraceId, TracePayload,
-    semantic::SemanticTag,
+    ToolingError, ToolingResult, Trace, TraceId, TracePayload, semantic::SemanticTag,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -154,14 +153,12 @@ impl GoalTree {
                         semantic_tags: Vec::new(),
                         candidates: BTreeMap::new(),
                     });
-                    goal.candidates
-                        .entry(data.candidate_id)
-                        .or_insert_with(|| CandidateState {
-                            kind: data.candidate_kind.clone(),
-                            result: GoalResult::Unsupported,
-                            semantic_tags: data.semantic_tags.clone(),
-                            metadata: data.metadata.clone(),
-                        });
+                    goal.candidates.entry(data.candidate_id).or_insert_with(|| CandidateState {
+                        kind: data.candidate_kind.clone(),
+                        result: GoalResult::Unsupported,
+                        semantic_tags: data.semantic_tags.clone(),
+                        metadata: data.metadata.clone(),
+                    });
                 },
                 TracePayload::CandidateTried(data) => {
                     let goal = goals.entry(data.goal_id).or_insert_with(|| GoalState {
@@ -173,14 +170,14 @@ impl GoalTree {
                         candidates: BTreeMap::new(),
                     });
                     let candidate =
-                        goal.candidates
-                            .entry(data.candidate_id)
-                            .or_insert_with(|| CandidateState {
+                        goal.candidates.entry(data.candidate_id).or_insert_with(|| {
+                            CandidateState {
                                 kind: data.candidate_kind.clone(),
                                 result: GoalResult::Unsupported,
                                 semantic_tags: data.semantic_tags.clone(),
                                 metadata: data.metadata.clone(),
-                            });
+                            }
+                        });
                     candidate.kind = data.candidate_kind.clone();
                     candidate.semantic_tags = data.semantic_tags.clone();
                     candidate.metadata = data.metadata.clone();
@@ -195,14 +192,14 @@ impl GoalTree {
                         candidates: BTreeMap::new(),
                     });
                     let candidate =
-                        goal.candidates
-                            .entry(data.candidate_id)
-                            .or_insert_with(|| CandidateState {
+                        goal.candidates.entry(data.candidate_id).or_insert_with(|| {
+                            CandidateState {
                                 kind: data.candidate_kind.clone(),
                                 result: data.result,
                                 semantic_tags: data.semantic_tags.clone(),
                                 metadata: data.metadata.clone(),
-                            });
+                            }
+                        });
                     candidate.kind = data.candidate_kind.clone();
                     candidate.result = data.result;
                     candidate.semantic_tags = data.semantic_tags.clone();

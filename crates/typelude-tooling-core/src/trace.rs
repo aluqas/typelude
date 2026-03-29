@@ -61,10 +61,7 @@ impl PredicateRepr {
                 if args.is_empty() {
                     format!("TraitPredicate({self_ty} -> {trait_path})")
                 } else {
-                    format!(
-                        "TraitPredicate({self_ty} -> {trait_path}({}))",
-                        args.join(", ")
-                    )
+                    format!("TraitPredicate({self_ty} -> {trait_path}({}))", args.join(", "))
                 }
             },
             Self::AliasRelate {
@@ -532,25 +529,17 @@ impl TraceEvent {
             TracePayload::RunFinished(data) => {
                 let mut metadata = BTreeMap::new();
                 metadata.insert(String::from("goal_count"), data.goal_count.to_string());
-                metadata.insert(
-                    String::from("candidate_count"),
-                    data.candidate_count.to_string(),
-                );
+                metadata.insert(String::from("candidate_count"), data.candidate_count.to_string());
                 metadata.insert(String::from("subject_count"), data.subject_count.to_string());
-                metadata.insert(
-                    String::from("diagnostic_count"),
-                    data.diagnostic_count.to_string(),
-                );
+                metadata
+                    .insert(String::from("diagnostic_count"), data.diagnostic_count.to_string());
                 metadata.insert(String::from("dropped_count"), data.dropped_count.to_string());
                 metadata
             },
             TracePayload::SubjectDiscovered(data) => data.metadata.clone(),
             TracePayload::GoalDiscovered(data) => {
                 let mut metadata = BTreeMap::new();
-                metadata.insert(
-                    String::from("candidate_count"),
-                    data.candidate_count.to_string(),
-                );
+                metadata.insert(String::from("candidate_count"), data.candidate_count.to_string());
                 metadata
             },
             TracePayload::GoalEntered(data) => {

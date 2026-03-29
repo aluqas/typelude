@@ -19,15 +19,13 @@ pub fn emit_diagnostics_notice(session: &mut AnalysisSession<'_, '_>) {
     }
     let diag_id = session.alloc_diag_id();
     session.stats.diagnostic_count += 1;
-    session
-        .emitter
-        .write_payload(TracePayload::DiagnosticEmitted(DiagnosticEmitted {
-            hook_id: Some(HookId::Diagnostics),
-            diagnostic_id: diag_id,
-            subject_id: None,
-            goal_id: None,
-            record: DiagnosticRecord::tooling_notice(
-                "compiler diagnostics remain available through typelude-tooling-rustc artifacts",
-            ),
-        }));
+    session.emitter.write_payload(TracePayload::DiagnosticEmitted(DiagnosticEmitted {
+        hook_id: Some(HookId::Diagnostics),
+        diagnostic_id: diag_id,
+        subject_id: None,
+        goal_id: None,
+        record: DiagnosticRecord::tooling_notice(
+            "compiler diagnostics remain available through typelude-tooling-rustc artifacts",
+        ),
+    }));
 }

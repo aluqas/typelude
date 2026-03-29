@@ -617,6 +617,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "typelude-bool"
+version = "0.1.0"
+dependencies = [
+ "static_assertions",
+ "typelude-std",
+]
+
+[[package]]
+name = "typelude-col"
+version = "0.1.0"
+dependencies = [
+ "static_assertions",
+ "typelude-std",
+]
+
+[[package]]
 name = "typelude-macros"
 version = "0.1.0"
 dependencies = [
@@ -624,6 +640,15 @@ dependencies = [
  "quote",
  "syn",
  "trybuild",
+]
+
+[[package]]
+name = "typelude-num"
+version = "0.1.0"
+dependencies = [
+ "static_assertions",
+ "typelude-std",
+ "typenum",
 ]
 
 [[package]]

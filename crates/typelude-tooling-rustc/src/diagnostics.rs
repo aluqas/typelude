@@ -100,10 +100,7 @@ fn parse_diagnostic(value: &Value) -> DiagnosticRecord {
             raw: RawCompilerDiagnostic {
                 code,
                 message,
-                rendered: value
-                    .get("rendered")
-                    .and_then(Value::as_str)
-                    .map(String::from),
+                rendered: value.get("rendered").and_then(Value::as_str).map(String::from),
             },
             normalized: kind,
         },

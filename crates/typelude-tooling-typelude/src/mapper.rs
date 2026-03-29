@@ -57,30 +57,21 @@ impl SemanticMapper {
                 }),
                 TracePayload::GoalDiscovered(data) => Some(SemanticNode {
                     id: NodeId::new(event.id.value()),
-                    kind: classify_semantic_kind_from_tags(
-                        &data.semantic_tags,
-                        &data.predicate,
-                    ),
+                    kind: classify_semantic_kind_from_tags(&data.semantic_tags, &data.predicate),
                     label: compress_symbol_name(&data.predicate.debug_text()),
                     source_event_id: Some(event.id),
                     metadata: BTreeMap::new(),
                 }),
                 TracePayload::GoalEntered(data) => Some(SemanticNode {
                     id: NodeId::new(event.id.value()),
-                    kind: classify_semantic_kind_from_tags(
-                        &data.semantic_tags,
-                        &data.predicate,
-                    ),
+                    kind: classify_semantic_kind_from_tags(&data.semantic_tags, &data.predicate),
                     label: compress_symbol_name(&data.predicate.debug_text()),
                     source_event_id: Some(event.id),
                     metadata: BTreeMap::new(),
                 }),
                 TracePayload::GoalExited(data) => Some(SemanticNode {
                     id: NodeId::new(event.id.value()),
-                    kind: classify_semantic_kind_from_tags(
-                        &data.semantic_tags,
-                        &data.predicate,
-                    ),
+                    kind: classify_semantic_kind_from_tags(&data.semantic_tags, &data.predicate),
                     label: compress_symbol_name(&data.predicate.debug_text()),
                     source_event_id: Some(event.id),
                     metadata: BTreeMap::new(),

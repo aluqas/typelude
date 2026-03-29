@@ -43,23 +43,19 @@ impl TypeludeMetricEnricher {
             .sum::<usize>() as f64;
 
         vec![
-            MetricRecord::new(MetricKind::StepCount, "semantic_step_count", trace.events.len() as f64),
+            MetricRecord::new(
+                MetricKind::StepCount,
+                "semantic_step_count",
+                trace.events.len() as f64,
+            ),
             MetricRecord::new(MetricKind::ObligationCount, "obligation_count", goal_count as f64),
             MetricRecord::new(
                 MetricKind::CandidateCount,
                 "candidate_count",
                 candidate_count as f64,
             ),
-            MetricRecord::new(
-                MetricKind::RecursionDepth,
-                "recursion_depth_max",
-                max_depth as f64,
-            ),
-            MetricRecord::new(
-                MetricKind::ReEvaluationCount,
-                "re_evaluation_count",
-                re_eval_count,
-            ),
+            MetricRecord::new(MetricKind::RecursionDepth, "recursion_depth_max", max_depth as f64),
+            MetricRecord::new(MetricKind::ReEvaluationCount, "re_evaluation_count", re_eval_count),
         ]
     }
 
