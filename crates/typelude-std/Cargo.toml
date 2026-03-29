@@ -2,7 +2,7 @@
 name = "typelude-std"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.94.0"
+rust-version = "1.91.0"
 description = "Core traits and libraries for typelude"
 license = "MIT"
 
@@ -17,6 +17,8 @@ const_panic = "0.2.15"
 derive_more = { version = "2.1.0", features = ["full"] }
 paste = "1.0.15"
 typelude-macros = { path = "../typelude-macros" }
+typelude-col = { path = "../typelude-col" }
+typelude-bool = { path = "../typelude-bool" }
 # typelude-core = { path = "../typelude-core" }
 
 [dev-dependencies]

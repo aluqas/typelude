@@ -2,10 +2,10 @@ use ::std::marker::PhantomData;
 
 use crate::{Add, Div, Mul, Sub};
 
-struct Succ<T>(PhantomData<T>);
-struct Zero;
+pub struct Succ<T>(PhantomData<T>);
+pub struct Zero;
 
-trait Nat {
+pub trait Nat {
     const VAL: usize;
 }
 
@@ -48,10 +48,29 @@ where
 }
 
 //
+// Pow
+//
+
+trait Pow<M, N> {
+    type Output;
+}
+
+impl<M: Nat> Pow<M, Zero> for () {
+    type Output = Succ<Zero>;
+}
+
+impl<M: Nat, N: Nat> Pow<M, Succ<N>> for ()
+where
+    (): Pow<M, N> + Mul<M, <() as Pow<M, N>>::Output>,
+{
+    type Output = <() as Mul<M, <() as Pow<M, N>>::Output>>::Output;
+}
+
+//
 // Pred
 //
 
-trait Pred<N> {
+pub trait Pred<N> {
     type Output;
 }
 
@@ -78,24 +97,6 @@ where
     type Output = <() as Pred<<() as Sub<M, Rhs>>::Output>>::Output;
 }
 
-//
-// Pow
-//
-
-trait Pow<M, N> {
-    type Output;
-}
-
-impl<M: Nat> Pow<M, Zero> for () {
-    type Output = Succ<Zero>;
-}
-
-impl<M: Nat, N: Nat> Pow<M, Succ<N>> for ()
-where
-    (): Pow<M, N> + Mul<M, <() as Pow<M, N>>::Output>,
-{
-    type Output = <() as Mul<M, <() as Pow<M, N>>::Output>>::Output;
-}
 
 #[cfg(test)]
 mod tests {

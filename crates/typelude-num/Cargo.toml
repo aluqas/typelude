@@ -2,12 +2,11 @@
 name = "typelude-num"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.94.0"
+rust-version = "1.91.0"
 description = "Type-level numeric utilities for typelude"
 license = "MIT"
 
 [dependencies]
-typelude-std = { path = "../typelude-std" }
 typenum = { version = "1.19.0", features = ["const-generics"] }
 
 [dev-dependencies]

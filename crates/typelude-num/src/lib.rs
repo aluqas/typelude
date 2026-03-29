@@ -2,18 +2,10 @@
 
 #![recursion_limit = "1024"]
 
-pub mod model {
-    pub use typelude_std::model::prim::int::*;
-}
-
-pub mod std {
-    pub use typelude_std::std::prim::int::*;
-}
-
 pub use typenum::*;
 extern crate typenum;
 
-mod peano;
+pub mod peano;
 
 /// Ops
 trait Add<Lhs, Rhs> {

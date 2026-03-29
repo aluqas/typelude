@@ -2,12 +2,12 @@
 name = "typelude-col"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.94.0"
+rust-version = "1.91.0"
 description = "Type-level collection utilities for typelude"
 license = "MIT"
 
 [dependencies]
-typelude-std = { path = "../typelude-std" }
+typelude-num = { path = "../typelude-num" }
 
 [dev-dependencies]
 static_assertions = "1.1.0"
