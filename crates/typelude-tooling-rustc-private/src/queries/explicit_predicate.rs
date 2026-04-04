@@ -9,12 +9,16 @@ use rustc_trait_selection::solve::inspect::{
     InferCtxtProofTreeExt, InspectCandidate, InspectConfig, InspectGoal, ProofTreeVisitor,
 };
 use typelude_tooling_core::{
-    CandidateDiscovered, CandidateKind, CandidateResult, CandidateTried, ErrorRaised,
-    GoalDiscovered, GoalEntered, GoalExited, GoalResult, HookId, PredicateRepr, SemanticTag,
-    SubjectId, TracePayload,
+    CandidateDiscovered, CandidateResult, CandidateTried, ErrorRaised, GoalDiscovered,
+    GoalEntered, GoalExited, GoalResult, HookId, SubjectId, TracePayload,
 };
 
 use crate::{
+    adapters::trait_solve::{
+        candidate_kind_with_metadata, inspect_goal_predicate_debug, inspect_goal_predicate_repr,
+        lower_goal_result_from_candidate, lower_goal_result_from_goal, semantic_tags_for_candidate,
+        semantic_tags_for_predicate,
+    },
     error::{AnalysisError, AnalysisResult},
     queries::{Query, QueryContext},
     session::AnalysisSession,
@@ -169,12 +173,8 @@ impl<'v, 'c, 'tcx> ProofTreeCollector<'v, 'c, 'tcx> {
 
         let candidate_id = self.session.alloc_candidate_id();
         self.session.stats.candidate_count += 1;
-        let candidate_kind = lower_candidate_kind(&format!("{:?}", candidate.kind()));
+        let (candidate_kind, metadata) = candidate_kind_with_metadata(candidate);
         let semantic_tags = semantic_tags_for_candidate(&candidate_kind);
-        let metadata = BTreeMap::from([(
-            String::from("raw_candidate_kind"),
-            format!("{:?}", candidate.kind()),
-        )]);
 
         self.session.emitter.write_payload(TracePayload::CandidateDiscovered(
             CandidateDiscovered {
@@ -204,7 +204,7 @@ impl<'v, 'c, 'tcx> ProofTreeCollector<'v, 'c, 'tcx> {
             goal_id,
             candidate_id,
             candidate_kind,
-            result: lower_goal_result(&format!("{:?}", candidate.result())),
+            result: lower_goal_result_from_candidate(candidate),
             semantic_tags,
             metadata,
         }));
@@ -227,7 +227,7 @@ impl<'tcx> ProofTreeVisitor<'tcx> for ProofTreeCollector<'_, '_, 'tcx> {
     }
 
     fn visit_goal(&mut self, goal: &InspectGoal<'_, 'tcx>) -> Self::Result {
-        let predicate_debug = format!("{:?}", goal.goal().predicate);
+        let predicate_debug = inspect_goal_predicate_debug(goal);
         if !self.session.focus_matches(&predicate_debug) {
             return;
         }
@@ -239,7 +239,7 @@ impl<'tcx> ProofTreeVisitor<'tcx> for ProofTreeCollector<'_, '_, 'tcx> {
         let goal_id = self.session.alloc_goal_id();
         let parent_goal_id = self.stack.last().copied();
         let candidates = goal.candidates();
-        let predicate = lower_predicate_repr(&predicate_debug);
+        let predicate = inspect_goal_predicate_repr(goal);
         let semantic_tags = semantic_tags_for_predicate(&predicate);
         self.session.stats.goal_count += 1;
 
@@ -274,148 +274,8 @@ impl<'tcx> ProofTreeVisitor<'tcx> for ProofTreeCollector<'_, '_, 'tcx> {
             goal_id,
             parent_goal_id,
             predicate,
-            result: lower_goal_result(&format!("{:?}", goal.result())),
+            result: lower_goal_result_from_goal(goal),
             semantic_tags,
         }));
     }
-}
-
-use std::collections::BTreeMap;
-
-fn lower_predicate_repr(raw: &str) -> PredicateRepr {
-    let text = raw.trim();
-    if text.contains("AliasRelate(") {
-        let inner = text
-            .split_once("AliasRelate(")
-            .and_then(|(_, rest)| rest.rsplit_once(')'))
-            .map(|(body, _)| body)
-            .unwrap_or_default();
-        if let Some((lhs, rhs)) = split_top_level_once(inner) {
-            return PredicateRepr::AliasRelate {
-                lhs: lhs.to_string(),
-                rhs: rhs.to_string(),
-            };
-        }
-    }
-    if text.contains("NormalizesTo(") {
-        let inner = text
-            .split_once("NormalizesTo(")
-            .and_then(|(_, rest)| rest.rsplit_once(')'))
-            .map(|(body, _)| body)
-            .unwrap_or_default();
-        if let Some((alias, target)) = split_top_level_once(inner) {
-            return PredicateRepr::NormalizesTo {
-                alias: alias.to_string(),
-                target: target.to_string(),
-            };
-        }
-    }
-    if text.contains("TraitPredicate(") {
-        let trait_path = if let Some(start) = text.find("TraitPredicate(") {
-            let inner = &text[start + "TraitPredicate(".len()..];
-            inner.split_once(')').map_or(inner, |(body, _)| body).to_string()
-        } else {
-            text.to_string()
-        };
-        return PredicateRepr::TraitPredicate {
-            trait_path,
-            self_ty: String::from("<unknown>"),
-            args: Vec::new(),
-        };
-    }
-    if text.is_empty() {
-        PredicateRepr::Unknown
-    } else {
-        PredicateRepr::DebugText(text.to_string())
-    }
-}
-
-fn lower_candidate_kind(raw: &str) -> CandidateKind {
-    let lower = raw.to_ascii_lowercase();
-    if lower.contains("paramenv") {
-        CandidateKind::ParamEnv
-    } else if lower.contains("impl") {
-        CandidateKind::Impl
-    } else if lower.contains("builtin") {
-        CandidateKind::Builtin
-    } else if lower.contains("aliasrelate") {
-        CandidateKind::AliasRelate
-    } else if lower.contains("normalize") {
-        CandidateKind::Normalize
-    } else {
-        CandidateKind::Unknown(raw.to_string())
-    }
-}
-
-fn lower_goal_result(raw: &str) -> GoalResult {
-    let lower = raw.to_ascii_lowercase();
-    if lower.contains("no_solution") || lower.contains("nosolution") {
-        GoalResult::NoSolution
-    } else if lower.contains("ambiguous") {
-        GoalResult::Ambiguous
-    } else if lower.contains("unsupported") {
-        GoalResult::Unsupported
-    } else if lower.contains("ok") || lower.contains("yes") {
-        GoalResult::Success
-    } else {
-        GoalResult::Error
-    }
-}
-
-fn semantic_tags_for_predicate(predicate: &PredicateRepr) -> Vec<SemanticTag> {
-    let text = predicate.debug_text();
-    let mut tags = Vec::new();
-    if text.contains("EIf") {
-        tags.push(SemanticTag::BranchLike);
-    }
-    if text.contains("EWhile") {
-        tags.push(SemanticTag::LoopLike);
-    }
-    if text.contains("EGet") {
-        tags.push(SemanticTag::LookupLike);
-    }
-    if text.contains("EMap") {
-        tags.push(SemanticTag::MapLike);
-    }
-    if text.contains("EApp") {
-        tags.push(SemanticTag::ApplyLike);
-    }
-    if text.contains("Helper") {
-        tags.push(SemanticTag::HelperDispatchLike);
-    }
-    if text.contains("Op") {
-        tags.push(SemanticTag::VmOpLike);
-    }
-    if tags.is_empty() {
-        tags.push(SemanticTag::EvalLike);
-    }
-    tags
-}
-
-fn semantic_tags_for_candidate(candidate_kind: &CandidateKind) -> Vec<SemanticTag> {
-    match candidate_kind {
-        CandidateKind::AliasRelate => vec![SemanticTag::HelperDispatchLike],
-        CandidateKind::Normalize => vec![SemanticTag::EvalLike],
-        CandidateKind::ParamEnv | CandidateKind::Impl | CandidateKind::Builtin => {
-            vec![SemanticTag::EvalLike]
-        },
-        CandidateKind::Unknown(_) => vec![SemanticTag::Unknown],
-    }
-}
-
-fn split_top_level_once(input: &str) -> Option<(&str, &str)> {
-    let mut depth = 0_i32;
-    for (index, ch) in input.char_indices() {
-        match ch {
-            '<' | '(' | '[' | '{' => depth += 1,
-            '>' | ')' | ']' | '}' => depth -= 1,
-            ',' if depth == 0 => {
-                let lhs = input[..index].trim();
-                let rhs = input[index + 1..].trim();
-                return Some((lhs, rhs));
-            },
-            _ => {},
-        }
-    }
-    None
 }

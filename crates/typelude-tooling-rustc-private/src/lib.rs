@@ -10,6 +10,7 @@ extern crate rustc_session;
 extern crate rustc_span;
 extern crate rustc_trait_selection;
 
+pub(crate) mod adapters;
 pub mod emit;
 pub mod error;
 pub mod filters;

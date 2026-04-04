@@ -4,6 +4,7 @@ pub mod diagnostic;
 pub mod error;
 pub mod graph;
 pub mod ids;
+pub mod ingest;
 pub mod metrics;
 pub mod render;
 pub mod semantic;
