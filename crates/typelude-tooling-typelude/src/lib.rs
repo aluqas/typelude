@@ -1,27 +1,25 @@
 //! Typelude-specific semantic adapters and renderers.
 
-pub mod analysis;
 pub mod caps;
 pub mod diagnostics;
-pub mod graph;
 pub mod mapper;
 pub mod metrics;
 pub mod naming;
 pub mod render;
-pub mod type_expr;
 
-pub use analysis::{GraphAnalysis, GraphSummary, KindDistribution};
 pub use caps::{CapabilityKind, normalize_capability_name};
 pub use diagnostics::TypeludeDiagnosticEnricher;
-pub use graph::TraceGraphBuilder;
 pub use mapper::{SemanticMapper, SemanticNode, SemanticNodeKind};
 pub use metrics::TypeludeMetricEnricher;
 pub use naming::compress_symbol_name;
 pub use render::TypeludeRenderer;
-pub use type_expr::{SemanticExpr, TypeExpr};
 use typelude_tooling_core::{
     CandidateKind, DiagnosticRecord, GoalTreeCandidate, GoalTreeGoal, GraphNode, MetricRecord,
-    PredicateRepr, RenderMode, RenderedText, SemanticTag, Trace,
+    PredicateRepr, RenderMode, RenderedText, SemanticTag, Trace, semantic_tags_for_candidate,
+    semantic_tags_for_predicate,
+};
+pub use typelude_tooling_core::{
+    GraphAnalysis, GraphSummary, KindDistribution, SemanticExpr, TraceGraphBuilder, TypeExpr,
 };
 use typelude_tooling_semantic_api::SemanticExtension;
 
@@ -34,45 +32,11 @@ impl SemanticExtension for TypeludeExtension {
     }
 
     fn classify_predicate(&self, predicate: &PredicateRepr) -> Vec<SemanticTag> {
-        let text = predicate.debug_text();
-        let mut tags = Vec::new();
-        if text.contains("EIf") {
-            tags.push(SemanticTag::BranchLike);
-        }
-        if text.contains("EWhile") {
-            tags.push(SemanticTag::LoopLike);
-        }
-        if text.contains("EGet") {
-            tags.push(SemanticTag::LookupLike);
-        }
-        if text.contains("EMap") {
-            tags.push(SemanticTag::MapLike);
-        }
-        if text.contains("EApp") {
-            tags.push(SemanticTag::ApplyLike);
-        }
-        if text.contains("Helper") {
-            tags.push(SemanticTag::HelperDispatchLike);
-        }
-        if text.contains("Op") {
-            tags.push(SemanticTag::VmOpLike);
-        }
-        if tags.is_empty() {
-            tags.push(SemanticTag::EvalLike);
-        }
-        tags
+        semantic_tags_for_predicate(predicate)
     }
 
     fn classify_candidate(&self, candidate: &CandidateKind) -> Vec<SemanticTag> {
-        match candidate {
-            CandidateKind::AliasRelate => vec![SemanticTag::HelperDispatchLike],
-            CandidateKind::Normalize => vec![SemanticTag::EvalLike],
-            CandidateKind::ParamEnv | CandidateKind::Impl | CandidateKind::Builtin => {
-                vec![SemanticTag::EvalLike]
-            },
-            CandidateKind::Unknown(text) if text.contains("Op") => vec![SemanticTag::VmOpLike],
-            CandidateKind::Unknown(_) => vec![SemanticTag::Unknown],
-        }
+        semantic_tags_for_candidate(candidate)
     }
 
     fn semantic_tags_for_goal(&self, goal: &GoalTreeGoal) -> Vec<SemanticTag> {

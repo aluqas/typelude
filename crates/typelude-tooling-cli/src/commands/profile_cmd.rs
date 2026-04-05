@@ -9,9 +9,8 @@ use typelude_tooling_rustc::{
 use typelude_tooling_semantic_api::SemanticExtension;
 use typelude_tooling_typelude::TypeludeExtension;
 
-use crate::OutputModeArg;
-
 use super::trace_io::read_trace;
+use crate::OutputModeArg;
 
 #[derive(Debug, Default, Serialize)]
 pub(crate) struct ProfileArtifacts {
@@ -42,22 +41,24 @@ pub(crate) fn run_profile(
         metrics.extend(TypeludeExtension.enrich_metrics(&trace));
     }
     if let Some(path) = time_passes {
-        metrics.extend(
-            TimePassesCollector::new().collect_from_str(&std::fs::read_to_string(path)?)?,
-        );
+        metrics
+            .extend(TimePassesCollector::new().collect_from_str(&std::fs::read_to_string(path)?)?);
     }
     if let Some(path) = type_sizes {
-        metrics.extend(
-            TypeSizesCollector::new().collect_from_str(&std::fs::read_to_string(path)?)?,
-        );
+        metrics
+            .extend(TypeSizesCollector::new().collect_from_str(&std::fs::read_to_string(path)?)?);
     }
     if let Some(root) = self_profile_root {
-        let report = SelfProfileCollector::new().collect(&SelfProfileConfig { root })?;
+        let report = SelfProfileCollector::new().collect(&SelfProfileConfig {
+            root,
+        })?;
         metrics.extend(report.metrics);
         artifacts.self_profile = report.artifacts;
     }
     if let Some(root) = mir_root {
-        let report = MirArtifactCollector::new().collect(&MirArtifactConfig { root })?;
+        let report = MirArtifactCollector::new().collect(&MirArtifactConfig {
+            root,
+        })?;
         artifacts.mir = report.mir_files;
         artifacts.dot = report.dot_files;
     }
@@ -81,9 +82,6 @@ fn render_profile_text(
         .collect::<Vec<_>>();
     lines.push(format!("mir_files={}", artifacts.mir.len()));
     lines.push(format!("dot_files={}", artifacts.dot.len()));
-    lines.push(format!(
-        "self_profile_artifacts={}",
-        artifacts.self_profile.len()
-    ));
+    lines.push(format!("self_profile_artifacts={}", artifacts.self_profile.len()));
     lines.join("\n")
 }

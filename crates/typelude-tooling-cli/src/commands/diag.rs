@@ -6,9 +6,8 @@ use typelude_tooling_rustc::{RustcDiagnosticsCollector, RustcDiagnosticsConfig};
 use typelude_tooling_semantic_api::SemanticExtension;
 use typelude_tooling_typelude::TypeludeExtension;
 
-use crate::OutputModeArg;
-
 use super::trace_io::read_trace;
+use crate::OutputModeArg;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct DiagOutput {
@@ -36,10 +35,9 @@ pub(crate) fn run_diag(
             .count();
         if diagnostic_count > 0 {
             for diagnostic in &mut diagnostics {
-                diagnostic.metadata.insert(
-                    String::from("trace_diagnostics"),
-                    diagnostic_count.to_string(),
-                );
+                diagnostic
+                    .metadata
+                    .insert(String::from("trace_diagnostics"), diagnostic_count.to_string());
             }
         }
     }

@@ -2,6 +2,7 @@
 
 mod commands;
 mod process;
+mod solve_renderer;
 mod solve_view;
 
 use clap::{Parser, Subcommand, ValueEnum};
@@ -353,10 +354,13 @@ mod tests {
                 parent_subject_id: None,
                 subject_kind: SubjectKind::Predicate,
                 label: String::from("RunWriter"),
-                metadata: BTreeMap::from([(
-                    String::from("owner_path"),
-                    String::from("typelude_vm::core::writer_t::RunWriter"),
-                )]),
+                metadata: BTreeMap::from([
+                    (
+                        String::from("owner_path"),
+                        String::from("typelude_vm::core::writer_t::RunWriter"),
+                    ),
+                    (String::from("predicate_index"), String::from("0")),
+                ]),
             }),
         ));
 
@@ -382,7 +386,10 @@ mod tests {
                 candidate_kind: CandidateKind::Impl,
                 result: GoalResult::Success,
                 semantic_tags: Vec::new(),
-                metadata: BTreeMap::new(),
+                metadata: BTreeMap::from([(
+                    String::from("raw_candidate_kind"),
+                    String::from("ImplCandidate { source: user_impl, nested: ParamEnv }"),
+                )]),
             }),
         ));
 
@@ -457,7 +464,10 @@ mod tests {
             "text",
         ]);
         let output = run(cli).expect("solve-tree command should run");
+        assert!(output.contains("view_kind=solve_tree"));
+        assert!(output.contains("collection_basis=trace_input"));
         assert!(output.contains("subject #1"));
+        assert!(output.contains("predicate_index=0"));
         assert!(output.contains("candidate #1"));
         fs::remove_file(input).expect("trace fixture should be removed");
     }
@@ -475,6 +485,7 @@ mod tests {
             "text",
         ]);
         let output = run(cli).expect("solve-summary command should run");
+        assert!(output.contains("view_kind=solve_summary"));
         assert!(output.contains("subjects=1"));
         assert!(output.contains("result.no_solution=1"));
         fs::remove_file(input).expect("trace fixture should be removed");

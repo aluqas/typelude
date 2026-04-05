@@ -1,5 +1,4 @@
-use std::path::PathBuf;
-use std::process::Command;
+use std::{path::PathBuf, process::Command};
 
 use typelude_tooling_core::{ToolingError, ToolingResult};
 
@@ -18,9 +17,7 @@ pub fn driver_path() -> PathBuf {
     let target_dir = std::env::var_os("CARGO_TARGET_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("target"));
-    target_dir
-        .join("debug")
-        .join(format!("typelude-rustc-driver{}", std::env::consts::EXE_SUFFIX))
+    target_dir.join("debug").join(format!("typelude-rustc-driver{}", std::env::consts::EXE_SUFFIX))
 }
 
 pub fn ensure_driver(toolchain: &str, rebuild: bool) -> ToolingResult<PathBuf> {
@@ -34,9 +31,7 @@ pub fn ensure_driver(toolchain: &str, rebuild: bool) -> ToolingResult<PathBuf> {
         .args(["build", "-p", "typelude-tooling-rustc-private", "--bin", "typelude-rustc-driver"])
         .status()?;
     if !status.success() {
-        return Err(ToolingError::Command(String::from(
-            "failed to build typelude-rustc-driver",
-        )));
+        return Err(ToolingError::Command(String::from("failed to build typelude-rustc-driver")));
     }
     Ok(driver_path())
 }

@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use typelude_tooling_core::{Graph, GraphEdge, GraphEdgeKind, GraphNode, GraphNodeKind, NodeId};
+use crate::{Graph, GraphEdge, GraphEdgeKind, GraphNode, GraphNodeKind, NodeId};
 
-/// A parsed typelude type expression tree.
+/// A parsed tooling type expression tree.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeExpr {
     /// A bare identifier with no type arguments (e.g. `True`, `Nil`, `U3`).
@@ -14,64 +14,50 @@ pub enum TypeExpr {
     },
 }
 
-/// Semantic form of a typelude type expression.
+/// Semantic form of a tooling type expression.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SemanticExpr {
-    /// `EIf<Cond, Then, Else>`
     If {
         cond: Box<SemanticExpr>,
         then: Box<SemanticExpr>,
         else_: Box<SemanticExpr>,
     },
-    /// `EWhile<Pred, Step, Init>`
     While {
         pred: Box<SemanticExpr>,
         step: Box<SemanticExpr>,
         init: Box<SemanticExpr>,
     },
-    /// `EApp<Func, Arg>`
     App {
         func: Box<SemanticExpr>,
         arg: Box<SemanticExpr>,
     },
-    /// `EGet<Arr, Key>`
     Get {
         arr: Box<SemanticExpr>,
         key: Box<SemanticExpr>,
     },
-    /// `EMap<Func, List>`
     Map {
         func: Box<SemanticExpr>,
         list: Box<SemanticExpr>,
     },
-    /// `EFilter<Pred, List>`
     Filter {
         pred: Box<SemanticExpr>,
         list: Box<SemanticExpr>,
     },
-    /// `EFold<Func, Init, List>`
     Fold {
         func: Box<SemanticExpr>,
         init: Box<SemanticExpr>,
         list: Box<SemanticExpr>,
     },
-    /// `ELit<T>` — a literal value lifted into Eval
     Lit(Box<SemanticExpr>),
-    /// `Array<H, T>` cons cell
     Array {
         head: Box<SemanticExpr>,
         tail: Box<SemanticExpr>,
     },
-    /// `Nil` — the empty list
     Nil,
-    /// Anything else (typenum naturals, booleans, unknown generics)
     Primitive(String),
 }
 
 impl TypeExpr {
-    /// Parse a typelude type expression string into a `TypeExpr` tree.
-    ///
-    /// Returns `None` if the input is empty or malformed.
     #[must_use]
     pub fn parse(input: &str) -> Option<Self> {
         let input = input.trim();
@@ -81,7 +67,6 @@ impl TypeExpr {
         Some(parse_expr(input))
     }
 
-    /// Lift the parsed tree into a [`SemanticExpr`].
     #[must_use]
     pub fn lift(&self) -> SemanticExpr {
         lift_to_semantic(self)
@@ -89,8 +74,6 @@ impl TypeExpr {
 }
 
 impl SemanticExpr {
-    /// Build a [`Graph`] from this semantic expression, starting node IDs at
-    /// `start_id`.  Returns the graph and the root node id.
     #[must_use]
     pub fn to_graph(&self) -> Graph {
         let mut graph = Graph::default();
@@ -100,16 +83,12 @@ impl SemanticExpr {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Parsing
-// ---------------------------------------------------------------------------
-
 fn parse_expr(input: &str) -> TypeExpr {
-    if let Some(inner) = strip_generic(input, "") {
-        // Has angle brackets — generic
-        let lt = input.find('<').unwrap();
+    if let Some(inner) = strip_generic(input) {
+        let lt = input.find('<').unwrap_or(0);
         let name = input[..lt].trim().to_owned();
-        let args = split_top_level(inner).into_iter().map(|a| parse_expr(a.trim())).collect();
+        let args =
+            split_top_level(inner).into_iter().map(|segment| parse_expr(segment.trim())).collect();
         TypeExpr::Generic {
             name,
             args,
@@ -119,14 +98,11 @@ fn parse_expr(input: &str) -> TypeExpr {
     }
 }
 
-/// Returns the content between the outermost `<` and `>` if the input ends
-/// with `>` and contains `<`.
-fn strip_generic<'a>(input: &'a str, _prefix: &str) -> Option<&'a str> {
+fn strip_generic(input: &str) -> Option<&str> {
     let lt = input.find('<')?;
     if !input.ends_with('>') {
         return None;
     }
-    // Verify depth is balanced.
     let inner = &input[lt + 1..input.len() - 1];
     let mut depth = 0_i32;
     for ch in inner.chars() {
@@ -148,13 +124,13 @@ fn split_top_level(input: &str) -> Vec<&str> {
     let mut result = Vec::new();
     let mut depth = 0_i32;
     let mut start = 0_usize;
-    for (i, ch) in input.char_indices() {
+    for (index, ch) in input.char_indices() {
         match ch {
             '<' => depth += 1,
             '>' => depth -= 1,
             ',' if depth == 0 => {
-                result.push(input[start..i].trim());
-                start = i + 1;
+                result.push(input[start..index].trim());
+                start = index + 1;
             },
             _ => {},
         }
@@ -163,23 +139,20 @@ fn split_top_level(input: &str) -> Vec<&str> {
     result
 }
 
-// ---------------------------------------------------------------------------
-// Semantic lifting
-// ---------------------------------------------------------------------------
+fn type_suffix(name: &str) -> &str {
+    name.rsplit_once("::").map(|(_, tail)| tail).unwrap_or(name)
+}
 
 fn lift_to_semantic(expr: &TypeExpr) -> SemanticExpr {
     match expr {
-        TypeExpr::Name(name) => {
-            if name == "Nil" {
-                SemanticExpr::Nil
-            } else {
-                SemanticExpr::Primitive(name.clone())
-            }
+        TypeExpr::Name(name) => match type_suffix(name) {
+            "Nil" | "TTerm" => SemanticExpr::Nil,
+            _ => SemanticExpr::Primitive(name.clone()),
         },
         TypeExpr::Generic {
             name,
             args,
-        } => match name.as_str() {
+        } => match type_suffix(name) {
             "EIf" if args.len() == 3 => SemanticExpr::If {
                 cond: Box::new(lift_to_semantic(&args[0])),
                 then: Box::new(lift_to_semantic(&args[1])),
@@ -212,15 +185,11 @@ fn lift_to_semantic(expr: &TypeExpr) -> SemanticExpr {
                 list: Box::new(lift_to_semantic(&args[2])),
             },
             "ELit" if args.len() == 1 => SemanticExpr::Lit(Box::new(lift_to_semantic(&args[0]))),
-            "Array" if args.len() == 2 => SemanticExpr::Array {
+            "Array" | "TArr" if args.len() == 2 => SemanticExpr::Array {
                 head: Box::new(lift_to_semantic(&args[0])),
                 tail: Box::new(lift_to_semantic(&args[1])),
             },
-            _ => {
-                // Generic type we don't recognise — treat as primitive with its
-                // full stringified form.
-                SemanticExpr::Primitive(format_generic(name, args))
-            },
+            _ => SemanticExpr::Primitive(format_generic(name, args)),
         },
     }
 }
@@ -235,17 +204,13 @@ fn format_generic(name: &str, args: &[TypeExpr]) -> String {
 
 fn format_type_expr(expr: &TypeExpr) -> String {
     match expr {
-        TypeExpr::Name(n) => n.clone(),
+        TypeExpr::Name(name) => name.clone(),
         TypeExpr::Generic {
             name,
             args,
         } => format_generic(name, args),
     }
 }
-
-// ---------------------------------------------------------------------------
-// Graph construction
-// ---------------------------------------------------------------------------
 
 fn build_graph(expr: &SemanticExpr, graph: &mut Graph, counter: &mut u64) -> NodeId {
     *counter += 1;
@@ -365,23 +330,19 @@ fn wire_child(
     });
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 #[cfg(test)]
 mod tests {
     use super::{SemanticExpr, TypeExpr};
 
     #[test]
     fn parses_bare_name() {
-        let expr = TypeExpr::parse("Nil").unwrap();
+        let expr = TypeExpr::parse("Nil").expect("Nil should parse");
         assert_eq!(expr, TypeExpr::Name(String::from("Nil")));
     }
 
     #[test]
     fn parses_generic() {
-        let expr = TypeExpr::parse("EIf<True, U1, U0>").unwrap();
+        let expr = TypeExpr::parse("EIf<True, U1, U0>").expect("generic should parse");
         assert_eq!(expr, TypeExpr::Generic {
             name: String::from("EIf"),
             args: vec![
@@ -394,39 +355,35 @@ mod tests {
 
     #[test]
     fn lifts_eif_to_semantic() {
-        let expr = TypeExpr::parse("EIf<True, U1, U0>").unwrap();
-        let sem = expr.lift();
-        assert!(matches!(sem, SemanticExpr::If { .. }));
+        let expr = TypeExpr::parse("EIf<True, U1, U0>").expect("expression should parse");
+        assert!(matches!(expr.lift(), SemanticExpr::If { .. }));
     }
 
     #[test]
     fn lifts_ewhile_to_semantic() {
-        let expr = TypeExpr::parse("EWhile<Pred, Step, U0>").unwrap();
-        let sem = expr.lift();
-        assert!(matches!(sem, SemanticExpr::While { .. }));
+        let expr = TypeExpr::parse("EWhile<Pred, Step, U0>").expect("expression should parse");
+        assert!(matches!(expr.lift(), SemanticExpr::While { .. }));
     }
 
     #[test]
     fn lifts_nil() {
-        let expr = TypeExpr::parse("Nil").unwrap();
+        let expr = TypeExpr::parse("Nil").expect("Nil should parse");
         assert_eq!(expr.lift(), SemanticExpr::Nil);
     }
 
     #[test]
     fn lifts_array_cons() {
-        let expr = TypeExpr::parse("Array<U1, Nil>").unwrap();
-        let sem = expr.lift();
-        assert!(matches!(sem, SemanticExpr::Array { .. }));
+        let expr = TypeExpr::parse("Array<U1, Nil>").expect("array should parse");
+        assert!(matches!(expr.lift(), SemanticExpr::Array { .. }));
     }
 
     #[test]
     fn eif_graph_has_three_children() {
-        let expr = TypeExpr::parse("EIf<True, U1, U0>").unwrap();
+        let expr = TypeExpr::parse("EIf<True, U1, U0>").expect("expression should parse");
         let graph = expr.lift().to_graph();
-        // root (EIf) + 3 children
         assert_eq!(graph.nodes.len(), 4);
         assert_eq!(graph.edges.len(), 3);
-        let labels: Vec<&str> = graph.edges.iter().map(|e| e.label.as_str()).collect();
+        let labels: Vec<&str> = graph.edges.iter().map(|edge| edge.label.as_str()).collect();
         assert!(labels.contains(&"cond"));
         assert!(labels.contains(&"then"));
         assert!(labels.contains(&"else"));
@@ -434,7 +391,7 @@ mod tests {
 
     #[test]
     fn eapp_graph_has_two_children() {
-        let expr = TypeExpr::parse("EApp<MyFn, U3>").unwrap();
+        let expr = TypeExpr::parse("EApp<MyFn, U3>").expect("expression should parse");
         let graph = expr.lift().to_graph();
         assert_eq!(graph.nodes.len(), 3);
         assert_eq!(graph.edges.len(), 2);
@@ -442,10 +399,63 @@ mod tests {
 
     #[test]
     fn nested_eif_graph_is_correct() {
-        // EIf<True, EApp<F, U1>, U0>
-        let expr = TypeExpr::parse("EIf<True, EApp<F, U1>, U0>").unwrap();
-        let graph = expr.lift().to_graph();
-        // EIf(1) + True(2) + EApp(3) + F(4) + U1(5) + U0(6)
-        assert_eq!(graph.nodes.len(), 6);
+        let expr = TypeExpr::parse("EIf<True, EApp<F, U1>, U0>").expect("expression should parse");
+        assert_eq!(expr.lift().to_graph().nodes.len(), 6);
+    }
+
+    #[test]
+    fn lifts_path_qualified_eif() {
+        let expr =
+            TypeExpr::parse("crate::path::EIf<True, U1, U0>").expect("expression should parse");
+        assert!(matches!(expr.lift(), SemanticExpr::If { .. }));
+    }
+
+    #[test]
+    fn lifts_path_qualified_tarr_and_tterm() {
+        let expr = TypeExpr::parse("typelude_col::array::TArr<U1, typelude_col::array::TTerm>")
+            .expect("expression should parse");
+        let sem = expr.lift();
+        assert!(matches!(sem, SemanticExpr::Array { .. }));
+        if let SemanticExpr::Array {
+            head,
+            tail,
+        } = sem
+        {
+            assert!(matches!(*head, SemanticExpr::Primitive(_)));
+            assert_eq!(*tail, SemanticExpr::Nil);
+        } else {
+            panic!("expected Array");
+        }
+    }
+
+    #[test]
+    fn lifts_path_qualified_eget_over_tarr() {
+        let expr = TypeExpr::parse(
+            "typelude_col::array::EGet<typelude_col::array::TArr<U1, typelude_col::array::TTerm>, Zero>",
+        )
+        .expect("expression should parse");
+        let sem = expr.lift();
+        assert!(matches!(sem, SemanticExpr::Get { .. }));
+        if let SemanticExpr::Get {
+            arr,
+            key,
+        } = sem
+        {
+            assert!(matches!(*arr, SemanticExpr::Array { .. }));
+            assert!(matches!(*key, SemanticExpr::Primitive(_)));
+        } else {
+            panic!("expected Get");
+        }
+    }
+
+    #[test]
+    fn nested_path_tarr_graph_matches_nested_array_shape() {
+        let tarr = TypeExpr::parse(
+            "typelude_col::array::TArr<U1, typelude_col::array::TArr<U2, typelude_col::array::TTerm>>",
+        )
+        .expect("expression should parse");
+        let array = TypeExpr::parse("Array<U1, Array<U2, Nil>>").expect("array should parse");
+        assert_eq!(tarr.lift().to_graph().nodes.len(), array.lift().to_graph().nodes.len());
+        assert_eq!(tarr.lift().to_graph().edges.len(), array.lift().to_graph().edges.len());
     }
 }

@@ -260,57 +260,7 @@ impl GoalTree {
 
     #[must_use]
     pub fn summarize(&self, trace: &Trace) -> SolveSummary {
-        let mut predicate_counts = BTreeMap::<String, usize>::new();
-        let mut candidate_counts = BTreeMap::<String, usize>::new();
-        let mut result_ok = 0_usize;
-        let mut result_no_solution = 0_usize;
-        let mut result_ambiguous = 0_usize;
-        let mut max_goal_depth = 0_usize;
-        let mut goal_count = 0_usize;
-        let mut candidate_count = 0_usize;
-        let mut root_goal_count = 0_usize;
-
-        for subject in &self.subjects {
-            root_goal_count += subject.roots.len();
-            for root in &subject.roots {
-                walk_goal(
-                    root,
-                    &mut predicate_counts,
-                    &mut candidate_counts,
-                    &mut result_ok,
-                    &mut result_no_solution,
-                    &mut result_ambiguous,
-                    &mut max_goal_depth,
-                    &mut goal_count,
-                    &mut candidate_count,
-                );
-            }
-        }
-
-        let unsupported = trace
-            .events
-            .iter()
-            .filter(|event| matches!(event.payload, TracePayload::ErrorRaised(..)))
-            .count();
-
-        SolveSummary {
-            subjects: self.subjects.len(),
-            root_goals: root_goal_count,
-            goals: goal_count,
-            candidates: candidate_count,
-            max_goal_depth,
-            avg_candidates_per_goal: if goal_count == 0 {
-                0.0
-            } else {
-                candidate_count as f64 / goal_count as f64
-            },
-            result_ok,
-            result_no_solution,
-            result_ambiguous,
-            result_unsupported: unsupported,
-            top_predicates: top_entries(predicate_counts, 5),
-            top_candidate_kinds: top_entries(candidate_counts, 5),
-        }
+        crate::build_solve_analysis(self, crate::unsupported_error_count(trace, self), 5).summary
     }
 }
 
@@ -351,61 +301,4 @@ fn build_goal(
         candidates,
         children,
     })
-}
-
-fn walk_goal(
-    goal: &GoalTreeGoal,
-    predicate_counts: &mut BTreeMap<String, usize>,
-    candidate_counts: &mut BTreeMap<String, usize>,
-    result_ok: &mut usize,
-    result_no_solution: &mut usize,
-    result_ambiguous: &mut usize,
-    max_goal_depth: &mut usize,
-    goal_count: &mut usize,
-    candidate_count: &mut usize,
-) {
-    *goal_count += 1;
-    *max_goal_depth = (*max_goal_depth).max(goal.depth);
-    *predicate_counts.entry(goal.predicate.debug_text()).or_default() += 1;
-
-    match goal.result {
-        GoalResult::Success => *result_ok += 1,
-        GoalResult::NoSolution => *result_no_solution += 1,
-        GoalResult::Ambiguous => *result_ambiguous += 1,
-        GoalResult::Unsupported | GoalResult::Error => {},
-    }
-
-    for candidate in &goal.candidates {
-        *candidate_count += 1;
-        *candidate_counts.entry(candidate.kind.label()).or_default() += 1;
-    }
-
-    for child in &goal.children {
-        walk_goal(
-            child,
-            predicate_counts,
-            candidate_counts,
-            result_ok,
-            result_no_solution,
-            result_ambiguous,
-            max_goal_depth,
-            goal_count,
-            candidate_count,
-        );
-    }
-}
-
-fn top_entries(counts: BTreeMap<String, usize>, limit: usize) -> Vec<SolveSummaryEntry> {
-    let mut entries = counts
-        .into_iter()
-        .map(|(label, count)| SolveSummaryEntry {
-            label,
-            count,
-        })
-        .collect::<Vec<_>>();
-    entries.sort_by(|left, right| {
-        right.count.cmp(&left.count).then_with(|| left.label.cmp(&right.label))
-    });
-    entries.truncate(limit);
-    entries
 }

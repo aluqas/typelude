@@ -2,23 +2,14 @@ use std::collections::BTreeMap;
 
 use rustc_middle::ty::TyCtxt;
 use typelude_tooling_core::{
-    CandidateId, DiagId, GoalId, HookId, SubjectDiscovered, SubjectId, TracePayload,
+    AnalysisConfig, CandidateId, DiagId, FocusFilter, GoalId, HookId, SubjectDiscovered,
+    SubjectFilter, SubjectId, TracePayload,
 };
 
 use crate::{
     emit::{CollectStats, EventEmitter},
-    filters::{FocusFilter, SubjectFilter},
     subjects::ResolvedSubject,
 };
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AnalysisConfig {
-    pub enabled: Vec<HookId>,
-    pub focus: Option<String>,
-    pub subject_filter: Option<String>,
-    pub max_events: usize,
-    pub max_depth: usize,
-}
 
 #[derive(Debug, Clone, Copy)]
 struct SubjectRecord {

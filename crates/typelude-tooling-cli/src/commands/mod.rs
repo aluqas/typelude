@@ -8,10 +8,13 @@ mod profile_cmd;
 mod solve;
 mod trace_io;
 
-use crate::solve_view::{SolveFilters, SolveRenderOptions};
-use crate::{Cli, Commands, OutputModeArg};
-
 pub(crate) use collect::QueryKindArg;
+use typelude_tooling_core::{SolveFilters, SolveResultFilter};
+
+use crate::{
+    Cli, Commands, OutputModeArg,
+    solve_view::{SolveRenderOptions, SolveResultArg},
+};
 
 pub fn dispatch(cli: Cli) -> typelude_tooling_core::ToolingResult<String> {
     match cli.command {
@@ -57,7 +60,7 @@ pub fn dispatch(cli: Cli) -> typelude_tooling_core::ToolingResult<String> {
                 show_full_predicate,
             },
             SolveFilters {
-                result,
+                result: result.map(solve_result_filter),
                 candidate_kind,
                 max_depth,
                 subject,
@@ -86,7 +89,7 @@ pub fn dispatch(cli: Cli) -> typelude_tooling_core::ToolingResult<String> {
             include_distribution,
             top,
             SolveFilters {
-                result,
+                result: result.map(solve_result_filter),
                 candidate_kind,
                 max_depth,
                 subject,
@@ -128,7 +131,7 @@ pub fn dispatch(cli: Cli) -> typelude_tooling_core::ToolingResult<String> {
             top,
             rebuild_driver,
             SolveFilters {
-                result,
+                result: result.map(solve_result_filter),
                 candidate_kind,
                 max_depth,
                 subject,
@@ -170,7 +173,7 @@ pub fn dispatch(cli: Cli) -> typelude_tooling_core::ToolingResult<String> {
             top,
             rebuild_driver,
             SolveFilters {
-                result,
+                result: result.map(solve_result_filter),
                 candidate_kind,
                 max_depth,
                 subject,
@@ -212,7 +215,7 @@ pub fn dispatch(cli: Cli) -> typelude_tooling_core::ToolingResult<String> {
             top,
             rebuild_driver,
             SolveFilters {
-                result,
+                result: result.map(solve_result_filter),
                 candidate_kind,
                 max_depth,
                 subject,
@@ -281,6 +284,10 @@ pub fn dispatch(cli: Cli) -> typelude_tooling_core::ToolingResult<String> {
             output,
         } => graph_analyze::run_analyze(input, expr, filter.as_deref(), filter_depth, output),
     }
+}
+
+fn solve_result_filter(value: SolveResultArg) -> SolveResultFilter {
+    value.into()
 }
 
 fn run_render(value: &str, output: OutputModeArg) -> typelude_tooling_core::ToolingResult<String> {

@@ -1,4 +1,7 @@
-use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::{
+    collections::BTreeMap,
+    panic::{AssertUnwindSafe, catch_unwind},
+};
 
 use rustc_infer::infer::TyCtxtInferExt;
 use rustc_middle::{
@@ -10,14 +13,15 @@ use rustc_trait_selection::solve::inspect::{
 };
 use typelude_tooling_core::{
     CandidateDiscovered, CandidateResult, CandidateTried, ErrorRaised, GoalDiscovered,
-    GoalEntered, GoalExited, GoalResult, HookId, SubjectId, TracePayload,
+    GoalEntered, GoalExited, GoalResult, HookId, SubjectId, TracePayload, lower_candidate_kind,
+    lower_goal_result, lower_predicate_repr, semantic_tags_for_candidate,
+    semantic_tags_for_predicate,
 };
 
 use crate::{
     adapters::trait_solve::{
-        candidate_kind_with_metadata, inspect_goal_predicate_debug, inspect_goal_predicate_repr,
-        lower_goal_result_from_candidate, lower_goal_result_from_goal, semantic_tags_for_candidate,
-        semantic_tags_for_predicate,
+        inspect_candidate_kind_debug, inspect_candidate_result_debug,
+        inspect_goal_predicate_debug, inspect_goal_result_debug,
     },
     error::{AnalysisError, AnalysisResult},
     queries::{Query, QueryContext},
@@ -173,7 +177,9 @@ impl<'v, 'c, 'tcx> ProofTreeCollector<'v, 'c, 'tcx> {
 
         let candidate_id = self.session.alloc_candidate_id();
         self.session.stats.candidate_count += 1;
-        let (candidate_kind, metadata) = candidate_kind_with_metadata(candidate);
+        let raw_candidate_kind = inspect_candidate_kind_debug(candidate);
+        let candidate_kind = lower_candidate_kind(&raw_candidate_kind);
+        let metadata = BTreeMap::from([(String::from("raw_candidate_kind"), raw_candidate_kind)]);
         let semantic_tags = semantic_tags_for_candidate(&candidate_kind);
 
         self.session.emitter.write_payload(TracePayload::CandidateDiscovered(
@@ -204,7 +210,7 @@ impl<'v, 'c, 'tcx> ProofTreeCollector<'v, 'c, 'tcx> {
             goal_id,
             candidate_id,
             candidate_kind,
-            result: lower_goal_result_from_candidate(candidate),
+            result: lower_goal_result(&inspect_candidate_result_debug(candidate)),
             semantic_tags,
             metadata,
         }));
@@ -239,7 +245,7 @@ impl<'tcx> ProofTreeVisitor<'tcx> for ProofTreeCollector<'_, '_, 'tcx> {
         let goal_id = self.session.alloc_goal_id();
         let parent_goal_id = self.stack.last().copied();
         let candidates = goal.candidates();
-        let predicate = inspect_goal_predicate_repr(goal);
+        let predicate = lower_predicate_repr(&predicate_debug);
         let semantic_tags = semantic_tags_for_predicate(&predicate);
         self.session.stats.goal_count += 1;
 
@@ -274,7 +280,7 @@ impl<'tcx> ProofTreeVisitor<'tcx> for ProofTreeCollector<'_, '_, 'tcx> {
             goal_id,
             parent_goal_id,
             predicate,
-            result: lower_goal_result_from_goal(goal),
+            result: lower_goal_result(&inspect_goal_result_debug(goal)),
             semantic_tags,
         }));
     }

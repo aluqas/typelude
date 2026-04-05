@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use typelude_tooling_core::{
+use crate::{
     CandidateId, GoalId, Graph, GraphEdge, GraphEdgeKind, GraphNode, GraphNodeKind, NodeId,
-    SubjectId, Trace, TracePayload,
+    SubjectId, Trace, TraceEvent, TracePayload,
 };
 
 const SUBJECT_NODE_BASE: u64 = 1_000_000_000;
@@ -123,7 +123,7 @@ impl TraceGraphBuilder {
                         kind: GraphNodeKind::Expression,
                         label: data.message.clone(),
                         span_id: event.span_id,
-                        semantic_tags: vec![],
+                        semantic_tags: Vec::new(),
                         metadata: BTreeMap::from([(
                             String::from("result"),
                             String::from(data.result.label()),
@@ -160,11 +160,11 @@ impl TraceGraphBuilder {
 
     #[must_use]
     pub fn subgraph(&self, graph: &Graph, pattern: &str, max_depth: usize) -> Graph {
-        let pattern_lower = pattern.to_lowercase();
+        let pattern_lower = pattern.to_ascii_lowercase();
         let seeds: BTreeSet<NodeId> = graph
             .nodes
             .iter()
-            .filter(|node| node.label.to_lowercase().contains(&pattern_lower))
+            .filter(|node| node.label.to_ascii_lowercase().contains(&pattern_lower))
             .map(|node| node.id)
             .collect();
         if seeds.is_empty() {
@@ -273,7 +273,7 @@ fn ensure_subject_node(
     graph: &mut Graph,
     subject_nodes: &mut BTreeMap<SubjectId, NodeId>,
     subject_id: SubjectId,
-    event: &typelude_tooling_core::TraceEvent,
+    event: &TraceEvent,
 ) -> NodeId {
     *subject_nodes.entry(subject_id).or_insert_with(|| {
         let node_id = subject_node_id(subject_id);
@@ -282,7 +282,7 @@ fn ensure_subject_node(
             kind: GraphNodeKind::Semantic,
             label: event.title(),
             span_id: event.span_id,
-            semantic_tags: vec![],
+            semantic_tags: Vec::new(),
             metadata: event.metadata(),
         });
         node_id
@@ -301,7 +301,7 @@ fn ensure_subject_placeholder(
             kind: GraphNodeKind::Semantic,
             label: format!("subject:{}", subject_id.value()),
             span_id: None,
-            semantic_tags: vec![],
+            semantic_tags: Vec::new(),
             metadata: BTreeMap::new(),
         });
         node_id

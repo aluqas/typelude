@@ -1,12 +1,12 @@
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
-use typelude_tooling_core::{ToolingError, ToolingResult};
-use typelude_tooling_typelude::{GraphAnalysis, TraceGraphBuilder, TypeExpr};
-
-use crate::OutputModeArg;
+use typelude_tooling_core::{
+    GraphAnalysis, ToolingError, ToolingResult, TraceGraphBuilder, TypeExpr,
+};
 
 use super::trace_io::read_trace;
+use crate::OutputModeArg;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct DistributionOutput {
@@ -123,7 +123,10 @@ pub(crate) fn run_analyze(
     }
 }
 
-fn build_graph(input: Option<&Path>, expr: Option<&str>) -> ToolingResult<typelude_tooling_core::Graph> {
+fn build_graph(
+    input: Option<&Path>,
+    expr: Option<&str>,
+) -> ToolingResult<typelude_tooling_core::Graph> {
     match (input, expr) {
         (Some(path), None) => {
             let trace = read_trace(path)?;
@@ -135,8 +138,6 @@ fn build_graph(input: Option<&Path>, expr: Option<&str>) -> ToolingResult<typelu
             })?;
             Ok(type_expr.lift().to_graph())
         },
-        _ => Err(ToolingError::Parse(String::from(
-            "provide exactly one of --input or --expr",
-        ))),
+        _ => Err(ToolingError::Parse(String::from("provide exactly one of --input or --expr"))),
     }
 }

@@ -3,8 +3,7 @@ use std::process::Command;
 use serde::Serialize;
 use typelude_tooling_core::ToolingResult;
 
-use crate::OutputModeArg;
-use crate::process::cargo::driver_path;
+use crate::{OutputModeArg, process::cargo::driver_path};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct DoctorReport {
@@ -15,9 +14,7 @@ pub(crate) struct DoctorReport {
 }
 
 pub(crate) fn run_doctor(output: OutputModeArg) -> ToolingResult<String> {
-    let nightly = Command::new("rustup")
-        .args(["run", "nightly", "rustc", "-V"])
-        .output();
+    let nightly = Command::new("rustup").args(["run", "nightly", "rustc", "-V"]).output();
     let nightly_available = nightly.as_ref().is_ok_and(|result| result.status.success());
     let path = driver_path();
     let driver_exists = path.exists();

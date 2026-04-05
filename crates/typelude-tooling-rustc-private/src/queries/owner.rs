@@ -1,47 +1,14 @@
 use rustc_hir::ItemKind;
 use rustc_span::def_id::LocalDefId;
+use typelude_tooling_core::{
+    QueryMatchKind, QueryTargetKind, def_index_matches, owner_path_matches,
+};
 
 use crate::{
     error::{AnalysisError, AnalysisResult},
     queries::{Query, QueryContext, run_owner_predicates},
     subjects::{ResolvedSubject, subject_for_owner},
 };
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum QueryTargetKind {
-    AnyOwner,
-    ImplOwner,
-    AssocItemOwner,
-}
-
-impl QueryTargetKind {
-    pub fn from_env(value: Option<&str>) -> Self {
-        match value.unwrap_or("owner") {
-            "impl" => Self::ImplOwner,
-            "assoc_item" => Self::AssocItemOwner,
-            _ => Self::AnyOwner,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum QueryMatchKind {
-    Substring,
-    Suffix,
-    Exact,
-    DefId,
-}
-
-impl QueryMatchKind {
-    pub fn from_env(value: Option<&str>) -> Self {
-        match value.unwrap_or("exact") {
-            "substring" => Self::Substring,
-            "exact" => Self::Exact,
-            "def_id" => Self::DefId,
-            _ => Self::Suffix,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct ResolveOwnerQuery {
@@ -116,14 +83,8 @@ fn owner_matches(
     match_kind: QueryMatchKind,
 ) -> bool {
     match match_kind {
-        QueryMatchKind::Substring => owner_path.contains(query),
-        QueryMatchKind::Suffix => {
-            owner_path == query || owner_path.ends_with(&format!("::{query}"))
-        },
-        QueryMatchKind::Exact => owner_path == query,
-        QueryMatchKind::DefId => {
-            query.parse::<u32>().ok().is_some_and(|index| def_id.local_def_index.as_u32() == index)
-        },
+        QueryMatchKind::DefId => def_index_matches(def_id.local_def_index.as_u32(), query),
+        _ => owner_path_matches(owner_path, query, match_kind),
     }
 }
 
@@ -132,25 +93,5 @@ fn matches_owner_kind(kind: ItemKind<'_>, target_kind: QueryTargetKind) -> bool 
         QueryTargetKind::AnyOwner => true,
         QueryTargetKind::ImplOwner => matches!(kind, ItemKind::Impl(..)),
         QueryTargetKind::AssocItemOwner => false,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{QueryMatchKind, QueryTargetKind};
-
-    #[test]
-    fn parses_query_target_from_env() {
-        assert_eq!(QueryTargetKind::from_env(Some("owner")), QueryTargetKind::AnyOwner);
-        assert_eq!(QueryTargetKind::from_env(Some("impl")), QueryTargetKind::ImplOwner);
-        assert_eq!(QueryTargetKind::from_env(Some("assoc_item")), QueryTargetKind::AssocItemOwner);
-    }
-
-    #[test]
-    fn parses_query_match_from_env() {
-        assert_eq!(QueryMatchKind::from_env(Some("substring")), QueryMatchKind::Substring);
-        assert_eq!(QueryMatchKind::from_env(Some("suffix")), QueryMatchKind::Suffix);
-        assert_eq!(QueryMatchKind::from_env(Some("exact")), QueryMatchKind::Exact);
-        assert_eq!(QueryMatchKind::from_env(Some("def_id")), QueryMatchKind::DefId);
     }
 }

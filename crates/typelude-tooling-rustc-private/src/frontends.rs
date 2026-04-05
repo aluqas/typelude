@@ -1,53 +1,17 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rustc_middle::ty::TyCtxt;
-use typelude_tooling_core::{HookId, RunFinished, RunId, RunStarted, TracePayload};
+use typelude_tooling_core::{AnalysisConfig, RunFinished, RunId, RunStarted, TracePayload};
 
 use crate::{
     emit::{CollectStats, EventEmitter},
     error::AnalysisResult,
     hooks::HookRegistry,
     queries::{Query, QueryContext, QueryMatchKind, QueryTargetKind, ResolveOwnerQuery},
-    session::{AnalysisConfig, AnalysisSession},
+    session::AnalysisSession,
 };
 
 pub type CollectConfig = AnalysisConfig;
-
-impl Default for CollectConfig {
-    fn default() -> Self {
-        Self {
-            enabled: default_hooks(),
-            focus: std::env::var("TYPELUDE_TOOLING_FOCUS").ok(),
-            subject_filter: std::env::var("TYPELUDE_TOOLING_SUBJECT_FILTER").ok(),
-            max_events: std::env::var("TYPELUDE_TOOLING_MAX_EVENTS")
-                .ok()
-                .and_then(|value| value.parse::<usize>().ok())
-                .unwrap_or(50_000),
-            max_depth: std::env::var("TYPELUDE_TOOLING_MAX_DEPTH")
-                .ok()
-                .and_then(|value| value.parse::<usize>().ok())
-                .unwrap_or(32),
-        }
-    }
-}
-
-fn default_hooks() -> Vec<HookId> {
-    if let Some(raw) = std::env::var("TYPELUDE_TOOLING_HOOKS").ok() {
-        let parsed = raw
-            .split(',')
-            .filter_map(|segment| match segment.trim() {
-                "trait_solve" => Some(HookId::TraitSolve),
-                "diagnostics" => Some(HookId::Diagnostics),
-                "item_structure" => Some(HookId::ItemStructure),
-                _ => None,
-            })
-            .collect::<Vec<_>>();
-        if !parsed.is_empty() {
-            return parsed;
-        }
-    }
-    vec![HookId::ItemStructure, HookId::TraitSolve, HookId::Diagnostics]
-}
 
 pub fn run_collect_frontend(
     tcx: TyCtxt<'_>,
@@ -117,19 +81,4 @@ fn run_with_session(
 }
 fn rustc_version() -> String {
     option_env!("CFG_VERSION").map(str::to_owned).unwrap_or_else(|| String::from("unknown"))
-}
-
-#[cfg(test)]
-mod tests {
-    use typelude_tooling_core::HookId;
-
-    use super::default_hooks;
-
-    #[test]
-    fn default_config_has_all_primary_hooks() {
-        let hooks = default_hooks();
-        assert!(hooks.contains(&HookId::TraitSolve));
-        assert!(hooks.contains(&HookId::ItemStructure));
-        assert!(hooks.contains(&HookId::Diagnostics));
-    }
 }

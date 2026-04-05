@@ -1,13 +1,10 @@
-use std::{
-    fs,
-    path::PathBuf,
-    process::Command,
+use std::{fs, path::PathBuf, process::Command};
+
+use typelude_tooling_core::{
+    QueryMatchKind, QueryTargetKind, ToolingError, ToolingResult, Trace, TraceId,
 };
 
-use typelude_tooling_core::{ToolingError, ToolingResult, Trace, TraceId};
-
-use crate::{HookArg, OwnerMatchArg};
-use crate::process::cargo::ensure_driver;
+use crate::{HookArg, process::cargo::ensure_driver};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum QueryKindArg {
@@ -43,11 +40,7 @@ pub(crate) fn run_collect(
     let hooks_text = if hooks.is_empty() {
         String::from("default")
     } else {
-        hooks
-            .iter()
-            .map(|hook| format!("{:?}", hook.hook_id()))
-            .collect::<Vec<_>>()
-            .join(", ")
+        hooks.iter().map(|hook| format!("{:?}", hook.hook_id())).collect::<Vec<_>>().join(", ")
     };
     Ok(format!(
         "collected {} events into {} using hooks: {} subject_filter={}",
@@ -67,15 +60,12 @@ pub(crate) fn collect_trace(
     subject_filter: Option<String>,
     rebuild_driver: bool,
     owner_query: Option<&str>,
-    query_kind: Option<QueryKindArg>,
-    query_match: Option<OwnerMatchArg>,
+    query_kind: Option<QueryTargetKind>,
+    query_match: Option<QueryMatchKind>,
 ) -> ToolingResult<Trace> {
     let driver_path = ensure_driver(toolchain, rebuild_driver)?;
     let mut command = Command::new("cargo");
-    command
-        .arg(format!("+{toolchain}"))
-        .arg(cargo_subcommand)
-        .arg("--quiet");
+    command.arg(format!("+{toolchain}")).arg(cargo_subcommand).arg("--quiet");
     if let Some(package) = package {
         command.args(["-p", &package]);
     }
@@ -91,28 +81,13 @@ pub(crate) fn collect_trace(
         command.env("TYPELUDE_TOOLING_QUERY_OWNER", owner_query);
     }
     if let Some(query_kind) = query_kind {
-        let value = match query_kind {
-            QueryKindArg::Owner => "owner",
-            QueryKindArg::Impl => "impl",
-            QueryKindArg::AssocItem => "assoc_item",
-        };
-        command.env("TYPELUDE_TOOLING_QUERY_KIND", value);
+        command.env("TYPELUDE_TOOLING_QUERY_KIND", query_kind.label());
     }
     if let Some(query_match) = query_match {
-        let value = match query_match {
-            OwnerMatchArg::Substring => "substring",
-            OwnerMatchArg::Suffix => "suffix",
-            OwnerMatchArg::Exact => "exact",
-            OwnerMatchArg::DefId => "def_id",
-        };
-        command.env("TYPELUDE_TOOLING_QUERY_MATCH", value);
+        command.env("TYPELUDE_TOOLING_QUERY_MATCH", query_match.label());
     }
     if !hooks.is_empty() {
-        let enabled = hooks
-            .iter()
-            .map(|hook| hook.as_env())
-            .collect::<Vec<_>>()
-            .join(",");
+        let enabled = hooks.iter().map(|hook| hook.as_env()).collect::<Vec<_>>().join(",");
         command.env("TYPELUDE_TOOLING_HOOKS", enabled);
     }
 

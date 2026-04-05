@@ -1,6 +1,6 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
-use typelude_tooling_core::{Graph, GraphNodeKind, NodeId};
+use crate::{Graph, GraphNodeKind, NodeId};
 
 /// Graph analysis over an obligation or semantic expression graph.
 pub struct GraphAnalysis<'a> {
@@ -35,25 +35,26 @@ impl<'a> GraphAnalysis<'a> {
         }
     }
 
-    /// Return node IDs that have no incoming edges (i.e. roots).
     #[must_use]
     pub fn roots(&self) -> Vec<NodeId> {
-        let targets: std::collections::BTreeSet<NodeId> =
-            self.graph.edges.iter().map(|e| e.to).collect();
-        self.graph.nodes.iter().filter(|n| !targets.contains(&n.id)).map(|n| n.id).collect()
+        let targets: BTreeSet<NodeId> = self.graph.edges.iter().map(|edge| edge.to).collect();
+        self.graph
+            .nodes
+            .iter()
+            .filter(|node| !targets.contains(&node.id))
+            .map(|node| node.id)
+            .collect()
     }
 
-    /// Longest path (in edges) from any root to any leaf.
     #[must_use]
     pub fn max_depth(&self) -> usize {
         let roots = self.roots();
         if roots.is_empty() {
             return 0;
         }
-        roots.iter().map(|&r| self.depth_from(r, &mut Vec::new())).max().unwrap_or(0)
+        roots.iter().map(|&root| self.depth_from(root, &mut Vec::new())).max().unwrap_or(0)
     }
 
-    /// Collect the IDs on the longest path (first one found if ties exist).
     #[must_use]
     pub fn critical_path(&self) -> Vec<NodeId> {
         let roots = self.roots();
@@ -62,41 +63,38 @@ impl<'a> GraphAnalysis<'a> {
         }
         roots
             .iter()
-            .map(|&r| {
+            .map(|&root| {
                 let mut path = Vec::new();
-                self.longest_path_from(r, &mut path, &mut Vec::new());
+                self.longest_path_from(root, &mut path, &mut Vec::new());
                 path
             })
             .max_by_key(Vec::len)
             .unwrap_or_default()
     }
 
-    /// Return the `top_n` nodes with the highest out-degree (most children).
     #[must_use]
     pub fn hot_nodes(&self, top_n: usize) -> Vec<(NodeId, usize)> {
-        let mut counts: std::collections::BTreeMap<NodeId, usize> = BTreeMap::new();
+        let mut counts = BTreeMap::<NodeId, usize>::new();
         for edge in &self.graph.edges {
             *counts.entry(edge.from).or_insert(0) += 1;
         }
         let mut entries: Vec<(NodeId, usize)> = counts.into_iter().collect();
-        entries.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        entries.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
         entries.truncate(top_n);
         entries
     }
 
-    /// True if the graph contains at least one cycle (detected via DFS).
     #[must_use]
     pub fn has_cycles(&self) -> bool {
-        let mut visited = std::collections::BTreeSet::new();
+        let mut visited = BTreeSet::new();
         for root in self.roots() {
-            if self.cycle_dfs(root, &mut visited, &mut std::collections::BTreeSet::new()) {
+            if self.cycle_dfs(root, &mut visited, &mut BTreeSet::new()) {
                 return true;
             }
         }
         false
     }
 
-    /// Count nodes by kind.
     #[must_use]
     pub fn kind_distribution(&self) -> KindDistribution {
         let mut dist = KindDistribution {
@@ -116,7 +114,6 @@ impl<'a> GraphAnalysis<'a> {
         dist
     }
 
-    /// Produce a one-shot summary of the graph.
     #[must_use]
     pub fn summarize(&self) -> GraphSummary {
         GraphSummary {
@@ -129,24 +126,20 @@ impl<'a> GraphAnalysis<'a> {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Private helpers
-    // ------------------------------------------------------------------
-
     fn children_of(&self, id: NodeId) -> Vec<NodeId> {
-        self.graph.edges.iter().filter(|e| e.from == id).map(|e| e.to).collect()
+        self.graph.edges.iter().filter(|edge| edge.from == id).map(|edge| edge.to).collect()
     }
 
     fn depth_from(&self, id: NodeId, stack: &mut Vec<NodeId>) -> usize {
         if stack.contains(&id) {
-            return 0; // cycle guard
+            return 0;
         }
         stack.push(id);
         let children = self.children_of(id);
         let depth = if children.is_empty() {
             0
         } else {
-            children.iter().map(|&c| 1 + self.depth_from(c, stack)).max().unwrap_or(0)
+            children.iter().map(|&child| 1 + self.depth_from(child, stack)).max().unwrap_or(0)
         };
         stack.pop();
         depth
@@ -154,7 +147,6 @@ impl<'a> GraphAnalysis<'a> {
 
     fn longest_path_from(&self, id: NodeId, best: &mut Vec<NodeId>, current: &mut Vec<NodeId>) {
         if current.contains(&id) {
-            // cycle — stop
             return;
         }
         current.push(id);
@@ -174,8 +166,8 @@ impl<'a> GraphAnalysis<'a> {
     fn cycle_dfs(
         &self,
         id: NodeId,
-        visited: &mut std::collections::BTreeSet<NodeId>,
-        in_stack: &mut std::collections::BTreeSet<NodeId>,
+        visited: &mut BTreeSet<NodeId>,
+        in_stack: &mut BTreeSet<NodeId>,
     ) -> bool {
         if in_stack.contains(&id) {
             return true;
@@ -199,13 +191,11 @@ impl<'a> GraphAnalysis<'a> {
 mod tests {
     use std::collections::BTreeMap;
 
-    use typelude_tooling_core::{
-        EventId, GoalDiscovered, GoalId, HookId, PredicateRepr, SubjectDiscovered, SubjectId,
-        SubjectKind, Trace, TraceEvent, TraceId, TracePayload,
-    };
-
     use super::GraphAnalysis;
-    use crate::graph::TraceGraphBuilder;
+    use crate::{
+        EventId, GoalDiscovered, GoalId, HookId, PredicateRepr, SubjectDiscovered, SubjectId,
+        SubjectKind, Trace, TraceEvent, TraceId, TracePayload, trace_graph::TraceGraphBuilder,
+    };
 
     fn linear_trace() -> Trace {
         let mut trace = Trace::new(TraceId::new(1));
@@ -249,37 +239,28 @@ mod tests {
 
     #[test]
     fn roots_returns_top_level_node() {
-        let trace = linear_trace();
-        let graph = TraceGraphBuilder::new().build(&trace);
-        let analysis = GraphAnalysis::new(&graph);
-        let roots = analysis.roots();
+        let graph = TraceGraphBuilder::new().build(&linear_trace());
+        let roots = GraphAnalysis::new(&graph).roots();
         assert_eq!(roots.len(), 1);
         assert_eq!(roots[0], graph.nodes[0].id);
     }
 
     #[test]
     fn max_depth_two_levels() {
-        let trace = linear_trace();
-        let graph = TraceGraphBuilder::new().build(&trace);
-        let analysis = GraphAnalysis::new(&graph);
-        assert_eq!(analysis.max_depth(), 2);
+        let graph = TraceGraphBuilder::new().build(&linear_trace());
+        assert_eq!(GraphAnalysis::new(&graph).max_depth(), 2);
     }
 
     #[test]
     fn critical_path_contains_both_nodes() {
-        let trace = linear_trace();
-        let graph = TraceGraphBuilder::new().build(&trace);
-        let analysis = GraphAnalysis::new(&graph);
-        let path = analysis.critical_path();
-        assert_eq!(path.len(), 3);
+        let graph = TraceGraphBuilder::new().build(&linear_trace());
+        assert_eq!(GraphAnalysis::new(&graph).critical_path().len(), 3);
     }
 
     #[test]
     fn hot_nodes_returns_parent() {
-        let trace = linear_trace();
-        let graph = TraceGraphBuilder::new().build(&trace);
-        let analysis = GraphAnalysis::new(&graph);
-        let hot = analysis.hot_nodes(1);
+        let graph = TraceGraphBuilder::new().build(&linear_trace());
+        let hot = GraphAnalysis::new(&graph).hot_nodes(1);
         assert_eq!(hot.len(), 1);
         assert_eq!(hot[0].0, graph.nodes[0].id);
         assert_eq!(hot[0].1, 1);
@@ -287,15 +268,13 @@ mod tests {
 
     #[test]
     fn has_cycles_false_for_dag() {
-        let trace = linear_trace();
-        let graph = TraceGraphBuilder::new().build(&trace);
+        let graph = TraceGraphBuilder::new().build(&linear_trace());
         assert!(!GraphAnalysis::new(&graph).has_cycles());
     }
 
     #[test]
     fn kind_distribution_counts_goal_nodes() {
-        let trace = linear_trace();
-        let graph = TraceGraphBuilder::new().build(&trace);
+        let graph = TraceGraphBuilder::new().build(&linear_trace());
         let dist = GraphAnalysis::new(&graph).kind_distribution();
         assert_eq!(dist.goal, 2);
         assert_eq!(dist.expression, 0);
@@ -303,10 +282,8 @@ mod tests {
 
     #[test]
     fn summarize_matches_individual_methods() {
-        let trace = linear_trace();
-        let graph = TraceGraphBuilder::new().build(&trace);
-        let analysis = GraphAnalysis::new(&graph);
-        let summary = analysis.summarize();
+        let graph = TraceGraphBuilder::new().build(&linear_trace());
+        let summary = GraphAnalysis::new(&graph).summarize();
         assert_eq!(summary.node_count, 3);
         assert_eq!(summary.edge_count, 2);
         assert_eq!(summary.root_count, 1);
