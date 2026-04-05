@@ -97,7 +97,6 @@ where
     type Output = <() as Pred<<() as Sub<M, Rhs>>::Output>>::Output;
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

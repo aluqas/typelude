@@ -721,10 +721,8 @@ name = "typelude-tooling-typelude"
 version = "0.1.0"
 dependencies = [
  "serde",
- "typelude-std",
  "typelude-tooling-core",
  "typelude-tooling-semantic-api",
- "typelude-vm",
 ]
 
 [[package]]
@@ -736,6 +734,10 @@ dependencies = [
  "typelude-std",
  "typenum",
 ]
+
+[[package]]
+name = "typelude-wasm"
+version = "0.1.0"
 
 [[package]]
 name = "typenum"

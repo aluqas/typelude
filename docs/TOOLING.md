@@ -71,57 +71,57 @@ rustc_private driver
 
 ### 4.1 ツール提案
 
-| 項目 | 状態 | 概要 |
-|---|---|---|
-| `typelude-tooling-core` | 主経路 | trace / solve / graph / diagnostic / metrics / render の共通 IR がある |
-| `typelude-tooling-rustc-private` | 主経路 | `rustc_driver` 経由で subject / goal / candidate を収集し NDJSON に出す |
-| `typelude-tooling-cli` | 主経路 | `collect`, `solve-tree`, `solve-summary`, `solve-owner`, `solve-diff` が主な入口 |
-| `typelude-tooling-rustc` | 部分実装 | diagnostics, MIR, self-profile, time-passes, type-sizes collector がある |
-| `typelude-tooling-typelude` | 部分実装 | render, diagnostics enrichment, graph, analysis, mapper, metrics がある |
-| `typelude-tooling-lsp` | 未着手に近い | 設計候補のみ |
-| `typelude-tooling-mcp` | 未着手に近い | 設計候補のみ |
-| `typelude-diagnostics` / `typelude-prof` / `typelude-explain` などの分離 product | 未着手に近い | 役割は見えているが独立 product 化はまだ |
+| 項目                                                                             | 状態         | 概要                                                                             |
+| -------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------- |
+| `typelude-tooling-core`                                                          | 主経路       | trace / solve / graph / diagnostic / metrics / render の共通 IR がある           |
+| `typelude-tooling-rustc-private`                                                 | 主経路       | `rustc_driver` 経由で subject / goal / candidate を収集し NDJSON に出す          |
+| `typelude-tooling-cli`                                                           | 主経路       | `collect`, `solve-tree`, `solve-summary`, `solve-owner`, `solve-diff` が主な入口 |
+| `typelude-tooling-rustc`                                                         | 部分実装     | diagnostics, MIR, self-profile, time-passes, type-sizes collector がある         |
+| `typelude-tooling-typelude`                                                      | 部分実装     | render, diagnostics enrichment, graph, analysis, mapper, metrics がある          |
+| `typelude-tooling-lsp`                                                           | 未着手に近い | 設計候補のみ                                                                     |
+| `typelude-tooling-mcp`                                                           | 未着手に近い | 設計候補のみ                                                                     |
+| `typelude-diagnostics` / `typelude-prof` / `typelude-explain` などの分離 product | 未着手に近い | 役割は見えているが独立 product 化はまだ                                          |
 
 ### 4.2 UX提案
 
-| 項目 | 状態 | 概要 |
-|---|---|---|
-| solve tree / solve summary 表示 | 主経路 | trait solving flow の観測の中心 |
-| focused owner query | 主経路 | `solve-owner` で build-wide collect を経由せずに focused 実行できる |
-| summary diff | 部分実装 | `solve-diff` はあるが比較粒度はまだ粗い |
-| pretty print | 部分実装 | `Array<...>` の list 記法化、typenum 表示、nested `EApp` 簡約がある |
-| helper trait / internal symbol の圧縮表示 | 部分実装 | compact formatter と symbol compression がある |
-| semantic mapper | 部分実装 | `EIf`, `EWhile`, `EGet`, `EMap`, `EApp` などへの分類はあるが heuristic 寄り |
-| VM state / trace / stack の専用表示 | 未着手に近い | 提案はあるが主経路ではない |
-| IDE / LSP / MCP 接続 | 未着手に近い | まだ CLI 中心 |
+| 項目                                      | 状態         | 概要                                                                        |
+| ----------------------------------------- | ------------ | --------------------------------------------------------------------------- |
+| solve tree / solve summary 表示           | 主経路       | trait solving flow の観測の中心                                             |
+| focused owner query                       | 主経路       | `solve-owner` で build-wide collect を経由せずに focused 実行できる         |
+| summary diff                              | 部分実装     | `solve-diff` はあるが比較粒度はまだ粗い                                     |
+| pretty print                              | 部分実装     | `Array<...>` の list 記法化、typenum 表示、nested `EApp` 簡約がある         |
+| helper trait / internal symbol の圧縮表示 | 部分実装     | compact formatter と symbol compression がある                              |
+| semantic mapper                           | 部分実装     | `EIf`, `EWhile`, `EGet`, `EMap`, `EApp` などへの分類はあるが heuristic 寄り |
+| VM state / trace / stack の専用表示       | 未着手に近い | 提案はあるが主経路ではない                                                  |
+| IDE / LSP / MCP 接続                      | 未着手に近い | まだ CLI 中心                                                               |
 
 ### 4.3 診断・説明機能
 
-| 項目 | 状態 | 概要 |
-|---|---|---|
-| rustc JSON diagnostics 取り込み | 部分実装 | collector と `diag` コマンドがある |
-| typelude-aware diagnostics enrichment | 部分実装 | capability failure を正規化し補足 note を付けられる |
-| `why failed` explanation | 部分実装 | `IsBool`, `IsList`, `Callable`, `LookupKey`, `SupportsAdd`, `SupportsCompare` に説明がある |
-| helper trait noise の抑制 | 部分実装 | 表示圧縮はあるが compiler 側 attribute 適用は未完 |
-| `#[diagnostic::on_unimplemented]` の広域適用 | 雛形あり | 方針は固いが、workspace 全体での展開はこれから |
-| `#[diagnostic::do_not_recommend]` の広域適用 | 雛形あり | 方針は固いが、実装の広がりはまだ小さい |
-| `why not?` / 完全な semantic diagnostics | 未着手に近い | 後段の機能 |
+| 項目                                         | 状態         | 概要                                                                                       |
+| -------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------ |
+| rustc JSON diagnostics 取り込み              | 部分実装     | collector と `diag` コマンドがある                                                         |
+| typelude-aware diagnostics enrichment        | 部分実装     | capability failure を正規化し補足 note を付けられる                                        |
+| `why failed` explanation                     | 部分実装     | `IsBool`, `IsList`, `Callable`, `LookupKey`, `SupportsAdd`, `SupportsCompare` に説明がある |
+| helper trait noise の抑制                    | 部分実装     | 表示圧縮はあるが compiler 側 attribute 適用は未完                                          |
+| `#[diagnostic::on_unimplemented]` の広域適用 | 雛形あり     | 方針は固いが、workspace 全体での展開はこれから                                             |
+| `#[diagnostic::do_not_recommend]` の広域適用 | 雛形あり     | 方針は固いが、実装の広がりはまだ小さい                                                     |
+| `why not?` / 完全な semantic diagnostics     | 未着手に近い | 後段の機能                                                                                 |
 
 ### 4.4 可視化・分析・profiling
 
-| 項目 | 状態 | 概要 |
-|---|---|---|
-| obligation / goal / candidate の tree 表示 | 主経路 | `solve-tree` が現在の中心 |
-| summary / diff / focused compare | 主経路 | `solve-summary`, `solve-owner`, `solve-diff` がある |
-| graph builder | 部分実装 | trace から graph を構成できる |
-| graph export | 部分実装 | DOT / Mermaid 出力がある |
-| graph analysis | 部分実装 | root, max depth, critical path, hot nodes, cycle 判定, kind 分布がある |
-| profiling artifact ingestion | 部分実装 | `time-passes`, `type-sizes`, `self-profile`, `MIR` collector がある |
-| typelude metric enrichment | 部分実装 | `step_count`, `obligation_count`, `recursion_depth`, `re_eval_count` などがある |
-| proof tree viewer | 雛形あり | solver flow の基盤はあるが専用 viewer としては未完成 |
-| obligation graph viewer | 雛形あり | graph はあるが UX はまだ粗い |
-| flamegraph / branch profile / growth chart | 未着手に近い | 指標候補はあるが product 化されていない |
-| failing slice minimizer | 未着手に近い | 提案段階 |
+| 項目                                       | 状態         | 概要                                                                            |
+| ------------------------------------------ | ------------ | ------------------------------------------------------------------------------- |
+| obligation / goal / candidate の tree 表示 | 主経路       | `solve-tree` が現在の中心                                                       |
+| summary / diff / focused compare           | 主経路       | `solve-summary`, `solve-owner`, `solve-diff` がある                             |
+| graph builder                              | 部分実装     | trace から graph を構成できる                                                   |
+| graph export                               | 部分実装     | DOT / Mermaid 出力がある                                                        |
+| graph analysis                             | 部分実装     | root, max depth, critical path, hot nodes, cycle 判定, kind 分布がある          |
+| profiling artifact ingestion               | 部分実装     | `time-passes`, `type-sizes`, `self-profile`, `MIR` collector がある             |
+| typelude metric enrichment                 | 部分実装     | `step_count`, `obligation_count`, `recursion_depth`, `re_eval_count` などがある |
+| proof tree viewer                          | 雛形あり     | solver flow の基盤はあるが専用 viewer としては未完成                            |
+| obligation graph viewer                    | 雛形あり     | graph はあるが UX はまだ粗い                                                    |
+| flamegraph / branch profile / growth chart | 未着手に近い | 指標候補はあるが product 化されていない                                         |
+| failing slice minimizer                    | 未着手に近い | 提案段階                                                                        |
 
 ## 5. 現在の本線
 

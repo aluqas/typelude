@@ -30,6 +30,10 @@
       - では`Apply<Arg> for Op`や`Apply<Op> for Arg`や`Apply for (Op, Arg)`や`Apply<Op, Arg> for ()`が欲しくなる
         - それ、結局薄い関数適用抽象が必要という話では？（Applyを噛ませて二重ジェネリクスで怒られないようにする）
         - それってEvalでは？
+        - 実装はOp中心のほうが楽（とりあえずそのままWhileやMapの高階で使える）
+          - それを強制するならEval<Op, Arg>のtraitか構造体で形を堅牢にしたほうがよいだろう
+            - というこよでApply for (Op, Arg)は自由すぎるので却下
+          - AST<Arg>と{Eval|Apply}<Op, Arg>を強制できるAPI/型定義
     - 今の`Op*`+`E*`のような、抽象操作のトレイト + AST構成は残すかも
       - 対応・拡張がしやすい
   - ただ、固定できるのはある
@@ -40,13 +44,16 @@
   - ASTと分岐実体とAtomさえ固定できていれば、抽象の積み上げ方は慎重にやれば割とどうにでもなるし、どういうやり方もできる
     - 例えばBoolであれば
       - NandHelper基盤: 真理値表の定義
+
         ```rust
         impl NandHelper<True, True> for () { type Output = False; }
         impl NandHelper<False, True> for () { type Output = True; }
         impl NandHelper<True, False> for () { type Output = True; }
         impl NandHelper<False, False> for () { type Output = True; }
         ```
+
       - IsBoolの関連型基盤
+
         ```rust
         trait IsBool {
             const VALUE: bool;
@@ -58,15 +65,20 @@
             type Xor<B: IsBool>: IsBool;
         }
         ```
+
       - どっちを使うせよ、`Nand<A, B>`と書きたいなら抽象を積むことになる
         - 関連型なら
+
           ```rust
           type Nand<A: IsBool, B: IsBool> = <() as NandHelper<A, B>>::Output;
           ```
+
           ```rust
           type Nand<A: IsBool, B: IsBool> = <A as IsBool>::Nand<B>;
           ```
+
         - `OpNand`を積むなら
+
           ```rust
           impl<A: IsBool, B: IsBool> OpNand for (A, B) {
               type Output = <() as NandHelper<A, B>>::Output;
@@ -143,6 +155,7 @@
     - `std::mem::align_of`
     - `std::marker::PhantomData`
       - Wrapして色々使えるかもしれん
+
       - ```rust
         struct TypeTag<T>(PhantomData<T>);
 
@@ -152,6 +165,7 @@
             }
         }
         ```
+
   - デバッグ / テスト
     - この全体含むが
     - `static_assertion`系のやつもだし

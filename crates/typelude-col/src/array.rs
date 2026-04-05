@@ -119,7 +119,6 @@ impl<Other, Array: TypeArray> Prepend<Other> for Array {
     type Output = TArr<Other, Array>;
 }
 
-
 /*
 /// Contains
 /// Nightly only or incomplete-inequality feature (macro)
@@ -147,8 +146,6 @@ where
 */
 
 // ---------------------------------------------------------------------
-
-
 
 #[cfg(test)]
 mod tests {

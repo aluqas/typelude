@@ -11,9 +11,10 @@ use std::marker::PhantomData;
 
 #[macro_use]
 pub mod macros;
-mod r#while;
+pub mod debug;
+pub mod effect;
 mod core;
-
+mod r#while;
 
 struct Same<T>(PhantomData<T>);
 struct None;
@@ -85,6 +86,8 @@ pub trait Eval {
 impl<T> Eval for T {
     type Output = T::Output;
 }
+
+pub trait
 
 pub trait OpAdd<Lhs, Rhs> {
     type Output;

@@ -16,7 +16,3 @@ trait Apply<Fn, Arg> {
 impl<Fn, Arg> Eval for Apply<Fn, Arg> {
     type Output = <Fn as Apply<Arg>>::Output;
 }
-
-
-
-P

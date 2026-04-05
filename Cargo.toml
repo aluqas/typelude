@@ -13,7 +13,7 @@ members = [
     "crates/typelude-tooling-rustc",
     "crates/typelude-tooling-typelude",
     "crates/typelude-tooling-cli",
-    "crates/typelude-tooling-rustc-private", "crates/typelude-lambda",
+    "crates/typelude-tooling-rustc-private", "crates/typelude-lambda", "crates/typelude-wasm",
 ]
 resolver = "2"
 

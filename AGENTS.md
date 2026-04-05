@@ -55,12 +55,12 @@ pub type Evaluate<T> = <T as Eval>::Output;
 
 ## 命名規則
 
-| パターン | 意味 | 例 |
-|---|---|---|
-| `E` prefix | 評価可能な式の型 (Eval型) | `EIf`, `EAdd`, `EGet`, `EWhile` |
-| `Op` prefix | VMのオペコード | `OpPush`, `OpAdd`, `OpWhile` |
-| `XxxHelper` | dispatch用の内部ヘルパートレイト | `EIfHelper`, `EWhileHelper`, `GetHelper` |
-| 素の名前 | データ型・ケイパビリティトレイト | `True`, `False`, `Array`, `Nil`, `Bool`, `IsList` |
+| パターン    | 意味                             | 例                                                |
+| ----------- | -------------------------------- | ------------------------------------------------- |
+| `E` prefix  | 評価可能な式の型 (Eval型)        | `EIf`, `EAdd`, `EGet`, `EWhile`                   |
+| `Op` prefix | VMのオペコード                   | `OpPush`, `OpAdd`, `OpWhile`                      |
+| `XxxHelper` | dispatch用の内部ヘルパートレイト | `EIfHelper`, `EWhileHelper`, `GetHelper`          |
+| 素の名前    | データ型・ケイパビリティトレイト | `True`, `False`, `Array`, `Nil`, `Bool`, `IsList` |
 
 ## 重要な設計パターン
 
@@ -99,9 +99,9 @@ pub struct EIf<Cond, Then, Else>(PhantomData<(Cond, Then, Else)>);
 
 `feature = "nightly"` フラグで有効化：
 
-| Feature | 用途 |
-|---|---|
-| `specialization` | より柔軟なimpl特殊化 |
+| Feature               | 用途                   |
+| --------------------- | ---------------------- |
+| `specialization`      | より柔軟なimpl特殊化   |
 | `generic_const_exprs` | const genericsの式評価 |
 
 ## recursion_limit
@@ -110,12 +110,12 @@ pub struct EIf<Cond, Then, Else>(PhantomData<(Cond, Then, Else)>);
 
 ## 外部クレートへの依存
 
-| クレート | 用途 |
-|---|---|
-| `typenum` | 型レベル自然数 (`U0`, `U1`, ...) |
-| `tstr` | 型レベル文字列 |
+| クレート            | 用途                             |
+| ------------------- | -------------------------------- |
+| `typenum`           | 型レベル自然数 (`U0`, `U1`, ...) |
+| `tstr`              | 型レベル文字列                   |
 | `static_assertions` | テストでの `assert_type_eq_all!` |
-| `paste` | マクロ内のトークン結合 |
+| `paste`             | マクロ内のトークン結合           |
 
 ## テストの書き方
 

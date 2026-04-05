@@ -49,14 +49,14 @@ type Or<Lhf, Rhf> = <Lhf as IsBool>::Or<Rhf>;
 type Xor<Lhf, Rhf> = <Lhf as IsBool>::Xor<Rhf>;
 
 mod primitive {
-    use super::{IsBool, True, False};
+    use super::{False, IsBool, True};
 
     /// **Nand Helper Trait**
     /// Trait in type-level programming is conditional braunching and recursion.
-    /// so, we can implement Nand with only 4 impls, and then derive Not, And, Or,
-    /// Xor from it. This is not only more efficient, but more formally correct,
-    /// as it avoids the need for trait resolution in the implementation of Not,
-    /// And, Or, Xor.
+    /// so, we can implement Nand with only 4 impls, and then derive Not, And,
+    /// Or, Xor from it. This is not only more efficient, but more formally
+    /// correct, as it avoids the need for trait resolution in the
+    /// implementation of Not, And, Or, Xor.
     trait NandHelper<Lhf: IsBool, Rhf: IsBool> {
         type Output: IsBool;
     }
@@ -96,5 +96,4 @@ type If<Cond, Then, Else> = <() as IfHelper<Cond, Then, Else>>::Output;
 #[cfg(test)]
 mod tests {
     use super::*;
-
 }
