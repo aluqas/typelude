@@ -17,9 +17,6 @@ const_panic = "0.2.15"
 derive_more = { version = "2.1.0", features = ["full"] }
 paste = "1.0.15"
 typelude-macros = { path = "../typelude-macros" }
-typelude-col = { path = "../typelude-col" }
-typelude-bool = { path = "../typelude-bool" }
-# typelude-core = { path = "../typelude-core" }
 
 [dev-dependencies]
 static_assertions = "1.1.0"

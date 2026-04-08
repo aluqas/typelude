@@ -1,12 +1,32 @@
 //! Type-level boolean utilities.
+//!
+//! This crate owns boolean primitive values and boolean capability traits.
+//! Shared higher-order APIs should use the canonical operator names from
+//! `typelude_std::core`.
+//!
+//! Canonical operator mapping:
+//! - `Not` -> `OpNot`
+//! - `And` -> `OpAnd`
+//! - `Or` -> `OpOr`
+//! - `Xor` -> `OpXor`
+//! - `Nand` -> `OpNand`
+
+pub mod option;
+
+pub use typelude_std::core::{And, Nand, Not, Or, Xor};
+
+use typelude_std::core::{
+    And as TlAnd, Nand as TlNand, Not as TlNot, Or as TlOr, Value, Xor as TlXor,
+};
+
 pub struct True;
 pub struct False;
 
+impl Value for True {}
+impl Value for False {}
+
 /// **Marker Trait**
 /// Represents that a type is a boolean type (True or False).
-///
-/// And, Efficient implementations of boolean calculation operations
-/// without trait resolution.
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a boolean type",
     label = "not a TYPE-LEVEL boolean",
@@ -20,6 +40,48 @@ pub trait IsBool {
     type And<B: IsBool>: IsBool;
     type Or<B: IsBool>: IsBool;
     type Xor<B: IsBool>: IsBool;
+}
+
+impl TlNot for True {
+    type Output = <True as IsBool>::Not;
+}
+
+impl TlNot for False {
+    type Output = <False as IsBool>::Not;
+}
+
+impl<Rhs: IsBool> TlAnd<Rhs> for True {
+    type Output = <True as IsBool>::And<Rhs>;
+}
+
+impl<Rhs: IsBool> TlAnd<Rhs> for False {
+    type Output = <False as IsBool>::And<Rhs>;
+}
+
+impl<Rhs: IsBool> TlOr<Rhs> for True {
+    type Output = <True as IsBool>::Or<Rhs>;
+}
+
+impl<Rhs: IsBool> TlOr<Rhs> for False {
+    type Output = <False as IsBool>::Or<Rhs>;
+}
+
+impl<Rhs: IsBool> TlXor<Rhs> for True {
+    type Output = <True as IsBool>::Xor<Rhs>;
+}
+
+impl<Rhs: IsBool> TlXor<Rhs> for False {
+    type Output = <False as IsBool>::Xor<Rhs>;
+}
+
+impl<Rhs: IsBool> TlNand<Rhs> for True
+{
+    type Output = <True as IsBool>::Nand<Rhs>;
+}
+
+impl<Rhs: IsBool> TlNand<Rhs> for False
+{
+    type Output = <False as IsBool>::Nand<Rhs>;
 }
 
 impl IsBool for True {
@@ -42,58 +104,19 @@ impl IsBool for False {
     type Xor<B: IsBool> = B;
 }
 
-type Nand<Lhf, Rhf> = <Lhf as IsBool>::Nand<Rhf>;
-type Not<A> = <A as IsBool>::Not;
-type And<Lhf, Rhf> = <Lhf as IsBool>::And<Rhf>;
-type Or<Lhf, Rhf> = <Lhf as IsBool>::Or<Rhf>;
-type Xor<Lhf, Rhf> = <Lhf as IsBool>::Xor<Rhf>;
-
-mod primitive {
-    use super::{False, IsBool, True};
-
-    /// **Nand Helper Trait**
-    /// Trait in type-level programming is conditional braunching and recursion.
-    /// so, we can implement Nand with only 4 impls, and then derive Not, And,
-    /// Or, Xor from it. This is not only more efficient, but more formally
-    /// correct, as it avoids the need for trait resolution in the
-    /// implementation of Not, And, Or, Xor.
-    trait NandHelper<Lhf: IsBool, Rhf: IsBool> {
-        type Output: IsBool;
-    }
-
-    impl NandHelper<True, True> for () {
-        type Output = False;
-    }
-    impl NandHelper<True, False> for () {
-        type Output = True;
-    }
-    impl NandHelper<False, True> for () {
-        type Output = True;
-    }
-    impl NandHelper<False, False> for () {
-        type Output = True;
-    }
-
-    type Nand<Lhf, Rhf> = <() as NandHelper<Lhf, Rhf>>::Output;
-    type Not<A> = Nand<A, A>;
-    type And<Lhf, Rhf> = Not<Nand<Lhf, Rhf>>;
-    type Or<Lhf, Rhf> = Nand<Not<Lhf>, Not<Rhf>>;
-    type Xor<Lhf, Rhf> = Nand<Nand<Lhf, Not<Rhf>>, Nand<Not<Lhf>, Rhf>>;
-}
-
-trait IfHelper<Cond: IsBool, Then, Else> {
-    type Output;
-}
-impl<Then, Else> IfHelper<True, Then, Else> for () {
-    type Output = Then;
-}
-impl<Then, Else> IfHelper<False, Then, Else> for () {
-    type Output = Else;
-}
-
-type If<Cond, Then, Else> = <() as IfHelper<Cond, Then, Else>>::Output;
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use static_assertions::assert_type_eq_all;
+
+    use super::{False, True};
+    use typelude_std::core::{Apply, Evaluate, OpAnd, OpNand, OpNot, OpOr, OpXor};
+
+    #[test]
+    fn bool_primitives_work_through_canonical_ops() {
+        assert_type_eq_all!(Evaluate<Apply<OpNot, True>>, False);
+        assert_type_eq_all!(Evaluate<Apply<OpAnd, (True, False)>>, False);
+        assert_type_eq_all!(Evaluate<Apply<OpOr, (False, True)>>, True);
+        assert_type_eq_all!(Evaluate<Apply<OpXor, (True, False)>>, True);
+        assert_type_eq_all!(Evaluate<Apply<OpNand, (True, True)>>, False);
+    }
 }

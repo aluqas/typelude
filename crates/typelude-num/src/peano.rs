@@ -1,9 +1,12 @@
-use ::std::marker::PhantomData;
+use core::marker::PhantomData;
 
-use crate::{Add, Div, Mul, Sub};
+use typelude_std::core::{Add, Div, Mul, Sub, Value};
 
 pub struct Succ<T>(PhantomData<T>);
 pub struct Zero;
+
+impl<T> Value for Succ<T> {}
+impl Value for Zero {}
 
 pub trait Nat {
     const VAL: usize;
@@ -17,88 +20,108 @@ impl<T: Nat> Nat for Succ<T> {
     const VAL: usize = T::VAL + 1;
 }
 
-//
-// Add
-//
-
-impl<M: Nat> Add<M, Zero> for () {
-    type Output = M;
+impl<Rhs: Nat> Add<Rhs> for Zero {
+    type Output = Rhs;
 }
 
-impl<M: Nat, N: Nat> Add<M, Succ<N>> for ()
+impl<Lhs: Nat, Rhs: Nat> Add<Rhs> for Succ<Lhs>
 where
-    (): Add<M, N>,
+    Lhs: Add<Rhs>,
 {
-    type Output = Succ<<() as Add<M, N>>::Output>;
+    type Output = Succ<<Lhs as Add<Rhs>>::Output>;
 }
 
-//
-// Mul
-//
-
-impl<M: Nat> Mul<M, Zero> for () {
+impl<Rhs: Nat> Mul<Rhs> for Zero {
     type Output = Zero;
 }
 
-impl<M: Nat, N: Nat> Mul<M, Succ<N>> for ()
+impl<Lhs: Nat, Rhs: Nat> Mul<Rhs> for Succ<Lhs>
 where
-    (): Mul<M, N> + Add<M, <() as Mul<M, N>>::Output>,
+    Lhs: Mul<Rhs>,
+    Rhs: Add<<Lhs as Mul<Rhs>>::Output>,
 {
-    type Output = <() as Add<M, <() as Mul<M, N>>::Output>>::Output;
+    type Output = <Rhs as Add<<Lhs as Mul<Rhs>>::Output>>::Output;
 }
 
-//
-// Pow
-//
-
-trait Pow<M, N> {
-    type Output;
-}
-
-impl<M: Nat> Pow<M, Zero> for () {
-    type Output = Succ<Zero>;
-}
-
-impl<M: Nat, N: Nat> Pow<M, Succ<N>> for ()
-where
-    (): Pow<M, N> + Mul<M, <() as Pow<M, N>>::Output>,
-{
-    type Output = <() as Mul<M, <() as Pow<M, N>>::Output>>::Output;
-}
-
-//
-// Pred
-//
-
-pub trait Pred<N> {
-    type Output;
-}
-
-impl Pred<Zero> for () {
+impl<Rhs: Nat> Sub<Rhs> for Zero {
     type Output = Zero;
 }
 
-impl<N: Nat> Pred<Succ<N>> for () {
-    type Output = N;
+impl<Lhs: Nat> Sub<Zero> for Succ<Lhs> {
+    type Output = Succ<Lhs>;
 }
 
-//
-// Sub: 切り捨て
-//
-
-impl<M: Nat> Sub<M, Zero> for () {
-    type Output = M;
-}
-
-impl<M: Nat, Rhs: Nat> Sub<M, Succ<Rhs>> for ()
+impl<Lhs: Nat, Rhs: Nat> Sub<Succ<Rhs>> for Succ<Lhs>
 where
-    (): Sub<M, Rhs> + Pred<<() as Sub<M, Rhs>>::Output>,
+    Lhs: Sub<Rhs>,
 {
-    type Output = <() as Pred<<() as Sub<M, Rhs>>::Output>>::Output;
+    type Output = <Lhs as Sub<Rhs>>::Output;
+}
+
+#[doc(hidden)]
+pub struct CanSubYes;
+#[doc(hidden)]
+pub struct CanSubNo;
+
+#[doc(hidden)]
+pub trait CanSub<Rhs> {
+    type Output;
+}
+
+impl CanSub<Zero> for Zero {
+    type Output = CanSubYes;
+}
+
+impl<Rhs: Nat> CanSub<Succ<Rhs>> for Zero {
+    type Output = CanSubNo;
+}
+
+impl<Lhs: Nat> CanSub<Zero> for Succ<Lhs> {
+    type Output = CanSubYes;
+}
+
+impl<Lhs: Nat, Rhs: Nat> CanSub<Succ<Rhs>> for Succ<Lhs>
+where
+    Lhs: CanSub<Rhs>,
+{
+    type Output = <Lhs as CanSub<Rhs>>::Output;
+}
+
+#[doc(hidden)]
+pub trait DivStep<Divisor, Flag> {
+    type Output;
+}
+
+impl<Dividend: Nat, Divisor: Nat> DivStep<Divisor, CanSubNo> for Dividend {
+    type Output = Zero;
+}
+
+impl<Dividend: Nat, Divisor: Nat> DivStep<Divisor, CanSubYes> for Dividend
+where
+    Dividend: Sub<Succ<Divisor>>,
+    <Dividend as Sub<Succ<Divisor>>>::Output: Div<Succ<Divisor>>,
+{
+    type Output = Succ<<<Dividend as Sub<Succ<Divisor>>>::Output as Div<Succ<Divisor>>>::Output>;
+}
+
+impl<Divisor: Nat> Div<Succ<Divisor>> for Zero {
+    type Output = Zero;
+}
+
+impl<Dividend: Nat, Divisor: Nat> Div<Succ<Divisor>> for Succ<Dividend>
+where
+    Succ<Dividend>: CanSub<Succ<Divisor>>,
+    Succ<Dividend>: DivStep<Divisor, <Succ<Dividend> as CanSub<Succ<Divisor>>>::Output>,
+{
+    type Output =
+        <Succ<Dividend> as DivStep<Divisor, <Succ<Dividend> as CanSub<Succ<Divisor>>>::Output>>::Output;
 }
 
 #[cfg(test)]
 mod tests {
+    use static_assertions::assert_type_eq_all;
+    use typelude_std::core::{Apply, Evaluate, OpAdd, OpDiv, OpMul, OpSub};
+
     use super::*;
 
     type N0 = Zero;
@@ -106,31 +129,36 @@ mod tests {
     type N2 = Succ<Succ<Zero>>;
     type N3 = Succ<Succ<Succ<Zero>>>;
     type N4 = Succ<Succ<Succ<Succ<Zero>>>>;
+    type N5 = Succ<N4>;
+    type N6 = Succ<N5>;
 
     #[test]
     fn test_add() {
-        assert_eq!(<() as Add<N2, N0>>::Output::VAL, 2);
-        assert_eq!(<() as Add<N2, N3>>::Output::VAL, 5);
+        assert_eq!(<N2 as Add<N0>>::Output::VAL, 2);
+        assert_eq!(<N2 as Add<N3>>::Output::VAL, 5);
+        assert_type_eq_all!(Evaluate<Apply<OpAdd, (N2, N3)>>, N5);
     }
 
     #[test]
     fn test_mul() {
-        assert_eq!(<() as Mul<N2, N0>>::Output::VAL, 0);
-        assert_eq!(<() as Mul<N2, N3>>::Output::VAL, 6);
+        assert_eq!(<N2 as Mul<N0>>::Output::VAL, 0);
+        assert_eq!(<N2 as Mul<N3>>::Output::VAL, 6);
+        assert_type_eq_all!(Evaluate<Apply<OpMul, (N2, N3)>>, N6);
     }
 
     #[test]
     fn test_sub() {
-        assert_eq!(<() as Sub<N3, N0>>::Output::VAL, 3);
-        assert_eq!(<() as Sub<N3, N1>>::Output::VAL, 2);
-        assert_eq!(<() as Sub<N3, N3>>::Output::VAL, 0);
-        assert_eq!(<() as Sub<N3, N4>>::Output::VAL, 0);
+        assert_eq!(<N3 as Sub<N0>>::Output::VAL, 3);
+        assert_eq!(<N3 as Sub<N1>>::Output::VAL, 2);
+        assert_eq!(<N3 as Sub<N3>>::Output::VAL, 0);
+        assert_eq!(<N3 as Sub<N4>>::Output::VAL, 0);
+        assert_type_eq_all!(Evaluate<Apply<OpSub, (N3, N1)>>, N2);
     }
 
     #[test]
-    fn test_pow() {
-        assert_eq!(<() as Pow<N2, N0>>::Output::VAL, 1);
-        assert_eq!(<() as Pow<N2, N3>>::Output::VAL, 8);
-        assert_eq!(<() as Pow<N4, N4>>::Output::VAL, 256);
+    fn test_div() {
+        assert_eq!(<N6 as Div<N2>>::Output::VAL, 3);
+        assert_eq!(<N5 as Div<N2>>::Output::VAL, 2);
+        assert_type_eq_all!(Evaluate<Apply<OpDiv, (N6, N2)>>, N3);
     }
 }

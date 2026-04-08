@@ -8,6 +8,7 @@ license = "MIT"
 
 [dependencies]
 typelude-num = { path = "../typelude-num" }
+typelude-std = { path = "../typelude-std", default-features = false }
 
 [dev-dependencies]
 static_assertions = "1.1.0"

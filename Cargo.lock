@@ -621,6 +621,7 @@ name = "typelude-bool"
 version = "0.1.0"
 dependencies = [
  "static_assertions",
+ "typelude-std",
 ]
 
 [[package]]
@@ -629,6 +630,7 @@ version = "0.1.0"
 dependencies = [
  "static_assertions",
  "typelude-num",
+ "typelude-std",
 ]
 
 [[package]]
@@ -650,6 +652,7 @@ name = "typelude-num"
 version = "0.1.0"
 dependencies = [
  "static_assertions",
+ "typelude-std",
  "typenum",
 ]
 
@@ -664,8 +667,6 @@ dependencies = [
  "proptest",
  "static_assertions",
  "trybuild",
- "typelude-bool",
- "typelude-col",
  "typelude-macros",
  "typenum",
 ]

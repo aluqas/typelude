@@ -5,10 +5,15 @@ mod bridge;
 mod convert;
 mod eval;
 mod op;
+mod op_adapters;
 mod ops;
-mod option;
+mod traits;
 mod value;
 
+pub use traits::{
+    Add, And, Append, Concat, Div, Get, Head, Len, Mul, Nand, Not, Or, Prepend, Set, Sub, Tail,
+    Xor,
+};
 pub use assert::{Assert, Unwrap, UnwrapOr};
 pub use bridge::{IntoValue, Lift, Reflect, Reify};
 pub use convert::{From, Into};
@@ -19,5 +24,4 @@ pub use ops::{
     OpLt, OpMap, OpMul, OpNand, OpNeq, OpNot, OpOr, OpPow, OpRem, OpSet, OpSub, OpTail, OpWhile,
     OpXor,
 };
-pub use option::{IsOption, None, Some};
 pub use value::Value;
