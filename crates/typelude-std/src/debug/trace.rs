@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use typelude_std::core::Eval;
+use typelude_std::core::Value;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TraceTag;
@@ -11,10 +11,6 @@ pub struct TraceRecord<Event>(pub PhantomData<Event>);
 #[derive(Debug)]
 pub struct TraceBundle<Source, Core>(pub PhantomData<(Source, Core)>);
 
-impl<Event> Eval for TraceRecord<Event> {
-    type Output = Self;
-}
-
-impl<Source, Core> Eval for TraceBundle<Source, Core> {
-    type Output = Self;
-}
+impl Value for TraceTag {}
+impl<Event> Value for TraceRecord<Event> {}
+impl<Source, Core> Value for TraceBundle<Source, Core> {}

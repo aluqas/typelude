@@ -41,9 +41,8 @@
       - `And<Lhf, Rhf>`, `Or<Lhf, Rhf>`, `Not<Arg>`, `If<Cond, Then, Else>`など
     - ほしい機能・分岐（本質的なimplに求められる分岐）
     - プリミティブなAtom（`True`, `False`, `TArr`, `Tail`など）
-  - ASTと分岐実体とAtomさえ固定できていれば、抽象の積み上げ方は慎重にやれば割とどうにでもなるし、どういうやり方もできる
-    - 例えばBoolであれば
-      - NandHelper基盤: 真理値表の定義
+  - AST→インターフェースとAtomさえ固定できていれば、抽象の積み上げ方は慎重にやれば割とどうにでもなるし、どういうやり方もできる
+    - 例えばBoolであれば、あとからOpに対するimpl実装でも、bool自身の関連型でもASTさえ決めてればあとから差し替えはできる
 
         ```rust
         impl NandHelper<True, True> for () { type Output = False; }
@@ -51,8 +50,6 @@
         impl NandHelper<True, False> for () { type Output = True; }
         impl NandHelper<False, False> for () { type Output = True; }
         ```
-
-      - IsBoolの関連型基盤
 
         ```rust
         trait IsBool {

@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use typelude_std::core::Eval;
+use crate::core::Value;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Unit;
@@ -18,28 +18,11 @@ pub struct Err<E>(pub PhantomData<E>);
 pub struct Done<A>(pub PhantomData<A>);
 
 #[derive(Debug)]
-pub struct Yielded<R>(pub PhantomData<R>);
+pub struct Yielded<Request>(pub PhantomData<Request>);
 
-impl Eval for Unit {
-    type Output = Self;
-}
-
-impl<A, B> Eval for Pair<A, B> {
-    type Output = Self;
-}
-
-impl<A> Eval for Ok<A> {
-    type Output = Self;
-}
-
-impl<E> Eval for Err<E> {
-    type Output = Self;
-}
-
-impl<A> Eval for Done<A> {
-    type Output = Self;
-}
-
-impl<R> Eval for Yielded<R> {
-    type Output = Self;
-}
+impl Value for Unit {}
+impl<A, B> Value for Pair<A, B> {}
+impl<A> Value for Ok<A> {}
+impl<E> Value for Err<E> {}
+impl<A> Value for Done<A> {}
+impl<Request> Value for Yielded<Request> {}

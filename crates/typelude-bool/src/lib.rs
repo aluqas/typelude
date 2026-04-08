@@ -1,6 +1,6 @@
 //! Type-level boolean utilities.
-struct True;
-struct False;
+pub struct True;
+pub struct False;
 
 /// **Marker Trait**
 /// Represents that a type is a boolean type (True or False).
@@ -12,7 +12,7 @@ struct False;
     label = "not a TYPE-LEVEL boolean",
     note = "[TYPELUDE MESSAGE] ensure `{Self}` is either `True` or `False`."
 )]
-trait IsBool {
+pub trait IsBool {
     const VALUE: bool;
 
     type Not: IsBool;

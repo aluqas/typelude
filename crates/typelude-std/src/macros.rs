@@ -224,7 +224,7 @@ macro_rules! eval_once {
 
 /// Evaluate a type-level expression twice.
 ///
-/// This is useful for operations returning a quoted expression like `ELit<T>`.
+/// This is useful for operations returning another expression-like type.
 #[macro_export]
 macro_rules! eval_twice {
     ($expr:ty) => {
@@ -235,13 +235,13 @@ macro_rules! eval_twice {
 /// Assert that a type-level boolean is true at compile time.
 ///
 /// If the condition evaluates to `TyFalse` (or isn't `TyTrue`), this will
-/// trigger a compilation error. The `Condition` must implement `Reify<bool>`
-/// (usually via `Eval` -> `TyTrue/TyFalse`).
+/// trigger a compilation error. The `Condition` must implement `Reify<bool>`.
 ///
 /// # Example
 ///
 /// ```rust,compile_fail
-/// use typelude_std::{static_assert_true, std::prim::bool::False};
+/// use typelude_bool::False;
+/// use typelude_std::static_assert_true;
 ///
 /// static_assert_true!(False, "This should fail");
 /// ```
@@ -251,7 +251,7 @@ macro_rules! static_assert_true {
         const _: () = {
             // Reify the type to a boolean value
             // We use fully qualified path to ensure we use the correct trait
-            use $crate::{core::Evaluate, std::reify::Reify};
+            use $crate::core::{Evaluate, Reify};
 
             // Note: $Condition might be an expression needing evaluation
             type Evaluated = Evaluate<$Condition>;

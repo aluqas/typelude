@@ -1,25 +1,31 @@
 use core::marker::PhantomData;
 
-use typelude_std::core::TyFn;
+use crate::core::Op;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Unit;
-
-#[derive(Debug)]
-pub struct Pair<A, B>(pub PhantomData<(A, B)>);
-
-#[derive(Debug)]
-pub struct Ok<A>(pub PhantomData<A>);
-
-#[derive(Debug)]
-pub struct Err<E>(pub PhantomData<E>);
-
-#[derive(Debug)]
-pub struct Done<A>(pub PhantomData<A>);
-
-#[derive(Debug)]
-pub struct Yielded<R>(pub PhantomData<R>);
-
+/// Type-level monad interface.
+///
+/// `Pure<F, A>` and `Bind<F, MA, K>` are the canonical aliases for building
+/// monadic expressions from a monad kind `F`.
+///
+/// ```rust
+/// use core::marker::PhantomData;
+///
+/// use typelude_std::{
+///     Evaluate, Op,
+///     effect::{Bind, IdK, Pair, Pure, RunId, Unit},
+/// };
+///
+/// struct Duplicate;
+///
+/// impl Op<Unit> for Duplicate {
+///     type Output = Pure<IdK, Pair<Unit, Unit>>;
+/// }
+///
+/// type Program = Bind<IdK, Pure<IdK, Unit>, Duplicate>;
+/// type Result = Evaluate<RunId<Program>>;
+///
+/// let _: PhantomData<Pair<Unit, Unit>> = PhantomData::<Result>;
+/// ```
 pub trait Monad {
     type Pure<A>;
     type Bind<MA, K>;
@@ -32,6 +38,11 @@ pub trait MonadTrans<Inner>: Monad {
     type Lift<MA>;
 }
 
+pub trait MonadReader<R>: Monad {
+    type Ask;
+    type Local<F, MA>;
+}
+
 pub trait MonadState<S>: Monad {
     type Get;
     type Put<NewState>;
@@ -39,74 +50,61 @@ pub trait MonadState<S>: Monad {
 }
 
 pub trait MonadWriter<W>: Monad {
-    type Tell<Item>;
+    type Tell<Chunk>;
+    type Listen<MA>;
+    type Censor<F, MA>;
 }
 
 pub trait MonadError<E>: Monad {
     type Throw<Reason>;
+    type Catch<MA, H>;
 }
 
 pub trait MonadSuspend<R>: Monad {
     type Suspend<Request>;
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TraceTag;
-
-#[derive(Debug)]
-pub struct TraceRecord<Event>(pub PhantomData<Event>);
-
-#[derive(Debug)]
-pub struct TraceBundle<Source, Core>(pub PhantomData<(Source, Core)>);
-
-#[derive(Debug)]
-pub struct LogRecord<Event>(pub PhantomData<Event>);
-
-#[derive(Debug)]
-pub struct LogTrace<Event>(pub PhantomData<Event>);
-
-impl Eval for Unit {
-    type Output = Self;
+pub trait Empty {
+    type Output;
 }
 
-impl<A, B> Eval for Pair<A, B> {
-    type Output = Self;
-}
-
-impl<A> Eval for Ok<A> {
-    type Output = Self;
-}
-
-impl<E> Eval for Err<E> {
-    type Output = Self;
-}
-
-impl<A> Eval for Done<A> {
-    type Output = Self;
-}
-
-impl<R> Eval for Yielded<R> {
-    type Output = Self;
-}
-
-impl<Event> Eval for TraceRecord<Event> {
-    type Output = Self;
-}
-
-impl<Source, Core> Eval for TraceBundle<Source, Core> {
-    type Output = Self;
-}
-
-impl<Event> Eval for LogRecord<Event> {
-    type Output = Self;
-}
-
-impl<Event> Eval for LogTrace<Event> {
-    type Output = Self;
+pub trait Append<Rhs> {
+    type Output;
 }
 
 pub struct LConst<T>(pub PhantomData<T>);
 
-impl<A, T> TyFn<A> for LConst<T> {
+impl<A, T> Op<A> for LConst<T> {
     type Output = T;
+}
+
+#[cfg(test)]
+mod tests {
+    use static_assertions::assert_type_eq_all;
+
+    use super::*;
+    use crate::{
+        core::Evaluate,
+        effect::{IdK, Pair, RunId, Unit},
+    };
+
+    struct Duplicate;
+
+    impl Op<Unit> for Duplicate {
+        type Output = Pure<IdK, Pair<Unit, Unit>>;
+    }
+
+    #[test]
+    fn monad_usage_example_builds_id_program() {
+        type Program = Bind<IdK, Pure<IdK, Unit>, Duplicate>;
+        type Result = Evaluate<RunId<Program>>;
+        assert_type_eq_all!(Result, Pair<Unit, Unit>);
+    }
+
+    #[test]
+    fn lconst_can_be_used_as_bind_continuation() {
+        type Program = Bind<IdK, Pure<IdK, Unit>, LConst<Pure<IdK, Pair<Unit, Unit>>>>;
+        type Result = Evaluate<RunId<Program>>;
+        assert_type_eq_all!(Result, Pair<Unit, Unit>);
+    }
 }
