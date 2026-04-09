@@ -6,10 +6,8 @@
 
 use core::marker::PhantomData;
 
-use typelude_std::{
-    core::{Eval, Evaluate, TyFn},
-    std::col::array::{Array, IsList, Nil},
-};
+use typelude_col::{TArr, TTerm};
+use typelude_std::core::{Eval, Op};
 
 use crate::{
     opcode::local::{OpDropLocal, OpGetLocal, OpLet, OpSetLocal},
@@ -18,167 +16,109 @@ use crate::{
         semantics::{
             helpers::local_index::{FoundLocal, GetAt, MissingLocal, SetAt, SetLocalOk},
             state::VmState,
-            step::{StepContinue, StepInstr, StepTrap},
+            step::{StepContinue, StepTrap},
         },
+        value::Unlit,
     },
 };
 
-pub struct LLet;
-pub struct LDropLocal;
-pub struct LGetLocal<Idx>(pub PhantomData<Idx>);
-pub struct LSetLocal<Idx>(pub PhantomData<Idx>);
-
-impl<Locals, Memory, Frames, Program> TyFn<VmState<Nil, Locals, Memory, Frames, Program>>
-    for LLet
-{
-    type Output = StepTrap<StackUnderflow>;
-}
-
-impl<Value, Tail, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Array<Value, Tail>, Locals, Memory, Frames, Array<OpLet, Rest>>> for LLet
-where
-    Tail: IsList,
-    Locals: IsList,
-    Rest: IsList,
-{
-    type Output = StepContinue<VmState<Tail, Array<Value, Locals>, Memory, Frames, Rest>>;
-}
-
-impl<Stack, Memory, Frames, Rest>
-    TyFn<VmState<Stack, Nil, Memory, Frames, Array<OpDropLocal, Rest>>> for LDropLocal
-where
-    Rest: IsList,
-{
-    type Output = StepTrap<LocalUnderflow>;
-}
-
-impl<Stack, Head, Tail, Memory, Frames, Rest>
-    TyFn<VmState<Stack, Array<Head, Tail>, Memory, Frames, Array<OpDropLocal, Rest>>>
-    for LDropLocal
-where
-    Tail: IsList,
-    Rest: IsList,
-{
-    type Output = StepContinue<VmState<Stack, Tail, Memory, Frames, Rest>>;
-}
-
 pub type GetAtResult<Locals, Idx, Stack, Memory, Frames, Rest> =
-    EGetAtResult<<Locals as GetAt<Idx>>::Output, Stack, Locals, Memory, Frames, Rest>;
+    ResolveLocalGet<<Locals as GetAt<Idx>>::Output, Stack, Locals, Memory, Frames, Rest>;
 
-pub struct EGetAtResult<Result, Stack, Locals, Memory, Frames, Rest>(
+pub struct ResolveLocalGet<Result, Stack, Locals, Memory, Frames, Rest>(
     pub PhantomData<(Result, Stack, Locals, Memory, Frames, Rest)>,
 );
 
 impl<Value, Stack, Locals, Memory, Frames, Rest> Eval
-    for EGetAtResult<FoundLocal<Value>, Stack, Locals, Memory, Frames, Rest>
-where
-    Stack: IsList,
-    Rest: IsList,
+    for ResolveLocalGet<FoundLocal<Value>, Stack, Locals, Memory, Frames, Rest>
 {
-    type Output = StepContinue<VmState<Array<Value, Stack>, Locals, Memory, Frames, Rest>>;
+    type Output = StepContinue<VmState<TArr<Value, Stack>, Locals, Memory, Frames, Rest>>;
 }
 
 impl<Idx, Stack, Locals, Memory, Frames, Rest> Eval
-    for EGetAtResult<MissingLocal<Idx>, Stack, Locals, Memory, Frames, Rest>
+    for ResolveLocalGet<MissingLocal<Idx>, Stack, Locals, Memory, Frames, Rest>
 {
     type Output = StepTrap<BadLocalIndex<Idx>>;
 }
 
-impl<Idx, Stack, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpGetLocal<Idx>, Rest>>> for LGetLocal<Idx>
-where
-    Idx: Eval,
-    Stack: IsList,
-    Rest: IsList,
-    Locals: GetAt<Evaluate<Idx>>,
-    GetAtResult<Locals, Evaluate<Idx>, Stack, Memory, Frames, Rest>: Eval,
-{
-    type Output = Evaluate<GetAtResult<Locals, Evaluate<Idx>, Stack, Memory, Frames, Rest>>;
-}
-
-pub struct ESetAtResult<Locals, RestStack, Memory, Frames, Program, Idx>(
+pub struct ResolveLocalSet<Locals, RestStack, Memory, Frames, Program, Idx>(
     pub PhantomData<(Locals, RestStack, Memory, Frames, Program, Idx)>,
 );
 
 impl<Locals, RestStack, Memory, Frames, Program, Idx> Eval
-    for ESetAtResult<SetLocalOk<Locals>, RestStack, Memory, Frames, Program, Idx>
-where
-    Locals: IsList,
-    RestStack: IsList,
-    Program: IsList,
+    for ResolveLocalSet<SetLocalOk<Locals>, RestStack, Memory, Frames, Program, Idx>
 {
     type Output = StepContinue<VmState<RestStack, Locals, Memory, Frames, Program>>;
 }
 
 impl<Idx, RestStack, Memory, Frames, Program> Eval
-    for ESetAtResult<MissingLocal<Idx>, RestStack, Memory, Frames, Program, Idx>
-where
-    RestStack: IsList,
+    for ResolveLocalSet<MissingLocal<Idx>, RestStack, Memory, Frames, Program, Idx>
 {
     type Output = StepTrap<BadLocalIndex<Idx>>;
 }
 
-impl<Idx, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpSetLocal<Idx>, Rest>>> for LSetLocal<Idx>
+impl<Locals, Memory, Frames, Program> Op<VmState<TTerm, Locals, Memory, Frames, Program>>
+    for OpLet
+{
+    type Output = StepTrap<StackUnderflow>;
+}
+
+impl<Value, Tail, Locals, Memory, Frames, Rest>
+    Op<VmState<TArr<Value, Tail>, Locals, Memory, Frames, TArr<OpLet, Rest>>> for OpLet
+{
+    type Output = StepContinue<VmState<Tail, TArr<Value, Locals>, Memory, Frames, Rest>>;
+}
+
+impl<Stack, Memory, Frames, Rest>
+    Op<VmState<Stack, TTerm, Memory, Frames, TArr<OpDropLocal, Rest>>> for OpDropLocal
+{
+    type Output = StepTrap<LocalUnderflow>;
+}
+
+impl<Stack, Head, Tail, Memory, Frames, Rest>
+    Op<VmState<Stack, TArr<Head, Tail>, Memory, Frames, TArr<OpDropLocal, Rest>>> for OpDropLocal
+{
+    type Output = StepContinue<VmState<Stack, Tail, Memory, Frames, Rest>>;
+}
+
+impl<Idx, Stack, Locals, Memory, Frames, Rest>
+    Op<VmState<Stack, Locals, Memory, Frames, TArr<OpGetLocal<Idx>, Rest>>> for OpGetLocal<Idx>
 where
-    Rest: IsList,
+    Idx: Unlit,
+    Locals: GetAt<<Idx as Unlit>::Output>,
+    GetAtResult<Locals, <Idx as Unlit>::Output, Stack, Memory, Frames, Rest>: Eval,
+{
+    type Output =
+        <GetAtResult<Locals, <Idx as Unlit>::Output, Stack, Memory, Frames, Rest> as Eval>::Output;
+}
+
+impl<Idx, Locals, Memory, Frames, Rest>
+    Op<VmState<TTerm, Locals, Memory, Frames, TArr<OpSetLocal<Idx>, Rest>>> for OpSetLocal<Idx>
 {
     type Output = StepTrap<StackUnderflow>;
 }
 
 impl<Idx, Value, RestStack, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Array<Value, RestStack>, Locals, Memory, Frames, Array<OpSetLocal<Idx>, Rest>>>
-    for LSetLocal<Idx>
+    Op<VmState<TArr<Value, RestStack>, Locals, Memory, Frames, TArr<OpSetLocal<Idx>, Rest>>>
+    for OpSetLocal<Idx>
 where
-    Idx: Eval,
-    RestStack: IsList,
-    Rest: IsList,
-    Locals: SetAt<Evaluate<Idx>, Value> + IsList,
-    ESetAtResult<
-        <Locals as SetAt<Evaluate<Idx>, Value>>::Output,
+    Idx: Unlit,
+    Locals: SetAt<<Idx as Unlit>::Output, Value>,
+    ResolveLocalSet<
+        <Locals as SetAt<<Idx as Unlit>::Output, Value>>::Output,
         RestStack,
         Memory,
         Frames,
         Rest,
-        Evaluate<Idx>,
+        <Idx as Unlit>::Output,
     >: Eval,
 {
-    type Output = Evaluate<
-        ESetAtResult<
-            <Locals as SetAt<Evaluate<Idx>, Value>>::Output,
-            RestStack,
-            Memory,
-            Frames,
-            Rest,
-            Evaluate<Idx>,
-        >,
-    >;
-}
-
-impl<State> StepInstr<State> for OpLet
-where
-    LLet: TyFn<State>,
-{
-    type Output = <LLet as TyFn<State>>::Output;
-}
-
-impl<State> StepInstr<State> for OpDropLocal
-where
-    LDropLocal: TyFn<State>,
-{
-    type Output = <LDropLocal as TyFn<State>>::Output;
-}
-
-impl<Idx, State> StepInstr<State> for OpGetLocal<Idx>
-where
-    LGetLocal<Idx>: TyFn<State>,
-{
-    type Output = <LGetLocal<Idx> as TyFn<State>>::Output;
-}
-
-impl<Idx, State> StepInstr<State> for OpSetLocal<Idx>
-where
-    LSetLocal<Idx>: TyFn<State>,
-{
-    type Output = <LSetLocal<Idx> as TyFn<State>>::Output;
+    type Output = <ResolveLocalSet<
+        <Locals as SetAt<<Idx as Unlit>::Output, Value>>::Output,
+        RestStack,
+        Memory,
+        Frames,
+        Rest,
+        <Idx as Unlit>::Output,
+    > as Eval>::Output;
 }

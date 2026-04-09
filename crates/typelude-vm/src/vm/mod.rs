@@ -4,4 +4,5 @@
 pub mod protocol;
 pub mod runtime;
 pub mod semantics;
+pub mod value;
 pub mod well_formed;

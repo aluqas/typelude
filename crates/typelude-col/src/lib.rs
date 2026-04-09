@@ -16,6 +16,5 @@
 
 mod array;
 
-pub use typelude_std::core::{Append, Concat, Get, Head, Len, Prepend, Set, Tail};
-
 pub use array::{TArr, TTerm};
+pub use typelude_std::core::{Append, Concat, Get, Head, Len, Prepend, Set, Tail};

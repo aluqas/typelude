@@ -1,9 +1,7 @@
 use static_assertions::assert_type_eq_all;
-use typelude_std::{
-    core::{ELit, Evaluate},
-    std::{col::array::Nil, prim::bool::False},
-    tyarray,
-};
+use typelude_bool::{False, True};
+use typelude_col::{TTerm, tarr};
+use typelude_std::core::{Apply, Evaluate};
 use typelude_vm::{
     opcode::{
         control::{OpIf, OpWhile},
@@ -15,10 +13,8 @@ use typelude_vm::{
     vm::{
         protocol::request::{HostRequest, HostSignature},
         runtime::effects::trace::{CoreTraceEvent, SourceTraceEvent},
-        semantics::{
-            state::VmState,
-            step::{StepInstr, StepSuspend},
-        },
+        semantics::{state::VmState, step::StepSuspend},
+        value::Lit,
     },
 };
 use typenum::{U1, U2, U3, U5, U7};
@@ -35,48 +31,43 @@ impl HostSignature for Print {
 
 #[test]
 fn sub_uses_top_as_lhs() {
-    type Program = tyarray![OpPush<ELit<U2>>, OpPush<ELit<U5>>, OpSub];
+    type Program = tarr![OpPush<Lit<U2>>, OpPush<Lit<U5>>, OpSub];
     type Out = ProgramRun<Program>;
     type State = <Out as OutcomeState>::Output;
 
-    assert_type_eq_all!(<State as StateStack>::Output, tyarray![ELit<U3>]);
+    assert_type_eq_all!(<State as StateStack>::Output, tarr![Lit<U3>]);
 }
 
 #[test]
 fn lt_and_gt_use_current_operand_order() {
-    type LtProgram = tyarray![OpPush<ELit<U2>>, OpPush<ELit<U5>>, OpLt];
-    type GtProgram = tyarray![OpPush<ELit<U2>>, OpPush<ELit<U5>>, OpGt];
+    type LtProgram = tarr![OpPush<Lit<U2>>, OpPush<Lit<U5>>, OpLt];
+    type GtProgram = tarr![OpPush<Lit<U2>>, OpPush<Lit<U5>>, OpGt];
     type LtState = <<ProgramRun<LtProgram> as OutcomeState>::Output as StateStack>::Output;
     type GtState = <<ProgramRun<GtProgram> as OutcomeState>::Output as StateStack>::Output;
 
-    assert_type_eq_all!(LtState, tyarray![ELit<typelude_std::std::prim::bool::False>]);
-    assert_type_eq_all!(GtState, tyarray![ELit<typelude_std::std::prim::bool::True>]);
+    assert_type_eq_all!(LtState, tarr![Lit<False>]);
+    assert_type_eq_all!(GtState, tarr![Lit<True>]);
 }
 
 #[test]
 fn store_consumes_value_then_address() {
-    type Initial = VmState<
-        tyarray![ELit<U7>, ELit<U1>],
-        Nil,
-        tyarray![ELit<U2>, ELit<U3>],
-        Nil,
-        tyarray![OpStore],
-    >;
+    type Initial =
+        VmState<tarr![Lit<U7>, Lit<U1>], TTerm, tarr![Lit<U2>, Lit<U3>], TTerm, tarr![OpStore]>;
     type Out = Run<Initial>;
     type State = <Out as OutcomeState>::Output;
 
-    assert_type_eq_all!(<State as StateStack>::Output, Nil);
-    assert_type_eq_all!(<State as StateMemory>::Output, tyarray![ELit<U2>, ELit<U7>]);
+    assert_type_eq_all!(<State as StateStack>::Output, TTerm);
+    assert_type_eq_all!(<State as StateMemory>::Output, tarr![Lit<U2>, Lit<U7>]);
 }
 
 #[test]
 fn host_call_pure_step_suspends_with_advanced_state() {
     type Initial =
-        VmState<tyarray![ELit<U5>], Nil, Nil, Nil, tyarray![OpHostCall<Print>, OpPush<ELit<U1>>]>;
-    type Actual = Evaluate<<OpHostCall<Print> as StepInstr<Initial>>::Output>;
+        VmState<tarr![Lit<U5>], TTerm, TTerm, TTerm, tarr![OpHostCall<Print>, OpPush<Lit<U1>>]>;
+    type Actual = Evaluate<Apply<OpHostCall<Print>, Initial>>;
     type Expected = StepSuspend<
-        HostRequest<Print, tyarray![ELit<U5>], U1>,
-        VmState<tyarray![ELit<U5>], Nil, Nil, Nil, tyarray![OpPush<ELit<U1>>]>,
+        HostRequest<Print, tarr![Lit<U5>], U1>,
+        VmState<tarr![Lit<U5>], TTerm, TTerm, TTerm, tarr![OpPush<Lit<U1>>]>,
     >;
 
     assert_type_eq_all!(Actual, Expected);
@@ -84,13 +75,13 @@ fn host_call_pure_step_suspends_with_advanced_state() {
 
 #[test]
 fn while_lowering_matches_runtime_trace_and_result() {
-    type Cond = tyarray![OpPush<ELit<False>>];
-    type Body = tyarray![OpPush<ELit<U1>>];
-    type WhileProgram = tyarray![OpWhile<Cond, Body>, OpPush<ELit<U2>>];
-    type LoweredProgram = tyarray![
-        OpPush<ELit<False>>,
-        OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>,
-        OpPush<ELit<U2>>
+    type Cond = tarr![OpPush<Lit<False>>];
+    type Body = tarr![OpPush<Lit<U1>>];
+    type WhileProgram = tarr![OpWhile<Cond, Body>, OpPush<Lit<U2>>];
+    type LoweredProgram = tarr![
+        OpPush<Lit<False>>,
+        OpIf<tarr![OpPush<Lit<U1>>, OpWhile<Cond, Body>], TTerm>,
+        OpPush<Lit<U2>>
     ];
     type WhileOut = ProgramRun<WhileProgram>;
     type LoweredOut = ProgramRun<LoweredProgram>;
@@ -99,15 +90,15 @@ fn while_lowering_matches_runtime_trace_and_result() {
         <<WhileOut as OutcomeState>::Output as StateStack>::Output,
         <<LoweredOut as OutcomeState>::Output as StateStack>::Output
     );
-    assert_type_eq_all!(<WhileOut as OutcomeSourceTrace>::Output, tyarray![
+    assert_type_eq_all!(<WhileOut as OutcomeSourceTrace>::Output, tarr![
         SourceTraceEvent<OpWhile<Cond, Body>>,
-        SourceTraceEvent<OpPush<ELit<False>>>,
-        SourceTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
-        SourceTraceEvent<OpPush<ELit<U2>>>
+        SourceTraceEvent<OpPush<Lit<False>>>,
+        SourceTraceEvent<OpIf<tarr![OpPush<Lit<U1>>, OpWhile<Cond, Body>], TTerm>>,
+        SourceTraceEvent<OpPush<Lit<U2>>>
     ]);
-    assert_type_eq_all!(<WhileOut as OutcomeCoreTrace>::Output, tyarray![
-        CoreTraceEvent<OpPush<ELit<False>>>,
-        CoreTraceEvent<OpIf<tyarray![OpPush<ELit<U1>>, OpWhile<Cond, Body>], Nil>>,
-        CoreTraceEvent<OpPush<ELit<U2>>>
+    assert_type_eq_all!(<WhileOut as OutcomeCoreTrace>::Output, tarr![
+        CoreTraceEvent<OpPush<Lit<False>>>,
+        CoreTraceEvent<OpIf<tarr![OpPush<Lit<U1>>, OpWhile<Cond, Body>], TTerm>>,
+        CoreTraceEvent<OpPush<Lit<U2>>>
     ]);
 }

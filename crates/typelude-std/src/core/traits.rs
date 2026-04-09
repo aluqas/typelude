@@ -45,6 +45,31 @@ pub trait Div<Rhs> {
     type Output;
 }
 
+/// Equality comparison.
+pub trait Eq<Rhs> {
+    type Output;
+}
+
+/// Inequality comparison.
+pub trait Neq<Rhs> {
+    type Output;
+}
+
+/// Strict less-than comparison.
+pub trait Lt<Rhs> {
+    type Output;
+}
+
+/// Less-than-or-equal comparison.
+pub trait Le<Rhs> {
+    type Output;
+}
+
+/// Strict greater-than comparison.
+pub trait Gt<Rhs> {
+    type Output;
+}
+
 /// Collection length.
 pub trait Len {
     type Output;

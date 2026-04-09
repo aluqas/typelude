@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
-use typelude_std::{
-    core::{ELit, Evaluate},
-    std::col::array::{ELen, Nil},
-};
+use typelude_col::TTerm;
+use typelude_num::peano::{Succ, Zero};
+use typelude_std::core::{Add, Apply, Evaluate, OpLen};
 use typelude_vm::{
     opcode::host::OpHostCall,
     vm::{
@@ -11,17 +10,35 @@ use typelude_vm::{
         runtime::{
             effects::trace::{CoreTraceEvent, SourceTraceEvent, TraceBundle},
             outcome::{Done, Raised, Suspended},
-            run::{EResumeVm, ERunVm},
+            run::{ResumeVm, RunVm},
         },
         semantics::state::VmState,
     },
 };
 
-pub type EmptyState = VmState<Nil, Nil, Nil, Nil, Nil>;
+pub type EmptyState = VmState<TTerm, TTerm, TTerm, TTerm, TTerm>;
 
-pub type Run<Initial> = Evaluate<ERunVm<ELit<Initial>>>;
-pub type ProgramRun<Prog> = Run<VmState<Nil, Nil, Nil, Nil, Prog>>;
-pub type Resume<Outcome, Response> = Evaluate<EResumeVm<Outcome, Response>>;
+pub type N0 = Zero;
+pub type N1 = Succ<N0>;
+pub type N2 = Succ<N1>;
+pub type N3 = Succ<N2>;
+pub type N4 = Succ<N3>;
+pub type N5 = Succ<N4>;
+pub type N6 = Succ<N5>;
+pub type N7 = Succ<N6>;
+pub type N8 = Succ<N7>;
+pub type N9 = Succ<N8>;
+pub type N10 = Succ<N9>;
+pub type N20 = <N10 as Add<N10>>::Output;
+pub type N40 = <N20 as Add<N20>>::Output;
+pub type N80 = <N40 as Add<N40>>::Output;
+pub type N160 = <N80 as Add<N80>>::Output;
+pub type N162 = <N160 as Add<N2>>::Output;
+pub type N163 = <N160 as Add<N3>>::Output;
+
+pub type Run<Initial> = Evaluate<RunVm<Initial>>;
+pub type ProgramRun<Prog> = Run<VmState<TTerm, TTerm, TTerm, TTerm, Prog>>;
+pub type Resume<Outcome, Response> = Evaluate<ResumeVm<Outcome, Response>>;
 
 pub trait OutcomeState {
     type Output;
@@ -115,10 +132,6 @@ pub trait StateMemory {
     type Output;
 }
 
-pub trait StateHistory {
-    type Output;
-}
-
 impl<S, L, M, F, P> StateStack for VmState<S, L, M, F, P> {
     type Output = S;
 }
@@ -150,7 +163,7 @@ where
     type Output = <Request as HostRequestResponse>::Output;
 }
 
-pub type SourceTraceLen<O> = Evaluate<ELen<ELit<<O as OutcomeSourceTrace>::Output>>>;
-pub type CoreTraceLen<O> = Evaluate<ELen<ELit<<O as OutcomeCoreTrace>::Output>>>;
+pub type SourceTraceLen<O> = Evaluate<Apply<OpLen, <O as OutcomeSourceTrace>::Output>>;
+pub type CoreTraceLen<O> = Evaluate<Apply<OpLen, <O as OutcomeCoreTrace>::Output>>;
 pub type HostSourceTraceEvent<Sig> = SourceTraceEvent<OpHostCall<Sig>>;
 pub type HostCoreTraceEvent<Sig> = CoreTraceEvent<OpHostCall<Sig>>;

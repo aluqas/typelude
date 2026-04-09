@@ -2,56 +2,37 @@
 //!
 //! Stack top is the array head. Binary operators consume `lhs` from the top of
 //! the stack and `rhs` from the next slot. Boolean results are normalized to
-//! `ELit<True>` or `ELit<False>`.
+//! `Lit<True>` or `Lit<False>`.
 
-use core::marker::PhantomData;
-
-use typelude_std::{
-    core::{Eval, TyFn},
-    std::col::array::{Array, IsList, Nil},
-};
+use typelude_col::{TArr, TTerm};
+use typelude_std::core::Op;
 
 use crate::{
     opcode::numeric::{OpAdd, OpAnd, OpEq, OpGt, OpLt, OpNeq, OpNot, OpOr, OpSub},
     vm::{
         protocol::trap::StackUnderflow,
         semantics::{
-            helpers::value::{AsValueExpr, BinaryResult, BoolResult},
+            helpers::value::{BinaryInstrResult, UnaryInstrResult},
             state::VmState,
-            step::{StepContinue, StepInstr, StepTrap},
+            step::{StepContinue, StepTrap},
         },
     },
 };
 
-pub struct LUnaryNot;
-pub struct LBinaryStep<Inst>(pub PhantomData<Inst>);
-
-impl<Locals, Memory, Frames, Rest> TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpNot, Rest>>>
-    for LUnaryNot
-where
-    Rest: IsList,
+impl<Locals, Memory, Frames, Rest> Op<VmState<TTerm, Locals, Memory, Frames, TArr<OpNot, Rest>>>
+    for OpNot
 {
     type Output = StepTrap<StackUnderflow>;
 }
 
 impl<Val, Tail, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Array<Val, Tail>, Locals, Memory, Frames, Array<OpNot, Rest>>> for LUnaryNot
+    Op<VmState<TArr<Val, Tail>, Locals, Memory, Frames, TArr<OpNot, Rest>>> for OpNot
 where
-    Tail: IsList,
-    Rest: IsList,
-    Val: AsValueExpr,
-    typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>: Eval,
-    typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>:
-        BoolResult<typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>>,
+    Val: UnaryInstrResult<OpNot>,
 {
     type Output = StepContinue<
         VmState<
-            Array<
-                <typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output> as BoolResult<
-                    typelude_std::std::ops::ENot<<Val as AsValueExpr>::Output>,
-                >>::Output,
-                Tail,
-            >,
+            TArr<<Val as UnaryInstrResult<OpNot>>::Output, Tail>,
             Locals,
             Memory,
             Frames,
@@ -60,67 +41,44 @@ where
     >;
 }
 
-impl<Inst, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Nil, Locals, Memory, Frames, Array<Inst, Rest>>> for LBinaryStep<Inst>
-where
-    Rest: IsList,
-{
-    type Output = StepTrap<StackUnderflow>;
-}
-
-impl<Inst, Head, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Array<Head, Nil>, Locals, Memory, Frames, Array<Inst, Rest>>>
-    for LBinaryStep<Inst>
-where
-    Rest: IsList,
-{
-    type Output = StepTrap<StackUnderflow>;
-}
-
-impl<Inst, Lhs, Rhs, Tail, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Array<Lhs, Array<Rhs, Tail>>, Locals, Memory, Frames, Array<Inst, Rest>>>
-    for LBinaryStep<Inst>
-where
-    Inst: BinaryResult<Lhs, Rhs>,
-    Tail: IsList,
-    Rest: IsList,
-{
-    type Output = StepContinue<
-        VmState<
-            Array<<Inst as BinaryResult<Lhs, Rhs>>::Output, Tail>,
-            Locals,
-            Memory,
-            Frames,
-            Rest,
-        >,
-    >;
-}
-
-macro_rules! impl_binary_step_instr {
+macro_rules! impl_binary_instr {
     ($inst:ty) => {
-        impl<State> StepInstr<State> for $inst
-        where
-            LBinaryStep<$inst>: TyFn<State>,
+        impl<Locals, Memory, Frames, Rest>
+            Op<VmState<TTerm, Locals, Memory, Frames, TArr<$inst, Rest>>> for $inst
         {
-            type Output = <LBinaryStep<$inst> as TyFn<State>>::Output;
+            type Output = StepTrap<StackUnderflow>;
+        }
+
+        impl<Head, Locals, Memory, Frames, Rest>
+            Op<VmState<TArr<Head, TTerm>, Locals, Memory, Frames, TArr<$inst, Rest>>> for $inst
+        {
+            type Output = StepTrap<StackUnderflow>;
+        }
+
+        impl<Lhs, Rhs, Tail, Locals, Memory, Frames, Rest>
+            Op<VmState<TArr<Lhs, TArr<Rhs, Tail>>, Locals, Memory, Frames, TArr<$inst, Rest>>>
+            for $inst
+        where
+            Lhs: BinaryInstrResult<$inst, Rhs>,
+        {
+            type Output = StepContinue<
+                VmState<
+                    TArr<<Lhs as BinaryInstrResult<$inst, Rhs>>::Output, Tail>,
+                    Locals,
+                    Memory,
+                    Frames,
+                    Rest,
+                >,
+            >;
         }
     };
 }
 
-impl_binary_step_instr!(OpAdd);
-impl_binary_step_instr!(OpSub);
-#[cfg(feature = "nightly")]
-impl_binary_step_instr!(OpEq);
-#[cfg(feature = "nightly")]
-impl_binary_step_instr!(OpNeq);
-impl_binary_step_instr!(OpLt);
-impl_binary_step_instr!(OpGt);
-impl_binary_step_instr!(OpAnd);
-impl_binary_step_instr!(OpOr);
-
-impl<State> StepInstr<State> for OpNot
-where
-    LUnaryNot: TyFn<State>,
-{
-    type Output = <LUnaryNot as TyFn<State>>::Output;
-}
+impl_binary_instr!(OpAdd);
+impl_binary_instr!(OpSub);
+impl_binary_instr!(OpEq);
+impl_binary_instr!(OpNeq);
+impl_binary_instr!(OpLt);
+impl_binary_instr!(OpGt);
+impl_binary_instr!(OpAnd);
+impl_binary_instr!(OpOr);

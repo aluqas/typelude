@@ -1,6 +1,8 @@
 //! Condition normalization and branch selection.
 
-use typelude_std::core::ELit;
+use typelude_bool::{False, True};
+
+use crate::vm::value::Lit;
 
 #[derive(Debug)]
 pub struct BranchTrue;
@@ -17,51 +19,44 @@ pub trait DecideBranch {
     type Output;
 }
 
-impl DecideBranch for typelude_std::std::prim::bool::True {
+impl DecideBranch for Lit<True> {
     type Output = BranchTrue;
 }
 
-impl DecideBranch for typelude_std::std::prim::bool::False {
+impl DecideBranch for Lit<False> {
     type Output = BranchFalse;
 }
 
-impl DecideBranch for typenum::B1 {
+impl DecideBranch for Lit<typenum::B1> {
     type Output = BranchTrue;
 }
 
-impl DecideBranch for typenum::B0 {
+impl DecideBranch for Lit<typenum::B0> {
     type Output = BranchFalse;
 }
 
-impl DecideBranch for typenum::UTerm {
+impl DecideBranch for Lit<typenum::UTerm> {
     type Output = BranchInvalid;
 }
 
-impl<N, B> DecideBranch for typenum::UInt<N, B> {
+impl<N, B> DecideBranch for Lit<typenum::UInt<N, B>> {
     type Output = BranchInvalid;
 }
 
-impl<U> DecideBranch for typenum::PInt<U>
+impl<U> DecideBranch for Lit<typenum::PInt<U>>
 where
     U: typenum::Unsigned + typenum::NonZero,
 {
     type Output = BranchInvalid;
 }
 
-impl<U> DecideBranch for typenum::NInt<U>
+impl<U> DecideBranch for Lit<typenum::NInt<U>>
 where
     U: typenum::Unsigned + typenum::NonZero,
 {
     type Output = BranchInvalid;
 }
 
-impl DecideBranch for typenum::Z0 {
+impl DecideBranch for Lit<typenum::Z0> {
     type Output = BranchInvalid;
-}
-
-impl<T> DecideBranch for ELit<T>
-where
-    T: DecideBranch,
-{
-    type Output = <T as DecideBranch>::Output;
 }

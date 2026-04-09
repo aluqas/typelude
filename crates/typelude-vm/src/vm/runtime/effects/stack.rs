@@ -1,15 +1,10 @@
-use typelude_std::std::col::array::Nil;
+use typelude_col::TTerm;
+use typelude_std::effect::{EitherT, IdK, Pure, StateT, SuspendT, Unit, WriterT};
 
-use crate::{
-    core::{
-        either_t::EitherT, id::IdK, state_t::StateT, suspend_t::SuspendT, traits::Unit,
-        writer_t::WriterT,
-    },
-    vm::runtime::effects::{
-        io::VmRequest,
-        trace::{VmCoreTrace, VmSourceTrace},
-        trap::VmTrap,
-    },
+use crate::vm::runtime::effects::{
+    io::VmRequest,
+    trace::{VmCoreTrace, VmSourceTrace},
+    trap::VmTrap,
 };
 
 pub type VmFx<
@@ -20,5 +15,5 @@ pub type VmFx<
     Req = VmRequest,
 > = SuspendT<Req, EitherT<Trap, StateT<State, WriterT<SourceTrace, WriterT<CoreTrace, IdK>>>>>;
 
-pub type EmptyTrace = Nil;
-pub type VmUnit<F> = crate::core::traits::Pure<F, Unit>;
+pub type EmptyTrace = TTerm;
+pub type VmUnit<F> = Pure<F, Unit>;

@@ -1,9 +1,9 @@
 //! Generic adapters from shared capability traits to canonical `Op*` markers.
 
 use super::{
-    Add, And, Concat, Div, Get, Head, Len, Mul, Nand, Not, Op, OpAdd, OpAnd, OpConcat, OpDiv,
-    OpGet, OpHead, OpLen, OpMul, OpNand, OpNot, OpOr, OpSet, OpSub, OpTail, OpXor, Or, Set, Sub,
-    Tail, Xor,
+    Add, And, Concat, Div, Eq, Get, Gt, Head, Le, Len, Lt, Mul, Nand, Neq, Not, Op, OpAdd, OpAnd,
+    OpConcat, OpDiv, OpEq, OpGet, OpGt, OpHead, OpLe, OpLen, OpLt, OpMul, OpNand, OpNeq, OpNot,
+    OpOr, OpSet, OpSub, OpTail, OpXor, Or, Set, Sub, Tail, Xor,
 };
 
 impl<Arg> Op<Arg> for OpNot
@@ -69,6 +69,41 @@ where
     type Output = <Lhs as Div<Rhs>>::Output;
 }
 
+impl<Lhs, Rhs> Op<(Lhs, Rhs)> for OpEq
+where
+    Lhs: Eq<Rhs>,
+{
+    type Output = <Lhs as Eq<Rhs>>::Output;
+}
+
+impl<Lhs, Rhs> Op<(Lhs, Rhs)> for OpNeq
+where
+    Lhs: Neq<Rhs>,
+{
+    type Output = <Lhs as Neq<Rhs>>::Output;
+}
+
+impl<Lhs, Rhs> Op<(Lhs, Rhs)> for OpLt
+where
+    Lhs: Lt<Rhs>,
+{
+    type Output = <Lhs as Lt<Rhs>>::Output;
+}
+
+impl<Lhs, Rhs> Op<(Lhs, Rhs)> for OpLe
+where
+    Lhs: Le<Rhs>,
+{
+    type Output = <Lhs as Le<Rhs>>::Output;
+}
+
+impl<Lhs, Rhs> Op<(Lhs, Rhs)> for OpGt
+where
+    Lhs: Gt<Rhs>,
+{
+    type Output = <Lhs as Gt<Rhs>>::Output;
+}
+
 impl<Col> Op<Col> for OpLen
 where
     Col: Len,
@@ -116,8 +151,8 @@ mod tests {
     use static_assertions::assert_type_eq_all;
 
     use crate::core::{
-        Add, And, Apply, Concat, Evaluate, Get, Len, Not, OpAdd, OpAnd, OpConcat, OpGet, OpLen,
-        OpNot, OpSet, Set, Value,
+        Add, And, Apply, Concat, Eq, Evaluate, Get, Gt, Len, Lt, Not, OpAdd, OpAnd, OpConcat,
+        OpEq, OpGet, OpGt, OpLen, OpLt, OpNot, OpSet, Set, Value,
     };
 
     struct A;
@@ -156,6 +191,18 @@ mod tests {
         type Output = A;
     }
 
+    impl Eq<B> for A {
+        type Output = C;
+    }
+
+    impl Lt<B> for A {
+        type Output = D;
+    }
+
+    impl Gt<B> for A {
+        type Output = Col;
+    }
+
     impl Get<Idx> for Col {
         type Output = Val;
     }
@@ -173,6 +220,9 @@ mod tests {
         assert_type_eq_all!(Evaluate<Apply<OpNot, A>>, B);
         assert_type_eq_all!(Evaluate<Apply<OpAnd, (A, B)>>, C);
         assert_type_eq_all!(Evaluate<Apply<OpAdd, (A, B)>>, D);
+        assert_type_eq_all!(Evaluate<Apply<OpEq, (A, B)>>, C);
+        assert_type_eq_all!(Evaluate<Apply<OpLt, (A, B)>>, D);
+        assert_type_eq_all!(Evaluate<Apply<OpGt, (A, B)>>, Col);
         assert_type_eq_all!(Evaluate<Apply<OpLen, Col>>, A);
         assert_type_eq_all!(Evaluate<Apply<OpGet, (Col, Idx)>>, Val);
         assert_type_eq_all!(Evaluate<Apply<OpSet, (Col, Idx, Val)>>, Col2);

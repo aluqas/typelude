@@ -1,7 +1,7 @@
-use crate::core::traits::{Bind, MonadState, Pure};
+use typelude_std::effect::{Bind, LConst, MonadState, Pure};
 
 pub type GetVm<F, State> = <F as MonadState<State>>::Get;
 pub type PutVm<F, State, NewState> = <F as MonadState<State>>::Put<NewState>;
 pub type ModifyVm<F, State, Func> = <F as MonadState<State>>::Modify<Func>;
 pub type ReturnVm<F, A> = Pure<F, A>;
-pub type Then<F, MA, MB> = Bind<F, MA, crate::core::traits::LConst<MB>>;
+pub type Then<F, MA, MB> = Bind<F, MA, LConst<MB>>;

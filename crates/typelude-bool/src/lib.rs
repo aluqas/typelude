@@ -13,11 +13,10 @@
 
 pub mod option;
 
-pub use typelude_std::core::{And, Nand, Not, Or, Xor};
-
 use typelude_std::core::{
     And as TlAnd, Nand as TlNand, Not as TlNot, Or as TlOr, Value, Xor as TlXor,
 };
+pub use typelude_std::core::{And, Nand, Not, Or, Xor};
 
 pub struct True;
 pub struct False;
@@ -74,13 +73,11 @@ impl<Rhs: IsBool> TlXor<Rhs> for False {
     type Output = <False as IsBool>::Xor<Rhs>;
 }
 
-impl<Rhs: IsBool> TlNand<Rhs> for True
-{
+impl<Rhs: IsBool> TlNand<Rhs> for True {
     type Output = <True as IsBool>::Nand<Rhs>;
 }
 
-impl<Rhs: IsBool> TlNand<Rhs> for False
-{
+impl<Rhs: IsBool> TlNand<Rhs> for False {
     type Output = <False as IsBool>::Nand<Rhs>;
 }
 
@@ -107,9 +104,9 @@ impl IsBool for False {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
+    use typelude_std::core::{Apply, Evaluate, OpAnd, OpNand, OpNot, OpOr, OpXor};
 
     use super::{False, True};
-    use typelude_std::core::{Apply, Evaluate, OpAnd, OpNand, OpNot, OpOr, OpXor};
 
     #[test]
     fn bool_primitives_work_through_canonical_ops() {

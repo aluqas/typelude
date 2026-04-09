@@ -1,19 +1,17 @@
 //! Static well-formedness proofs for VM programs.
 //!
 //! This layer is independent from the runtime effect stack. It reuses pure
-//! `StepInstr` semantics to prove whether a concrete program/state pair can
+//! `Op<VmState>` semantics to prove whether a concrete program/state pair can
 //! execute without trapping.
 
 use core::marker::PhantomData;
 
-use typelude_std::{
-    core::Eval,
-    std::col::array::{Array, IsList, Nil},
-};
+use typelude_col::{TArr, TTerm};
+use typelude_std::core::{Apply, Eval, Evaluate, Op};
 
 use crate::vm::semantics::{
     state::VmState,
-    step::{StepContinue, StepInstr, StepSuspend, StepTrap},
+    step::{StepContinue, StepSuspend, StepTrap},
 };
 
 /// Proof that a state or program can execute without trapping, carrying the
@@ -58,10 +56,11 @@ impl<State, Reason> StepWellFormed<State> for StepTrap<Reason> {
 
 impl<Inst, State> InstrWellFormed<State> for Inst
 where
-    Inst: StepInstr<State>,
-    <Inst as StepInstr<State>>::Output: StepWellFormed<State>,
+    Apply<Inst, State>: Eval,
+    Inst: Op<State>,
+    Evaluate<Apply<Inst, State>>: StepWellFormed<State>,
 {
-    type Output = <<Inst as StepInstr<State>>::Output as StepWellFormed<State>>::Output;
+    type Output = <Evaluate<Apply<Inst, State>> as StepWellFormed<State>>::Output;
 }
 
 pub trait ContinueProgramWellFormed {
@@ -85,21 +84,20 @@ pub trait StateWellFormed {
 }
 
 impl<Stack, Locals, Memory, Frames> StateWellFormed
-    for VmState<Stack, Locals, Memory, Frames, Nil>
+    for VmState<Stack, Locals, Memory, Frames, TTerm>
 {
     type Output = WellFormed<Self>;
 }
 
 impl<Stack, Locals, Memory, Frames, Inst, Rest> StateWellFormed
-    for VmState<Stack, Locals, Memory, Frames, Array<Inst, Rest>>
+    for VmState<Stack, Locals, Memory, Frames, TArr<Inst, Rest>>
 where
-    Rest: IsList,
-    Inst: InstrWellFormed<VmState<Stack, Locals, Memory, Frames, Array<Inst, Rest>>>,
-    <Inst as InstrWellFormed<VmState<Stack, Locals, Memory, Frames, Array<Inst, Rest>>>>::Output:
+    Inst: InstrWellFormed<VmState<Stack, Locals, Memory, Frames, TArr<Inst, Rest>>>,
+    <Inst as InstrWellFormed<VmState<Stack, Locals, Memory, Frames, TArr<Inst, Rest>>>>::Output:
         ContinueProgramWellFormed,
 {
     type Output = <<Inst as InstrWellFormed<
-        VmState<Stack, Locals, Memory, Frames, Array<Inst, Rest>>,
+        VmState<Stack, Locals, Memory, Frames, TArr<Inst, Rest>>,
     >>::Output as ContinueProgramWellFormed>::Output;
 }
 

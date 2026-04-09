@@ -1,5 +1,5 @@
 use static_assertions::assert_type_eq_all;
-use typelude_std::{core::ELit, std::col::array::Nil, tyarray};
+use typelude_col::{TTerm, tarr};
 use typelude_vm::{
     opcode::{
         control::{OpIf, OpReturn},
@@ -17,6 +17,7 @@ use typelude_vm::{
             outcome::Raised,
         },
         semantics::state::VmState,
+        value::Lit,
     },
 };
 use typenum::U0;
@@ -25,13 +26,13 @@ use crate::support::{ProgramRun, Run};
 
 #[test]
 fn stack_underflow_program_traps() {
-    type Prog = tyarray![OpAdd];
-    type Initial = VmState<Nil, Nil, Nil, Nil, Prog>;
+    type Prog = tarr![OpAdd];
+    type Initial = VmState<TTerm, TTerm, TTerm, TTerm, Prog>;
     type Final = ProgramRun<Prog>;
     type Expected = Raised<
         StackUnderflow,
         Initial,
-        TraceBundle<tyarray![SourceTraceEvent<OpAdd>], tyarray![CoreTraceEvent<OpAdd>]>,
+        TraceBundle<tarr![SourceTraceEvent<OpAdd>], tarr![CoreTraceEvent<OpAdd>]>,
     >;
 
     assert_type_eq_all!(Final, Expected);
@@ -39,15 +40,15 @@ fn stack_underflow_program_traps() {
 
 #[test]
 fn bad_local_index_program_traps() {
-    type Prog = tyarray![OpGetLocal<ELit<U0>>];
-    type Initial = VmState<Nil, Nil, Nil, Nil, Prog>;
+    type Prog = tarr![OpGetLocal<Lit<U0>>];
+    type Initial = VmState<TTerm, TTerm, TTerm, TTerm, Prog>;
     type Final = ProgramRun<Prog>;
     type Expected = Raised<
         BadLocalIndex<U0>,
         Initial,
         TraceBundle<
-            tyarray![SourceTraceEvent<OpGetLocal<ELit<U0>>>],
-            tyarray![CoreTraceEvent<OpGetLocal<ELit<U0>>>],
+            tarr![SourceTraceEvent<OpGetLocal<Lit<U0>>>],
+            tarr![CoreTraceEvent<OpGetLocal<Lit<U0>>>],
         >,
     >;
 
@@ -56,12 +57,12 @@ fn bad_local_index_program_traps() {
 
 #[test]
 fn bad_memory_index_program_traps() {
-    type Initial = VmState<tyarray![ELit<U0>], Nil, Nil, Nil, tyarray![OpLoad]>;
+    type Initial = VmState<tarr![Lit<U0>], TTerm, TTerm, TTerm, tarr![OpLoad]>;
     type Final = Run<Initial>;
     type Expected = Raised<
         BadMemoryIndex<U0>,
         Initial,
-        TraceBundle<tyarray![SourceTraceEvent<OpLoad>], tyarray![CoreTraceEvent<OpLoad>]>,
+        TraceBundle<tarr![SourceTraceEvent<OpLoad>], tarr![CoreTraceEvent<OpLoad>]>,
     >;
 
     assert_type_eq_all!(Final, Expected);
@@ -69,13 +70,13 @@ fn bad_memory_index_program_traps() {
 
 #[test]
 fn return_underflow_program_traps() {
-    type Prog = tyarray![OpReturn];
-    type Initial = VmState<Nil, Nil, Nil, Nil, Prog>;
+    type Prog = tarr![OpReturn];
+    type Initial = VmState<TTerm, TTerm, TTerm, TTerm, Prog>;
     type Final = ProgramRun<Prog>;
     type Expected = Raised<
         ReturnUnderflow,
         Initial,
-        TraceBundle<tyarray![SourceTraceEvent<OpReturn>], tyarray![CoreTraceEvent<OpReturn>]>,
+        TraceBundle<tarr![SourceTraceEvent<OpReturn>], tarr![CoreTraceEvent<OpReturn>]>,
     >;
 
     assert_type_eq_all!(Final, Expected);
@@ -83,17 +84,15 @@ fn return_underflow_program_traps() {
 
 #[test]
 fn invalid_if_condition_program_traps() {
-    type Prog = tyarray![OpIf<tyarray![OpPush<ELit<U0>>], tyarray![OpPush<ELit<U0>>]>];
-    type State = VmState<tyarray![U0], Nil, Nil, Nil, Prog>;
+    type Prog = tarr![OpIf<tarr![OpPush<Lit<U0>>], tarr![OpPush<Lit<U0>>]>];
+    type State = VmState<tarr![Lit<U0>], TTerm, TTerm, TTerm, Prog>;
     type Out = Run<State>;
     type Expected = Raised<
         InvalidCondition,
         State,
         TraceBundle<
-            tyarray![
-                SourceTraceEvent<OpIf<tyarray![OpPush<ELit<U0>>], tyarray![OpPush<ELit<U0>>]>>
-            ],
-            tyarray![CoreTraceEvent<OpIf<tyarray![OpPush<ELit<U0>>], tyarray![OpPush<ELit<U0>>]>>],
+            tarr![SourceTraceEvent<OpIf<tarr![OpPush<Lit<U0>>], tarr![OpPush<Lit<U0>>]>>],
+            tarr![CoreTraceEvent<OpIf<tarr![OpPush<Lit<U0>>], tarr![OpPush<Lit<U0>>]>>],
         >,
     >;
 

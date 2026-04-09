@@ -113,8 +113,10 @@ where
     Succ<Dividend>: CanSub<Succ<Divisor>>,
     Succ<Dividend>: DivStep<Divisor, <Succ<Dividend> as CanSub<Succ<Divisor>>>::Output>,
 {
-    type Output =
-        <Succ<Dividend> as DivStep<Divisor, <Succ<Dividend> as CanSub<Succ<Divisor>>>::Output>>::Output;
+    type Output = <Succ<Dividend> as DivStep<
+        Divisor,
+        <Succ<Dividend> as CanSub<Succ<Divisor>>>::Output,
+    >>::Output;
 }
 
 #[cfg(test)]

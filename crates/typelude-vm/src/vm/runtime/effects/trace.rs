@@ -2,24 +2,18 @@
 
 use core::marker::PhantomData;
 
+use typelude_col::{TArr, TTerm};
 use typelude_std::{
-    core::Eval,
-    std::col::array::{Concat, IsList},
+    core::Value,
+    effect::{
+        Append, EitherLift, EitherT, Empty, IdK, MonadWriter, StateLift, StateT, SuspendLift,
+        WriterLift, WriterT,
+    },
 };
 
-use crate::{
-    core::{
-        either_t::{EitherLift, EitherT},
-        id::IdK,
-        state_t::{StateLift, StateT},
-        suspend_t::{SuspendLift, SuspendT},
-        traits::MonadWriter,
-        writer_t::{WriterLift, WriterT},
-    },
-    vm::{
-        protocol::trace_event::TraceEvent,
-        runtime::effects::{io::VmRequest, trap::VmTrap},
-    },
+use crate::vm::{
+    protocol::trace_event::TraceEvent,
+    runtime::effects::{io::VmRequest, trap::VmTrap},
 };
 
 /// Surface opcode trace channel.
@@ -36,8 +30,12 @@ pub struct TraceBundle<Source, Core>(pub PhantomData<(Source, Core)>);
 
 pub type SourceTraceEvent<Instr> = TraceEvent<Instr, ()>;
 pub type CoreTraceEvent<Instr> = TraceEvent<Instr, ()>;
+pub type SourceTraceChunk<Instr> = TArr<SourceTraceEvent<Instr>, TTerm>;
+pub type CoreTraceChunk<Instr> = TArr<CoreTraceEvent<Instr>, TTerm>;
+
 pub type PushSourceTrace<F, Instr, Trace = VmSourceTrace> =
-    <F as MonadWriter<Trace>>::Tell<SourceTraceEvent<Instr>>;
+    <F as MonadWriter<Trace>>::Tell<SourceTraceChunk<Instr>>;
+
 pub type PushCoreTrace<
     State,
     Instr,
@@ -57,11 +55,19 @@ pub type PushCoreTrace<
             WriterLift<
                 SourceTrace,
                 WriterT<CoreTrace, IdK>,
-                <WriterT<CoreTrace, IdK> as MonadWriter<CoreTrace>>::Tell<CoreTraceEvent<Instr>>,
+                <WriterT<CoreTrace, IdK> as MonadWriter<CoreTrace>>::Tell<CoreTraceChunk<Instr>>,
             >,
         >,
     >,
 >;
+
+impl Empty for VmSourceTrace {
+    type Output = TTerm;
+}
+
+impl Empty for VmCoreTrace {
+    type Output = TTerm;
+}
 
 /// Concatenates a newer trace bundle onto an existing trace bundle during
 /// resume.
@@ -72,18 +78,14 @@ pub trait AppendTraceBundle<Other> {
 impl<SourceA, CoreA, SourceB, CoreB> AppendTraceBundle<TraceBundle<SourceB, CoreB>>
     for TraceBundle<SourceA, CoreA>
 where
-    SourceA: Concat<SourceB> + IsList,
-    SourceB: IsList,
-    CoreA: Concat<CoreB> + IsList,
-    CoreB: IsList,
+    SourceA: Append<SourceB>,
+    CoreA: Append<CoreB>,
 {
     type Output =
-        TraceBundle<<SourceA as Concat<SourceB>>::Output, <CoreA as Concat<CoreB>>::Output>;
+        TraceBundle<<SourceA as Append<SourceB>>::Output, <CoreA as Append<CoreB>>::Output>;
 }
 
-impl<Source, Core> Eval for TraceBundle<Source, Core> {
-    type Output = Self;
-}
+impl<Source, Core> Value for TraceBundle<Source, Core> {}
 
 #[derive(Debug)]
 pub struct LogTrace<Event>(pub PhantomData<Event>);

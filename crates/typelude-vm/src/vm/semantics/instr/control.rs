@@ -4,12 +4,8 @@
 //! `OpWhile` records a surface-level loop step and lowers to `cond ++ if(body
 //! ++ while, nil)` for core execution.
 
-use core::marker::PhantomData;
-
-use typelude_std::{
-    core::TyFn,
-    std::col::array::{Array, Concat, IsList, Nil},
-};
+use typelude_col::{TArr, TTerm};
+use typelude_std::core::{Concat, Op};
 
 use crate::{
     opcode::control::{OpCall, OpIf, OpReturn, OpWhile},
@@ -20,15 +16,10 @@ use crate::{
             helpers::condition::{BranchFalse, BranchInvalid, BranchTrue, DecideBranch},
             lowering::LowerWhile,
             state::VmState,
-            step::{StepContinue, StepInstr, StepTrap},
+            step::{StepContinue, StepTrap},
         },
     },
 };
-
-pub struct LIf<ThenProg, ElseProg>(pub PhantomData<(ThenProg, ElseProg)>);
-pub struct LWhile<CondProg, BodyProg>(pub PhantomData<(CondProg, BodyProg)>);
-pub struct LCall<TargetProg>(pub PhantomData<TargetProg>);
-pub struct LReturn;
 
 pub trait SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest> {
     type Output;
@@ -37,8 +28,6 @@ pub trait SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, 
 impl<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest>
     SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest> for BranchTrue
 where
-    Stack: IsList,
-    Rest: IsList,
     ThenProg: Concat<Rest>,
 {
     type Output =
@@ -48,8 +37,6 @@ where
 impl<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest>
     SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest> for BranchFalse
 where
-    Stack: IsList,
-    Rest: IsList,
     ElseProg: Concat<Rest>,
 {
     type Output =
@@ -63,22 +50,17 @@ impl<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest>
 }
 
 impl<ThenProg, ElseProg, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Nil, Locals, Memory, Frames, Array<OpIf<ThenProg, ElseProg>, Rest>>>
-    for LIf<ThenProg, ElseProg>
-where
-    Rest: IsList,
+    Op<VmState<TTerm, Locals, Memory, Frames, TArr<OpIf<ThenProg, ElseProg>, Rest>>>
+    for OpIf<ThenProg, ElseProg>
 {
     type Output = StepTrap<StackUnderflow>;
 }
 
 impl<ThenProg, ElseProg, Cond, Stack, Locals, Memory, Frames, Rest>
-    TyFn<
-        VmState<Array<Cond, Stack>, Locals, Memory, Frames, Array<OpIf<ThenProg, ElseProg>, Rest>>,
-    > for LIf<ThenProg, ElseProg>
+    Op<VmState<TArr<Cond, Stack>, Locals, Memory, Frames, TArr<OpIf<ThenProg, ElseProg>, Rest>>>
+    for OpIf<ThenProg, ElseProg>
 where
     Cond: DecideBranch,
-    Stack: IsList,
-    Rest: IsList,
     <Cond as DecideBranch>::Output:
         SelectBranchResult<ThenProg, ElseProg, Stack, Locals, Memory, Frames, Rest>,
 {
@@ -94,11 +76,9 @@ where
 }
 
 impl<CondProg, BodyProg, Stack, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpWhile<CondProg, BodyProg>, Rest>>>
-    for LWhile<CondProg, BodyProg>
+    Op<VmState<Stack, Locals, Memory, Frames, TArr<OpWhile<CondProg, BodyProg>, Rest>>>
+    for OpWhile<CondProg, BodyProg>
 where
-    Stack: IsList,
-    Rest: IsList,
     OpWhile<CondProg, BodyProg>: LowerWhile<Rest>,
 {
     type Output = StepContinue<
@@ -113,69 +93,30 @@ where
 }
 
 impl<TargetProg, Stack, Locals, Memory, Frames, Rest>
-    TyFn<VmState<Stack, Locals, Memory, Frames, Array<OpCall<TargetProg>, Rest>>>
-    for LCall<TargetProg>
-where
-    Stack: IsList,
-    Locals: IsList,
-    Frames: IsList,
-    Rest: IsList,
+    Op<VmState<Stack, Locals, Memory, Frames, TArr<OpCall<TargetProg>, Rest>>>
+    for OpCall<TargetProg>
 {
     type Output = StepContinue<
-        VmState<Stack, Nil, Memory, Array<ReturnFrame<Locals, Rest>, Frames>, TargetProg>,
+        VmState<Stack, TTerm, Memory, TArr<ReturnFrame<Locals, Rest>, Frames>, TargetProg>,
     >;
 }
 
-impl<Stack, Locals, Memory, Rest> TyFn<VmState<Stack, Locals, Memory, Nil, Array<OpReturn, Rest>>>
-    for LReturn
-where
-    Rest: IsList,
+impl<Stack, Locals, Memory, Rest> Op<VmState<Stack, Locals, Memory, TTerm, TArr<OpReturn, Rest>>>
+    for OpReturn
 {
     type Output = StepTrap<ReturnUnderflow>;
 }
 
 impl<Stack, Locals, Memory, CallerLocals, Continuation, RestFrames, Rest>
-    TyFn<
+    Op<
         VmState<
             Stack,
             Locals,
             Memory,
-            Array<ReturnFrame<CallerLocals, Continuation>, RestFrames>,
-            Array<OpReturn, Rest>,
+            TArr<ReturnFrame<CallerLocals, Continuation>, RestFrames>,
+            TArr<OpReturn, Rest>,
         >,
-    > for LReturn
-where
-    Stack: IsList,
-    RestFrames: IsList,
-    Rest: IsList,
+    > for OpReturn
 {
     type Output = StepContinue<VmState<Stack, CallerLocals, Memory, RestFrames, Continuation>>;
-}
-
-impl<ThenProg, ElseProg, State> StepInstr<State> for OpIf<ThenProg, ElseProg>
-where
-    LIf<ThenProg, ElseProg>: TyFn<State>,
-{
-    type Output = <LIf<ThenProg, ElseProg> as TyFn<State>>::Output;
-}
-
-impl<CondProg, BodyProg, State> StepInstr<State> for OpWhile<CondProg, BodyProg>
-where
-    LWhile<CondProg, BodyProg>: TyFn<State>,
-{
-    type Output = <LWhile<CondProg, BodyProg> as TyFn<State>>::Output;
-}
-
-impl<TargetProg, State> StepInstr<State> for OpCall<TargetProg>
-where
-    LCall<TargetProg>: TyFn<State>,
-{
-    type Output = <LCall<TargetProg> as TyFn<State>>::Output;
-}
-
-impl<State> StepInstr<State> for OpReturn
-where
-    LReturn: TyFn<State>,
-{
-    type Output = <LReturn as TyFn<State>>::Output;
 }

@@ -6,7 +6,7 @@
 
 use core::{marker::PhantomData, ops::Sub};
 
-use typelude_std::std::col::array::{Array, IsList, Nil};
+use typelude_col::{TArr, TTerm};
 use typenum::{B0, B1, NInt, PInt, Sub1, U0, UInt, Unsigned, Z0};
 
 /// Reads a memory slot, classifying missing indices explicitly.
@@ -20,22 +20,19 @@ pub struct FoundMemory<Value>(pub PhantomData<Value>);
 #[derive(Debug)]
 pub struct MissingMemory<Idx>(pub PhantomData<Idx>);
 
-impl<Idx> MemoryGet<Idx> for Nil {
+impl<Idx> MemoryGet<Idx> for TTerm {
     type Output = MissingMemory<Idx>;
 }
 
-impl<Head, Tail> MemoryGet<U0> for Array<Head, Tail>
-where
-    Tail: IsList,
-{
+impl<Head, Tail> MemoryGet<U0> for TArr<Head, Tail> {
     type Output = FoundMemory<Head>;
 }
 
-impl<Head, Tail, N, B> MemoryGet<UInt<N, B>> for Array<Head, Tail>
+impl<Head, Tail, N, B> MemoryGet<UInt<N, B>> for TArr<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
-    Tail: MemoryGet<Sub1<UInt<N, B>>> + IsList,
+    Tail: MemoryGet<Sub1<UInt<N, B>>>,
 {
     type Output = <Tail as MemoryGet<Sub1<UInt<N, B>>>>::Output;
 }
@@ -43,10 +40,7 @@ where
 macro_rules! impl_invalid_memory_get {
     ($($idx:ty),+ $(,)?) => {
         $(
-            impl<Head, Tail> MemoryGet<$idx> for Array<Head, Tail>
-            where
-                Tail: IsList,
-            {
+            impl<Head, Tail> MemoryGet<$idx> for TArr<Head, Tail> {
                 type Output = MissingMemory<$idx>;
             }
         )+
@@ -55,17 +49,15 @@ macro_rules! impl_invalid_memory_get {
 
 impl_invalid_memory_get!(B0, B1, Z0);
 
-impl<Head, Tail, U> MemoryGet<PInt<U>> for Array<Head, Tail>
+impl<Head, Tail, U> MemoryGet<PInt<U>> for TArr<Head, Tail>
 where
-    Tail: IsList,
     U: Unsigned + typenum::NonZero,
 {
     type Output = MissingMemory<PInt<U>>;
 }
 
-impl<Head, Tail, U> MemoryGet<NInt<U>> for Array<Head, Tail>
+impl<Head, Tail, U> MemoryGet<NInt<U>> for TArr<Head, Tail>
 where
-    Tail: IsList,
     U: Unsigned + typenum::NonZero,
 {
     type Output = MissingMemory<NInt<U>>;
@@ -79,22 +71,19 @@ pub trait MemorySet<Idx, Value> {
 #[derive(Debug)]
 pub struct SetMemoryOk<Memory>(pub PhantomData<Memory>);
 
-impl<Idx, Value> MemorySet<Idx, Value> for Nil {
+impl<Idx, Value> MemorySet<Idx, Value> for TTerm {
     type Output = MissingMemory<Idx>;
 }
 
-impl<Head, Tail, Value> MemorySet<U0, Value> for Array<Head, Tail>
-where
-    Tail: IsList,
-{
-    type Output = SetMemoryOk<Array<Value, Tail>>;
+impl<Head, Tail, Value> MemorySet<U0, Value> for TArr<Head, Tail> {
+    type Output = SetMemoryOk<TArr<Value, Tail>>;
 }
 
-impl<Head, Tail, N, B, Value> MemorySet<UInt<N, B>, Value> for Array<Head, Tail>
+impl<Head, Tail, N, B, Value> MemorySet<UInt<N, B>, Value> for TArr<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
-    Tail: MemorySet<Sub1<UInt<N, B>>, Value> + IsList,
+    Tail: MemorySet<Sub1<UInt<N, B>>, Value>,
     <Tail as MemorySet<Sub1<UInt<N, B>>, Value>>::Output: MemorySetTailResult,
 {
     type Output =
@@ -106,10 +95,7 @@ where
 macro_rules! impl_invalid_memory_set {
     ($($idx:ty),+ $(,)?) => {
         $(
-            impl<Head, Tail, Value> MemorySet<$idx, Value> for Array<Head, Tail>
-            where
-                Tail: IsList,
-            {
+            impl<Head, Tail, Value> MemorySet<$idx, Value> for TArr<Head, Tail> {
                 type Output = MissingMemory<$idx>;
             }
         )+
@@ -118,17 +104,15 @@ macro_rules! impl_invalid_memory_set {
 
 impl_invalid_memory_set!(B0, B1, Z0);
 
-impl<Head, Tail, Value, U> MemorySet<PInt<U>, Value> for Array<Head, Tail>
+impl<Head, Tail, Value, U> MemorySet<PInt<U>, Value> for TArr<Head, Tail>
 where
-    Tail: IsList,
     U: Unsigned + typenum::NonZero,
 {
     type Output = MissingMemory<PInt<U>>;
 }
 
-impl<Head, Tail, Value, U> MemorySet<NInt<U>, Value> for Array<Head, Tail>
+impl<Head, Tail, Value, U> MemorySet<NInt<U>, Value> for TArr<Head, Tail>
 where
-    Tail: IsList,
     U: Unsigned + typenum::NonZero,
 {
     type Output = MissingMemory<NInt<U>>;
@@ -138,11 +122,8 @@ pub trait MemorySetTailResult {
     type WithHead<Head>;
 }
 
-impl<Memory> MemorySetTailResult for SetMemoryOk<Memory>
-where
-    Memory: IsList,
-{
-    type WithHead<Head> = SetMemoryOk<Array<Head, Memory>>;
+impl<Memory> MemorySetTailResult for SetMemoryOk<Memory> {
+    type WithHead<Head> = SetMemoryOk<TArr<Head, Memory>>;
 }
 
 impl<Idx> MemorySetTailResult for MissingMemory<Idx> {

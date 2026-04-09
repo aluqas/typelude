@@ -1,11 +1,18 @@
 use core::marker::PhantomData;
 
-use typelude_num::peano::{Nat, Succ, Zero};
-use typelude_std::core::{
-    Append, Concat, Get, Head, Len, Prepend, Set, Tail as TlTail, Value,
+use typelude_num::{
+    B1, Sub1, UInt, UTerm, Unsigned,
+    peano::{Nat, Succ, Zero},
+};
+use typelude_std::{
+    core::{Append as ColAppend, Concat, Get, Head, Len, Prepend, Set, Tail as TlTail, Value},
+    effect::Append as FxAppend,
 };
 
+#[derive(Debug, Default)]
 pub struct TArr<Val, A>(PhantomData<(Val, A)>);
+
+#[derive(Debug, Default)]
 pub struct TTerm;
 
 impl<Val, A> Value for TArr<Val, A> {}
@@ -74,15 +81,15 @@ where
     type Output = TArr<HeadVal, <Tail as Concat<Other>>::Output>;
 }
 
-impl<Elem> Append<Elem> for TTerm {
+impl<Elem> ColAppend<Elem> for TTerm {
     type Output = TArr<Elem, TTerm>;
 }
 
-impl<HeadVal, Tail, Elem> Append<Elem> for TArr<HeadVal, Tail>
+impl<HeadVal, Tail, Elem> ColAppend<Elem> for TArr<HeadVal, Tail>
 where
-    Tail: Append<Elem>,
+    Tail: ColAppend<Elem>,
 {
-    type Output = TArr<HeadVal, <Tail as Append<Elem>>::Output>;
+    type Output = TArr<HeadVal, <Tail as ColAppend<Elem>>::Output>;
 }
 
 impl<Elem> Prepend<Elem> for TTerm {
@@ -93,16 +100,59 @@ impl<HeadVal, Tail, Elem> Prepend<Elem> for TArr<HeadVal, Tail> {
     type Output = TArr<Elem, TArr<HeadVal, Tail>>;
 }
 
+impl<HeadVal, Tail> Get<UTerm> for TArr<HeadVal, Tail> {
+    type Output = HeadVal;
+}
+
+impl<HeadVal, Tail, N, B> Get<UInt<N, B>> for TArr<HeadVal, Tail>
+where
+    UInt<N, B>: core::ops::Sub<B1>,
+    Sub1<UInt<N, B>>: Unsigned,
+    Tail: Get<Sub1<UInt<N, B>>>,
+{
+    type Output = <Tail as Get<Sub1<UInt<N, B>>>>::Output;
+}
+
+impl<HeadVal, Tail, Val> Set<UTerm, Val> for TArr<HeadVal, Tail> {
+    type Output = TArr<Val, Tail>;
+}
+
+impl<HeadVal, Tail, Val, N, B> Set<UInt<N, B>, Val> for TArr<HeadVal, Tail>
+where
+    UInt<N, B>: core::ops::Sub<B1>,
+    Sub1<UInt<N, B>>: Unsigned,
+    Tail: Set<Sub1<UInt<N, B>>, Val>,
+{
+    type Output = TArr<HeadVal, <Tail as Set<Sub1<UInt<N, B>>, Val>>::Output>;
+}
+
+impl<Rhs> FxAppend<Rhs> for TTerm {
+    type Output = Rhs;
+}
+
+impl<HeadVal, Tail, Rhs> FxAppend<Rhs> for TArr<HeadVal, Tail>
+where
+    Tail: FxAppend<Rhs>,
+{
+    type Output = TArr<HeadVal, <Tail as FxAppend<Rhs>>::Output>;
+}
+
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-    use typelude_std::core::{
-        Append, Apply, Concat, Evaluate, Get, Head, Len, OpConcat, OpGet, OpHead, OpLen, OpSet,
-        Prepend, Set, Tail, Value,
+    use typelude_num::{
+        U0, U1,
+        peano::{Succ, Zero},
+    };
+    use typelude_std::{
+        core::{
+            Append, Apply, Concat, Evaluate, Get, Head, Len, OpConcat, OpGet, OpHead, OpLen,
+            OpSet, Prepend, Set, Tail, Value,
+        },
+        effect::Append as FxAppend,
     };
 
     use super::{TArr, TTerm};
-    use typelude_num::peano::{Succ, Zero};
 
     struct U8Ty;
     struct U16Ty;
@@ -143,7 +193,10 @@ mod tests {
         assert_type_eq_all!(<Arr as Get<N0>>::Output, U8Ty);
         assert_type_eq_all!(<Arr as Get<N1>>::Output, U16Ty);
         assert_type_eq_all!(<Arr as Get<N2>>::Output, U32Ty);
+        assert_type_eq_all!(<Arr as Get<U0>>::Output, U8Ty);
+        assert_type_eq_all!(<Arr as Get<U1>>::Output, U16Ty);
         assert_type_eq_all!(Evaluate<Apply<OpGet, (Arr, N1)>>, U16Ty);
+        // assert_type_eq_all!(Evaluate<Apply<OpGet, (Arr, U1)>>, U16Ty);
     }
 
     #[test]
@@ -154,6 +207,9 @@ mod tests {
         assert_type_eq_all!(<NewArr as Get<N1>>::Output, I16Ty);
         assert_type_eq_all!(<NewArr as Get<N2>>::Output, U32Ty);
         assert_type_eq_all!(Evaluate<Apply<OpSet, (Arr, N1, I16Ty)>>, NewArr);
+        assert_type_eq_all!(<Arr as Set<U1, I16Ty>>::Output, NewArr);
+        // assert_type_eq_all!(Evaluate<Apply<OpSet, (Arr, U1, I16Ty)>>,
+        // NewArr);
     }
 
     #[test]
@@ -171,5 +227,13 @@ mod tests {
 
         assert_type_eq_all!(<Arr as Append<I64Ty>>::Output, Appended);
         assert_type_eq_all!(<Arr as Prepend<I64Ty>>::Output, Prepended);
+    }
+
+    #[test]
+    fn test_effect_append_concat() {
+        type Joined = <Arr as FxAppend<Arr2>>::Output;
+        type Expected = TArr<U8Ty, TArr<U16Ty, TArr<U32Ty, TArr<I8Ty, TArr<I16Ty, TTerm>>>>>;
+
+        assert_type_eq_all!(Joined, Expected);
     }
 }

@@ -12,12 +12,15 @@ nightly = ["typelude-std/nightly"]
 
 [dependencies]
 # typelude-core = { path = "../typelude-core", default-features = false }
+typelude-bool = { path = "../typelude-bool", default-features = false }
+typelude-col = { path = "../typelude-col", default-features = false }
 typelude-std = { path = "../typelude-std", default-features = false }
 typenum = { version = "1.19.0", features = ["const-generics"] }
 paste = "1.0.15"
 
 [dev-dependencies]
 static_assertions = "1.1.0"
+typelude-num = { path = "../typelude-num", default-features = false }
 
 [lints.rust]
 unsafe_code = "deny"

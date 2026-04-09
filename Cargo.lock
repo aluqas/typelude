@@ -732,6 +732,9 @@ version = "0.1.0"
 dependencies = [
  "paste",
  "static_assertions",
+ "typelude-bool",
+ "typelude-col",
+ "typelude-num",
  "typelude-std",
  "typenum",
 ]

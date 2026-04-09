@@ -1,4 +1,4 @@
-use crate::core::traits::MonadError;
+use typelude_std::effect::MonadError;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VmTrap;

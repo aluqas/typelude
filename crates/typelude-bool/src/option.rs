@@ -46,11 +46,10 @@ impl<Default> UnwrapOr<Default> for None {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
-
-    use crate::{False, True};
     use typelude_std::core::{Unwrap, UnwrapOr};
 
     use super::{IsOption, None, Some};
+    use crate::{False, True};
 
     #[test]
     fn option_predicates_and_unwraps_work() {

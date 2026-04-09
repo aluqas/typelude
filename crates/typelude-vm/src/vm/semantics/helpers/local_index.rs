@@ -6,7 +6,7 @@
 
 use core::{marker::PhantomData, ops::Sub};
 
-use typelude_std::std::col::array::{Array, IsList, Nil};
+use typelude_col::{TArr, TTerm};
 use typenum::{B0, B1, NInt, PInt, Sub1, U0, UInt, Unsigned, Z0};
 
 /// Reads a local slot, classifying missing indices explicitly.
@@ -20,22 +20,19 @@ pub struct FoundLocal<Value>(pub PhantomData<Value>);
 #[derive(Debug)]
 pub struct MissingLocal<Idx>(pub PhantomData<Idx>);
 
-impl<Idx> GetAt<Idx> for Nil {
+impl<Idx> GetAt<Idx> for TTerm {
     type Output = MissingLocal<Idx>;
 }
 
-impl<Head, Tail> GetAt<U0> for Array<Head, Tail>
-where
-    Tail: IsList,
-{
+impl<Head, Tail> GetAt<U0> for TArr<Head, Tail> {
     type Output = FoundLocal<Head>;
 }
 
-impl<Head, Tail, N, B> GetAt<UInt<N, B>> for Array<Head, Tail>
+impl<Head, Tail, N, B> GetAt<UInt<N, B>> for TArr<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
-    Tail: GetAt<Sub1<UInt<N, B>>> + IsList,
+    Tail: GetAt<Sub1<UInt<N, B>>>,
 {
     type Output = <Tail as GetAt<Sub1<UInt<N, B>>>>::Output;
 }
@@ -43,9 +40,7 @@ where
 macro_rules! impl_invalid_get_at {
     ($($idx:ty),+ $(,)?) => {
         $(
-            impl<Head, Tail> GetAt<$idx> for Array<Head, Tail>
-            where
-                Tail: IsList,
+            impl<Head, Tail> GetAt<$idx> for TArr<Head, Tail>
             {
                 type Output = MissingLocal<$idx>;
             }
@@ -55,17 +50,15 @@ macro_rules! impl_invalid_get_at {
 
 impl_invalid_get_at!(B0, B1, Z0);
 
-impl<Head, Tail, U> GetAt<PInt<U>> for Array<Head, Tail>
+impl<Head, Tail, U> GetAt<PInt<U>> for TArr<Head, Tail>
 where
-    Tail: IsList,
     U: Unsigned + typenum::NonZero,
 {
     type Output = MissingLocal<PInt<U>>;
 }
 
-impl<Head, Tail, U> GetAt<NInt<U>> for Array<Head, Tail>
+impl<Head, Tail, U> GetAt<NInt<U>> for TArr<Head, Tail>
 where
-    Tail: IsList,
     U: Unsigned + typenum::NonZero,
 {
     type Output = MissingLocal<NInt<U>>;
@@ -79,22 +72,19 @@ pub trait SetAt<Idx, Value> {
 #[derive(Debug)]
 pub struct SetLocalOk<Locals>(pub PhantomData<Locals>);
 
-impl<Idx, Value> SetAt<Idx, Value> for Nil {
+impl<Idx, Value> SetAt<Idx, Value> for TTerm {
     type Output = MissingLocal<Idx>;
 }
 
-impl<Head, Tail, Value> SetAt<U0, Value> for Array<Head, Tail>
-where
-    Tail: IsList,
-{
-    type Output = SetLocalOk<Array<Value, Tail>>;
+impl<Head, Tail, Value> SetAt<U0, Value> for TArr<Head, Tail> {
+    type Output = SetLocalOk<TArr<Value, Tail>>;
 }
 
-impl<Head, Tail, N, B, Value> SetAt<UInt<N, B>, Value> for Array<Head, Tail>
+impl<Head, Tail, N, B, Value> SetAt<UInt<N, B>, Value> for TArr<Head, Tail>
 where
     UInt<N, B>: Sub<B1>,
     Sub1<UInt<N, B>>: Unsigned,
-    Tail: SetAt<Sub1<UInt<N, B>>, Value> + IsList,
+    Tail: SetAt<Sub1<UInt<N, B>>, Value>,
     <Tail as SetAt<Sub1<UInt<N, B>>, Value>>::Output: SetAtTailResult,
 {
     type Output =
@@ -104,9 +94,7 @@ where
 macro_rules! impl_invalid_set_at {
     ($($idx:ty),+ $(,)?) => {
         $(
-            impl<Head, Tail, Value> SetAt<$idx, Value> for Array<Head, Tail>
-            where
-                Tail: IsList,
+            impl<Head, Tail, Value> SetAt<$idx, Value> for TArr<Head, Tail>
             {
                 type Output = MissingLocal<$idx>;
             }
@@ -116,17 +104,15 @@ macro_rules! impl_invalid_set_at {
 
 impl_invalid_set_at!(B0, B1, Z0);
 
-impl<Head, Tail, Value, U> SetAt<PInt<U>, Value> for Array<Head, Tail>
+impl<Head, Tail, Value, U> SetAt<PInt<U>, Value> for TArr<Head, Tail>
 where
-    Tail: IsList,
     U: Unsigned + typenum::NonZero,
 {
     type Output = MissingLocal<PInt<U>>;
 }
 
-impl<Head, Tail, Value, U> SetAt<NInt<U>, Value> for Array<Head, Tail>
+impl<Head, Tail, Value, U> SetAt<NInt<U>, Value> for TArr<Head, Tail>
 where
-    Tail: IsList,
     U: Unsigned + typenum::NonZero,
 {
     type Output = MissingLocal<NInt<U>>;
@@ -136,11 +122,8 @@ pub trait SetAtTailResult {
     type WithHead<Head>;
 }
 
-impl<Locals> SetAtTailResult for SetLocalOk<Locals>
-where
-    Locals: IsList,
-{
-    type WithHead<Head> = SetLocalOk<Array<Head, Locals>>;
+impl<Locals> SetAtTailResult for SetLocalOk<Locals> {
+    type WithHead<Head> = SetLocalOk<TArr<Head, Locals>>;
 }
 
 impl<Idx> SetAtTailResult for MissingLocal<Idx> {

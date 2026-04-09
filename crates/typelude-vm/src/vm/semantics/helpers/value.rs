@@ -1,254 +1,108 @@
 //! Value normalization helpers shared by pure instruction semantics.
 
-use typelude_std::core::{ELit, Eval, Evaluate};
+use typelude_bool::{False, True};
+use typelude_std::core::{Add, And, Eq, Gt, Lt, Neq, Not, Or, Sub};
 
-use crate::opcode::numeric::{OpAdd, OpAnd, OpEq, OpGt, OpLt, OpNeq, OpOr, OpSub};
-
-/// Converts raw typenum and typelude values into canonical VM stack values.
-pub trait AsValueExpr {
-    type Output;
-}
-
-impl<T> AsValueExpr for ELit<T> {
-    type Output = ELit<T>;
-}
-
-impl AsValueExpr for typenum::UTerm {
-    type Output = ELit<typenum::UTerm>;
-}
-
-impl<N, B> AsValueExpr for typenum::UInt<N, B> {
-    type Output = ELit<typenum::UInt<N, B>>;
-}
-
-impl<U> AsValueExpr for typenum::PInt<U>
-where
-    U: typenum::Unsigned + typenum::NonZero,
-{
-    type Output = ELit<typenum::PInt<U>>;
-}
-
-impl<U> AsValueExpr for typenum::NInt<U>
-where
-    U: typenum::Unsigned + typenum::NonZero,
-{
-    type Output = ELit<typenum::NInt<U>>;
-}
-
-impl AsValueExpr for typenum::Z0 {
-    type Output = ELit<typenum::Z0>;
-}
-
-impl AsValueExpr for typenum::B0 {
-    type Output = ELit<typenum::B0>;
-}
-
-impl AsValueExpr for typenum::B1 {
-    type Output = ELit<typenum::B1>;
-}
-
-impl AsValueExpr for typelude_std::std::prim::bool::True {
-    type Output = ELit<typelude_std::std::prim::bool::True>;
-}
-
-impl AsValueExpr for typelude_std::std::prim::bool::False {
-    type Output = ELit<typelude_std::std::prim::bool::False>;
-}
+use crate::{
+    opcode::numeric::{OpAdd, OpAnd, OpEq, OpGt, OpLt, OpNeq, OpNot, OpOr, OpSub},
+    vm::value::Lit,
+};
 
 /// Canonicalizes all boolean-like result types to `True` or `False`.
 pub trait NormalizeBool {
     type Output;
 }
 
-impl NormalizeBool for typelude_std::std::prim::bool::True {
-    type Output = typelude_std::std::prim::bool::True;
+impl NormalizeBool for True {
+    type Output = True;
 }
 
-impl NormalizeBool for typelude_std::std::prim::bool::False {
-    type Output = typelude_std::std::prim::bool::False;
+impl NormalizeBool for False {
+    type Output = False;
 }
 
 impl NormalizeBool for typenum::B1 {
-    type Output = typelude_std::std::prim::bool::True;
+    type Output = True;
 }
 
 impl NormalizeBool for typenum::B0 {
-    type Output = typelude_std::std::prim::bool::False;
+    type Output = False;
 }
 
-/// Computes a canonicalized boolean stack value.
-pub trait BoolResult<Expr> {
+pub trait UnaryInstrResult<Inst> {
     type Output;
 }
 
-impl<Expr> BoolResult<Expr> for Expr
-where
-    Expr: Eval,
-    Evaluate<Expr>: NormalizeBool,
-{
-    type Output = ELit<<Evaluate<Expr> as NormalizeBool>::Output>;
-}
-
-pub trait BinaryResult<Lhs, Rhs> {
+pub trait BinaryInstrResult<Inst, Rhs> {
     type Output;
 }
 
-impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpAdd
+impl<Value> UnaryInstrResult<OpNot> for Lit<Value>
 where
-    Lhs: AsValueExpr,
-    Rhs: AsValueExpr,
-    typelude_std::std::ops::EAdd<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
+    Value: Not,
+    <Value as Not>::Output: NormalizeBool,
 {
-    type Output = ELit<
-        Evaluate<
-            typelude_std::std::ops::EAdd<
-                <Lhs as AsValueExpr>::Output,
-                <Rhs as AsValueExpr>::Output,
-            >,
-        >,
-    >;
+    type Output = Lit<<<Value as Not>::Output as NormalizeBool>::Output>;
 }
 
-impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpSub
+impl<Lhs, Rhs> BinaryInstrResult<OpAdd, Lit<Rhs>> for Lit<Lhs>
 where
-    Lhs: AsValueExpr,
-    Rhs: AsValueExpr,
-    typelude_std::std::ops::ESub<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
+    Lhs: Add<Rhs>,
 {
-    type Output = ELit<
-        Evaluate<
-            typelude_std::std::ops::ESub<
-                <Lhs as AsValueExpr>::Output,
-                <Rhs as AsValueExpr>::Output,
-            >,
-        >,
-    >;
+    type Output = Lit<<Lhs as Add<Rhs>>::Output>;
 }
 
-#[cfg(feature = "nightly")]
-impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpEq
+impl<Lhs, Rhs> BinaryInstrResult<OpSub, Lit<Rhs>> for Lit<Lhs>
 where
-    Lhs: AsValueExpr,
-    Rhs: AsValueExpr,
-    typelude_std::std::ops::EEq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
-    typelude_std::std::ops::EEq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<
-            typelude_std::std::ops::EEq<
-                <Lhs as AsValueExpr>::Output,
-                <Rhs as AsValueExpr>::Output,
-            >,
-        >,
+    Lhs: Sub<Rhs>,
 {
-    type Output = <typelude_std::std::ops::EEq<
-        <Lhs as AsValueExpr>::Output,
-        <Rhs as AsValueExpr>::Output,
-    > as BoolResult<
-        typelude_std::std::ops::EEq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
-    >>::Output;
+    type Output = Lit<<Lhs as Sub<Rhs>>::Output>;
 }
 
-#[cfg(feature = "nightly")]
-impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpNeq
+impl<Lhs, Rhs> BinaryInstrResult<OpEq, Lit<Rhs>> for Lit<Lhs>
 where
-    Lhs: AsValueExpr,
-    Rhs: AsValueExpr,
-    typelude_std::std::ops::ENeq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
-    typelude_std::std::ops::ENeq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<
-            typelude_std::std::ops::ENeq<
-                <Lhs as AsValueExpr>::Output,
-                <Rhs as AsValueExpr>::Output,
-            >,
-        >,
+    Lhs: Eq<Rhs>,
+    <Lhs as Eq<Rhs>>::Output: NormalizeBool,
 {
-    type Output = <typelude_std::std::ops::ENeq<
-        <Lhs as AsValueExpr>::Output,
-        <Rhs as AsValueExpr>::Output,
-    > as BoolResult<
-        typelude_std::std::ops::ENeq<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
-    >>::Output;
+    type Output = Lit<<<Lhs as Eq<Rhs>>::Output as NormalizeBool>::Output>;
 }
 
-impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpLt
+impl<Lhs, Rhs> BinaryInstrResult<OpNeq, Lit<Rhs>> for Lit<Lhs>
 where
-    Lhs: AsValueExpr,
-    Rhs: AsValueExpr,
-    typelude_std::std::ops::ELt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
-    typelude_std::std::ops::ELt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<
-            typelude_std::std::ops::ELt<
-                <Lhs as AsValueExpr>::Output,
-                <Rhs as AsValueExpr>::Output,
-            >,
-        >,
+    Lhs: Neq<Rhs>,
+    <Lhs as Neq<Rhs>>::Output: NormalizeBool,
 {
-    type Output = <typelude_std::std::ops::ELt<
-        <Lhs as AsValueExpr>::Output,
-        <Rhs as AsValueExpr>::Output,
-    > as BoolResult<
-        typelude_std::std::ops::ELt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
-    >>::Output;
+    type Output = Lit<<<Lhs as Neq<Rhs>>::Output as NormalizeBool>::Output>;
 }
 
-impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpGt
+impl<Lhs, Rhs> BinaryInstrResult<OpLt, Lit<Rhs>> for Lit<Lhs>
 where
-    Lhs: AsValueExpr,
-    Rhs: AsValueExpr,
-    typelude_std::std::ops::EGt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
-    typelude_std::std::ops::EGt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<
-            typelude_std::std::ops::EGt<
-                <Lhs as AsValueExpr>::Output,
-                <Rhs as AsValueExpr>::Output,
-            >,
-        >,
+    Lhs: Lt<Rhs>,
+    <Lhs as Lt<Rhs>>::Output: NormalizeBool,
 {
-    type Output = <typelude_std::std::ops::EGt<
-        <Lhs as AsValueExpr>::Output,
-        <Rhs as AsValueExpr>::Output,
-    > as BoolResult<
-        typelude_std::std::ops::EGt<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
-    >>::Output;
+    type Output = Lit<<<Lhs as Lt<Rhs>>::Output as NormalizeBool>::Output>;
 }
 
-impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpAnd
+impl<Lhs, Rhs> BinaryInstrResult<OpGt, Lit<Rhs>> for Lit<Lhs>
 where
-    Lhs: AsValueExpr,
-    Rhs: AsValueExpr,
-    typelude_std::std::ops::EAnd<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
-    typelude_std::std::ops::EAnd<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<
-            typelude_std::std::ops::EAnd<
-                <Lhs as AsValueExpr>::Output,
-                <Rhs as AsValueExpr>::Output,
-            >,
-        >,
+    Lhs: Gt<Rhs>,
+    <Lhs as Gt<Rhs>>::Output: NormalizeBool,
 {
-    type Output = <typelude_std::std::ops::EAnd<
-        <Lhs as AsValueExpr>::Output,
-        <Rhs as AsValueExpr>::Output,
-    > as BoolResult<
-        typelude_std::std::ops::EAnd<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
-    >>::Output;
+    type Output = Lit<<<Lhs as Gt<Rhs>>::Output as NormalizeBool>::Output>;
 }
 
-impl<Lhs, Rhs> BinaryResult<Lhs, Rhs> for OpOr
+impl<Lhs, Rhs> BinaryInstrResult<OpAnd, Lit<Rhs>> for Lit<Lhs>
 where
-    Lhs: AsValueExpr,
-    Rhs: AsValueExpr,
-    typelude_std::std::ops::EOr<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>: Eval,
-    typelude_std::std::ops::EOr<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>:
-        BoolResult<
-            typelude_std::std::ops::EOr<
-                <Lhs as AsValueExpr>::Output,
-                <Rhs as AsValueExpr>::Output,
-            >,
-        >,
+    Lhs: And<Rhs>,
+    <Lhs as And<Rhs>>::Output: NormalizeBool,
 {
-    type Output = <typelude_std::std::ops::EOr<
-        <Lhs as AsValueExpr>::Output,
-        <Rhs as AsValueExpr>::Output,
-    > as BoolResult<
-        typelude_std::std::ops::EOr<<Lhs as AsValueExpr>::Output, <Rhs as AsValueExpr>::Output>,
-    >>::Output;
+    type Output = Lit<<<Lhs as And<Rhs>>::Output as NormalizeBool>::Output>;
+}
+
+impl<Lhs, Rhs> BinaryInstrResult<OpOr, Lit<Rhs>> for Lit<Lhs>
+where
+    Lhs: Or<Rhs>,
+    <Lhs as Or<Rhs>>::Output: NormalizeBool,
+{
+    type Output = Lit<<<Lhs as Or<Rhs>>::Output as NormalizeBool>::Output>;
 }
