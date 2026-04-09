@@ -33,6 +33,9 @@ pub type N20 = <N10 as Add<N10>>::Output;
 pub type N40 = <N20 as Add<N20>>::Output;
 pub type N80 = <N40 as Add<N40>>::Output;
 pub type N160 = <N80 as Add<N80>>::Output;
+pub type N100 = <N80 as Add<N20>>::Output;
+pub type N102 = <N100 as Add<N2>>::Output;
+pub type N103 = <N100 as Add<N3>>::Output;
 pub type N162 = <N160 as Add<N2>>::Output;
 pub type N163 = <N160 as Add<N3>>::Output;
 

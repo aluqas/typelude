@@ -17,3 +17,9 @@ type-check = "check --lib -v"
 big-type-check = "rustc --lib -- -Z print-type-sizes"
 expand-check = "expand --lib"
 pedantic-check = "clippy -- -W clippy::pedantic"
+
+[unstable]
+build-analysis = true
+
+[build.analysis]
+enabled = true
