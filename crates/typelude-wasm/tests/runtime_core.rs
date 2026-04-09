@@ -1,5 +1,3 @@
-#![recursion_limit = "65536"]
-
 mod support;
 
 use static_assertions::assert_type_eq_all;
@@ -234,11 +232,8 @@ fn calls_inside_control_flow_restore_caller_branches() {
 
 type ScopedBranchCallee = WasmFunc<U0, TTerm, tarr![OpBlock<tarr![OpI32Const<U1>]>, OpReturn]>;
 
-type AddParamsAndReturn = WasmFunc<
-    U2,
-    TTerm,
-    tarr![OpLocalGet<U0>, OpLocalGet<U1>, OpI32Add, OpReturn],
->;
+type AddParamsAndReturn =
+    WasmFunc<U2, TTerm, tarr![OpLocalGet<U0>, OpLocalGet<U1>, OpI32Add, OpReturn]>;
 
 #[test]
 fn call_binds_params_from_stack_in_wasm_order() {

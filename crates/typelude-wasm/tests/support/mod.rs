@@ -1,5 +1,7 @@
 #![allow(dead_code, unused_imports)]
 
+pub mod runtime;
+
 use typelude_std::core::Evaluate;
 use typelude_wasm::RunWasm;
 

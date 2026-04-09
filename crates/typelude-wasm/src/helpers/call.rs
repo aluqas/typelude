@@ -20,7 +20,8 @@ where
     Tail: PopArgs<<UInt<N, B> as core::ops::Sub<U1>>::Output>,
     <Tail as PopArgs<<UInt<N, B> as core::ops::Sub<U1>>::Output>>::Params: Append<WasmI32<ValueT>>,
 {
-    type RemainingStack = <Tail as PopArgs<<UInt<N, B> as core::ops::Sub<U1>>::Output>>::RemainingStack;
+    type RemainingStack =
+        <Tail as PopArgs<<UInt<N, B> as core::ops::Sub<U1>>::Output>>::RemainingStack;
     type Params =
         <<Tail as PopArgs<<UInt<N, B> as core::ops::Sub<U1>>::Output>>::Params as Append<
             WasmI32<ValueT>,

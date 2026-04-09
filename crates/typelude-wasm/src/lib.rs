@@ -9,8 +9,6 @@ mod run;
 mod state;
 mod value;
 
-pub use typelude_col::{TArr, TTerm};
-
 pub use frame::ReturnFrame;
 #[doc(hidden)]
 pub use frame::{BranchBlock, BranchLoop, ResolvedBlock, ResolvedLoop};
@@ -22,4 +20,5 @@ pub use run::{
 #[doc(hidden)]
 pub use state::MemoryCell;
 pub use state::{WasmMemory, WasmState};
+pub use typelude_col::{TArr, TTerm};
 pub use value::WasmI32;
