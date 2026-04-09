@@ -672,12 +672,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "typelude-tooling-cargo-profile"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "typelude-tooling-core",
+]
+
+[[package]]
 name = "typelude-tooling-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
  "serde",
  "serde_json",
+ "typelude-tooling-cargo-profile",
  "typelude-tooling-core",
  "typelude-tooling-rustc",
  "typelude-tooling-semantic-api",

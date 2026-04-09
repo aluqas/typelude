@@ -287,6 +287,18 @@ pub enum Commands {
         #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
         output: OutputModeArg,
     },
+    CargoProfile {
+        #[arg(long)]
+        chrome_profiler_json: Option<std::path::PathBuf>,
+        #[arg(long)]
+        summarize_json: Option<std::path::PathBuf>,
+        #[arg(long)]
+        self_profile_prefix: Option<std::path::PathBuf>,
+        #[arg(long, default_value_t = 10)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
+        output: OutputModeArg,
+    },
     Doctor {
         #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
         output: OutputModeArg,
@@ -337,6 +349,35 @@ mod tests {
     };
 
     use super::{Cli, OutputModeArg, run};
+
+    const SAMPLE_CHROME_PROFILE: &str = r#"
+[
+  {"name":"typeck","cat":"Query","ph":"X","ts":1,"dur":100,"tid":3,"args":{"arg0":"program_fibonacci::demo[1]::_"}},
+  {"name":"evaluate_obligation","cat":"Query","ph":"X","ts":2,"dur":60,"tid":3,"args":{"arg0":"CanonicalQueryInput { value: <typelude_vm::vm::runtime::run::RunVm<typelude_vm::vm::semantics::state::VmState<typelude_col::TArr<typelude_num::peano::Succ<typelude_num::peano::Zero>>>> as Trait> }"}}
+]
+"#;
+
+    const SAMPLE_SUMMARIZE_JSON: &str = r#"
+{
+  "query_data": [
+    {
+      "label": "typeck",
+      "time": { "secs": 2, "nanos": 0 },
+      "self_time": { "secs": 1, "nanos": 500000000 },
+      "number_of_cache_misses": 5,
+      "number_of_cache_hits": 10,
+      "invocation_count": 3,
+      "blocked_time": { "secs": 0, "nanos": 0 },
+      "incremental_load_time": { "secs": 0, "nanos": 0 },
+      "incremental_hashing_time": { "secs": 0, "nanos": 0 }
+    }
+  ],
+  "artifact_sizes": [
+    { "label": "linked_artifact", "value": 1234 }
+  ],
+  "total_time": { "secs": 3, "nanos": 0 }
+}
+"#;
 
     fn unique_path(name: &str) -> std::path::PathBuf {
         let nanos =
@@ -582,6 +623,31 @@ mod tests {
         let output = run(cli).expect("diag command should run");
         assert!(output.starts_with("E0277: expected a typelude Boolish value"));
         fs::remove_file(input).expect("diagnostic fixture should be removed");
+    }
+
+    #[test]
+    fn renders_cargo_profile_output() {
+        let chrome_input = unique_path("typelude-cargo-profile-chrome");
+        let summarize_input = unique_path("typelude-cargo-profile-summary");
+        fs::write(&chrome_input, SAMPLE_CHROME_PROFILE).expect("chrome profile fixture should be written");
+        fs::write(&summarize_input, SAMPLE_SUMMARIZE_JSON)
+            .expect("summarize fixture should be written");
+        let cli = Cli::parse_from([
+            "typelude-tooling-cli",
+            "cargo-profile",
+            "--chrome-profiler-json",
+            chrome_input.to_str().expect("path should be valid utf-8"),
+            "--summarize-json",
+            summarize_input.to_str().expect("path should be valid utf-8"),
+            "--output",
+            "text",
+        ]);
+        let output = run(cli).expect("cargo-profile command should run");
+        assert!(output.contains("self-profile self time is dominated by `typeck`"));
+        assert!(output.contains("chrome.semantic_hotspots:"));
+        assert!(output.contains("chrome.item_hotspots:"));
+        fs::remove_file(chrome_input).expect("chrome fixture should be removed");
+        fs::remove_file(summarize_input).expect("summarize fixture should be removed");
     }
 
     #[test]

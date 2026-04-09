@@ -1,5 +1,6 @@
 //! Subcommand implementations and dispatch from [`crate::Cli`].
 
+mod cargo_profile_cmd;
 mod collect;
 mod diag;
 mod doctor_cmd;
@@ -264,6 +265,19 @@ pub fn dispatch(cli: Cli) -> typelude_tooling_core::ToolingResult<String> {
             type_sizes,
             self_profile_root,
             mir_root,
+            output,
+        ),
+        Commands::CargoProfile {
+            chrome_profiler_json,
+            summarize_json,
+            self_profile_prefix,
+            top,
+            output,
+        } => cargo_profile_cmd::run_cargo_profile(
+            chrome_profiler_json,
+            summarize_json,
+            self_profile_prefix,
+            top,
             output,
         ),
         Commands::Doctor {
