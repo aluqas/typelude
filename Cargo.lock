@@ -752,6 +752,12 @@ dependencies = [
 [[package]]
 name = "typelude-wasm"
 version = "0.1.0"
+dependencies = [
+ "static_assertions",
+ "typelude-col",
+ "typelude-std",
+ "typenum",
+]
 
 [[package]]
 name = "typenum"

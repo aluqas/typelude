@@ -629,7 +629,8 @@ mod tests {
     fn renders_cargo_profile_output() {
         let chrome_input = unique_path("typelude-cargo-profile-chrome");
         let summarize_input = unique_path("typelude-cargo-profile-summary");
-        fs::write(&chrome_input, SAMPLE_CHROME_PROFILE).expect("chrome profile fixture should be written");
+        fs::write(&chrome_input, SAMPLE_CHROME_PROFILE)
+            .expect("chrome profile fixture should be written");
         fs::write(&summarize_input, SAMPLE_SUMMARIZE_JSON)
             .expect("summarize fixture should be written");
         let cli = Cli::parse_from([

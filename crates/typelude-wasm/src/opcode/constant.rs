@@ -1,0 +1,4 @@
+use core::marker::PhantomData;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct OpI32Const<Val>(pub PhantomData<Val>);

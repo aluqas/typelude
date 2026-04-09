@@ -2,8 +2,21 @@
 name = "typelude-wasm"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.91.0"
+description = "Type-level WebAssembly runtime for typelude"
+license = "MIT"
+
+[features]
+default = ["nightly"]
+nightly = ["typelude-std/nightly"]
 
 [dependencies]
+typelude-col = { path = "../typelude-col", default-features = false }
+typelude-std = { path = "../typelude-std", default-features = false }
+typenum = { version = "1.19.0", features = ["const-generics"] }
+
+[dev-dependencies]
+static_assertions = "1.1.0"
 
 [lints]
 workspace = true

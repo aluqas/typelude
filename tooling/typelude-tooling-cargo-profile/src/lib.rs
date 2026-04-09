@@ -332,18 +332,14 @@ pub fn render_text(analysis: &CargoProfileAnalysis) -> String {
         if !chrome.item_hotspots.is_empty() {
             lines.push(String::from("chrome.item_hotspots:"));
             for entry in &chrome.item_hotspots {
-                let dominant_query = entry
-                    .query_breakdown
-                    .first()
-                    .map_or("<none>", |value| value.label.as_str());
+                let dominant_query =
+                    entry.query_breakdown.first().map_or("<none>", |value| value.label.as_str());
                 let dominant_semantic = entry
                     .semantic_breakdown
                     .first()
                     .map_or("<none>", |value| value.label.as_str());
-                let dominant_domain = entry
-                    .domain_breakdown
-                    .first()
-                    .map_or("<none>", |value| value.label.as_str());
+                let dominant_domain =
+                    entry.domain_breakdown.first().map_or("<none>", |value| value.label.as_str());
                 lines.push(format!(
                     "- {} total_us={} dominant_query={} dominant_semantic={} dominant_domain={}",
                     entry.item, entry.total_us, dominant_query, dominant_semantic, dominant_domain
@@ -462,16 +458,10 @@ impl ChromeAggregate {
         }
 
         for semantic in &semantics {
-            add_count(
-                self.semantics.entry(String::from(semantic.label())).or_default(),
-                duration,
-            );
+            add_count(self.semantics.entry(String::from(semantic.label())).or_default(), duration);
         }
         for domain in &domains {
-            add_count(
-                self.domains.entry(String::from(domain.label())).or_default(),
-                duration,
-            );
+            add_count(self.domains.entry(String::from(domain.label())).or_default(), duration);
         }
 
         if let Some(item) = arg0.as_deref().and_then(extract_item_label) {
@@ -480,19 +470,13 @@ impl ChromeAggregate {
             add_count(aggregate.queries.entry(event.name.clone()).or_default(), duration);
             for semantic in &semantics {
                 add_count(
-                    aggregate
-                        .semantics
-                        .entry(String::from(semantic.label()))
-                        .or_default(),
+                    aggregate.semantics.entry(String::from(semantic.label())).or_default(),
                     duration,
                 );
             }
             for domain in &domains {
                 add_count(
-                    aggregate
-                        .domains
-                        .entry(String::from(domain.label()))
-                        .or_default(),
+                    aggregate.domains.entry(String::from(domain.label())).or_default(),
                     duration,
                 );
             }
@@ -611,8 +595,7 @@ struct SummarizeJson {
 
 impl SummarizeJson {
     fn finish(self, top: usize) -> SelfProfileSummaryAnalysis {
-        let mut top_self_time =
-            self.query_data.iter().map(to_query_stat).collect::<Vec<_>>();
+        let mut top_self_time = self.query_data.iter().map(to_query_stat).collect::<Vec<_>>();
         top_self_time.sort_by(|left, right| {
             right
                 .self_us
@@ -622,8 +605,7 @@ impl SummarizeJson {
         });
         top_self_time.truncate(top);
 
-        let mut top_total_time =
-            self.query_data.iter().map(to_query_stat).collect::<Vec<_>>();
+        let mut top_total_time = self.query_data.iter().map(to_query_stat).collect::<Vec<_>>();
         top_total_time.sort_by(|left, right| {
             right
                 .total_us
@@ -641,7 +623,9 @@ impl SummarizeJson {
                 bytes: artifact.value,
             })
             .collect::<Vec<_>>();
-        artifacts.sort_by(|left, right| right.bytes.cmp(&left.bytes).then_with(|| left.label.cmp(&right.label)));
+        artifacts.sort_by(|left, right| {
+            right.bytes.cmp(&left.bytes).then_with(|| left.label.cmp(&right.label))
+        });
 
         SelfProfileSummaryAnalysis {
             total_time_us: self.total_time.total_us(),
@@ -723,7 +707,9 @@ fn top_items(input: BTreeMap<String, ItemAggregate>, top: usize) -> Vec<ItemHots
             domain_breakdown: top_count_map(aggregate.domains, 5),
         })
         .collect::<Vec<_>>();
-    rows.sort_by(|left, right| right.total_us.cmp(&left.total_us).then_with(|| left.item.cmp(&right.item)));
+    rows.sort_by(|left, right| {
+        right.total_us.cmp(&left.total_us).then_with(|| left.item.cmp(&right.item))
+    });
     rows.truncate(top);
     rows
 }
@@ -736,15 +722,19 @@ fn classify_semantics(query: &str) -> Vec<CargoProfileSemanticKind> {
         "eval_to_const_value_raw" | "eval_to_allocation_raw" | "trivial_const" => {
             CargoProfileSemanticKind::ConstEval
         },
-        "mir_built" | "mir_for_ctfe" | "mir_drops_elaborated_and_const_checked"
-        | "mir_borrowck" | "mir_promoted" => CargoProfileSemanticKind::MirBuild,
+        "mir_built"
+        | "mir_for_ctfe"
+        | "mir_drops_elaborated_and_const_checked"
+        | "mir_borrowck"
+        | "mir_promoted" => CargoProfileSemanticKind::MirBuild,
         "type_op_ascribe_user_type" => CargoProfileSemanticKind::TypeAscription,
         "check_type_wf" | "check_well_formed" | "predicates_of" => {
             CargoProfileSemanticKind::WellFormedness
         },
         "resolve_instance_raw" => CargoProfileSemanticKind::InstanceResolution,
         "layout_of" => CargoProfileSemanticKind::Layout,
-        "collect_and_partition_mono_items" | "monomorphization_collector"
+        "collect_and_partition_mono_items"
+        | "monomorphization_collector"
         | "monomorphization_collector_graph_walk" => CargoProfileSemanticKind::Monomorphization,
         "link" | "link_crate" | "link_binary" | "run_linker" => CargoProfileSemanticKind::Linking,
         _ => CargoProfileSemanticKind::Unknown,
@@ -791,7 +781,7 @@ fn find_path_like(input: &str, needle: &str) -> Option<String> {
         .find_map(|(index, ch)| {
             if index == 0 {
                 None
-            } else if ch.is_ascii_alphanumeric() || matches!(ch, ':' | '_' ) {
+            } else if ch.is_ascii_alphanumeric() || matches!(ch, ':' | '_') {
                 None
             } else {
                 Some(index)
@@ -842,10 +832,8 @@ fn infer_findings(
                 query.self_us / 1_000
             ));
         }
-        if let Some(query) = summary
-            .top_self_time
-            .iter()
-            .find(|query| query.label == "evaluate_obligation")
+        if let Some(query) =
+            summary.top_self_time.iter().find(|query| query.label == "evaluate_obligation")
         {
             findings.push(format!(
                 "`evaluate_obligation` has {} invocations with {} cache hits and {} cache misses",
@@ -905,9 +893,7 @@ fn run_summarize_json(prefix: &Path) -> ToolingResult<String> {
     let temp_root = std::env::temp_dir().join(format!(
         "typelude-tooling-cargo-profile-{}-{}",
         std::process::id(),
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_or(0, |value| value.as_nanos())
+        SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |value| value.as_nanos())
     ));
     fs::create_dir_all(&temp_root)?;
 
@@ -921,11 +907,8 @@ fn run_summarize_json(prefix: &Path) -> ToolingResult<String> {
     }
 
     let staged_prefix = normalize_profile_prefix(&staged_profile);
-    let output = Command::new("summarize")
-        .arg("summarize")
-        .arg("--json")
-        .arg(&staged_prefix)
-        .output()?;
+    let output =
+        Command::new("summarize").arg("summarize").arg("--json").arg(&staged_prefix).output()?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let _ = fs::remove_dir_all(&temp_root);
@@ -988,9 +971,9 @@ mod tests {
 
     #[test]
     fn analyzes_chrome_profile_stream() {
-        let analysis =
-            CargoProfileAnalyzer::new().analyze_chrome_profiler_reader(SAMPLE_CHROME.as_bytes(), 10)
-                .expect("chrome profile should parse");
+        let analysis = CargoProfileAnalyzer::new()
+            .analyze_chrome_profiler_reader(SAMPLE_CHROME.as_bytes(), 10)
+            .expect("chrome profile should parse");
 
         assert_eq!(analysis.event_count, 5);
         assert_eq!(analysis.query_hotspots[0].name, "typeck");
@@ -1011,9 +994,9 @@ mod tests {
 
     #[test]
     fn analyzes_summarize_json() {
-        let analysis =
-            CargoProfileAnalyzer::new().analyze_summarize_json_str(SAMPLE_SUMMARIZE, 10)
-                .expect("summarize json should parse");
+        let analysis = CargoProfileAnalyzer::new()
+            .analyze_summarize_json_str(SAMPLE_SUMMARIZE, 10)
+            .expect("summarize json should parse");
 
         assert_eq!(analysis.total_time_us, 3_000_000);
         assert_eq!(analysis.top_self_time[0].label, "typeck");
@@ -1042,8 +1025,9 @@ mod tests {
 
     #[test]
     fn empty_analysis_has_no_findings() {
-        let merged =
-            CargoProfileAnalyzer::new().analyze_paths(None, None, None, 10).expect("empty analysis should succeed");
+        let merged = CargoProfileAnalyzer::new()
+            .analyze_paths(None, None, None, 10)
+            .expect("empty analysis should succeed");
         assert!(merged.findings.is_empty());
     }
 }

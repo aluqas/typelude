@@ -1,0 +1,188 @@
+use core::{
+    marker::PhantomData,
+    ops::{Add, BitAnd, BitOr, Mul, Shl, Shr},
+};
+
+use typelude_col::TArr;
+use typelude_std::core::{Eq, Lt, Value};
+use typenum::{
+    B1, U1, U2, U3, U8, U16, U24, U255, U65536,
+    operator_aliases::{And, Or, Prod, Shleft, Shright, Sum},
+};
+
+use crate::state::{MemoryCell, WasmMemory};
+
+pub trait TrueBit {}
+
+impl TrueBit for B1 {}
+
+pub trait FindByte<Addr> {
+    type Output;
+}
+
+impl<Addr> FindByte<Addr> for typelude_col::TTerm {
+    type Output = typenum::U0;
+}
+
+pub trait FindByteHelper<Addr, Byte, Tail> {
+    type Output;
+}
+
+impl<Addr, Byte, Tail> FindByteHelper<Addr, Byte, Tail> for B1 {
+    type Output = Byte;
+}
+
+impl<Addr, Byte, Tail> FindByteHelper<Addr, Byte, Tail> for typenum::B0
+where
+    Tail: FindByte<Addr>,
+{
+    type Output = <Tail as FindByte<Addr>>::Output;
+}
+
+impl<QueryAddr, CellAddr, Byte, Tail> FindByte<QueryAddr>
+    for TArr<MemoryCell<CellAddr, Byte>, Tail>
+where
+    QueryAddr: Eq<CellAddr>,
+    <QueryAddr as Eq<CellAddr>>::Output: FindByteHelper<QueryAddr, Byte, Tail>,
+{
+    type Output =
+        <<QueryAddr as Eq<CellAddr>>::Output as FindByteHelper<QueryAddr, Byte, Tail>>::Output;
+}
+
+pub trait MemoryReadByte<Addr> {
+    type Output;
+}
+
+impl<Pages, Cells, Addr> MemoryReadByte<Addr> for WasmMemory<Pages, Cells>
+where
+    Pages: Mul<U65536>,
+    Addr: Lt<Prod<Pages, U65536>>,
+    <Addr as Lt<Prod<Pages, U65536>>>::Output: TrueBit,
+    Cells: FindByte<Addr>,
+{
+    type Output = <Cells as FindByte<Addr>>::Output;
+}
+
+pub trait MemoryWriteByte<Addr, Byte> {
+    type Output;
+}
+
+impl<Pages, Cells, Addr, Byte> MemoryWriteByte<Addr, Byte> for WasmMemory<Pages, Cells>
+where
+    Pages: Mul<U65536>,
+    Addr: Lt<Prod<Pages, U65536>>,
+    <Addr as Lt<Prod<Pages, U65536>>>::Output: TrueBit,
+{
+    type Output = WasmMemory<Pages, TArr<MemoryCell<Addr, Byte>, Cells>>;
+}
+
+#[doc(hidden)]
+pub struct EncodedI32<B0, B1, B2, B3>(pub PhantomData<(B0, B1, B2, B3)>);
+
+impl<B0V, B1V, B2V, B3V> Value for EncodedI32<B0V, B1V, B2V, B3V> {}
+
+pub trait EncodeI32 {
+    type Output;
+}
+
+impl<ValueT> EncodeI32 for ValueT
+where
+    ValueT: BitAnd<U255> + Shr<U8> + Shr<U16> + Shr<U24>,
+    Shright<ValueT, U8>: BitAnd<U255>,
+    Shright<ValueT, U16>: BitAnd<U255>,
+    Shright<ValueT, U24>: BitAnd<U255>,
+{
+    type Output = EncodedI32<
+        And<ValueT, U255>,
+        And<Shright<ValueT, U8>, U255>,
+        And<Shright<ValueT, U16>, U255>,
+        And<Shright<ValueT, U24>, U255>,
+    >;
+}
+
+pub trait LowByte {
+    type Output;
+}
+
+impl<B0V, B1V, B2V, B3V> LowByte for EncodedI32<B0V, B1V, B2V, B3V> {
+    type Output = B0V;
+}
+
+pub trait DecodeI32 {
+    type Output;
+}
+
+impl<B0V, B1V, B2V, B3V> DecodeI32 for EncodedI32<B0V, B1V, B2V, B3V>
+where
+    B1V: Shl<U8>,
+    B2V: Shl<U16>,
+    B3V: Shl<U24>,
+    B0V: BitOr<Shleft<B1V, U8>>,
+    Shleft<B2V, U16>: BitOr<Shleft<B3V, U24>>,
+    Or<B0V, Shleft<B1V, U8>>: BitOr<Or<Shleft<B2V, U16>, Shleft<B3V, U24>>>,
+{
+    type Output = Or<Or<B0V, Shleft<B1V, U8>>, Or<Shleft<B2V, U16>, Shleft<B3V, U24>>>;
+}
+
+pub trait MemoryReadI32<Addr> {
+    type Output;
+}
+
+impl<Pages, Cells, Addr> MemoryReadI32<Addr> for WasmMemory<Pages, Cells>
+where
+    Addr: Add<U1> + Add<U2> + Add<U3>,
+    WasmMemory<Pages, Cells>: MemoryReadByte<Addr>,
+    WasmMemory<Pages, Cells>: MemoryReadByte<Sum<Addr, U1>>,
+    WasmMemory<Pages, Cells>: MemoryReadByte<Sum<Addr, U2>>,
+    WasmMemory<Pages, Cells>: MemoryReadByte<Sum<Addr, U3>>,
+    EncodedI32<
+        <WasmMemory<Pages, Cells> as MemoryReadByte<Addr>>::Output,
+        <WasmMemory<Pages, Cells> as MemoryReadByte<Sum<Addr, U1>>>::Output,
+        <WasmMemory<Pages, Cells> as MemoryReadByte<Sum<Addr, U2>>>::Output,
+        <WasmMemory<Pages, Cells> as MemoryReadByte<Sum<Addr, U3>>>::Output,
+    >: DecodeI32,
+{
+    type Output = <EncodedI32<
+        <WasmMemory<Pages, Cells> as MemoryReadByte<Addr>>::Output,
+        <WasmMemory<Pages, Cells> as MemoryReadByte<Sum<Addr, U1>>>::Output,
+        <WasmMemory<Pages, Cells> as MemoryReadByte<Sum<Addr, U2>>>::Output,
+        <WasmMemory<Pages, Cells> as MemoryReadByte<Sum<Addr, U3>>>::Output,
+    > as DecodeI32>::Output;
+}
+
+pub trait MemoryWriteI32<Addr, ValueT> {
+    type Output;
+}
+
+impl<Pages, Cells, Addr, ValueT> MemoryWriteI32<Addr, ValueT> for WasmMemory<Pages, Cells>
+where
+    Addr: Add<U1> + Add<U2> + Add<U3>,
+    ValueT: EncodeI32,
+    <ValueT as EncodeI32>::Output: WriteEncodedI32<WasmMemory<Pages, Cells>, Addr>,
+{
+    type Output =
+        <<ValueT as EncodeI32>::Output as WriteEncodedI32<WasmMemory<Pages, Cells>, Addr>>::Output;
+}
+
+pub trait WriteEncodedI32<Memory, Addr> {
+    type Output;
+}
+
+impl<Memory, Addr, B0V, B1V, B2V, B3V> WriteEncodedI32<Memory, Addr> for EncodedI32<B0V, B1V, B2V, B3V>
+where
+    Addr: Add<U1> + Add<U2> + Add<U3>,
+    Memory: MemoryWriteByte<Addr, B0V>,
+    <Memory as MemoryWriteByte<Addr, B0V>>::Output: MemoryWriteByte<Sum<Addr, U1>, B1V>,
+    <<Memory as MemoryWriteByte<Addr, B0V>>::Output as MemoryWriteByte<Sum<Addr, U1>, B1V>>::Output:
+        MemoryWriteByte<Sum<Addr, U2>, B2V>,
+    <<<Memory as MemoryWriteByte<Addr, B0V>>::Output as MemoryWriteByte<Sum<Addr, U1>, B1V>>::Output as MemoryWriteByte<Sum<Addr, U2>, B2V>>::Output:
+        MemoryWriteByte<Sum<Addr, U3>, B3V>,
+{
+    type Output = <<<<Memory as MemoryWriteByte<Addr, B0V>>::Output as MemoryWriteByte<
+        Sum<Addr, U1>,
+        B1V,
+    >>::Output as MemoryWriteByte<Sum<Addr, U2>, B2V>>::Output as MemoryWriteByte<
+        Sum<Addr, U3>,
+        B3V,
+    >>::Output;
+}
