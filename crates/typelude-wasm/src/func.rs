@@ -3,6 +3,8 @@ use core::marker::PhantomData;
 use typelude_std::core::Value;
 
 #[derive(Debug, Default)]
-pub struct WasmFunc<Locals, Program>(pub PhantomData<(Locals, Program)>);
+pub struct WasmFunc<ParamCount, LocalInits, Program>(
+    pub PhantomData<(ParamCount, LocalInits, Program)>,
+);
 
-impl<Locals, Program> Value for WasmFunc<Locals, Program> {}
+impl<ParamCount, LocalInits, Program> Value for WasmFunc<ParamCount, LocalInits, Program> {}

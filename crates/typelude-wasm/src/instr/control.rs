@@ -5,7 +5,10 @@ use typenum::{B0, B1, U0};
 use crate::{
     frame::{BranchBlock, BranchLoop, ReturnFrame},
     func::WasmFunc,
-    helpers::branch_stack::{BranchJump, ContinueIfZero, ResolveBranch},
+    helpers::{
+        branch_stack::{BranchJump, ContinueIfZero, ResolveBranch},
+        call::{BindLocals, PopArgs},
+    },
     opcode::{
         OpBlock, OpBr, OpBrIf, OpCall, OpEndBlock, OpEndFunc, OpEndLoop, OpIf, OpLoop, OpReturn,
         OpSelect,
@@ -47,7 +50,7 @@ impl<TrueValue, FalseValue> SelectResult<TrueValue, FalseValue> for B1 {
     type Output = WasmI32<FalseValue>;
 }
 
-impl<FuncLocals, FuncProgram, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<ParamCount, LocalInits, FuncProgram, Stack, Locals, Memory, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
             Stack,
@@ -55,15 +58,16 @@ impl<FuncLocals, FuncProgram, Stack, Locals, Memory, Frames, Branches, Rest> Eva
             Memory,
             Frames,
             Branches,
-            TArr<OpCall<WasmFunc<FuncLocals, FuncProgram>>, Rest>,
+            TArr<OpCall<WasmFunc<ParamCount, LocalInits, FuncProgram>>, Rest>,
         >,
     >
 where
+    Stack: PopArgs<ParamCount> + BindLocals<ParamCount, LocalInits>,
     FuncProgram: Concat<TArr<OpEndFunc, TTerm>>,
 {
     type Output = WasmState<
-        Stack,
-        FuncLocals,
+        <Stack as PopArgs<ParamCount>>::RemainingStack,
+        <Stack as BindLocals<ParamCount, LocalInits>>::Output,
         Memory,
         TArr<ReturnFrame<Locals, Branches, Rest>, Frames>,
         TTerm,

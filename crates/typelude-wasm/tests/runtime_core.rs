@@ -73,9 +73,9 @@ fn local_tee_updates_local_and_preserves_stack() {
     assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U5>]);
 }
 
-type AddTwoAndReturn = WasmFunc<TTerm, tarr![OpI32Const<U2>, OpI32Add, OpReturn]>;
+type AddTwoAndReturn = WasmFunc<U0, TTerm, tarr![OpI32Const<U2>, OpI32Add, OpReturn]>;
 type OuterAddAndReturn =
-    WasmFunc<TTerm, tarr![OpCall<AddTwoAndReturn>, OpI32Const<U3>, OpI32Add, OpReturn]>;
+    WasmFunc<U0, TTerm, tarr![OpCall<AddTwoAndReturn>, OpI32Const<U3>, OpI32Add, OpReturn]>;
 
 #[test]
 fn simple_call_and_return_resume_caller_continuation() {
@@ -95,7 +95,7 @@ fn nested_calls_produce_expected_result() {
 }
 
 type ShadowLocalAndReturn =
-    WasmFunc<tarr![WasmI32<U0>], tarr![OpI32Const<U9>, OpLocalSet<U0>, OpReturn]>;
+    WasmFunc<U0, tarr![WasmI32<U0>], tarr![OpI32Const<U9>, OpLocalSet<U0>, OpReturn]>;
 
 #[test]
 fn callee_locals_do_not_leak_back_to_caller() {
@@ -107,7 +107,7 @@ fn callee_locals_do_not_leak_back_to_caller() {
     assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U1>]);
 }
 
-type FallthroughAdd = WasmFunc<TTerm, tarr![OpI32Const<U2>, OpI32Add]>;
+type FallthroughAdd = WasmFunc<U0, TTerm, tarr![OpI32Const<U2>, OpI32Add]>;
 
 #[test]
 fn callee_fallthrough_returns_via_end_func() {
@@ -220,7 +220,7 @@ fn loop_fallthrough_pops_active_loop_label() {
     assert_type_eq_all!(<FinalState as StateBranches>::Output, TTerm);
 }
 
-type BranchingCallee = WasmFunc<TTerm, tarr![OpBlock<tarr![OpBr<U0>]>, OpReturn]>;
+type BranchingCallee = WasmFunc<U0, TTerm, tarr![OpBlock<tarr![OpBr<U0>]>, OpReturn]>;
 
 #[test]
 fn calls_inside_control_flow_restore_caller_branches() {
@@ -232,7 +232,31 @@ fn calls_inside_control_flow_restore_caller_branches() {
     assert_type_eq_all!(<FinalState as StateBranches>::Output, TTerm);
 }
 
-type ScopedBranchCallee = WasmFunc<TTerm, tarr![OpBlock<tarr![OpI32Const<U1>]>, OpReturn]>;
+type ScopedBranchCallee = WasmFunc<U0, TTerm, tarr![OpBlock<tarr![OpI32Const<U1>]>, OpReturn]>;
+
+type AddParamsAndReturn = WasmFunc<
+    U2,
+    TTerm,
+    tarr![OpLocalGet<U0>, OpLocalGet<U1>, OpI32Add, OpReturn],
+>;
+
+#[test]
+fn call_binds_params_from_stack_in_wasm_order() {
+    type Program = tarr![OpI32Const<U2>, OpI32Const<U3>, OpCall<AddParamsAndReturn>];
+    type FinalState = ProgramRun<Program>;
+
+    assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U5>]);
+}
+
+type ZeroInitLocalAndReturn = WasmFunc<U0, tarr![WasmI32<U0>], tarr![OpLocalGet<U0>, OpReturn]>;
+
+#[test]
+fn extra_locals_are_zero_initialized() {
+    type Program = tarr![OpCall<ZeroInitLocalAndReturn>];
+    type FinalState = ProgramRun<Program>;
+
+    assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U0>]);
+}
 
 #[test]
 fn callee_branch_stack_does_not_leak_back_to_caller() {

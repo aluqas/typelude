@@ -9,6 +9,8 @@ mod run;
 mod state;
 mod value;
 
+pub use typelude_col::{TArr, TTerm};
+
 pub use frame::ReturnFrame;
 #[doc(hidden)]
 pub use frame::{BranchBlock, BranchLoop, ResolvedBlock, ResolvedLoop};

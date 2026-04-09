@@ -12,7 +12,8 @@ pub mod core {
     pub use typelude_std::core::*;
     pub use typenum;
 }
-pub use typelude_macros::program;
+pub use typelude_macros::{program, wasm_wat};
 pub use typelude_std::{Eval, Evaluate};
 pub use typelude_vm as vm;
+pub use typelude_wasm as wasm;
 pub use typenum;

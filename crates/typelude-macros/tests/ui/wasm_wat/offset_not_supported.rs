@@ -1,0 +1,26 @@
+mod typelude {
+    pub mod core {
+        pub use typelude_std::core::*;
+        pub use typenum;
+    }
+
+    pub use typelude_std::{Eval, Evaluate};
+    pub use typelude_wasm as wasm;
+    pub use typenum;
+}
+
+use typelude_macros::wasm_wat;
+
+type _Bad = wasm_wat! {
+    module: r#"
+        (module
+          (memory 1)
+          (func (export "main")
+            i32.const 0
+            i32.load offset=1
+            drop))
+    "#,
+    invoke: "main",
+};
+
+fn main() {}
