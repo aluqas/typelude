@@ -16,7 +16,6 @@ type _Bad = wasm_wat! {
         (module
           (import "env" "x" (func)))
     "#,
-    invoke: "main",
 };
 
 fn main() {}

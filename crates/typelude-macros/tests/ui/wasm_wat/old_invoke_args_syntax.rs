@@ -14,9 +14,13 @@ use typelude_macros::wasm_wat;
 type _Bad = wasm_wat! {
     module: r#"
         (module
-          (func (export "main")))
+          (func (export "main") (param i32 i32) (result i32)
+            local.get 0
+            local.get 1
+            i32.add))
     "#,
-    invoke: "missing",
+    invoke: "main",
+    args: [typenum::U2, typenum::U3],
 };
 
 fn main() {}

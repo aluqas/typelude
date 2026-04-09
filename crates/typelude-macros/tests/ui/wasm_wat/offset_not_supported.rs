@@ -20,7 +20,6 @@ type _Bad = wasm_wat! {
             i32.load offset=1
             drop))
     "#,
-    invoke: "main",
 };
 
 fn main() {}

@@ -22,9 +22,10 @@ impl EqzValue for B1 {
     type Output = WasmI32<U1>;
 }
 
-impl<Lhs, Rhs, Tail, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Lhs, Rhs, Tail, Locals, Memory, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<Rhs>, TArr<WasmI32<Lhs>, Tail>>,
             Locals,
             Memory,
@@ -37,6 +38,7 @@ where
     Lhs: Add<Rhs>,
 {
     type Output = WasmState<
+        Module,
         TArr<WasmI32<<Lhs as Add<Rhs>>::Output>, Tail>,
         Locals,
         Memory,
@@ -46,9 +48,10 @@ where
     >;
 }
 
-impl<Lhs, Rhs, Tail, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Lhs, Rhs, Tail, Locals, Memory, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<Rhs>, TArr<WasmI32<Lhs>, Tail>>,
             Locals,
             Memory,
@@ -61,6 +64,7 @@ where
     Lhs: Sub<Rhs>,
 {
     type Output = WasmState<
+        Module,
         TArr<WasmI32<<Lhs as Sub<Rhs>>::Output>, Tail>,
         Locals,
         Memory,
@@ -70,9 +74,10 @@ where
     >;
 }
 
-impl<Value, Tail, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Value, Tail, Locals, Memory, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<Value>, Tail>,
             Locals,
             Memory,
@@ -86,6 +91,7 @@ where
     <Value as Eq<U0>>::Output: EqzValue,
 {
     type Output = WasmState<
+        Module,
         TArr<<<Value as Eq<U0>>::Output as EqzValue>::Output, Tail>,
         Locals,
         Memory,

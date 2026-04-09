@@ -4,6 +4,7 @@ mod frame;
 mod func;
 mod helpers;
 mod instr;
+mod module;
 pub mod opcode;
 mod run;
 mod state;
@@ -13,9 +14,10 @@ pub use frame::ReturnFrame;
 #[doc(hidden)]
 pub use frame::{BranchBlock, BranchLoop, ResolvedBlock, ResolvedLoop};
 pub use func::WasmFunc;
+pub use module::WasmModule;
 pub use run::{
-    EmptyState, ProgramRun, Run, RunWasm, StateBranches, StateLocals, StateMemory, StateProgram,
-    StateStack,
+    EmptyState, InvokeFunc, ModuleProgramRun, Run, RunWasm, StateBranches, StateLocals,
+    StateMemory, StateProgram, StateStack,
 };
 #[doc(hidden)]
 pub use state::MemoryCell;

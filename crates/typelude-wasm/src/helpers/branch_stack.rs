@@ -27,37 +27,40 @@ where
     type Output = <Tail as ResolveBranch<<UInt<N, B> as Sub<U1>>::Output>>::Output;
 }
 
-pub trait BranchJump<Stack, Locals, Memory, Frames> {
+pub trait BranchJump<Module, Stack, Locals, Memory, Frames> {
     type Output;
 }
 
-impl<Continuation, RemainingBranches, Stack, Locals, Memory, Frames>
-    BranchJump<Stack, Locals, Memory, Frames> for ResolvedBlock<Continuation, RemainingBranches>
+impl<Continuation, RemainingBranches, Module, Stack, Locals, Memory, Frames>
+    BranchJump<Module, Stack, Locals, Memory, Frames>
+    for ResolvedBlock<Continuation, RemainingBranches>
 {
-    type Output = WasmState<Stack, Locals, Memory, Frames, RemainingBranches, Continuation>;
+    type Output =
+        WasmState<Module, Stack, Locals, Memory, Frames, RemainingBranches, Continuation>;
 }
 
-impl<LoopProgram, RemainingBranches, Stack, Locals, Memory, Frames>
-    BranchJump<Stack, Locals, Memory, Frames> for ResolvedLoop<LoopProgram, RemainingBranches>
+impl<LoopProgram, RemainingBranches, Module, Stack, Locals, Memory, Frames>
+    BranchJump<Module, Stack, Locals, Memory, Frames>
+    for ResolvedLoop<LoopProgram, RemainingBranches>
 {
-    type Output = WasmState<Stack, Locals, Memory, Frames, RemainingBranches, LoopProgram>;
+    type Output = WasmState<Module, Stack, Locals, Memory, Frames, RemainingBranches, LoopProgram>;
 }
 
 #[doc(hidden)]
-pub trait ContinueIfZero<Resolved, Stack, Locals, Memory, Frames, Branches, Rest> {
+pub trait ContinueIfZero<Resolved, Module, Stack, Locals, Memory, Frames, Branches, Rest> {
     type Output;
 }
 
-impl<Resolved, Stack, Locals, Memory, Frames, Branches, Rest>
-    ContinueIfZero<Resolved, Stack, Locals, Memory, Frames, Branches, Rest> for B1
+impl<Resolved, Module, Stack, Locals, Memory, Frames, Branches, Rest>
+    ContinueIfZero<Resolved, Module, Stack, Locals, Memory, Frames, Branches, Rest> for B1
 {
-    type Output = WasmState<Stack, Locals, Memory, Frames, Branches, Rest>;
+    type Output = WasmState<Module, Stack, Locals, Memory, Frames, Branches, Rest>;
 }
 
-impl<Resolved, Stack, Locals, Memory, Frames, Branches, Rest>
-    ContinueIfZero<Resolved, Stack, Locals, Memory, Frames, Branches, Rest> for typenum::B0
+impl<Resolved, Module, Stack, Locals, Memory, Frames, Branches, Rest>
+    ContinueIfZero<Resolved, Module, Stack, Locals, Memory, Frames, Branches, Rest> for typenum::B0
 where
-    Resolved: BranchJump<Stack, Locals, Memory, Frames>,
+    Resolved: BranchJump<Module, Stack, Locals, Memory, Frames>,
 {
-    type Output = <Resolved as BranchJump<Stack, Locals, Memory, Frames>>::Output;
+    type Output = <Resolved as BranchJump<Module, Stack, Locals, Memory, Frames>>::Output;
 }

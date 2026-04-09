@@ -1,8 +1,8 @@
 use typelude_col::{TArr, TTerm};
-use typelude_std::core::{Append, Concat};
+use typelude_std::core::{Append, Concat, Get};
 use typenum::{U1, UInt, UTerm};
 
-use crate::value::WasmI32;
+use crate::{module::WasmModule, value::WasmI32};
 
 pub trait PopArgs<ParamCount> {
     type RemainingStack;
@@ -38,4 +38,15 @@ where
     <Stack as PopArgs<ParamCount>>::Params: Concat<LocalInits>,
 {
     type Output = <<Stack as PopArgs<ParamCount>>::Params as Concat<LocalInits>>::Output;
+}
+
+pub trait ModuleFuncLookup<FuncIdx> {
+    type Output;
+}
+
+impl<Funcs, InitialMemory, FuncIdx> ModuleFuncLookup<FuncIdx> for WasmModule<Funcs, InitialMemory>
+where
+    Funcs: Get<FuncIdx>,
+{
+    type Output = <Funcs as Get<FuncIdx>>::Output;
 }

@@ -8,12 +8,15 @@ use crate::{
     state::WasmState,
 };
 
-impl<Idx, Stack, Locals, Memory, Frames, Branches, Rest> Eval
-    for Step<WasmState<Stack, Locals, Memory, Frames, Branches, TArr<OpLocalGet<Idx>, Rest>>>
+impl<Module, Idx, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+    for Step<
+        WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<OpLocalGet<Idx>, Rest>>,
+    >
 where
     Locals: LocalGet<Idx>,
 {
     type Output = WasmState<
+        Module,
         TArr<<Locals as LocalGet<Idx>>::Output, Stack>,
         Locals,
         Memory,
@@ -23,9 +26,10 @@ where
     >;
 }
 
-impl<Idx, Value, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Idx, Value, Stack, Locals, Memory, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<Value, Stack>,
             Locals,
             Memory,
@@ -37,13 +41,21 @@ impl<Idx, Value, Stack, Locals, Memory, Frames, Branches, Rest> Eval
 where
     Locals: LocalSet<Idx, Value>,
 {
-    type Output =
-        WasmState<Stack, <Locals as LocalSet<Idx, Value>>::Output, Memory, Frames, Branches, Rest>;
+    type Output = WasmState<
+        Module,
+        Stack,
+        <Locals as LocalSet<Idx, Value>>::Output,
+        Memory,
+        Frames,
+        Branches,
+        Rest,
+    >;
 }
 
-impl<Idx, Value, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Idx, Value, Stack, Locals, Memory, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<Value, Stack>,
             Locals,
             Memory,
@@ -56,6 +68,7 @@ where
     Locals: LocalSet<Idx, Value>,
 {
     type Output = WasmState<
+        Module,
         TArr<Value, Stack>,
         <Locals as LocalSet<Idx, Value>>::Output,
         Memory,

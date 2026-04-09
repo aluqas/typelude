@@ -1,24 +1,18 @@
-use std::collections::{BTreeMap, BTreeSet};
-
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{
-    Error, LitStr, Token, Type, bracketed,
+    Error, LitStr, Token,
     parse::{Parse, ParseStream},
 };
-use wasmparser::{BlockType, ExternalKind, FuncType, Operator, Parser, Payload, ValType};
+use wasmparser::{BlockType, FuncType, Operator, Parser, Payload, ValType};
 
 pub struct WasmWatInput {
     module: LitStr,
-    invoke: LitStr,
-    args: Vec<Type>,
 }
 
 impl Parse for WasmWatInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let mut module = None;
-        let mut invoke = None;
-        let mut args = None;
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
@@ -31,33 +25,8 @@ impl Parse for WasmWatInput {
                     }
                     module = Some(input.parse()?);
                 },
-                "invoke" => {
-                    if invoke.is_some() {
-                        return Err(Error::new(key.span(), "`invoke` specified more than once"));
-                    }
-                    invoke = Some(input.parse()?);
-                },
-                "args" => {
-                    if args.is_some() {
-                        return Err(Error::new(key.span(), "`args` specified more than once"));
-                    }
-
-                    let content;
-                    bracketed!(content in input);
-                    let mut parsed = Vec::new();
-                    while !content.is_empty() {
-                        parsed.push(content.parse()?);
-                        if content.peek(Token![,]) {
-                            content.parse::<Token![,]>()?;
-                        }
-                    }
-                    args = Some(parsed);
-                },
                 _ => {
-                    return Err(Error::new(
-                        key.span(),
-                        "expected one of `module`, `invoke`, or `args`",
-                    ));
+                    return Err(Error::new(key.span(), "expected only the `module` field"));
                 },
             }
 
@@ -69,9 +38,6 @@ impl Parse for WasmWatInput {
         Ok(Self {
             module: module
                 .ok_or_else(|| Error::new(Span::call_site(), "missing `module` field"))?,
-            invoke: invoke
-                .ok_or_else(|| Error::new(Span::call_site(), "missing `invoke` field"))?,
-            args: args.unwrap_or_default(),
         })
     }
 }
@@ -91,7 +57,6 @@ struct FunctionDef {
     sig: FuncSig,
     extra_locals: Vec<Val>,
     body: Vec<Instr>,
-    calls: Vec<u32>,
 }
 
 #[derive(Clone)]
@@ -120,7 +85,6 @@ enum Instr {
 
 struct ModuleDef {
     functions: Vec<FunctionDef>,
-    exports: BTreeMap<String, u32>,
     memory_pages: u32,
 }
 
@@ -133,58 +97,16 @@ pub fn expand(input: WasmWatInput) -> syn::Result<TokenStream> {
     let wasm = wat::parse_str(input.module.value())
         .map_err(|err| Error::new(input.module.span(), format!("WAT parse error: {err}")))?;
     let module = parse_module(&wasm)?;
+    let funcs = lower_functions(&module)?;
+    let memory = lower_memory(module.memory_pages)?;
 
-    let invoke_name = input.invoke.value();
-    let function_index = module.exports.get(&invoke_name).copied().ok_or_else(|| {
-        Error::new(input.invoke.span(), format!("unknown export `{invoke_name}`"))
-    })?;
-    let function = module
-        .functions
-        .get(usize::try_from(function_index).map_err(|_| {
-            Error::new(input.invoke.span(), "export function index does not fit in usize")
-        })?)
-        .ok_or_else(|| {
-            Error::new(
-                input.invoke.span(),
-                format!("export `{invoke_name}` does not resolve to a defined function"),
-            )
-        })?;
-
-    if function.sig.params.len() != input.args.len() {
-        return Err(Error::new(
-            input.invoke.span(),
-            format!(
-                "invoke args length mismatch: export `{invoke_name}` expects {} params but got {}",
-                function.sig.params.len(),
-                input.args.len()
-            ),
-        ));
-    }
-
-    let mut cache = BTreeMap::new();
-    let target = lower_function(function_index, &module, &mut cache)?;
-    let memory = lower_memory(module.memory_pages);
-    let stack = lower_invoke_stack(&input.args);
-    let empty = quote!(::typelude::wasm::TTerm);
-    let frames = quote!(
-        ::typelude::wasm::TArr<
-            ::typelude::wasm::ReturnFrame<#empty, #empty, #empty>,
-            ::typelude::wasm::TTerm
-        >
-    );
-    let program = lower_list(vec![quote!(::typelude::wasm::opcode::OpCall<#target>)]);
-    let initial_state = quote!(
-        ::typelude::wasm::WasmState<#stack, #empty, #memory, #frames, #empty, #program>
-    );
-
-    Ok(quote!(::typelude::Evaluate<::typelude::wasm::RunWasm<#initial_state>>))
+    Ok(quote!(::typelude::wasm::WasmModule<#funcs, #memory>))
 }
 
 fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
     let mut types = Vec::new();
     let mut function_type_indexes = Vec::new();
     let mut function_bodies = Vec::new();
-    let mut exports = BTreeMap::new();
     let mut memory_pages = 0_u32;
     let mut saw_memory = false;
 
@@ -262,10 +184,7 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
             },
             Payload::ExportSection(reader) => {
                 for export in reader {
-                    let export = export.map_err(parser_error)?;
-                    if export.kind == ExternalKind::Func {
-                        exports.insert(export.name.to_owned(), export.index);
-                    }
+                    export.map_err(parser_error)?;
                 }
             },
             Payload::CodeSectionStart {
@@ -315,15 +234,11 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
             sig,
             extra_locals: body.extra_locals,
             body: body.body,
-            calls: body.calls,
         });
     }
 
-    ensure_non_recursive(&functions)?;
-
     Ok(ModuleDef {
         functions,
-        exports,
         memory_pages,
     })
 }
@@ -331,7 +246,6 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
 struct ParsedFunction {
     extra_locals: Vec<Val>,
     body: Vec<Instr>,
-    calls: Vec<u32>,
 }
 
 fn parse_function_body(body: wasmparser::FunctionBody<'_>) -> syn::Result<ParsedFunction> {
@@ -346,7 +260,7 @@ fn parse_function_body(body: wasmparser::FunctionBody<'_>) -> syn::Result<Parsed
     }
 
     let mut operators = body.get_operators_reader().map_err(parser_error)?;
-    let (instructions, terminator, calls) = parse_instruction_sequence(&mut operators)?;
+    let (instructions, terminator) = parse_instruction_sequence(&mut operators)?;
     if !matches!(terminator, Terminator::End) {
         return Err(Error::new(
             Span::call_site(),
@@ -358,70 +272,63 @@ fn parse_function_body(body: wasmparser::FunctionBody<'_>) -> syn::Result<Parsed
     Ok(ParsedFunction {
         extra_locals,
         body: instructions,
-        calls,
     })
 }
 
 fn parse_instruction_sequence(
     operators: &mut wasmparser::OperatorsReader<'_>,
-) -> syn::Result<(Vec<Instr>, Terminator, Vec<u32>)> {
+) -> syn::Result<(Vec<Instr>, Terminator)> {
     let mut instructions = Vec::new();
-    let mut calls = Vec::new();
 
     loop {
         let operator = operators.read().map_err(parser_error)?;
         match operator {
-            Operator::End => return Ok((instructions, Terminator::End, calls)),
-            Operator::Else => return Ok((instructions, Terminator::Else, calls)),
+            Operator::End => return Ok((instructions, Terminator::End)),
+            Operator::Else => return Ok((instructions, Terminator::Else)),
             Operator::Block {
                 blockty,
             } => {
                 ensure_empty_block_type(blockty, "block")?;
-                let (body, terminator, nested_calls) = parse_instruction_sequence(operators)?;
+                let (body, terminator) = parse_instruction_sequence(operators)?;
                 if !matches!(terminator, Terminator::End) {
                     return Err(Error::new(
                         Span::call_site(),
                         "opcode else: unexpected else inside block",
                     ));
                 }
-                calls.extend(nested_calls);
                 instructions.push(Instr::Block(body));
             },
             Operator::Loop {
                 blockty,
             } => {
                 ensure_empty_block_type(blockty, "loop")?;
-                let (body, terminator, nested_calls) = parse_instruction_sequence(operators)?;
+                let (body, terminator) = parse_instruction_sequence(operators)?;
                 if !matches!(terminator, Terminator::End) {
                     return Err(Error::new(
                         Span::call_site(),
                         "opcode else: unexpected else inside loop",
                     ));
                 }
-                calls.extend(nested_calls);
                 instructions.push(Instr::Loop(body));
             },
             Operator::If {
                 blockty,
             } => {
                 ensure_empty_block_type(blockty, "if")?;
-                let (then_body, terminator, then_calls) = parse_instruction_sequence(operators)?;
-                calls.extend(then_calls);
-                let (else_body, else_calls) = match terminator {
-                    Terminator::End => (Vec::new(), Vec::new()),
+                let (then_body, terminator) = parse_instruction_sequence(operators)?;
+                let else_body = match terminator {
+                    Terminator::End => Vec::new(),
                     Terminator::Else => {
-                        let (else_body, else_terminator, else_calls) =
-                            parse_instruction_sequence(operators)?;
+                        let (else_body, else_terminator) = parse_instruction_sequence(operators)?;
                         if !matches!(else_terminator, Terminator::End) {
                             return Err(Error::new(
                                 Span::call_site(),
                                 "opcode else: malformed if/else structure",
                             ));
                         }
-                        (else_body, else_calls)
+                        else_body
                     },
                 };
-                calls.extend(else_calls);
                 instructions.push(Instr::If(then_body, else_body));
             },
             Operator::I32Const {
@@ -477,10 +384,7 @@ fn parse_instruction_sequence(
             },
             Operator::Call {
                 function_index,
-            } => {
-                calls.push(function_index);
-                instructions.push(Instr::Call(function_index));
-            },
+            } => instructions.push(Instr::Call(function_index)),
             Operator::Return => instructions.push(Instr::Return),
             Operator::I32Load {
                 memarg,
@@ -537,50 +441,30 @@ fn parse_instruction_sequence(
     }
 }
 
-fn lower_function(
-    index: u32,
-    module: &ModuleDef,
-    cache: &mut BTreeMap<u32, TokenStream>,
-) -> syn::Result<TokenStream> {
-    if let Some(tokens) = cache.get(&index) {
-        return Ok(tokens.clone());
+fn lower_functions(module: &ModuleDef) -> syn::Result<TokenStream> {
+    let mut funcs = Vec::with_capacity(module.functions.len());
+    for function in &module.functions {
+        funcs.push(lower_function(function)?);
     }
-
-    let function =
-        module
-            .functions
-            .get(usize::try_from(index).map_err(|_| {
-                Error::new(Span::call_site(), "function index does not fit in usize")
-            })?)
-            .ok_or_else(|| {
-                Error::new(Span::call_site(), format!("function index {index} out of bounds"))
-            })?;
-
-    let program = lower_instrs(&function.body, module, cache)?;
-    let param_count = uint_type(function.sig.params.len())?;
-    let local_inits = lower_local_inits(&function.extra_locals)?;
-    let tokens = quote!(::typelude::wasm::WasmFunc<#param_count, #local_inits, #program>);
-    cache.insert(index, tokens.clone());
-    Ok(tokens)
+    Ok(lower_list(funcs))
 }
 
-fn lower_instrs(
-    instructions: &[Instr],
-    module: &ModuleDef,
-    cache: &mut BTreeMap<u32, TokenStream>,
-) -> syn::Result<TokenStream> {
+fn lower_function(function: &FunctionDef) -> syn::Result<TokenStream> {
+    let program = lower_instrs(&function.body)?;
+    let param_count = uint_type(function.sig.params.len())?;
+    let local_inits = lower_local_inits(&function.extra_locals)?;
+    Ok(quote!(::typelude::wasm::WasmFunc<#param_count, #local_inits, #program>))
+}
+
+fn lower_instrs(instructions: &[Instr]) -> syn::Result<TokenStream> {
     let mut lowered = Vec::with_capacity(instructions.len());
     for instr in instructions {
-        lowered.push(lower_instr(instr, module, cache)?);
+        lowered.push(lower_instr(instr)?);
     }
     Ok(lower_list(lowered))
 }
 
-fn lower_instr(
-    instr: &Instr,
-    module: &ModuleDef,
-    cache: &mut BTreeMap<u32, TokenStream>,
-) -> syn::Result<TokenStream> {
+fn lower_instr(instr: &Instr) -> syn::Result<TokenStream> {
     Ok(match instr {
         Instr::I32Const(value) => {
             let value = uint_type(*value as usize)?;
@@ -602,11 +486,11 @@ fn lower_instr(
         Instr::I32Sub => quote!(::typelude::wasm::opcode::OpI32Sub),
         Instr::I32Eqz => quote!(::typelude::wasm::opcode::OpI32Eqz),
         Instr::Block(body) => {
-            let body = lower_instrs(body, module, cache)?;
+            let body = lower_instrs(body)?;
             quote!(::typelude::wasm::opcode::OpBlock<#body>)
         },
         Instr::Loop(body) => {
-            let body = lower_instrs(body, module, cache)?;
+            let body = lower_instrs(body)?;
             quote!(::typelude::wasm::opcode::OpLoop<#body>)
         },
         Instr::Br(depth) => {
@@ -618,14 +502,14 @@ fn lower_instr(
             quote!(::typelude::wasm::opcode::OpBrIf<#depth>)
         },
         Instr::If(then_body, else_body) => {
-            let then_body = lower_instrs(then_body, module, cache)?;
-            let else_body = lower_instrs(else_body, module, cache)?;
+            let then_body = lower_instrs(then_body)?;
+            let else_body = lower_instrs(else_body)?;
             quote!(::typelude::wasm::opcode::OpIf<#then_body, #else_body>)
         },
         Instr::Select => quote!(::typelude::wasm::opcode::OpSelect),
         Instr::Call(index) => {
-            let func = lower_function(*index, module, cache)?;
-            quote!(::typelude::wasm::opcode::OpCall<#func>)
+            let index = uint_type(*index as usize)?;
+            quote!(::typelude::wasm::opcode::OpCall<#index>)
         },
         Instr::Return => quote!(::typelude::wasm::opcode::OpReturn),
         Instr::I32Load => quote!(::typelude::wasm::opcode::OpI32Load),
@@ -654,15 +538,9 @@ fn lower_zero_init(val: Val) -> TokenStream {
     }
 }
 
-fn lower_memory(pages: u32) -> TokenStream {
-    let pages = uint_type(pages as usize).expect("memory pages should fit in typenum Const");
-    quote!(::typelude::wasm::WasmMemory<#pages, ::typelude::wasm::TTerm>)
-}
-
-fn lower_invoke_stack(args: &[Type]) -> TokenStream {
-    let items =
-        args.iter().rev().map(|arg| quote!(::typelude::wasm::WasmI32<#arg>)).collect::<Vec<_>>();
-    lower_list(items)
+fn lower_memory(pages: u32) -> syn::Result<TokenStream> {
+    let pages = uint_type(pages as usize)?;
+    Ok(quote!(::typelude::wasm::WasmMemory<#pages, ::typelude::wasm::TTerm>))
 }
 
 fn lower_list(items: Vec<TokenStream>) -> TokenStream {
@@ -725,49 +603,6 @@ fn ensure_memarg(memarg: wasmparser::MemArg, opcode: &str) -> syn::Result<()> {
             Span::call_site(),
             format!("opcode {opcode}: offset {} is not supported", memarg.offset),
         ));
-    }
-    Ok(())
-}
-
-fn ensure_non_recursive(functions: &[FunctionDef]) -> syn::Result<()> {
-    fn visit(
-        index: usize,
-        functions: &[FunctionDef],
-        visiting: &mut BTreeSet<usize>,
-        visited: &mut BTreeSet<usize>,
-    ) -> syn::Result<()> {
-        if visited.contains(&index) {
-            return Ok(());
-        }
-        if !visiting.insert(index) {
-            return Err(Error::new(
-                Span::call_site(),
-                format!("recursive function call cycle detected at function index {index}"),
-            ));
-        }
-
-        for &callee in &functions[index].calls {
-            let callee = usize::try_from(callee).map_err(|_| {
-                Error::new(Span::call_site(), "callee index does not fit in usize")
-            })?;
-            if callee >= functions.len() {
-                return Err(Error::new(
-                    Span::call_site(),
-                    format!("call target function index {callee} is out of bounds"),
-                ));
-            }
-            visit(callee, functions, visiting, visited)?;
-        }
-
-        visiting.remove(&index);
-        visited.insert(index);
-        Ok(())
-    }
-
-    let mut visiting = BTreeSet::new();
-    let mut visited = BTreeSet::new();
-    for index in 0..functions.len() {
-        visit(index, functions, &mut visiting, &mut visited)?;
     }
     Ok(())
 }

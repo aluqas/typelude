@@ -1,12 +1,16 @@
 #![recursion_limit = "65536"]
 
 use static_assertions::assert_type_eq_all;
-use typelude::wasm::{StateBranches, StateStack, TArr, TTerm, WasmI32};
-use typenum::{U0, U1, U2, U3, U5};
+use typelude::wasm::{InvokeFunc, StateBranches, StateStack, TArr, TTerm, WasmI32};
+use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U8};
+
+type NoArgs = TTerm;
+type OneArg<A> = TArr<WasmI32<A>, TTerm>;
+type TwoArgs<A, B> = TArr<WasmI32<A>, TArr<WasmI32<B>, TTerm>>;
 
 #[test]
 fn wasm_wat_invokes_exported_add() {
-    type Final = typelude::wasm_wat! {
+    type Module = typelude::wasm_wat! {
         module: r#"
             (module
               (func (export "main") (param i32 i32) (result i32)
@@ -14,9 +18,8 @@ fn wasm_wat_invokes_exported_add() {
                 local.get 1
                 i32.add))
         "#,
-        invoke: "main",
-        args: [U2, U3],
     };
+    type Final = InvokeFunc<Module, U0, TwoArgs<U2, U3>>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U5>, TTerm>);
     assert_type_eq_all!(<Final as StateBranches>::Output, TTerm);
@@ -24,7 +27,7 @@ fn wasm_wat_invokes_exported_add() {
 
 #[test]
 fn wasm_wat_supports_internal_calls() {
-    type Final = typelude::wasm_wat! {
+    type Module = typelude::wasm_wat! {
         module: r#"
             (module
               (func $add2 (param i32) (result i32)
@@ -35,16 +38,15 @@ fn wasm_wat_supports_internal_calls() {
                 local.get 0
                 call $add2))
         "#,
-        invoke: "main",
-        args: [U3],
     };
+    type Final = InvokeFunc<Module, U1, OneArg<U3>>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U5>, TTerm>);
 }
 
 #[test]
 fn wasm_wat_handles_loop_and_br_if() {
-    type Final = typelude::wasm_wat! {
+    type Module = typelude::wasm_wat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -62,16 +64,15 @@ fn wasm_wat_handles_loop_and_br_if() {
                 end
                 local.get 0))
         "#,
-        invoke: "main",
-        args: [U3],
     };
+    type Final = InvokeFunc<Module, U0, OneArg<U3>>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U0>, TTerm>);
 }
 
 #[test]
 fn wasm_wat_supports_if_without_block_results() {
-    type Final = typelude::wasm_wat! {
+    type Module = typelude::wasm_wat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -88,16 +89,15 @@ fn wasm_wat_supports_if_without_block_results() {
                 end
                 local.get 1))
         "#,
-        invoke: "main",
-        args: [U0],
     };
+    type Final = InvokeFunc<Module, U0, OneArg<U0>>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U3>, TTerm>);
 }
 
 #[test]
 fn wasm_wat_supports_select() {
-    type Final = typelude::wasm_wat! {
+    type Module = typelude::wasm_wat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -106,16 +106,15 @@ fn wasm_wat_supports_select() {
                 local.get 0
                 select))
         "#,
-        invoke: "main",
-        args: [U1],
     };
+    type Final = InvokeFunc<Module, U0, OneArg<U1>>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U2>, TTerm>);
 }
 
 #[test]
 fn wasm_wat_supports_memory_ops_and_size() {
-    type Stored8 = typelude::wasm_wat! {
+    type Stored8Module = typelude::wasm_wat! {
         module: r#"
             (module
               (memory 1)
@@ -126,10 +125,10 @@ fn wasm_wat_supports_memory_ops_and_size() {
                 i32.const 0
                 i32.load8_u))
         "#,
-        invoke: "main",
     };
+    type Stored8 = InvokeFunc<Stored8Module, U0, NoArgs>;
 
-    type Stored = typelude::wasm_wat! {
+    type StoredModule = typelude::wasm_wat! {
         module: r#"
             (module
               (memory 1)
@@ -140,22 +139,22 @@ fn wasm_wat_supports_memory_ops_and_size() {
                 i32.const 1
                 i32.load8_u))
         "#,
-        invoke: "main",
     };
+    type Stored = InvokeFunc<StoredModule, U0, NoArgs>;
 
-    type SizedState = typelude::wasm_wat! {
+    type SizedModule = typelude::wasm_wat! {
         module: r#"
             (module
               (memory 2)
               (func (export "main") (result i32)
                 memory.size))
         "#,
-        invoke: "main",
     };
+    type SizedState = InvokeFunc<SizedModule, U0, NoArgs>;
 
     assert_type_eq_all!(
         <Stored8 as StateStack>::Output,
-        TArr<WasmI32<<typenum::Const<255> as typenum::ToUInt>::Output>, TTerm>
+        TArr<WasmI32<<Const<255> as ToUInt>::Output>, TTerm>
     );
     assert_type_eq_all!(<Stored as StateStack>::Output, TArr<WasmI32<U1>, TTerm>);
     assert_type_eq_all!(<SizedState as StateStack>::Output, TArr<WasmI32<U2>, TTerm>);
@@ -163,15 +162,54 @@ fn wasm_wat_supports_memory_ops_and_size() {
 
 #[test]
 fn wasm_wat_zero_initializes_extra_locals() {
-    type Final = typelude::wasm_wat! {
+    type Module = typelude::wasm_wat! {
         module: r#"
             (module
               (func (export "main") (result i32)
                 (local i32)
                 local.get 0))
         "#,
-        invoke: "main",
     };
+    type Final = InvokeFunc<Module, U0, NoArgs>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U0>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_supports_recursive_fibonacci() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (func (export "main") (param i32) (result i32)
+                local.get 0
+                call $fib)
+              (func $fib (param i32) (result i32)
+                local.get 0
+                i32.eqz
+                if
+                  i32.const 0
+                  return
+                end
+                local.get 0
+                i32.const 1
+                i32.sub
+                i32.eqz
+                if
+                  i32.const 1
+                  return
+                end
+                local.get 0
+                i32.const 1
+                i32.sub
+                call $fib
+                local.get 0
+                i32.const 2
+                i32.sub
+                call $fib
+                i32.add))
+        "#,
+    };
+    type Final = InvokeFunc<Module, U0, OneArg<<Const<6> as ToUInt>::Output>>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U8>, TTerm>);
 }

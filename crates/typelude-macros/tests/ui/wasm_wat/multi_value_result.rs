@@ -18,7 +18,6 @@ type _Bad = wasm_wat! {
             i32.const 1
             i32.const 2))
     "#,
-    invoke: "main",
 };
 
 fn main() {}

@@ -8,5 +8,5 @@ use typelude_wasm::RunWasm;
 pub type Run<Initial> = Evaluate<RunWasm<Initial>>;
 
 pub use typelude_wasm::{
-    ProgramRun, StateBranches, StateLocals, StateMemory, StateProgram, StateStack,
+    ModuleProgramRun, StateBranches, StateLocals, StateMemory, StateProgram, StateStack,
 };

@@ -3,12 +3,12 @@ use core::marker::PhantomData;
 use typelude_std::core::Value;
 
 #[derive(Debug, Default)]
-pub struct WasmState<Stack, Locals, Memory, Frames, Branches, Program>(
-    PhantomData<(Stack, Locals, Memory, Frames, Branches, Program)>,
+pub struct WasmState<Module, Stack, Locals, Memory, Frames, Branches, Program>(
+    PhantomData<(Module, Stack, Locals, Memory, Frames, Branches, Program)>,
 );
 
-impl<Stack, Locals, Memory, Frames, Branches, Program> Value
-    for WasmState<Stack, Locals, Memory, Frames, Branches, Program>
+impl<Module, Stack, Locals, Memory, Frames, Branches, Program> Value
+    for WasmState<Module, Stack, Locals, Memory, Frames, Branches, Program>
 {
 }
 

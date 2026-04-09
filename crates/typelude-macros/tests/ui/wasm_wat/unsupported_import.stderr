@@ -7,8 +7,7 @@ error: unsupported section: import
 16 | |         (module
 17 | |           (import "env" "x" (func)))
 18 | |     "#,
-19 | |     invoke: "main",
-20 | | };
+19 | | };
    | |_^
    |
    = note: this error originates in the macro `wasm_wat` (in Nightly builds, run with -Z macro-backtrace for more info)

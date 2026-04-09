@@ -7,8 +7,8 @@ error: unsupported type: multi-value results are not supported
 16 | |         (module
 17 | |           (func (export "main") (result i32 i32)
 ...  |
-21 | |     invoke: "main",
-22 | | };
+20 | |     "#,
+21 | | };
    | |_^
    |
    = note: this error originates in the macro `wasm_wat` (in Nightly builds, run with -Z macro-backtrace for more info)

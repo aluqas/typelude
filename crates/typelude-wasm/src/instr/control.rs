@@ -7,7 +7,7 @@ use crate::{
     func::WasmFunc,
     helpers::{
         branch_stack::{BranchJump, ContinueIfZero, ResolveBranch},
-        call::{BindLocals, PopArgs},
+        call::{BindLocals, ModuleFuncLookup, PopArgs},
     },
     opcode::{
         OpBlock, OpBr, OpBrIf, OpCall, OpEndBlock, OpEndFunc, OpEndLoop, OpIf, OpLoop, OpReturn,
@@ -50,22 +50,20 @@ impl<TrueValue, FalseValue> SelectResult<TrueValue, FalseValue> for B1 {
     type Output = WasmI32<FalseValue>;
 }
 
-impl<ParamCount, LocalInits, FuncProgram, Stack, Locals, Memory, Frames, Branches, Rest> Eval
-    for Step<
-        WasmState<
-            Stack,
-            Locals,
-            Memory,
-            Frames,
-            Branches,
-            TArr<OpCall<WasmFunc<ParamCount, LocalInits, FuncProgram>>, Rest>,
-        >,
-    >
+#[doc(hidden)]
+pub trait InvokeCall<Module, Stack, Locals, Memory, Frames, Branches, Rest> {
+    type Output;
+}
+
+impl<Module, ParamCount, LocalInits, FuncProgram, Stack, Locals, Memory, Frames, Branches, Rest>
+    InvokeCall<Module, Stack, Locals, Memory, Frames, Branches, Rest>
+    for WasmFunc<ParamCount, LocalInits, FuncProgram>
 where
     Stack: PopArgs<ParamCount> + BindLocals<ParamCount, LocalInits>,
     FuncProgram: Concat<TArr<OpEndFunc, TTerm>>,
 {
     type Output = WasmState<
+        Module,
         <Stack as PopArgs<ParamCount>>::RemainingStack,
         <Stack as BindLocals<ParamCount, LocalInits>>::Output,
         Memory,
@@ -75,10 +73,41 @@ where
     >;
 }
 
-impl<Stack, Locals, Memory, Branches, CallerLocals, CallerBranches, Continuation, RestFrames, Rest>
-    Eval
+impl<Module, FuncIdx, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+    for Step<
+        WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<OpCall<FuncIdx>, Rest>>,
+    >
+where
+    Module: ModuleFuncLookup<FuncIdx>,
+    <Module as ModuleFuncLookup<FuncIdx>>::Output:
+        InvokeCall<Module, Stack, Locals, Memory, Frames, Branches, Rest>,
+{
+    type Output = <<Module as ModuleFuncLookup<FuncIdx>>::Output as InvokeCall<
+        Module,
+        Stack,
+        Locals,
+        Memory,
+        Frames,
+        Branches,
+        Rest,
+    >>::Output;
+}
+
+impl<
+    Module,
+    Stack,
+    Locals,
+    Memory,
+    Branches,
+    CallerLocals,
+    CallerBranches,
+    Continuation,
+    RestFrames,
+    Rest,
+> Eval
     for Step<
         WasmState<
+            Module,
             Stack,
             Locals,
             Memory,
@@ -88,13 +117,25 @@ impl<Stack, Locals, Memory, Branches, CallerLocals, CallerBranches, Continuation
         >,
     >
 {
-    type Output = WasmState<Stack, CallerLocals, Memory, RestFrames, CallerBranches, Continuation>;
+    type Output =
+        WasmState<Module, Stack, CallerLocals, Memory, RestFrames, CallerBranches, Continuation>;
 }
 
-impl<Stack, Locals, Memory, Branches, CallerLocals, CallerBranches, Continuation, RestFrames, Rest>
-    Eval
+impl<
+    Module,
+    Stack,
+    Locals,
+    Memory,
+    Branches,
+    CallerLocals,
+    CallerBranches,
+    Continuation,
+    RestFrames,
+    Rest,
+> Eval
     for Step<
         WasmState<
+            Module,
             Stack,
             Locals,
             Memory,
@@ -104,15 +145,17 @@ impl<Stack, Locals, Memory, Branches, CallerLocals, CallerBranches, Continuation
         >,
     >
 {
-    type Output = WasmState<Stack, CallerLocals, Memory, RestFrames, CallerBranches, Continuation>;
+    type Output =
+        WasmState<Module, Stack, CallerLocals, Memory, RestFrames, CallerBranches, Continuation>;
 }
 
-impl<Body, Stack, Locals, Memory, Frames, Branches, Rest> Eval
-    for Step<WasmState<Stack, Locals, Memory, Frames, Branches, TArr<OpBlock<Body>, Rest>>>
+impl<Module, Body, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+    for Step<WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<OpBlock<Body>, Rest>>>
 where
     Body: Concat<TArr<OpEndBlock, Rest>>,
 {
     type Output = WasmState<
+        Module,
         Stack,
         Locals,
         Memory,
@@ -122,12 +165,13 @@ where
     >;
 }
 
-impl<Body, Stack, Locals, Memory, Frames, Branches, Rest> Eval
-    for Step<WasmState<Stack, Locals, Memory, Frames, Branches, TArr<OpLoop<Body>, Rest>>>
+impl<Module, Body, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+    for Step<WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<OpLoop<Body>, Rest>>>
 where
     Body: Concat<TArr<OpEndLoop, Rest>>,
 {
     type Output = WasmState<
+        Module,
         Stack,
         Locals,
         Memory,
@@ -137,9 +181,10 @@ where
     >;
 }
 
-impl<Stack, Locals, Memory, Frames, RestProgram, RestBranches> Eval
+impl<Module, Stack, Locals, Memory, Frames, RestProgram, RestBranches> Eval
     for Step<
         WasmState<
+            Module,
             Stack,
             Locals,
             Memory,
@@ -149,12 +194,13 @@ impl<Stack, Locals, Memory, Frames, RestProgram, RestBranches> Eval
         >,
     >
 {
-    type Output = WasmState<Stack, Locals, Memory, Frames, RestBranches, RestProgram>;
+    type Output = WasmState<Module, Stack, Locals, Memory, Frames, RestBranches, RestProgram>;
 }
 
-impl<Stack, Locals, Memory, Frames, LoopProgram, RestProgram, RestBranches> Eval
+impl<Module, Stack, Locals, Memory, Frames, LoopProgram, RestProgram, RestBranches> Eval
     for Step<
         WasmState<
+            Module,
             Stack,
             Locals,
             Memory,
@@ -164,16 +210,17 @@ impl<Stack, Locals, Memory, Frames, LoopProgram, RestProgram, RestBranches> Eval
         >,
     >
 {
-    type Output = WasmState<Stack, Locals, Memory, Frames, RestBranches, RestProgram>;
+    type Output = WasmState<Module, Stack, Locals, Memory, Frames, RestBranches, RestProgram>;
 }
 
-impl<Depth, Stack, Locals, Memory, Frames, Branches, Rest> Eval
-    for Step<WasmState<Stack, Locals, Memory, Frames, Branches, TArr<OpBr<Depth>, Rest>>>
+impl<Module, Depth, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+    for Step<WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<OpBr<Depth>, Rest>>>
 where
     Branches: ResolveBranch<Depth>,
-    <Branches as ResolveBranch<Depth>>::Output: BranchJump<Stack, Locals, Memory, Frames>,
+    <Branches as ResolveBranch<Depth>>::Output: BranchJump<Module, Stack, Locals, Memory, Frames>,
 {
     type Output = <<Branches as ResolveBranch<Depth>>::Output as BranchJump<
+        Module,
         Stack,
         Locals,
         Memory,
@@ -181,9 +228,10 @@ where
     >>::Output;
 }
 
-impl<Depth, Cond, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Depth, Cond, Stack, Locals, Memory, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<Cond>, Stack>,
             Locals,
             Memory,
@@ -195,9 +243,10 @@ impl<Depth, Cond, Stack, Locals, Memory, Frames, Branches, Rest> Eval
 where
     Cond: Eq<U0>,
     Branches: ResolveBranch<Depth>,
-    <Branches as ResolveBranch<Depth>>::Output: BranchJump<Stack, Locals, Memory, Frames>,
+    <Branches as ResolveBranch<Depth>>::Output: BranchJump<Module, Stack, Locals, Memory, Frames>,
     <Cond as Eq<U0>>::Output: ContinueIfZero<
             <Branches as ResolveBranch<Depth>>::Output,
+            Module,
             Stack,
             Locals,
             Memory,
@@ -208,6 +257,7 @@ where
 {
     type Output = <<Cond as Eq<U0>>::Output as ContinueIfZero<
         <Branches as ResolveBranch<Depth>>::Output,
+        Module,
         Stack,
         Locals,
         Memory,
@@ -217,9 +267,10 @@ where
     >>::Output;
 }
 
-impl<Then, Else, Cond, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Then, Else, Cond, Stack, Locals, Memory, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<Cond>, Stack>,
             Locals,
             Memory,
@@ -233,6 +284,7 @@ where
     <Cond as Eq<U0>>::Output: IfProgram<Then, Else, Rest>,
 {
     type Output = WasmState<
+        Module,
         Stack,
         Locals,
         Memory,
@@ -242,9 +294,10 @@ where
     >;
 }
 
-impl<Cond, TrueValue, FalseValue, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Cond, TrueValue, FalseValue, Stack, Locals, Memory, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<Cond>, TArr<WasmI32<FalseValue>, TArr<WasmI32<TrueValue>, Stack>>>,
             Locals,
             Memory,
@@ -258,6 +311,7 @@ where
     <Cond as Eq<U0>>::Output: SelectResult<TrueValue, FalseValue>,
 {
     type Output = WasmState<
+        Module,
         TArr<<<Cond as Eq<U0>>::Output as SelectResult<TrueValue, FalseValue>>::Output, Stack>,
         Locals,
         Memory,

@@ -6,9 +6,9 @@ error: unsupported opcode: nop
 15 | |     module: r#"
 16 | |         (module
 17 | |           (func (export "main")
-...  |
-20 | |     invoke: "main",
-21 | | };
+18 | |             nop))
+19 | |     "#,
+20 | | };
    | |_^
    |
    = note: this error originates in the macro `wasm_wat` (in Nightly builds, run with -Z macro-backtrace for more info)

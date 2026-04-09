@@ -11,9 +11,10 @@ use crate::{
     value::WasmI32,
 };
 
-impl<Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
+impl<Module, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<Addr>, Stack>,
             Locals,
             WasmMemory<Pages, Cells>,
@@ -26,6 +27,7 @@ where
     WasmMemory<Pages, Cells>: MemoryReadByte<Addr>,
 {
     type Output = WasmState<
+        Module,
         TArr<WasmI32<<WasmMemory<Pages, Cells> as MemoryReadByte<Addr>>::Output>, Stack>,
         Locals,
         WasmMemory<Pages, Cells>,
@@ -35,9 +37,10 @@ where
     >;
 }
 
-impl<ValueT, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
+impl<Module, ValueT, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<ValueT>, TArr<WasmI32<Addr>, Stack>>,
             Locals,
             WasmMemory<Pages, Cells>,
@@ -53,6 +56,7 @@ where
         MemoryWriteByte<Addr, <<ValueT as EncodeI32>::Output as LowByte>::Output>,
 {
     type Output = WasmState<
+        Module,
         Stack,
         Locals,
         <WasmMemory<Pages, Cells> as MemoryWriteByte<
@@ -65,9 +69,10 @@ where
     >;
 }
 
-impl<Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
+impl<Module, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<Addr>, Stack>,
             Locals,
             WasmMemory<Pages, Cells>,
@@ -80,6 +85,7 @@ where
     WasmMemory<Pages, Cells>: MemoryReadI32<Addr>,
 {
     type Output = WasmState<
+        Module,
         TArr<WasmI32<<WasmMemory<Pages, Cells> as MemoryReadI32<Addr>>::Output>, Stack>,
         Locals,
         WasmMemory<Pages, Cells>,
@@ -89,9 +95,10 @@ where
     >;
 }
 
-impl<ValueT, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
+impl<Module, ValueT, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             TArr<WasmI32<ValueT>, TArr<WasmI32<Addr>, Stack>>,
             Locals,
             WasmMemory<Pages, Cells>,
@@ -104,6 +111,7 @@ where
     WasmMemory<Pages, Cells>: MemoryWriteI32<Addr, ValueT>,
 {
     type Output = WasmState<
+        Module,
         Stack,
         Locals,
         <WasmMemory<Pages, Cells> as MemoryWriteI32<Addr, ValueT>>::Output,
@@ -113,9 +121,10 @@ where
     >;
 }
 
-impl<Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
+impl<Module, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
+            Module,
             Stack,
             Locals,
             WasmMemory<Pages, Cells>,
@@ -126,6 +135,7 @@ impl<Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
     >
 {
     type Output = WasmState<
+        Module,
         TArr<WasmI32<Pages>, Stack>,
         Locals,
         WasmMemory<Pages, Cells>,

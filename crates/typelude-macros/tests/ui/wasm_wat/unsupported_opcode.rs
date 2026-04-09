@@ -17,7 +17,6 @@ type _Bad = wasm_wat! {
           (func (export "main")
             nop))
     "#,
-    invoke: "main",
 };
 
 fn main() {}
