@@ -6,73 +6,132 @@ use typenum::U0;
 
 use crate::{
     frame::ReturnFrame,
-    module::WasmModule,
+    helpers::{
+        export::ResolveExportFunc,
+        i32::U4294967295,
+        instance::Instantiate,
+    },
+    module::{
+        NoLimit, NoStart, StartFunc, WasmFuncSpace, WasmHostEnv, WasmInstance, WasmMemoryDecl,
+        WasmModule, WasmResolvedModule,
+    },
     opcode::OpCall,
-    state::{WasmMemory, WasmState},
+    state::{WasmMemory, WasmState, WasmStore},
 };
 
 #[doc(hidden)]
 pub struct Step<State>(PhantomData<State>);
 
 #[doc(hidden)]
-pub struct BuildProgramState<Module, Program>(PhantomData<(Module, Program)>);
+pub struct BuildProgramState<Instance, Program>(PhantomData<(Instance, Program)>);
 
 #[doc(hidden)]
-pub struct BuildInvokeState<Module, FuncIdx, Args>(PhantomData<(Module, FuncIdx, Args)>);
+pub struct BuildInvokeState<Instance, FuncIdx, Args>(PhantomData<(Instance, FuncIdx, Args)>);
 
+#[doc(hidden)]
+pub struct BuildInvokeExportState<Instance, Name, Args>(PhantomData<(Instance, Name, Args)>);
+
+pub struct InstantiateModule<Module, Env>(PhantomData<(Module, Env)>);
 pub struct RunWasm<State>(PhantomData<State>);
 
-#[doc(hidden)]
-pub type EmptyModule = WasmModule<TTerm, WasmMemory<U0, TTerm>>;
+pub type EmptyHostEnv = WasmHostEnv<TTerm, TTerm, TTerm, TTerm>;
+pub type EmptyModule =
+    WasmModule<TTerm, WasmFuncSpace<TTerm, TTerm>, WasmMemoryDecl<U0, NoLimit, TTerm>, TTerm, TTerm, TTerm, NoStart>;
 
-pub type EmptyState =
-    WasmState<EmptyModule, TTerm, TTerm, WasmMemory<U0, TTerm>, TTerm, TTerm, TTerm>;
+pub type EmptyState = WasmState<
+    WasmResolvedModule<TTerm, TTerm, TTerm>,
+    WasmStore<WasmMemory<U0, U4294967295, TTerm>, TTerm, TTerm>,
+    TTerm,
+    TTerm,
+    TTerm,
+    TTerm,
+    TTerm,
+>;
 pub type Run<State> = Evaluate<RunWasm<State>>;
-pub type ModuleProgramRun<Module, Program> = Run<Evaluate<BuildProgramState<Module, Program>>>;
-pub type InvokeFunc<Module, FuncIdx, Args> =
-    Run<Evaluate<BuildInvokeState<Module, FuncIdx, Args>>>;
+pub type ModuleProgramRun<Module, Program> =
+    Run<Evaluate<BuildProgramState<Evaluate<InstantiateModule<Module, EmptyHostEnv>>, Program>>>;
+pub type InvokeFunc<Module, FuncIdx, Args> = InvokeFuncWithEnv<Module, EmptyHostEnv, FuncIdx, Args>;
+pub type InvokeFuncWithEnv<Module, Env, FuncIdx, Args> =
+    Run<Evaluate<BuildInvokeState<Evaluate<InstantiateModule<Module, Env>>, FuncIdx, Args>>>;
+pub type InvokeExport<Module, Name, Args> = InvokeExportWithEnv<Module, EmptyHostEnv, Name, Args>;
+pub type InvokeExportWithEnv<Module, Env, Name, Args> =
+    Run<Evaluate<BuildInvokeExportState<Evaluate<InstantiateModule<Module, Env>>, Name, Args>>>;
 
-impl<Funcs, InitialMemory, Program> Eval
-    for BuildProgramState<WasmModule<Funcs, InitialMemory>, Program>
+impl<Module, Env> Eval for InstantiateModule<Module, Env>
+where
+    Module: Instantiate<Env>,
 {
-    type Output = WasmState<
-        WasmModule<Funcs, InitialMemory>,
-        TTerm,
-        TTerm,
-        InitialMemory,
-        TTerm,
-        TTerm,
-        Program,
-    >;
+    type Output = <Module as Instantiate<Env>>::Output;
 }
 
-impl<Funcs, InitialMemory, FuncIdx, Args> Eval
-    for BuildInvokeState<WasmModule<Funcs, InitialMemory>, FuncIdx, Args>
+impl<Module, Store, Program> Eval for BuildProgramState<WasmInstance<Module, Store, NoStart>, Program> {
+    type Output = WasmState<Module, Store, TTerm, TTerm, TTerm, TTerm, Program>;
+}
+
+impl<Module, Store, StartIdx, Program> Eval
+    for BuildProgramState<WasmInstance<Module, Store, StartFunc<StartIdx>>, Program>
+{
+    type Output =
+        WasmState<Module, Store, TTerm, TTerm, TTerm, TTerm, TArr<OpCall<StartIdx>, Program>>;
+}
+
+impl<Module, Store, FuncIdx, Args> Eval
+    for BuildInvokeState<WasmInstance<Module, Store, NoStart>, FuncIdx, Args>
 {
     type Output = WasmState<
-        WasmModule<Funcs, InitialMemory>,
+        Module,
+        Store,
         Args,
         TTerm,
-        InitialMemory,
         TArr<ReturnFrame<TTerm, TTerm, TTerm>, TTerm>,
         TTerm,
         TArr<OpCall<FuncIdx>, TTerm>,
     >;
 }
 
-impl<Module, Stack, Locals, Memory, Frames, Branches> Eval
-    for RunWasm<WasmState<Module, Stack, Locals, Memory, Frames, Branches, TTerm>>
+impl<Module, Store, StartIdx, FuncIdx, Args> Eval
+    for BuildInvokeState<WasmInstance<Module, Store, StartFunc<StartIdx>>, FuncIdx, Args>
 {
-    type Output = WasmState<Module, Stack, Locals, Memory, Frames, Branches, TTerm>;
+    type Output = WasmState<
+        Module,
+        Store,
+        Args,
+        TTerm,
+        TArr<ReturnFrame<TTerm, TTerm, TTerm>, TTerm>,
+        TTerm,
+        TArr<OpCall<StartIdx>, TArr<OpCall<FuncIdx>, TTerm>>,
+    >;
 }
 
-impl<Module, Stack, Locals, Memory, Frames, Branches, Instr, Rest> Eval
-    for RunWasm<WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<Instr, Rest>>>
+impl<Module, Store, Name, Args, Start> Eval
+    for BuildInvokeExportState<WasmInstance<Module, Store, Start>, Name, Args>
 where
-    Step<WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<Instr, Rest>>>: Eval,
+    Module: ResolveExportFunc<Name>,
+    BuildInvokeState<WasmInstance<Module, Store, Start>, <Module as ResolveExportFunc<Name>>::Output, Args>:
+        Eval,
+{
+    type Output = Evaluate<
+        BuildInvokeState<
+            WasmInstance<Module, Store, Start>,
+            <Module as ResolveExportFunc<Name>>::Output,
+            Args,
+        >,
+    >;
+}
+
+impl<Module, Store, Stack, Locals, Frames, Branches> Eval
+    for RunWasm<WasmState<Module, Store, Stack, Locals, Frames, Branches, TTerm>>
+{
+    type Output = WasmState<Module, Store, Stack, Locals, Frames, Branches, TTerm>;
+}
+
+impl<Module, Store, Stack, Locals, Frames, Branches, Instr, Rest> Eval
+    for RunWasm<WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>>
+where
+    Step<WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>>: Eval,
     RunWasm<
         Evaluate<
-            Step<WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<Instr, Rest>>>,
+            Step<WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>>,
         >,
     >: Eval,
 {
@@ -80,11 +139,23 @@ where
         RunWasm<
             Evaluate<
                 Step<
-                    WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<Instr, Rest>>,
+                    WasmState<
+                        Module,
+                        Store,
+                        Stack,
+                        Locals,
+                        Frames,
+                        Branches,
+                        TArr<Instr, Rest>,
+                    >,
                 >,
             >,
         >,
     >;
+}
+
+pub trait StateStore {
+    type Output;
 }
 
 pub trait StateStack {
@@ -103,36 +174,62 @@ pub trait StateMemory {
     type Output;
 }
 
+pub trait StateTables {
+    type Output;
+}
+
+pub trait StateGlobals {
+    type Output;
+}
+
 pub trait StateBranches {
     type Output;
 }
 
-impl<Module, Stack, Locals, Memory, Frames, Branches, Program> StateStack
-    for WasmState<Module, Stack, Locals, Memory, Frames, Branches, Program>
+impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateStore
+    for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
+{
+    type Output = Store;
+}
+
+impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateStack
+    for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
 {
     type Output = Stack;
 }
 
-impl<Module, Stack, Locals, Memory, Frames, Branches, Program> StateLocals
-    for WasmState<Module, Stack, Locals, Memory, Frames, Branches, Program>
+impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateLocals
+    for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
 {
     type Output = Locals;
 }
 
-impl<Module, Stack, Locals, Memory, Frames, Branches, Program> StateProgram
-    for WasmState<Module, Stack, Locals, Memory, Frames, Branches, Program>
+impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateProgram
+    for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
 {
     type Output = Program;
 }
 
-impl<Module, Stack, Locals, Memory, Frames, Branches, Program> StateMemory
-    for WasmState<Module, Stack, Locals, Memory, Frames, Branches, Program>
+impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> StateMemory
+    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
 {
     type Output = Memory;
 }
 
-impl<Module, Stack, Locals, Memory, Frames, Branches, Program> StateBranches
-    for WasmState<Module, Stack, Locals, Memory, Frames, Branches, Program>
+impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> StateTables
+    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+{
+    type Output = Tables;
+}
+
+impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> StateGlobals
+    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+{
+    type Output = Globals;
+}
+
+impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateBranches
+    for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
 {
     type Output = Branches;
 }

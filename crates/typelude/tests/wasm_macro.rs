@@ -2,7 +2,7 @@
 
 use static_assertions::assert_type_eq_all;
 use typelude::wasm::{InvokeFunc, StateBranches, StateStack, TArr, TTerm, WasmI32};
-use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U8};
+use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, U42};
 
 type NoArgs = TTerm;
 type OneArg<A> = TArr<WasmI32<A>, TTerm>;
@@ -212,4 +212,124 @@ fn wasm_wat_supports_recursive_fibonacci() {
     type Final = InvokeFunc<Module, U0, OneArg<<Const<6> as ToUInt>::Output>>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U8>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_supports_global_get_and_set() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (global $g (mut i32) (i32.const 2))
+              (func (export "main") (result i32)
+                global.get $g
+                i32.const 3
+                i32.add
+                global.set $g
+                global.get $g))
+        "#,
+    };
+    type Final = InvokeFunc<Module, U0, NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U5>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_supports_nonzero_offsets_and_memory_grow() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (memory 1 2)
+              (func (export "main") (result i32)
+                i32.const 0
+                i32.const 258
+                i32.store offset=4
+                i32.const 1
+                memory.grow
+                drop
+                i32.const 5
+                i32.load8_u))
+        "#,
+    };
+    type Final = InvokeFunc<Module, U0, NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U1>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_supports_active_data_segments() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (memory 1)
+              (data (i32.const 0) "\2a")
+              (func (export "main") (result i32)
+                i32.const 0
+                i32.load8_u))
+        "#,
+    };
+    type Final = InvokeFunc<Module, U0, NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U42>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_executes_start_before_invocation() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (global $g (mut i32) (i32.const 0))
+              (func $start
+                i32.const 7
+                global.set $g)
+              (start $start)
+              (func (export "main") (result i32)
+                global.get $g))
+        "#,
+    };
+    type Final = InvokeFunc<Module, U1, NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U7>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_supports_call_indirect_on_default_table() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (type $ret (func (result i32)))
+              (table 2 funcref)
+              (elem (i32.const 0) $one $two)
+              (func $one (type $ret) (result i32)
+                i32.const 1)
+              (func $two (type $ret) (result i32)
+                i32.const 2)
+              (func (export "main") (result i32)
+                i32.const 1
+                call_indirect (type $ret)))
+        "#,
+    };
+    type Final = InvokeFunc<Module, U2, NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U2>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_supports_explicit_table_indices_and_table_exports() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (type $ret (func (result i32)))
+              (table (export "t0") 1 funcref)
+              (table $t1 1 funcref)
+              (elem (table $t1) (i32.const 0) func $three)
+              (func $three (type $ret) (result i32)
+                i32.const 3)
+              (func (export "main") (result i32)
+                i32.const 0
+                call_indirect $t1 (type $ret)))
+        "#,
+    };
+    type Final = InvokeFunc<Module, U1, NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U3>, TTerm>);
 }

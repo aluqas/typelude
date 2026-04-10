@@ -4,6 +4,9 @@ use core::marker::PhantomData;
 pub struct OpCall<Func>(pub PhantomData<Func>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct OpCallIndirect<TypeIdx, TableIdx = typenum::U0>(pub PhantomData<(TypeIdx, TableIdx)>);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpBlock<Body>(pub PhantomData<Body>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]

@@ -12,12 +12,15 @@ nightly = ["typelude-std/nightly"]
 
 [dependencies]
 typelude-col = { path = "../typelude-col", default-features = false }
+typelude-num = { path = "../typelude-num", default-features = false }
 typelude-std = { path = "../typelude-std", default-features = false }
+tstr = "0.3.0"
 typenum = { version = "1.19.0", features = ["const-generics"] }
 
 [dev-dependencies]
 static_assertions = "1.1.0"
 typelude-macros = { path = "../typelude-macros" }
+trybuild = "1.0.114"
 wasmi = "1.0.9"
 
 [lints]

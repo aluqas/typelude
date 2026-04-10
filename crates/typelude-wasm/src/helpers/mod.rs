@@ -1,4 +1,9 @@
 pub mod branch_stack;
 pub mod call;
+pub mod export;
+pub mod i32;
+pub mod instance;
 pub mod local_index;
 pub mod memory;
+pub mod name;
+pub mod table;

@@ -1,0 +1,22 @@
+error[E0277]: the trait bound `RunWasm<WasmState<WasmResolvedModule<TTerm, typelude_col::TArr<WasmFuncType<TTerm, typelude_col::TArr<WasmI32Type, TTerm>>, TTerm>, TTerm>, WasmStore<WasmMemory<UTerm, UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, TTerm>, typelude_col::TArr<WasmTable<UInt<UTerm, B1>, UInt<UTerm, B1>, TTerm>, TTerm>, TTerm>, TTerm, TTerm, TTerm, TTerm, typelude_col::TArr<OpI32Const<UInt<UTerm, B1>>, typelude_col::TArr<OpCallIndirect<UTerm>, TTerm>>>>: typelude_std::core::eval::Eval` is not satisfied
+  --> tests/ui/runtime/call_indirect_table_oob.rs:26:25
+   |
+26 |     let _: PhantomData<<Final as StateStack>::Output>;
+   |                         ^^^^^ unsatisfied trait bound
+   |
+   = help: the trait `typelude_std::core::eval::Eval` is not implemented for `RunWasm<WasmState<WasmResolvedModule<TTerm, typelude_col::TArr<WasmFuncType<TTerm, typelude_col::TArr<WasmI32Type, TTerm>>, TTerm>, TTerm>, WasmStore<WasmMemory<UTerm, UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, B1>, TTerm>, typelude_col::TArr<WasmTable<UInt<UTerm, B1>, UInt<UTerm, B1>, TTerm>, TTerm>, TTerm>, TTerm, TTerm, TTerm, TTerm, typelude_col::TArr<OpI32Const<UInt<UTerm, B1>>, typelude_col::TArr<OpCallIndirect<UTerm>, TTerm>>>>`
+help: the following other types implement trait `typelude_std::core::eval::Eval`
+  --> src/run.rs
+   |
+   | / impl<Module, Store, Stack, Locals, Frames, Branches> Eval
+   | |     for RunWasm<WasmState<Module, Store, Stack, Locals, Frames, Branches, TTerm>>
+   | |_________________________________________________________________________________^ `RunWasm<WasmState<Module, Store, Stack, Locals, Frames, Branches, TTerm>>`
+...
+   | / impl<Module, Store, Stack, Locals, Frames, Branches, Instr, Rest> Eval
+   | |     for RunWasm<WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>>
+   | | where
+   | |     Step<WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>>: Eval,
+...  |
+   | |         >,
+   | |     >: Eval,
+   | |____________^ `RunWasm<WasmState<Module, Store, Stack, Locals, Frames, Branches, typelude_col::TArr<Instr, Rest>>>`

@@ -1,133 +1,150 @@
+use core::ops::Add;
+
 use typelude_col::TArr;
 use typelude_std::core::Eval;
+use typenum::operator_aliases::Sum;
 
 use crate::{
-    helpers::memory::{
-        EncodeI32, LowByte, MemoryReadByte, MemoryReadI32, MemoryWriteByte, MemoryWriteI32,
-    },
-    opcode::{OpI32Load, OpI32Load8U, OpI32Store, OpI32Store8, OpMemorySize},
+    helpers::memory::{EncodeI32, LowByte, MemoryGrow, MemoryReadByte, MemoryReadI32, MemoryWriteByte, MemoryWriteI32},
+    opcode::{OpI32Load, OpI32Load8U, OpI32Store, OpI32Store8, OpMemoryGrow, OpMemorySize},
     run::Step,
-    state::{WasmMemory, WasmState},
+    state::{WasmMemory, WasmState, WasmStore},
     value::WasmI32,
 };
 
-impl<Module, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
+impl<Module, Pages, MaxPages, Cells, Tables, Globals, Addr, Tail, Locals, Frames, Branches, Rest, Offset>
+    Eval
     for Step<
         WasmState<
             Module,
-            TArr<WasmI32<Addr>, Stack>,
+            WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
+            TArr<WasmI32<Addr>, Tail>,
             Locals,
-            WasmMemory<Pages, Cells>,
             Frames,
             Branches,
-            TArr<OpI32Load8U, Rest>,
+            TArr<OpI32Load<Offset>, Rest>,
         >,
     >
 where
-    WasmMemory<Pages, Cells>: MemoryReadByte<Addr>,
+    Addr: Add<Offset>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryReadI32<Sum<Addr, Offset>>,
 {
     type Output = WasmState<
         Module,
-        TArr<WasmI32<<WasmMemory<Pages, Cells> as MemoryReadByte<Addr>>::Output>, Stack>,
+        WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
+        TArr<WasmI32<<WasmMemory<Pages, MaxPages, Cells> as MemoryReadI32<Sum<Addr, Offset>>>::Output>, Tail>,
         Locals,
-        WasmMemory<Pages, Cells>,
         Frames,
         Branches,
         Rest,
     >;
 }
 
-impl<Module, ValueT, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
+impl<Module, Pages, MaxPages, Cells, Tables, Globals, Addr, ValueT, Tail, Locals, Frames, Branches, Rest, Offset>
+    Eval
     for Step<
         WasmState<
             Module,
-            TArr<WasmI32<ValueT>, TArr<WasmI32<Addr>, Stack>>,
+            WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
+            TArr<WasmI32<ValueT>, TArr<WasmI32<Addr>, Tail>>,
             Locals,
-            WasmMemory<Pages, Cells>,
             Frames,
             Branches,
-            TArr<OpI32Store8, Rest>,
+            TArr<OpI32Store<Offset>, Rest>,
         >,
     >
 where
+    Addr: Add<Offset>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryWriteI32<Sum<Addr, Offset>, ValueT>,
+{
+    type Output = WasmState<
+        Module,
+        WasmStore<
+            <WasmMemory<Pages, MaxPages, Cells> as MemoryWriteI32<Sum<Addr, Offset>, ValueT>>::Output,
+            Tables,
+            Globals,
+        >,
+        Tail,
+        Locals,
+        Frames,
+        Branches,
+        Rest,
+    >;
+}
+
+impl<Module, Pages, MaxPages, Cells, Tables, Globals, Addr, Tail, Locals, Frames, Branches, Rest, Offset>
+    Eval
+    for Step<
+        WasmState<
+            Module,
+            WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
+            TArr<WasmI32<Addr>, Tail>,
+            Locals,
+            Frames,
+            Branches,
+            TArr<OpI32Load8U<Offset>, Rest>,
+        >,
+    >
+where
+    Addr: Add<Offset>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryReadByte<Sum<Addr, Offset>>,
+{
+    type Output = WasmState<
+        Module,
+        WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
+        TArr<WasmI32<<WasmMemory<Pages, MaxPages, Cells> as MemoryReadByte<Sum<Addr, Offset>>>::Output>, Tail>,
+        Locals,
+        Frames,
+        Branches,
+        Rest,
+    >;
+}
+
+impl<Module, Pages, MaxPages, Cells, Tables, Globals, Addr, ValueT, Tail, Locals, Frames, Branches, Rest, Offset>
+    Eval
+    for Step<
+        WasmState<
+            Module,
+            WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
+            TArr<WasmI32<ValueT>, TArr<WasmI32<Addr>, Tail>>,
+            Locals,
+            Frames,
+            Branches,
+            TArr<OpI32Store8<Offset>, Rest>,
+        >,
+    >
+where
+    Addr: Add<Offset>,
     ValueT: EncodeI32,
     <ValueT as EncodeI32>::Output: LowByte,
-    WasmMemory<Pages, Cells>:
-        MemoryWriteByte<Addr, <<ValueT as EncodeI32>::Output as LowByte>::Output>,
+    WasmMemory<Pages, MaxPages, Cells>:
+        MemoryWriteByte<Sum<Addr, Offset>, <<ValueT as EncodeI32>::Output as LowByte>::Output>,
 {
     type Output = WasmState<
         Module,
-        Stack,
-        Locals,
-        <WasmMemory<Pages, Cells> as MemoryWriteByte<
-            Addr,
-            <<ValueT as EncodeI32>::Output as LowByte>::Output,
-        >>::Output,
-        Frames,
-        Branches,
-        Rest,
-    >;
-}
-
-impl<Module, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
-    for Step<
-        WasmState<
-            Module,
-            TArr<WasmI32<Addr>, Stack>,
-            Locals,
-            WasmMemory<Pages, Cells>,
-            Frames,
-            Branches,
-            TArr<OpI32Load, Rest>,
+        WasmStore<
+            <WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+                Sum<Addr, Offset>,
+                <<ValueT as EncodeI32>::Output as LowByte>::Output,
+            >>::Output,
+            Tables,
+            Globals,
         >,
-    >
-where
-    WasmMemory<Pages, Cells>: MemoryReadI32<Addr>,
-{
-    type Output = WasmState<
-        Module,
-        TArr<WasmI32<<WasmMemory<Pages, Cells> as MemoryReadI32<Addr>>::Output>, Stack>,
+        Tail,
         Locals,
-        WasmMemory<Pages, Cells>,
         Frames,
         Branches,
         Rest,
     >;
 }
 
-impl<Module, ValueT, Addr, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
+impl<Module, Pages, MaxPages, Cells, Tables, Globals, Stack, Locals, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
             Module,
-            TArr<WasmI32<ValueT>, TArr<WasmI32<Addr>, Stack>>,
-            Locals,
-            WasmMemory<Pages, Cells>,
-            Frames,
-            Branches,
-            TArr<OpI32Store, Rest>,
-        >,
-    >
-where
-    WasmMemory<Pages, Cells>: MemoryWriteI32<Addr, ValueT>,
-{
-    type Output = WasmState<
-        Module,
-        Stack,
-        Locals,
-        <WasmMemory<Pages, Cells> as MemoryWriteI32<Addr, ValueT>>::Output,
-        Frames,
-        Branches,
-        Rest,
-    >;
-}
-
-impl<Module, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
-    for Step<
-        WasmState<
-            Module,
+            WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
             Stack,
             Locals,
-            WasmMemory<Pages, Cells>,
             Frames,
             Branches,
             TArr<OpMemorySize, Rest>,
@@ -136,9 +153,40 @@ impl<Module, Stack, Locals, Pages, Cells, Frames, Branches, Rest> Eval
 {
     type Output = WasmState<
         Module,
+        WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
         TArr<WasmI32<Pages>, Stack>,
         Locals,
-        WasmMemory<Pages, Cells>,
+        Frames,
+        Branches,
+        Rest,
+    >;
+}
+
+impl<Module, Pages, MaxPages, Cells, Tables, Globals, Delta, Tail, Locals, Frames, Branches, Rest>
+    Eval
+    for Step<
+        WasmState<
+            Module,
+            WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
+            TArr<WasmI32<Delta>, Tail>,
+            Locals,
+            Frames,
+            Branches,
+            TArr<OpMemoryGrow, Rest>,
+        >,
+    >
+where
+    WasmMemory<Pages, MaxPages, Cells>: MemoryGrow<Delta>,
+{
+    type Output = WasmState<
+        Module,
+        WasmStore<
+            <WasmMemory<Pages, MaxPages, Cells> as MemoryGrow<Delta>>::OutputMemory,
+            Tables,
+            Globals,
+        >,
+        TArr<WasmI32<<WasmMemory<Pages, MaxPages, Cells> as MemoryGrow<Delta>>::Result>, Tail>,
+        Locals,
         Frames,
         Branches,
         Rest,

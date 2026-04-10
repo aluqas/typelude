@@ -8,70 +8,70 @@ use crate::{
     state::WasmState,
 };
 
-impl<Module, Idx, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Store, Idx, Stack, Locals, Frames, Branches, Rest> Eval
     for Step<
-        WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<OpLocalGet<Idx>, Rest>>,
+        WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<OpLocalGet<Idx>, Rest>>,
     >
 where
     Locals: LocalGet<Idx>,
 {
     type Output = WasmState<
         Module,
+        Store,
         TArr<<Locals as LocalGet<Idx>>::Output, Stack>,
         Locals,
-        Memory,
         Frames,
         Branches,
         Rest,
     >;
 }
 
-impl<Module, Idx, Value, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Store, Idx, ValueT, Stack, Locals, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
             Module,
-            TArr<Value, Stack>,
+            Store,
+            TArr<ValueT, Stack>,
             Locals,
-            Memory,
             Frames,
             Branches,
             TArr<OpLocalSet<Idx>, Rest>,
         >,
     >
 where
-    Locals: LocalSet<Idx, Value>,
+    Locals: LocalSet<Idx, ValueT>,
 {
     type Output = WasmState<
         Module,
+        Store,
         Stack,
-        <Locals as LocalSet<Idx, Value>>::Output,
-        Memory,
+        <Locals as LocalSet<Idx, ValueT>>::Output,
         Frames,
         Branches,
         Rest,
     >;
 }
 
-impl<Module, Idx, Value, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Store, Idx, ValueT, Stack, Locals, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
             Module,
-            TArr<Value, Stack>,
+            Store,
+            TArr<ValueT, Stack>,
             Locals,
-            Memory,
             Frames,
             Branches,
             TArr<OpLocalTee<Idx>, Rest>,
         >,
     >
 where
-    Locals: LocalSet<Idx, Value>,
+    Locals: LocalSet<Idx, ValueT>,
 {
     type Output = WasmState<
         Module,
-        TArr<Value, Stack>,
-        <Locals as LocalSet<Idx, Value>>::Output,
-        Memory,
+        Store,
+        TArr<ValueT, Stack>,
+        <Locals as LocalSet<Idx, ValueT>>::Output,
         Frames,
         Branches,
         Rest,

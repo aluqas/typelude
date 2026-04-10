@@ -403,6 +403,149 @@ Doom のような framebuffer-returning program を
 `typelude-wasm` を作る際も、
 いきなり full feature を目指すよりこの層構造を守る方がよい。
 
+## 11. `typelude-wasm` の今後の対応ロードマップ
+
+現在の `typelude-wasm` は、
+runtime 側では `i32 + locals + direct call + structured control flow + linear memory + globals + memory.grow + active data init`
+あたりまで先行している一方、
+`wasm_wat!` frontend はそこまで追従していない。
+
+したがって、次の順で進めるのが自然である。
+
+### 11.1 Phase 1: 軽量な frontend 追従
+
+まずは runtime に既にある機能を
+`wasm_wat!` から end-to-end で使えるようにする。
+
+対象:
+
+- `memory.grow` の WAT lowering
+- nonzero `offset` を持つ `i32.load/store/load8_u/store8` の lowering
+- `global` section の lowering
+- active `data` section の lowering
+- `start` section の lowering
+
+この phase の主眼は frontend 側の gap を埋めることであり、
+新しい machine semantics を大きく増やすことではない。
+
+完了条件:
+
+- `memory.grow` を含む WAT が `wasm_wat!` 経由で動く
+- `offset != 0` の load/store を lower できる
+- global/data/start を含む module を lower できる
+- 非対応な data/init/start 形は compile error で固定する
+
+### 11.2 Phase 2: tables と `call_indirect`
+
+次に入れるべきは tables と indirect call。
+これは frontend だけの話ではなく、
+table 初期化、slot lookup、type check を runtime 側で実証する必要がある。
+
+対象:
+
+- table store の handwritten runtime test
+- active elem segment
+- `OpCallIndirect<TypeIdx, TableIdx>`
+- `call_indirect` の WAT lowering
+- table export の IR 保持
+
+完了条件:
+
+- active elem segment で function index が table に載る
+- `call_indirect` が signature 一致時だけ動く
+- null slot / table OOB / type mismatch は compile error のまま固定する
+- indirect call 付き WAT を lower して runtime/oracle で一致する
+
+### 11.3 Phase 3: imports
+
+imports は module instantiation 全体に触るため、
+tables より先に入れるより、table/call_indirect の整理後に入れる方がよい。
+
+対象:
+
+- `import` section の WAT lowering
+- typed host env への binding
+- imported function / global / memory / table の instantiation
+- data/global init で imported immutable global を使えるようにする
+
+完了条件:
+
+- unresolved import は compile error にする
+- host function call が runtime/oracle で一致する
+- imported immutable global を offset/init expr で使える
+- imported memory/table の最小ケースが通る
+
+### 11.4 Phase 4: export API の本格化
+
+現在の実行面は function index 寄りなので、
+module 機能を本物の WASM module に寄せるには name-first の export API が必要になる。
+
+対象:
+
+- `InvokeExport` を function export で安定化
+- global export / table export の解決 API
+- wrong-kind export の compile-time rejection
+
+完了条件:
+
+- export 名から function/global/table を型レベルで解決できる
+- function 以外を `InvokeExport` に渡した場合は compile error にする
+- public integration test が index だけでなく name-first でも通る
+
+### 11.5 Phase 5: `i64`
+
+整数系の次段としては `i64` が自然。
+`i32` の拡張として扱いやすく、module 機能とも独立して進めやすい。
+
+対象:
+
+- `WasmI64`
+- `i64.const`
+- `local/global/load/store` の最小セット
+- `add/sub/mul/eqz/eq/ne` から順次拡張
+
+完了条件:
+
+- i64 locals/calls/memory round-trip
+- WAT lowering が i64 subset に追従する
+- `wasmi` oracle と一致する
+
+### 11.6 Phase 6: `f32`, `f64`
+
+浮動小数は最後に回すのがよい。
+これは単に型を増やす話ではなく、
+NaN、signed zero、bitpattern fidelity をどう持つかの問題になる。
+
+対象:
+
+- `WasmF32`, `WasmF64`
+- `const/load/store`
+- `eq/ne/lt/gt/...` の spec 準拠
+
+完了条件:
+
+- bitpattern としての round-trip が成立する
+- NaN / signed zero の挙動を固定したテストが通る
+- `wasmi` oracle と最小 subset で一致する
+
+### 11.7 対応順の結論
+
+実装順としては次が妥当である。
+
+1. `memory.grow` の WAT lowering
+2. nonzero offset の load/store lowering
+3. `global` / `data` / `start` section の WAT lowering
+4. table / elem / `call_indirect`
+5. imports
+6. table/global export API
+7. `i64`
+8. `f32` / `f64`
+
+この順序を取る理由は単純で、
+既に runtime にある機能をまず frontend から使えるようにし、
+その後に module 構造そのものを厚くし、
+最後に新しい value kind を増やす方が手戻りが少ないからである。
+
 ## Sources
 
 - GitHub: <https://github.com/MichiganTypeScript/typescript-types-only-wasm-runtime>

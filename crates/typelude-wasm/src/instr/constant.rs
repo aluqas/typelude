@@ -3,11 +3,11 @@ use typelude_std::core::Eval;
 
 use crate::{opcode::OpI32Const, run::Step, state::WasmState, value::WasmI32};
 
-impl<Module, Val, Stack, Locals, Memory, Frames, Branches, Rest> Eval
+impl<Module, Store, Val, Stack, Locals, Frames, Branches, Rest> Eval
     for Step<
-        WasmState<Module, Stack, Locals, Memory, Frames, Branches, TArr<OpI32Const<Val>, Rest>>,
+        WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<OpI32Const<Val>, Rest>>,
     >
 {
     type Output =
-        WasmState<Module, TArr<WasmI32<Val>, Stack>, Locals, Memory, Frames, Branches, Rest>;
+        WasmState<Module, Store, TArr<WasmI32<Val>, Stack>, Locals, Frames, Branches, Rest>;
 }

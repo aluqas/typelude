@@ -14,11 +14,7 @@ use typelude_macros::wasm_wat;
 type _Bad = wasm_wat! {
     module: r#"
         (module
-          (memory 1)
-          (func (export "main")
-            i32.const 0
-            i32.load offset=1
-            drop))
+          (global f32 (f32.const 1.0)))
     "#,
 };
 
