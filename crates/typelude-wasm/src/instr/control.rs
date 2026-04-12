@@ -16,12 +16,18 @@ use crate::{
     module::{WasmFuncType, WasmHostFunc, WasmResolvedModule},
     opcode::{
         OpBlock, OpBr, OpBrIf, OpCall, OpCallIndirect, OpEndBlock, OpEndFunc, OpEndLoop, OpIf,
-        OpLoop, OpReturn, OpSelect,
+        OpLoop, OpNop, OpReturn, OpSelect,
     },
     run::Step,
     state::{WasmState, WasmStore},
     value::WasmI32,
 };
+
+impl<Module, Store, Stack, Locals, Frames, Branches, Rest> Eval
+    for Step<WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<OpNop, Rest>>>
+{
+    type Output = WasmState<Module, Store, Stack, Locals, Frames, Branches, Rest>;
+}
 
 #[doc(hidden)]
 pub trait IfProgram<Then, Else, Rest> {
@@ -544,5 +550,13 @@ mod tests {
         type Final = ModuleProgramRun<DefaultTableModule, Program>;
 
         assert_type_eq_all!(<Final as StateStack>::Output, tarr![WasmI32<U2>]);
+    }
+
+    #[test]
+    fn nop_leaves_stack_unchanged() {
+        type Program = tarr![OpI32Const<U1>, OpNop];
+        type Final = ModuleProgramRun<EmptyModule, Program>;
+
+        assert_type_eq_all!(<Final as StateStack>::Output, tarr![WasmI32<U1>]);
     }
 }

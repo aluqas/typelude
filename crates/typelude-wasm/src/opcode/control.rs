@@ -6,6 +6,12 @@
 
 use core::marker::PhantomData;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct OpNop;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct OpUnreachable;
+
 /// 関数直接呼び出し。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpCall<Func>(PhantomData<Func>);

@@ -7,8 +7,13 @@ use typenum::{
 
 pub type U31 = <Const<31> as ToUInt>::Output;
 pub type U32 = <Const<32> as ToUInt>::Output;
+pub type U128 = <Const<128> as ToUInt>::Output;
+pub type U127 = <Const<127> as ToUInt>::Output;
 pub type U255 = <Const<255> as ToUInt>::Output;
+pub type U32767 = <Const<32767> as ToUInt>::Output;
 pub type U65535 = <Const<65535> as ToUInt>::Output;
+pub type U32768 = <Const<32768> as ToUInt>::Output;
+pub type U2147483647 = <Const<2147483647> as ToUInt>::Output;
 pub type U2147483648 = <Const<2147483648> as ToUInt>::Output;
 pub type U4294967295 = <Const<4294967295> as ToUInt>::Output;
 pub type U4294967296 = <Const<4294967296> as ToUInt>::Output;
@@ -681,5 +686,317 @@ where
     type Output = <<Lhs as I32IsNegative>::Output as I32ShrSSelect<
         <Rhs as ShiftAmount>::Output,
         Shright<Lhs, <Rhs as ShiftAmount>::Output>,
+    >>::Output;
+}
+
+pub trait I32Clz {
+    type Output;
+}
+
+pub trait I32ClzZeroHelper<ValueT, SignZero> {
+    type Output;
+}
+
+impl<ValueT, SignZero> I32ClzZeroHelper<ValueT, SignZero> for B1 {
+    type Output = U32;
+}
+
+impl<ValueT> I32ClzZeroHelper<ValueT, B0> for B0 {
+    type Output = U0;
+}
+
+impl<ValueT> I32ClzZeroHelper<ValueT, B1> for B0
+where
+    ValueT: I32ShlValue<typenum::U1>,
+    <ValueT as I32ShlValue<typenum::U1>>::Output: I32Clz,
+    <<ValueT as I32ShlValue<typenum::U1>>::Output as I32Clz>::Output: Add<typenum::U1>,
+{
+    type Output =
+        Sum<<<ValueT as I32ShlValue<typenum::U1>>::Output as I32Clz>::Output, typenum::U1>;
+}
+
+impl<ValueT> I32Clz for ValueT
+where
+    ValueT: Unsigned + IsEqual<U0> + I32SignBitIsZero,
+    <ValueT as IsEqual<U0>>::Output:
+        I32ClzZeroHelper<ValueT, <ValueT as I32SignBitIsZero>::Output>,
+{
+    type Output = <<ValueT as IsEqual<U0>>::Output as I32ClzZeroHelper<
+        ValueT,
+        <ValueT as I32SignBitIsZero>::Output,
+    >>::Output;
+}
+
+pub trait I32Ctz {
+    type Output;
+}
+
+pub trait I32CtzZeroHelper<ValueT, LowBit> {
+    type Output;
+}
+
+impl<ValueT, LowBit> I32CtzZeroHelper<ValueT, LowBit> for B1 {
+    type Output = U32;
+}
+
+impl<ValueT> I32CtzZeroHelper<ValueT, typenum::U1> for B0 {
+    type Output = U0;
+}
+
+impl<ValueT> I32CtzZeroHelper<ValueT, U0> for B0
+where
+    ValueT: Shr<typenum::U1>,
+    Shright<ValueT, typenum::U1>: I32Ctz,
+    <Shright<ValueT, typenum::U1> as I32Ctz>::Output: Add<typenum::U1>,
+{
+    type Output = Sum<<Shright<ValueT, typenum::U1> as I32Ctz>::Output, typenum::U1>;
+}
+
+impl<ValueT> I32Ctz for ValueT
+where
+    ValueT: Unsigned + IsEqual<U0> + BitAnd<typenum::U1>,
+    <ValueT as IsEqual<U0>>::Output: I32CtzZeroHelper<ValueT, And<ValueT, typenum::U1>>,
+{
+    type Output = <<ValueT as IsEqual<U0>>::Output as I32CtzZeroHelper<
+        ValueT,
+        And<ValueT, typenum::U1>,
+    >>::Output;
+}
+
+pub trait I32Popcnt {
+    type Output;
+}
+
+pub trait I32PopcntZeroHelper<ValueT> {
+    type Output;
+}
+
+impl<ValueT> I32PopcntZeroHelper<ValueT> for B1 {
+    type Output = U0;
+}
+
+impl<ValueT> I32PopcntZeroHelper<ValueT> for B0
+where
+    ValueT: Shr<typenum::U1> + BitAnd<typenum::U1>,
+    Shright<ValueT, typenum::U1>: I32Popcnt,
+    <Shright<ValueT, typenum::U1> as I32Popcnt>::Output: Add<And<ValueT, typenum::U1>>,
+{
+    type Output =
+        Sum<<Shright<ValueT, typenum::U1> as I32Popcnt>::Output, And<ValueT, typenum::U1>>;
+}
+
+impl<ValueT> I32Popcnt for ValueT
+where
+    ValueT: Unsigned + IsEqual<U0>,
+    <ValueT as IsEqual<U0>>::Output: I32PopcntZeroHelper<ValueT>,
+{
+    type Output = <<ValueT as IsEqual<U0>>::Output as I32PopcntZeroHelper<ValueT>>::Output;
+}
+
+pub trait I32InvRotAmount<Rhs> {
+    type Output;
+}
+
+pub trait I32InvRotAmountValue {
+    type Output;
+}
+
+impl I32InvRotAmountValue for U0 {
+    type Output = U0;
+}
+
+macro_rules! inv_rot_amount_impls_32 {
+    ($($amount:ty => $inv:ty),* $(,)?) => {
+        $(
+            impl I32InvRotAmountValue for $amount {
+                type Output = $inv;
+            }
+        )*
+    };
+}
+
+inv_rot_amount_impls_32!(
+    typenum::U1 => typenum::U31,
+    typenum::U2 => typenum::U30,
+    typenum::U3 => typenum::U29,
+    typenum::U4 => typenum::U28,
+    typenum::U5 => typenum::U27,
+    typenum::U6 => typenum::U26,
+    typenum::U7 => typenum::U25,
+    typenum::U8 => typenum::U24,
+    typenum::U9 => typenum::U23,
+    typenum::U10 => typenum::U22,
+    typenum::U11 => typenum::U21,
+    typenum::U12 => typenum::U20,
+    typenum::U13 => typenum::U19,
+    typenum::U14 => typenum::U18,
+    typenum::U15 => typenum::U17,
+    typenum::U16 => typenum::U16,
+    typenum::U17 => typenum::U15,
+    typenum::U18 => typenum::U14,
+    typenum::U19 => typenum::U13,
+    typenum::U20 => typenum::U12,
+    typenum::U21 => typenum::U11,
+    typenum::U22 => typenum::U10,
+    typenum::U23 => typenum::U9,
+    typenum::U24 => typenum::U8,
+    typenum::U25 => typenum::U7,
+    typenum::U26 => typenum::U6,
+    typenum::U27 => typenum::U5,
+    typenum::U28 => typenum::U4,
+    typenum::U29 => typenum::U3,
+    typenum::U30 => typenum::U2,
+    typenum::U31 => typenum::U1,
+);
+
+impl<Lhs, Rhs> I32InvRotAmount<Rhs> for Lhs
+where
+    Rhs: ShiftAmount,
+    <Rhs as ShiftAmount>::Output: I32InvRotAmountValue,
+{
+    type Output = <<Rhs as ShiftAmount>::Output as I32InvRotAmountValue>::Output;
+}
+
+pub trait I32RotlValue<Rhs> {
+    type Output;
+}
+
+impl<Lhs, Rhs> I32RotlValue<Rhs> for Lhs
+where
+    Lhs: I32ShlValue<Rhs>
+        + I32InvRotAmount<Rhs>
+        + I32ShrUValue<<Lhs as I32InvRotAmount<Rhs>>::Output>,
+    <Lhs as I32ShlValue<Rhs>>::Output:
+        BitOr<<Lhs as I32ShrUValue<<Lhs as I32InvRotAmount<Rhs>>::Output>>::Output>,
+{
+    type Output = Or<
+        <Lhs as I32ShlValue<Rhs>>::Output,
+        <Lhs as I32ShrUValue<<Lhs as I32InvRotAmount<Rhs>>::Output>>::Output,
+    >;
+}
+
+pub trait I32RotrValue<Rhs> {
+    type Output;
+}
+
+impl<Lhs, Rhs> I32RotrValue<Rhs> for Lhs
+where
+    Lhs: I32ShrUValue<Rhs>
+        + I32InvRotAmount<Rhs>
+        + I32ShlValue<<Lhs as I32InvRotAmount<Rhs>>::Output>,
+    <Lhs as I32ShrUValue<Rhs>>::Output:
+        BitOr<<Lhs as I32ShlValue<<Lhs as I32InvRotAmount<Rhs>>::Output>>::Output>,
+{
+    type Output = Or<
+        <Lhs as I32ShrUValue<Rhs>>::Output,
+        <Lhs as I32ShlValue<<Lhs as I32InvRotAmount<Rhs>>::Output>>::Output,
+    >;
+}
+
+pub trait I32Extend8S {
+    type Output;
+}
+
+pub trait Mask8 {
+    type Output;
+}
+
+impl<ValueT> Mask8 for ValueT
+where
+    ValueT: BitAnd<U255>,
+{
+    type Output = And<ValueT, U255>;
+}
+
+pub trait SignBit8 {
+    type Output;
+}
+
+impl<ValueT> SignBit8 for ValueT
+where
+    ValueT: Mask8,
+    <ValueT as Mask8>::Output: BitAnd<U128>,
+{
+    type Output = And<<ValueT as Mask8>::Output, U128>;
+}
+
+pub trait I32Extend8SHelper<LowBits> {
+    type Output;
+}
+
+impl<LowBits> I32Extend8SHelper<LowBits> for B1 {
+    type Output = LowBits;
+}
+
+impl<LowBits> I32Extend8SHelper<LowBits> for B0
+where
+    LowBits: BitOr<Xor<U4294967295, U255>>,
+{
+    type Output = Or<LowBits, Xor<U4294967295, U255>>;
+}
+
+impl<ValueT> I32Extend8S for ValueT
+where
+    ValueT: Unsigned + Mask8 + SignBit8,
+    <ValueT as SignBit8>::Output: IsEqual<U0>,
+    <<ValueT as SignBit8>::Output as IsEqual<U0>>::Output:
+        I32Extend8SHelper<<ValueT as Mask8>::Output>,
+{
+    type Output = <<<ValueT as SignBit8>::Output as IsEqual<U0>>::Output as I32Extend8SHelper<
+        <ValueT as Mask8>::Output,
+    >>::Output;
+}
+
+pub trait I32Extend16S {
+    type Output;
+}
+
+pub trait Mask16 {
+    type Output;
+}
+
+impl<ValueT> Mask16 for ValueT
+where
+    ValueT: BitAnd<U65535>,
+{
+    type Output = And<ValueT, U65535>;
+}
+
+pub trait SignBit16 {
+    type Output;
+}
+
+impl<ValueT> SignBit16 for ValueT
+where
+    ValueT: Mask16,
+    <ValueT as Mask16>::Output: BitAnd<U32768>,
+{
+    type Output = And<<ValueT as Mask16>::Output, U32768>;
+}
+
+pub trait I32Extend16SHelper<LowBits> {
+    type Output;
+}
+
+impl<LowBits> I32Extend16SHelper<LowBits> for B1 {
+    type Output = LowBits;
+}
+
+impl<LowBits> I32Extend16SHelper<LowBits> for B0
+where
+    LowBits: BitOr<Xor<U4294967295, U65535>>,
+{
+    type Output = Or<LowBits, Xor<U4294967295, U65535>>;
+}
+
+impl<ValueT> I32Extend16S for ValueT
+where
+    ValueT: Unsigned + Mask16 + SignBit16,
+    <ValueT as SignBit16>::Output: IsEqual<U0>,
+    <<ValueT as SignBit16>::Output as IsEqual<U0>>::Output:
+        I32Extend16SHelper<<ValueT as Mask16>::Output>,
+{
+    type Output = <<<ValueT as SignBit16>::Output as IsEqual<U0>>::Output as I32Extend16SHelper<
+        <ValueT as Mask16>::Output,
     >>::Output;
 }

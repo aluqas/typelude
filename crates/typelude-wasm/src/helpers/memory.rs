@@ -6,7 +6,7 @@ use core::{
 use typelude_col::{TArr, TTerm};
 use typelude_std::core::{Eq, Gt, Lt, Value};
 use typenum::{
-    B0, B1, U1, U2, U3, U4, U5, U6, U7, U8, U16, U24, U32, U40, U48, U56, U65536,
+    B0, B1, IsGreater, U0, U1, U2, U3, U4, U5, U6, U7, U8, U16, U24, U32, U40, U48, U56, U65536,
     operator_aliases::{And, Or, Prod, Shleft, Shright, Sum},
 };
 
@@ -131,6 +131,30 @@ impl<B0V, B1V, B2V, B3V> LowByte for EncodedI32<B0V, B1V, B2V, B3V> {
     type Output = B0V;
 }
 
+pub trait SecondByte {
+    type Output;
+}
+
+impl<B0V, B1V, B2V, B3V> SecondByte for EncodedI32<B0V, B1V, B2V, B3V> {
+    type Output = B1V;
+}
+
+pub trait ThirdByte {
+    type Output;
+}
+
+impl<B0V, B1V, B2V, B3V> ThirdByte for EncodedI32<B0V, B1V, B2V, B3V> {
+    type Output = B2V;
+}
+
+pub trait FourthByte {
+    type Output;
+}
+
+impl<B0V, B1V, B2V, B3V> FourthByte for EncodedI32<B0V, B1V, B2V, B3V> {
+    type Output = B3V;
+}
+
 pub trait DecodeI32 {
     type Output;
 }
@@ -223,6 +247,30 @@ pub struct EncodedI64<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V>(
 impl<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V> Value
     for EncodedI64<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V>
 {
+}
+
+impl<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V> LowByte
+    for EncodedI64<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V>
+{
+    type Output = B0V;
+}
+
+impl<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V> SecondByte
+    for EncodedI64<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V>
+{
+    type Output = B1V;
+}
+
+impl<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V> ThirdByte
+    for EncodedI64<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V>
+{
+    type Output = B2V;
+}
+
+impl<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V> FourthByte
+    for EncodedI64<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V>
+{
+    type Output = B3V;
 }
 
 pub trait EncodeI64 {
@@ -455,4 +503,333 @@ where
         Cells,
         Sum<Pages, Delta>,
     >>::Result;
+}
+
+pub trait DecodeI32From2<B1V> {
+    type Output;
+}
+
+impl<B0V, B1V> DecodeI32From2<B1V> for B0V
+where
+    B1V: Shl<U8>,
+    B0V: BitOr<Shleft<B1V, U8>>,
+    Or<B0V, Shleft<B1V, U8>>: BitAnd<U4294967295>,
+{
+    type Output = And<Or<B0V, Shleft<B1V, U8>>, U4294967295>;
+}
+
+pub trait DecodeI64From1 {
+    type Output;
+}
+
+impl<B0V> DecodeI64From1 for B0V
+where
+    B0V: BitAnd<U18446744073709551615>,
+{
+    type Output = And<B0V, U18446744073709551615>;
+}
+
+pub trait DecodeI64From2<B1V> {
+    type Output;
+}
+
+impl<B0V, B1V> DecodeI64From2<B1V> for B0V
+where
+    B1V: Shl<U8>,
+    B0V: BitOr<Shleft<B1V, U8>>,
+    Or<B0V, Shleft<B1V, U8>>: BitAnd<U18446744073709551615>,
+{
+    type Output = And<Or<B0V, Shleft<B1V, U8>>, U18446744073709551615>;
+}
+
+pub trait DecodeI64From4<B1V, B2V, B3V> {
+    type Output;
+}
+
+impl<B0V, B1V, B2V, B3V> DecodeI64From4<B1V, B2V, B3V> for B0V
+where
+    B1V: Shl<U8>,
+    B2V: Shl<U16>,
+    B3V: Shl<U24>,
+    B0V: BitOr<Shleft<B1V, U8>>,
+    Or<B0V, Shleft<B1V, U8>>: BitOr<Shleft<B2V, U16>>,
+    Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>: BitOr<Shleft<B3V, U24>>,
+    Or<Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>, Shleft<B3V, U24>>:
+        BitAnd<U18446744073709551615>,
+{
+    type Output = And<
+        Or<Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>, Shleft<B3V, U24>>,
+        U18446744073709551615,
+    >;
+}
+
+pub trait SignExtend8ToI32 {
+    type Output;
+}
+
+impl<ValueT> SignExtend8ToI32 for ValueT
+where
+    ValueT: crate::helpers::i32::I32Extend8S,
+{
+    type Output = <ValueT as crate::helpers::i32::I32Extend8S>::Output;
+}
+
+pub trait SignExtend16ToI32 {
+    type Output;
+}
+
+impl<ValueT> SignExtend16ToI32 for ValueT
+where
+    ValueT: crate::helpers::i32::I32Extend16S,
+{
+    type Output = <ValueT as crate::helpers::i32::I32Extend16S>::Output;
+}
+
+pub trait SignExtend8ToI64 {
+    type Output;
+}
+
+pub trait MaskByte {
+    type Output;
+}
+
+impl<ValueT> MaskByte for ValueT
+where
+    ValueT: BitAnd<U255>,
+{
+    type Output = And<ValueT, U255>;
+}
+
+pub trait SignBitByte {
+    type Output;
+}
+
+impl<ValueT> SignBitByte for ValueT
+where
+    ValueT: MaskByte,
+    <ValueT as MaskByte>::Output: BitAnd<crate::helpers::i32::U128>,
+{
+    type Output = And<<ValueT as MaskByte>::Output, crate::helpers::i32::U128>;
+}
+
+pub trait SignExtend8ToI64Helper<LowBits> {
+    type Output;
+}
+
+impl<LowBits> SignExtend8ToI64Helper<LowBits> for B1 {
+    type Output = LowBits;
+}
+
+impl<LowBits> SignExtend8ToI64Helper<LowBits> for B0
+where
+    LowBits: BitOr<typenum::operator_aliases::Xor<U18446744073709551615, U255>>,
+{
+    type Output = Or<LowBits, typenum::operator_aliases::Xor<U18446744073709551615, U255>>;
+}
+
+impl<ValueT> SignExtend8ToI64 for ValueT
+where
+    ValueT: MaskByte + SignBitByte,
+    <ValueT as SignBitByte>::Output: Eq<U0>,
+    <<ValueT as SignBitByte>::Output as Eq<U0>>::Output:
+        SignExtend8ToI64Helper<<ValueT as MaskByte>::Output>,
+{
+    type Output =
+        <<<ValueT as SignBitByte>::Output as Eq<U0>>::Output as SignExtend8ToI64Helper<
+            <ValueT as MaskByte>::Output,
+        >>::Output;
+}
+
+pub trait SignExtend16ToI64 {
+    type Output;
+}
+
+pub trait MaskWord {
+    type Output;
+}
+
+impl<ValueT> MaskWord for ValueT
+where
+    ValueT: BitAnd<crate::helpers::i32::U65535>,
+{
+    type Output = And<ValueT, crate::helpers::i32::U65535>;
+}
+
+pub trait SignBitWord {
+    type Output;
+}
+
+impl<ValueT> SignBitWord for ValueT
+where
+    ValueT: MaskWord,
+    <ValueT as MaskWord>::Output: BitAnd<crate::helpers::i32::U32768>,
+{
+    type Output = And<<ValueT as MaskWord>::Output, crate::helpers::i32::U32768>;
+}
+
+pub trait SignExtend16ToI64Helper<LowBits> {
+    type Output;
+}
+
+impl<LowBits> SignExtend16ToI64Helper<LowBits> for B1 {
+    type Output = LowBits;
+}
+
+impl<LowBits> SignExtend16ToI64Helper<LowBits> for B0
+where
+    LowBits:
+        BitOr<typenum::operator_aliases::Xor<U18446744073709551615, crate::helpers::i32::U65535>>,
+{
+    type Output = Or<
+        LowBits,
+        typenum::operator_aliases::Xor<U18446744073709551615, crate::helpers::i32::U65535>,
+    >;
+}
+
+impl<ValueT> SignExtend16ToI64 for ValueT
+where
+    ValueT: MaskWord + SignBitWord,
+    <ValueT as SignBitWord>::Output: Eq<U0>,
+    <<ValueT as SignBitWord>::Output as Eq<U0>>::Output:
+        SignExtend16ToI64Helper<<ValueT as MaskWord>::Output>,
+{
+    type Output =
+        <<<ValueT as SignBitWord>::Output as Eq<U0>>::Output as SignExtend16ToI64Helper<
+            <ValueT as MaskWord>::Output,
+        >>::Output;
+}
+
+pub trait SignExtend32ToI64 {
+    type Output;
+}
+
+impl<ValueT> SignExtend32ToI64 for ValueT
+where
+    ValueT: crate::helpers::i64::I64ExtendI32S,
+{
+    type Output = <ValueT as crate::helpers::i64::I64ExtendI32S>::Output;
+}
+
+pub trait MemoryWriteI32Low16<Addr, ValueT> {
+    type Output;
+}
+
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI32Low16<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U1>,
+    ValueT: EncodeI32,
+    <ValueT as EncodeI32>::Output: LowByte + SecondByte,
+    WasmMemory<Pages, MaxPages, Cells>:
+        MemoryWriteByte<Addr, <<ValueT as EncodeI32>::Output as LowByte>::Output>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+        Addr,
+        <<ValueT as EncodeI32>::Output as LowByte>::Output,
+    >>::Output:
+        MemoryWriteByte<Sum<Addr, U1>, <<ValueT as EncodeI32>::Output as SecondByte>::Output>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+        Addr,
+        <<ValueT as EncodeI32>::Output as LowByte>::Output,
+    >>::Output as MemoryWriteByte<
+        Sum<Addr, U1>,
+        <<ValueT as EncodeI32>::Output as SecondByte>::Output,
+    >>::Output;
+}
+
+pub trait MemoryWriteI64Low8<Addr, ValueT> {
+    type Output;
+}
+
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI64Low8<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    ValueT: EncodeI64,
+    <ValueT as EncodeI64>::Output: LowByte,
+    WasmMemory<Pages, MaxPages, Cells>:
+        MemoryWriteByte<Addr, <<ValueT as EncodeI64>::Output as LowByte>::Output>,
+{
+    type Output = <WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+        Addr,
+        <<ValueT as EncodeI64>::Output as LowByte>::Output,
+    >>::Output;
+}
+
+pub trait MemoryWriteI64Low16<Addr, ValueT> {
+    type Output;
+}
+
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI64Low16<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U1>,
+    ValueT: EncodeI64,
+    <ValueT as EncodeI64>::Output: LowByte + SecondByte,
+    WasmMemory<Pages, MaxPages, Cells>:
+        MemoryWriteByte<Addr, <<ValueT as EncodeI64>::Output as LowByte>::Output>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+        Addr,
+        <<ValueT as EncodeI64>::Output as LowByte>::Output,
+    >>::Output:
+        MemoryWriteByte<Sum<Addr, U1>, <<ValueT as EncodeI64>::Output as SecondByte>::Output>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+        Addr,
+        <<ValueT as EncodeI64>::Output as LowByte>::Output,
+    >>::Output as MemoryWriteByte<
+        Sum<Addr, U1>,
+        <<ValueT as EncodeI64>::Output as SecondByte>::Output,
+    >>::Output;
+}
+
+pub trait MemoryWriteI64Low32<Addr, ValueT> {
+    type Output;
+}
+
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI64Low32<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U1> + Add<U2> + Add<U3>,
+    ValueT: EncodeI64,
+    <ValueT as EncodeI64>::Output: LowByte + SecondByte + ThirdByte + FourthByte,
+    WasmMemory<Pages, MaxPages, Cells>:
+        MemoryWriteByte<Addr, <<ValueT as EncodeI64>::Output as LowByte>::Output>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+        Addr,
+        <<ValueT as EncodeI64>::Output as LowByte>::Output,
+    >>::Output:
+        MemoryWriteByte<Sum<Addr, U1>, <<ValueT as EncodeI64>::Output as SecondByte>::Output>,
+    <<WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+        Addr,
+        <<ValueT as EncodeI64>::Output as LowByte>::Output,
+    >>::Output as MemoryWriteByte<
+        Sum<Addr, U1>,
+        <<ValueT as EncodeI64>::Output as SecondByte>::Output,
+    >>::Output:
+        MemoryWriteByte<Sum<Addr, U2>, <<ValueT as EncodeI64>::Output as ThirdByte>::Output>,
+    <<<WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+        Addr,
+        <<ValueT as EncodeI64>::Output as LowByte>::Output,
+    >>::Output as MemoryWriteByte<
+        Sum<Addr, U1>,
+        <<ValueT as EncodeI64>::Output as SecondByte>::Output,
+    >>::Output as MemoryWriteByte<
+        Sum<Addr, U2>,
+        <<ValueT as EncodeI64>::Output as ThirdByte>::Output,
+    >>::Output:
+        MemoryWriteByte<Sum<Addr, U3>, <<ValueT as EncodeI64>::Output as FourthByte>::Output>,
+{
+    type Output = <<<<WasmMemory<Pages, MaxPages, Cells> as MemoryWriteByte<
+        Addr,
+        <<ValueT as EncodeI64>::Output as LowByte>::Output,
+    >>::Output as MemoryWriteByte<
+        Sum<Addr, U1>,
+        <<ValueT as EncodeI64>::Output as SecondByte>::Output,
+    >>::Output as MemoryWriteByte<
+        Sum<Addr, U2>,
+        <<ValueT as EncodeI64>::Output as ThirdByte>::Output,
+    >>::Output as MemoryWriteByte<
+        Sum<Addr, U3>,
+        <<ValueT as EncodeI64>::Output as FourthByte>::Output,
+    >>::Output;
 }

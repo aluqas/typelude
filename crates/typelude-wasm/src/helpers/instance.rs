@@ -742,7 +742,7 @@ where
         WasmStore<
             <() as MaterializeMemoryStore<
                 <() as ResolveImportedMemory<Imports, MemoryBindings>>::Output,
-                MemoryDecl,
+                MemorySection,
                 <() as AppendDefinedGlobals<
                     <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
                     GlobalsDecl,
