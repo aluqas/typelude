@@ -30,7 +30,10 @@ pub fn lower_import(import: &ImportDef) -> syn::Result<TokenStream> {
             let sig = lower_func_type(sig)?;
             quote!(::typelude::wasm::ImportFunc<#sig>)
         },
-        ImportKindDef::Global { mutable, value_type } => {
+        ImportKindDef::Global {
+            mutable,
+            value_type,
+        } => {
             let mutability = if *mutable {
                 quote!(::typelude::wasm::GlobalMut)
             } else {
@@ -39,12 +42,18 @@ pub fn lower_import(import: &ImportDef) -> syn::Result<TokenStream> {
             let value_type = lower_value_type(*value_type);
             quote!(::typelude::wasm::ImportGlobal<#mutability, #value_type>)
         },
-        ImportKindDef::Memory { min, max } => {
+        ImportKindDef::Memory {
+            min,
+            max,
+        } => {
             let min = uint_type(*min as usize)?;
             let max = lower_limit(*max)?;
             quote!(::typelude::wasm::ImportMemory<#min, #max>)
         },
-        ImportKindDef::Table { min, max } => {
+        ImportKindDef::Table {
+            min,
+            max,
+        } => {
             let min = uint_type(*min as usize)?;
             let max = lower_limit(*max)?;
             quote!(::typelude::wasm::ImportTable<#min, #max>)
@@ -180,7 +189,10 @@ pub fn lower_instr(instr: &Instr) -> syn::Result<TokenStream> {
             let index = uint_type(*index as usize)?;
             quote!(::typelude::wasm::opcode::OpCall<#index>)
         },
-        Instr::CallIndirect { type_index, table_index } => {
+        Instr::CallIndirect {
+            type_index,
+            table_index,
+        } => {
             let type_index = uint_type(*type_index as usize)?;
             let table_index = uint_type(*table_index as usize)?;
             quote!(::typelude::wasm::opcode::OpCallIndirect<#type_index, #table_index>)

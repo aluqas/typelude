@@ -425,13 +425,8 @@ mod tests {
 
     #[test]
     fn store_then_load_round_trips_i32_value() {
-        type Program = tarr![
-            OpI32Const<U0>,
-            OpI32Const<U258>,
-            OpI32Store<U0>,
-            OpI32Const<U0>,
-            OpI32Load<U0>
-        ];
+        type Program =
+            tarr![OpI32Const<U0>, OpI32Const<U258>, OpI32Store<U0>, OpI32Const<U0>, OpI32Load<U0>];
         type Final = ModuleProgramRun<OnePageModule, Program>;
 
         assert_type_eq_all!(<Final as StateStack>::Output, tarr![WasmI32<U258>]);

@@ -61,7 +61,10 @@ pub enum Instr {
     If(Vec<Instr>, Vec<Instr>),
     Select,
     Call(u32),
-    CallIndirect { type_index: u32, table_index: u32 },
+    CallIndirect {
+        type_index: u32,
+        table_index: u32,
+    },
     Return,
     I32Load(MemArgDef),
     I32Store(MemArgDef),
@@ -95,9 +98,18 @@ pub struct ImportDef {
 #[derive(Clone)]
 pub enum ImportKindDef {
     Func(FuncSig),
-    Global { mutable: bool, value_type: Val },
-    Memory { min: u32, max: Option<u32> },
-    Table { min: u32, max: Option<u32> },
+    Global {
+        mutable: bool,
+        value_type: Val,
+    },
+    Memory {
+        min: u32,
+        max: Option<u32>,
+    },
+    Table {
+        min: u32,
+        max: Option<u32>,
+    },
 }
 
 pub struct MemoryDef {

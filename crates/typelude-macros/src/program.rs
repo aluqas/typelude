@@ -29,7 +29,9 @@ impl Parse for ProgramInput {
         while !input.is_empty() {
             instrs.push(input.parse()?);
         }
-        Ok(Self { instrs })
+        Ok(Self {
+            instrs,
+        })
     }
 }
 

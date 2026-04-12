@@ -511,8 +511,7 @@ mod tests {
 
     #[test]
     fn if_false_branch_executes_else_program() {
-        type Program =
-            tarr![OpI32Const<U0>, OpIf<tarr![OpI32Const<U1>], tarr![OpI32Const<U2>]>];
+        type Program = tarr![OpI32Const<U0>, OpIf<tarr![OpI32Const<U1>], tarr![OpI32Const<U2>]>];
         type Final = ModuleProgramRun<EmptyModule, Program>;
 
         assert_type_eq_all!(<Final as StateStack>::Output, tarr![WasmI32<U2>]);
@@ -531,7 +530,7 @@ mod tests {
                     OpI32Const<U1>,
                     OpI32Sub,
                     OpBr<U0>
-                ]
+                ],
             >
         ];
         type Final = Run<InitialState<TTerm, ZeroPages, tarr![WasmI32<U0>], Program>>;

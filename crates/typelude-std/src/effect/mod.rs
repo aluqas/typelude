@@ -1,8 +1,11 @@
-//! Type-level effect system primitives and transformer stack building blocks.
+//! 型レベルエフェクトシステム・プリミティブとトランスフォーマスタック構成素。
 //!
-//! The public entry point is the `effect` module itself: choose a base monad
-//! such as [`IdK`], layer transformers like [`EitherT`] or [`StateT`], then
-//! run the stack explicitly with the corresponding `Run*` wrappers.
+//! パブリックエントリーポイントはこのモジュール自体。
+//! 基盤モナド（IdK等）を選び、トランスフォーマ（EitherT、
+//! StateT等）を層状に積み上げ、
+//! 対応する Run* ラッパーで実行スタックを組み立てる。
+//!
+//! # 例
 //!
 //! ```rust
 //! use core::marker::PhantomData;
@@ -15,8 +18,11 @@
 //!     },
 //! };
 //!
+//! // エフェクトスタック：Reader -> State -> Either -> Id（内側より外側へ）
 //! type Stack = ReaderT<Unit, StateT<Unit, EitherT<Unit, IdK>>>;
+//! // プログラム：スタック上の計算
 //! type Program = Pure<Stack, Unit>;
+//! // 実行：内側から外側へ剥けていく
 //! type Result = Evaluate<RunId<RunEither<RunState<Unit, RunReader<Unit, Program>>>>>;
 //!
 //! let _: PhantomData<Ok<Pair<Unit, Unit>>> = PhantomData::<Result>;

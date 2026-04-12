@@ -1,3 +1,14 @@
+//! 型レベル同一型配列と要素操作。
+//!
+//! TArr<Value, Tail> は再帰的に構成される型レベル配列。
+//! TTerm は配列の終端を表す。tarr!マクロでリスト的記法が利用可能。
+//!
+//! ## 操作トレイト
+//!
+//! 手法 Len（長さ）、Head（先頭）、Tail（尾部）、Get（インデックスアクセス）、
+//! Set（要素更新）、Concat（連結）が実装される。いずれもペアノ数無しの
+//! 再帰的定義により、型レベルで計算されたあと出力型が確定する。
+
 use core::marker::PhantomData;
 
 use typelude_num::{
@@ -9,9 +20,17 @@ use typelude_std::{
     effect::Append as FxAppend,
 };
 
+/// 型レベル同一型配列。
+///
+/// `TArr<Val, A>` は先頭要素 `Val` と尾部 `A` からなる配列セル。
+/// Val は任意の型（リテラル、計算結果等）、A は次のセル（通常は TArr か
+/// TTerm）。
 #[derive(Debug, Default)]
 pub struct TArr<Val, A>(PhantomData<(Val, A)>);
 
+/// 型レベル配列の終端マーカー。
+///
+/// 空配列または配列の末端を表す值が無い型。Len により Zero を返す。
 #[derive(Debug, Default)]
 pub struct TTerm;
 

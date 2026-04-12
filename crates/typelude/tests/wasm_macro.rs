@@ -9,7 +9,7 @@ use typelude::wasm::{
     StateBranches, StateExportGlobal, StateExportMemory, StateExportTable, StateStack, TArr,
     TTerm, TableEntry, WasmGlobal, WasmHostEnv, WasmI32, WasmI32Type, WasmMemory, WasmTable,
 };
-use typenum::{twat, Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, U9, U42, operator_aliases::Sum};
+use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, U9, U42, operator_aliases::Sum, twat};
 
 type NoArgs = TTerm;
 type OneArg<A> = TArr<WasmI32<A>, TTerm>;

@@ -1,8 +1,16 @@
-//! Self-evaluating values and tuple argument packs.
+//! 自己評価値とタプル引数パック。
+//!
+//! Value トレイトレンにより、値型の自己評価と、
+//! 複数引数をタプルで表現する機構を提供。
 
 use super::{Eval, Evaluate};
 
-/// Marker trait for values that evaluate to themselves.
+/// 自分自身へ評価される値の型マーカートレイト。
+///
+/// Value を実装した型 T は自動的に Eval も実装し、
+/// Evaluate<T> = T として評価される。これにより、
+/// リテラル値（Zero、True等）や複合値（タプル）が
+/// 型レベル式の安全な基底ケースとなる。
 pub trait Value {}
 
 impl<T> Eval for T

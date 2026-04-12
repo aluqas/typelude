@@ -31,7 +31,10 @@ pub fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
 
     for payload in Parser::new(0).parse_all(bytes) {
         match payload.map_err(parser_error)? {
-            Payload::Version { encoding, .. } => {
+            Payload::Version {
+                encoding,
+                ..
+            } => {
                 if encoding != wasmparser::Encoding::Module {
                     return Err(Error::new(
                         Span::call_site(),
@@ -90,7 +93,9 @@ pub fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
                 for export in reader {
                     let export = export.map_err(parser_error)?;
                     let kind = match export.kind {
-                        ExternalKind::Func | ExternalKind::FuncExact => ExportKind::Func(export.index),
+                        ExternalKind::Func | ExternalKind::FuncExact => {
+                            ExportKind::Func(export.index)
+                        },
                         ExternalKind::Global => ExportKind::Global(export.index),
                         ExternalKind::Memory => ExportKind::Memory,
                         ExternalKind::Table => ExportKind::Table(export.index),
@@ -107,20 +112,27 @@ pub fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
                     });
                 }
             },
-            Payload::StartSection { func, .. } => start = Some(func),
+            Payload::StartSection {
+                func,
+                ..
+            } => start = Some(func),
             Payload::ElementSection(reader) => {
                 for element in reader {
                     elem_segments.push(parse_elem_segment(element.map_err(parser_error)?)?);
                 }
             },
-            Payload::CodeSectionStart { .. } => {},
+            Payload::CodeSectionStart {
+                ..
+            } => {},
             Payload::CodeSectionEntry(body) => function_bodies.push(parse_function_body(body)?),
             Payload::DataSection(reader) => {
                 for data in reader {
                     data_segments.push(parse_data_segment(data.map_err(parser_error)?)?);
                 }
             },
-            Payload::DataCountSection { .. } => return unsupported_section("data_count"),
+            Payload::DataCountSection {
+                ..
+            } => return unsupported_section("data_count"),
             Payload::TagSection(_) => return unsupported_section("tag"),
             Payload::CustomSection(_) | Payload::End(_) => {},
             _ => {
@@ -174,15 +186,24 @@ fn parse_import_group(
     imports: &mut Vec<ImportDef>,
 ) -> syn::Result<()> {
     match group {
-        Imports::Single(_, import) => parse_import_item(import.module, import.name, import.ty, types, imports),
-        Imports::Compact1 { module, items } => {
+        Imports::Single(_, import) => {
+            parse_import_item(import.module, import.name, import.ty, types, imports)
+        },
+        Imports::Compact1 {
+            module,
+            items,
+        } => {
             for item in items {
                 let item = item.map_err(parser_error)?;
                 parse_import_item(module, item.name, item.ty, types, imports)?;
             }
             Ok(())
         },
-        Imports::Compact2 { module, ty, names } => {
+        Imports::Compact2 {
+            module,
+            ty,
+            names,
+        } => {
             for name in names {
                 parse_import_item(module, name.map_err(parser_error)?, ty, types, imports)?;
             }
@@ -202,10 +223,15 @@ fn parse_import_item(
         TypeRef::Func(type_index) | TypeRef::FuncExact(type_index) => {
             let sig = types
                 .get(usize::try_from(type_index).map_err(|_| {
-                    Error::new(Span::call_site(), "import function type index does not fit in usize")
+                    Error::new(
+                        Span::call_site(),
+                        "import function type index does not fit in usize",
+                    )
                 })?)
                 .cloned()
-                .ok_or_else(|| Error::new(Span::call_site(), "import function type index out of bounds"))?;
+                .ok_or_else(|| {
+                    Error::new(Span::call_site(), "import function type index out of bounds")
+                })?;
             ImportKindDef::Func(sig)
         },
         TypeRef::Global(global_ty) => parse_global_import_kind(global_ty)?,
@@ -289,7 +315,9 @@ fn parse_instruction_sequence(
         match operator {
             Operator::End => return Ok((instructions, Terminator::End)),
             Operator::Else => return Ok((instructions, Terminator::Else)),
-            Operator::Block { blockty } => {
+            Operator::Block {
+                blockty,
+            } => {
                 ensure_empty_block_type(blockty, "block")?;
                 let (body, terminator) = parse_instruction_sequence(operators)?;
                 if !matches!(terminator, Terminator::End) {
@@ -300,7 +328,9 @@ fn parse_instruction_sequence(
                 }
                 instructions.push(Instr::Block(body));
             },
-            Operator::Loop { blockty } => {
+            Operator::Loop {
+                blockty,
+            } => {
                 ensure_empty_block_type(blockty, "loop")?;
                 let (body, terminator) = parse_instruction_sequence(operators)?;
                 if !matches!(terminator, Terminator::End) {
@@ -311,7 +341,9 @@ fn parse_instruction_sequence(
                 }
                 instructions.push(Instr::Loop(body));
             },
-            Operator::If { blockty } => {
+            Operator::If {
+                blockty,
+            } => {
                 ensure_empty_block_type(blockty, "if")?;
                 let (then_body, terminator) = parse_instruction_sequence(operators)?;
                 let else_body = match terminator {
@@ -330,13 +362,27 @@ fn parse_instruction_sequence(
                 instructions.push(Instr::If(then_body, else_body));
             },
             Operator::Drop => instructions.push(Instr::Drop),
-            Operator::I32Const { value } => instructions.push(Instr::I32Const(i32_to_bitpattern(value))),
-            Operator::I64Const { value } => instructions.push(Instr::I64Const(i64_to_bitpattern(value))),
-            Operator::LocalGet { local_index } => instructions.push(Instr::LocalGet(local_index)),
-            Operator::LocalSet { local_index } => instructions.push(Instr::LocalSet(local_index)),
-            Operator::LocalTee { local_index } => instructions.push(Instr::LocalTee(local_index)),
-            Operator::GlobalGet { global_index } => instructions.push(Instr::GlobalGet(global_index)),
-            Operator::GlobalSet { global_index } => instructions.push(Instr::GlobalSet(global_index)),
+            Operator::I32Const {
+                value,
+            } => instructions.push(Instr::I32Const(i32_to_bitpattern(value))),
+            Operator::I64Const {
+                value,
+            } => instructions.push(Instr::I64Const(i64_to_bitpattern(value))),
+            Operator::LocalGet {
+                local_index,
+            } => instructions.push(Instr::LocalGet(local_index)),
+            Operator::LocalSet {
+                local_index,
+            } => instructions.push(Instr::LocalSet(local_index)),
+            Operator::LocalTee {
+                local_index,
+            } => instructions.push(Instr::LocalTee(local_index)),
+            Operator::GlobalGet {
+                global_index,
+            } => instructions.push(Instr::GlobalGet(global_index)),
+            Operator::GlobalSet {
+                global_index,
+            } => instructions.push(Instr::GlobalSet(global_index)),
             Operator::I32Add => instructions.push(Instr::I32Add),
             Operator::I32Sub => instructions.push(Instr::I32Sub),
             Operator::I32Eqz => instructions.push(Instr::I32Eqz),
@@ -364,10 +410,16 @@ fn parse_instruction_sequence(
             Operator::I64DivU => instructions.push(Instr::I64DivU),
             Operator::I64RemS => instructions.push(Instr::I64RemS),
             Operator::I64RemU => instructions.push(Instr::I64RemU),
-            Operator::Br { relative_depth } => instructions.push(Instr::Br(relative_depth)),
-            Operator::BrIf { relative_depth } => instructions.push(Instr::BrIf(relative_depth)),
+            Operator::Br {
+                relative_depth,
+            } => instructions.push(Instr::Br(relative_depth)),
+            Operator::BrIf {
+                relative_depth,
+            } => instructions.push(Instr::BrIf(relative_depth)),
             Operator::Select => instructions.push(Instr::Select),
-            Operator::TypedSelect { ty } => {
+            Operator::TypedSelect {
+                ty,
+            } => {
                 if !matches!(lower_val_type(ty)?, Val::I32 | Val::I64) {
                     return Err(Error::new(
                         Span::call_site(),
@@ -376,26 +428,54 @@ fn parse_instruction_sequence(
                 }
                 instructions.push(Instr::Select);
             },
-            Operator::TypedSelectMulti { .. } => {
+            Operator::TypedSelectMulti {
+                ..
+            } => {
                 return Err(Error::new(
                     Span::call_site(),
                     "opcode typed select multi: multi-value select is not supported",
                 ));
             },
-            Operator::Call { function_index } => instructions.push(Instr::Call(function_index)),
-            Operator::CallIndirect { type_index, table_index } => {
-                instructions.push(Instr::CallIndirect { type_index, table_index });
+            Operator::Call {
+                function_index,
+            } => instructions.push(Instr::Call(function_index)),
+            Operator::CallIndirect {
+                type_index,
+                table_index,
+            } => {
+                instructions.push(Instr::CallIndirect {
+                    type_index,
+                    table_index,
+                });
             },
             Operator::Return => instructions.push(Instr::Return),
-            Operator::I32Load { memarg } => instructions.push(Instr::I32Load(parse_memarg(memarg, "i32.load")?)),
-            Operator::I32Store { memarg } => instructions.push(Instr::I32Store(parse_memarg(memarg, "i32.store")?)),
-            Operator::I32Load8U { memarg } => instructions.push(Instr::I32Load8U(parse_memarg(memarg, "i32.load8_u")?)),
-            Operator::I32Store8 { memarg } => instructions.push(Instr::I32Store8(parse_memarg(memarg, "i32.store8")?)),
-            Operator::I64Load { memarg } => instructions.push(Instr::I64Load(parse_memarg(memarg, "i64.load")?)),
-            Operator::I64Store { memarg } => instructions.push(Instr::I64Store(parse_memarg(memarg, "i64.store")?)),
-            Operator::MemorySize { mem } => instructions.push(Instr::MemorySize(mem)),
-            Operator::MemoryGrow { mem } => instructions.push(Instr::MemoryGrow(mem)),
-            Operator::BrTable { .. } => {
+            Operator::I32Load {
+                memarg,
+            } => instructions.push(Instr::I32Load(parse_memarg(memarg, "i32.load")?)),
+            Operator::I32Store {
+                memarg,
+            } => instructions.push(Instr::I32Store(parse_memarg(memarg, "i32.store")?)),
+            Operator::I32Load8U {
+                memarg,
+            } => instructions.push(Instr::I32Load8U(parse_memarg(memarg, "i32.load8_u")?)),
+            Operator::I32Store8 {
+                memarg,
+            } => instructions.push(Instr::I32Store8(parse_memarg(memarg, "i32.store8")?)),
+            Operator::I64Load {
+                memarg,
+            } => instructions.push(Instr::I64Load(parse_memarg(memarg, "i64.load")?)),
+            Operator::I64Store {
+                memarg,
+            } => instructions.push(Instr::I64Store(parse_memarg(memarg, "i64.store")?)),
+            Operator::MemorySize {
+                mem,
+            } => instructions.push(Instr::MemorySize(mem)),
+            Operator::MemoryGrow {
+                mem,
+            } => instructions.push(Instr::MemoryGrow(mem)),
+            Operator::BrTable {
+                ..
+            } => {
                 return Err(Error::new(Span::call_site(), "opcode br_table: not supported"));
             },
             other => {
@@ -410,18 +490,37 @@ fn parse_instruction_sequence(
 
 fn parse_memory_def(memory: wasmparser::MemoryType) -> syn::Result<MemoryDef> {
     if memory.memory64 {
-        return Err(Error::new(Span::call_site(), "unsupported section: memory64 is not supported"));
+        return Err(Error::new(
+            Span::call_site(),
+            "unsupported section: memory64 is not supported",
+        ));
     }
     if memory.shared {
-        return Err(Error::new(Span::call_site(), "unsupported section: shared memory is not supported"));
+        return Err(Error::new(
+            Span::call_site(),
+            "unsupported section: shared memory is not supported",
+        ));
     }
     if memory.page_size_log2.is_some() {
-        return Err(Error::new(Span::call_site(), "unsupported section: custom page sizes are not supported"));
+        return Err(Error::new(
+            Span::call_site(),
+            "unsupported section: custom page sizes are not supported",
+        ));
     }
     Ok(MemoryDef {
-        min: u32::try_from(memory.initial).map_err(|_| Error::new(Span::call_site(), "unsupported section: memory minimum exceeds u32 page count"))?,
+        min: u32::try_from(memory.initial).map_err(|_| {
+            Error::new(
+                Span::call_site(),
+                "unsupported section: memory minimum exceeds u32 page count",
+            )
+        })?,
         max: match memory.maximum {
-            Some(max) => Some(u32::try_from(max).map_err(|_| Error::new(Span::call_site(), "unsupported section: memory maximum exceeds u32 page count"))?),
+            Some(max) => Some(u32::try_from(max).map_err(|_| {
+                Error::new(
+                    Span::call_site(),
+                    "unsupported section: memory maximum exceeds u32 page count",
+                )
+            })?),
             None => None,
         },
     })
@@ -439,18 +538,37 @@ fn parse_table_def(table: wasmparser::Table<'_>) -> syn::Result<TableDef> {
 
 fn parse_table_type(table_ty: wasmparser::TableType) -> syn::Result<TableDef> {
     if table_ty.table64 {
-        return Err(Error::new(Span::call_site(), "unsupported section: table64 is not supported"));
+        return Err(Error::new(
+            Span::call_site(),
+            "unsupported section: table64 is not supported",
+        ));
     }
     if table_ty.shared {
-        return Err(Error::new(Span::call_site(), "unsupported section: shared table is not supported"));
+        return Err(Error::new(
+            Span::call_site(),
+            "unsupported section: shared table is not supported",
+        ));
     }
     if table_ty.element_type != RefType::FUNCREF {
-        return Err(Error::new(Span::call_site(), "unsupported section: only funcref tables are supported"));
+        return Err(Error::new(
+            Span::call_site(),
+            "unsupported section: only funcref tables are supported",
+        ));
     }
     Ok(TableDef {
-        min: u32::try_from(table_ty.initial).map_err(|_| Error::new(Span::call_site(), "unsupported section: table minimum exceeds u32 element count"))?,
+        min: u32::try_from(table_ty.initial).map_err(|_| {
+            Error::new(
+                Span::call_site(),
+                "unsupported section: table minimum exceeds u32 element count",
+            )
+        })?,
         max: match table_ty.maximum {
-            Some(max) => Some(u32::try_from(max).map_err(|_| Error::new(Span::call_site(), "unsupported section: table maximum exceeds u32 element count"))?),
+            Some(max) => Some(u32::try_from(max).map_err(|_| {
+                Error::new(
+                    Span::call_site(),
+                    "unsupported section: table maximum exceeds u32 element count",
+                )
+            })?),
             None => None,
         },
     })
@@ -458,7 +576,10 @@ fn parse_table_type(table_ty: wasmparser::TableType) -> syn::Result<TableDef> {
 
 fn parse_global_def(global: wasmparser::Global<'_>) -> syn::Result<GlobalDef> {
     if global.ty.shared {
-        return Err(Error::new(Span::call_site(), "unsupported section: shared globals are not supported"));
+        return Err(Error::new(
+            Span::call_site(),
+            "unsupported section: shared globals are not supported",
+        ));
     }
     lower_val_type(global.ty.content_type)?;
     Ok(GlobalDef {
@@ -469,9 +590,15 @@ fn parse_global_def(global: wasmparser::Global<'_>) -> syn::Result<GlobalDef> {
 
 fn parse_data_segment(data: wasmparser::Data<'_>) -> syn::Result<DataSegmentDef> {
     let (memory_index, offset_expr) = match data.kind {
-        DataKind::Active { memory_index, offset_expr } => (memory_index, offset_expr),
+        DataKind::Active {
+            memory_index,
+            offset_expr,
+        } => (memory_index, offset_expr),
         DataKind::Passive => {
-            return Err(Error::new(Span::call_site(), "unsupported section: passive data is not supported"));
+            return Err(Error::new(
+                Span::call_site(),
+                "unsupported section: passive data is not supported",
+            ));
         },
     };
     if memory_index != 0 {
@@ -488,17 +615,28 @@ fn parse_data_segment(data: wasmparser::Data<'_>) -> syn::Result<DataSegmentDef>
 
 fn parse_elem_segment(element: wasmparser::Element<'_>) -> syn::Result<ElemSegmentDef> {
     let (table_index, offset_expr) = match element.kind {
-        ElementKind::Active { table_index, offset_expr } => (table_index.unwrap_or(0), offset_expr),
+        ElementKind::Active {
+            table_index,
+            offset_expr,
+        } => (table_index.unwrap_or(0), offset_expr),
         ElementKind::Passive => {
-            return Err(Error::new(Span::call_site(), "unsupported section: passive elem is not supported"));
+            return Err(Error::new(
+                Span::call_site(),
+                "unsupported section: passive elem is not supported",
+            ));
         },
         ElementKind::Declared => {
-            return Err(Error::new(Span::call_site(), "unsupported section: declarative elem is not supported"));
+            return Err(Error::new(
+                Span::call_site(),
+                "unsupported section: declarative elem is not supported",
+            ));
         },
     };
 
     let func_indices = match element.items {
-        ElementItems::Functions(reader) => reader.into_iter().collect::<Result<Vec<_>, _>>().map_err(parser_error)?,
+        ElementItems::Functions(reader) => {
+            reader.into_iter().collect::<Result<Vec<_>, _>>().map_err(parser_error)?
+        },
         ElementItems::Expressions(_, _) => {
             return Err(Error::new(
                 Span::call_site(),
@@ -517,9 +655,15 @@ fn parse_elem_segment(element: wasmparser::Element<'_>) -> syn::Result<ElemSegme
 fn parse_const_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<ConstExprDef> {
     let mut operators = expr.get_operators_reader();
     let init = match operators.read().map_err(parser_error)? {
-        Operator::I32Const { value } => ConstInstrDef::I32Const(i32_to_bitpattern(value)),
-        Operator::I64Const { value } => ConstInstrDef::I64Const(i64_to_bitpattern(value)),
-        Operator::GlobalGet { global_index } => ConstInstrDef::GlobalGet(global_index),
+        Operator::I32Const {
+            value,
+        } => ConstInstrDef::I32Const(i32_to_bitpattern(value)),
+        Operator::I64Const {
+            value,
+        } => ConstInstrDef::I64Const(i64_to_bitpattern(value)),
+        Operator::GlobalGet {
+            global_index,
+        } => ConstInstrDef::GlobalGet(global_index),
         other => {
             return Err(Error::new(
                 Span::call_site(),
@@ -546,29 +690,26 @@ fn parse_const_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<ConstExp
         ));
     }
     operators.finish().map_err(parser_error)?;
-    Ok(ConstExprDef { instrs: vec![init] })
+    Ok(ConstExprDef {
+        instrs: vec![init],
+    })
 }
 
 pub fn lower_func_sig(func: &FuncType) -> syn::Result<FuncSig> {
-    let params = func
-        .params()
-        .iter()
-        .copied()
-        .map(lower_val_type)
-        .collect::<syn::Result<Vec<_>>>()?;
-    let results = func
-        .results()
-        .iter()
-        .copied()
-        .map(lower_val_type)
-        .collect::<syn::Result<Vec<_>>>()?;
+    let params =
+        func.params().iter().copied().map(lower_val_type).collect::<syn::Result<Vec<_>>>()?;
+    let results =
+        func.results().iter().copied().map(lower_val_type).collect::<syn::Result<Vec<_>>>()?;
     if results.len() > 1 {
         return Err(Error::new(
             Span::call_site(),
             "unsupported type: multi-value results are not supported",
         ));
     }
-    Ok(FuncSig { params, results })
+    Ok(FuncSig {
+        params,
+        results,
+    })
 }
 
 pub fn lower_val_type(ty: ValType) -> syn::Result<Val> {
@@ -636,12 +777,24 @@ fn opcode_name(operator: &Operator<'_>) -> &'static str {
     match operator {
         Operator::Drop => "drop",
         Operator::Nop => "nop",
-        Operator::GlobalGet { .. } => "global.get",
-        Operator::GlobalSet { .. } => "global.set",
-        Operator::MemoryGrow { .. } => "memory.grow",
-        Operator::CallIndirect { .. } => "call_indirect",
-        Operator::BrTable { .. } => "br_table",
-        Operator::RefNull { .. } => "ref.null",
+        Operator::GlobalGet {
+            ..
+        } => "global.get",
+        Operator::GlobalSet {
+            ..
+        } => "global.set",
+        Operator::MemoryGrow {
+            ..
+        } => "memory.grow",
+        Operator::CallIndirect {
+            ..
+        } => "call_indirect",
+        Operator::BrTable {
+            ..
+        } => "br_table",
+        Operator::RefNull {
+            ..
+        } => "ref.null",
         Operator::Unreachable => "unreachable",
         _ => "unknown opcode",
     }

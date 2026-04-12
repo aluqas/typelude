@@ -4,7 +4,6 @@ mod lower;
 mod parse;
 
 pub use input::WasmWatInput;
-
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Error;

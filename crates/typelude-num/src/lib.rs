@@ -1,21 +1,17 @@
-//! Type-level numeric utilities.
+//! 型レベル数値プリミティブと算術演算。
 //!
-//! This crate owns numeric primitive values and arithmetic capability traits.
-//! Shared higher-order APIs should use the canonical operator names from
-//! `typelude_std::core`.
+//! ## 責務
 //!
-//! Canonical operator mapping:
+//! ペアノ数（Zero、Succ）による型レベル自然数と
+//! 算術能力トレイト（Add、Sub、Mul、Div）を提供。
+//! typenum を再エクスポート（相互運用性確保）。
+//!
+//! ## 名前空間マッピング
+//!
 //! - `Add` -> `OpAdd`
 //! - `Sub` -> `OpSub`
 //! - `Mul` -> `OpMul`
 //! - `Div` -> `OpDiv`
-//! - `Rem` -> `OpRem`
-//! - `Pow` -> `OpPow`
-//! - comparison families, when provided, map to `OpEq`, `OpNeq`, `OpLt`,
-//!   `OpLe`, and `OpGt`
-//!
-//! `typenum` is re-exported for interoperability, but its foreign types are
-//! not part of the shared self-based trait integration in this phase.
 
 #![recursion_limit = "256"]
 

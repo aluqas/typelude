@@ -1,14 +1,39 @@
+//! ペアノ数による型レベル自然数実装。
+//!
+//! Zero と Succ<T> による標準的なペアノ数表現。
+//! 再帰的な型構造により、コンパイル時に数値計算と比較検証を実施できる。
+//!
+//! ## 主要操作
+//!
+//! - Add<Rhs>: 加算（ペアノ帰納法の再帰実装）
+//! - Mul<Rhs>: 乗算（加算の反復）
+//! - Sub<Rhs>: 減算（下限ゼロ）
+//! - CanSub<Rhs>: 減算可能判定（ヘルパートレイト）
+
 use core::marker::PhantomData;
 
 use typelude_std::core::{Add, Div, Mul, Sub, Value};
 
+/// 後続者（successor）型。
+///
+/// 汎用型パラメータ `T` の後続者を型レベルで表現。
+/// Succ<Zero> = 1, Succ<Succ<Zero>> = 2, ... の使い方で任意の自然数を構成。
 pub struct Succ<T>(PhantomData<T>);
+/// ペアノ数ゼロ型。
+///
+/// 数値ゼロを型レベルで表現。一般的なペアノ数の基底ケース。
 pub struct Zero;
 
 impl<T> Value for Succ<T> {}
 impl Value for Zero {}
 
+/// ペアノ数トレイト。
+///
+/// 型レベル自然数（Zero と Succ による再帰評価）を表現し、
+/// 定数値関連付け `VAL` により、実行時に数値へ変換可能。
+/// あらゆるペアノ数は Nat を実装していることが保証される。
 pub trait Nat {
+    /// 型レベル自然数に対応する実行時定数値。
     const VAL: usize;
 }
 

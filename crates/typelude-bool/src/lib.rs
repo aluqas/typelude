@@ -1,10 +1,12 @@
-//! Type-level boolean utilities.
+//! 型レベル論理値プリミティブと演算。
 //!
-//! This crate owns boolean primitive values and boolean capability traits.
-//! Shared higher-order APIs should use the canonical operator names from
-//! `typelude_std::core`.
+//! ## 責務
 //!
-//! Canonical operator mapping:
+//! 論理値プリミティブ型（True、False）と能力トレイト（IsBool）を提供。
+//! 型レベル高階APIは typelude_std::core のキャノニカル演算子を使用する。
+//!
+//! ## 名前空間マッピング
+//!
 //! - `Not` -> `OpNot`
 //! - `And` -> `OpAnd`
 //! - `Or` -> `OpOr`
@@ -18,26 +20,37 @@ use typelude_std::core::{
 };
 pub use typelude_std::core::{And, Nand, Not, Or, Xor};
 
+/// 真。真値を表す型レベル値。
 pub struct True;
+/// 偽。偽値を表す型レベル値。
 pub struct False;
 
 impl Value for True {}
 impl Value for False {}
 
-/// **Marker Trait**
-/// Represents that a type is a boolean type (True or False).
+/// 型レベル論理値能力トレイト。
+///
+/// 論理値（`True` または `False`）であることを示すマーカートレイト。
+/// 本トレイトを実装していれば、当該を有効論理値とみなし、
+/// 「Not, And, Or, Xor, Nand」による基本演算が使用できる。
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a boolean type",
     label = "not a TYPE-LEVEL boolean",
     note = "[TYPELUDE MESSAGE] ensure `{Self}` is either `True` or `False`."
 )]
 pub trait IsBool {
+    /// 実行時の論理値（true または false）。
     const VALUE: bool;
 
+    /// 論理的「不、否」を算出。
     type Not: IsBool;
+    /// 論理的「NAND」演算を算出。
     type Nand<B: IsBool>: IsBool;
+    /// 論理的「AND」演算を算出。
     type And<B: IsBool>: IsBool;
+    /// 論理的「OR」演算を算出。
     type Or<B: IsBool>: IsBool;
+    /// 論理的「XOR」演算を算出。
     type Xor<B: IsBool>: IsBool;
 }
 

@@ -1,33 +1,38 @@
-//! Conditional expression AST.
+//! 条件分岐式AST。
+//!
+//! 型レベルの if-then-else を表現。Cond（条件）の評価結果により、
+//! Then または Else 支流を選択。
 
 use core::marker::PhantomData;
 
-/// Conditional expression AST.
+/// 条件分岐式AST。
 ///
-/// Semantics may be provided either directly with `Eval` impls or via sugar
-/// over `Apply<OpIf, ...>`.
+/// `Cond` の評価結果（通常は比較演算子の出力）に基づき、
+/// `Then` または `Else` 支流へ分岐する型レベル構造。
 ///
-/// # Examples
+/// セマンティクスは `Eval` impl で直接提供するか、
+/// `Apply<OpIf, ...>` を通じた高階糖衣により実装可能。
+/// 遅延評価や独自実行ルールが必要な場合、直接Eval実装を使用可能。
 ///
-/// Direct `Eval` implementations remain supported for control-flow nodes.
+/// # 型パラメータ
 ///
-/// ```ignore
-/// use static_assertions::assert_type_eq_all;
-/// use typelude_std::{Eval, Evaluate, If};
+/// - `Cond`: 条件式（評価により True/False等に解決）
+/// - `Then`: Cond が真の場合に評価される式
+/// - `Else`: Cond が偽の場合に評価される式
 ///
-/// struct Yes;
-/// struct No;
+/// # 例
 ///
-/// impl<Then, Else> Eval for If<Yes, Then, Else> {
+/// ```text
+/// // 直接的な Eval 実装
+/// impl<Then, Else> Eval for If<True, Then, Else> {
 ///     type Output = Then;
 /// }
-///
-/// impl<Then, Else> Eval for If<No, Then, Else> {
+/// impl<Then, Else> Eval for If<False, Then, Else> {
 ///     type Output = Else;
 /// }
 ///
-/// assert_type_eq_all!(Evaluate<If<Yes, u8, u16>>, u8);
-/// assert_type_eq_all!(Evaluate<If<No, u8, u16>>, u16);
+/// // 使用
+/// type Branch = Evaluate<If<True, u8, u16>>;  // Branch = u8
 /// ```
 pub struct If<Cond, Then, Else>(pub PhantomData<(Cond, Then, Else)>);
 
