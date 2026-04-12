@@ -13,9 +13,9 @@ pub use typenum;
 
 use ::core::marker::PhantomData;
 
-use typelude_macros::wasm_wat;
+use typelude_macros::twat;
 
-type Module = wasm_wat! {
+type Module = twat! {
     module: r#"
         (module
           (func (export "main") (result i32)

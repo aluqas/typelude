@@ -61,7 +61,7 @@ fn wasmi_oracle_matches_type_level_add() {
         exported_global_i32: None,
     });
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (func (export "main") (param i32 i32) (result i32)
@@ -98,7 +98,7 @@ fn wasmi_oracle_matches_type_level_countdown_loop() {
     let runtime = run_wat_snapshot(MODULE, "main", &[3]).expect("wasmi should execute loop");
     assert_eq!(runtime.result_i32, 0);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -141,7 +141,7 @@ fn wasmi_oracle_matches_type_level_memory_store8_and_size() {
     assert_eq!(runtime.memory_pages, Some(1));
     assert_eq!(runtime.memory_prefix.first().copied(), Some(255));
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (memory (export "memory") 1)
@@ -197,7 +197,7 @@ fn wasmi_oracle_matches_type_level_iterative_fibonacci() {
     let runtime = run_wat_snapshot(MODULE, "main", &[6]).expect("wasmi should execute fibonacci");
     assert_eq!(runtime.result_i32, 8);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -271,7 +271,7 @@ fn wasmi_oracle_matches_type_level_recursive_fibonacci() {
         run_wat_snapshot(MODULE, "main", &[6]).expect("wasmi should execute recursive fibonacci");
     assert_eq!(runtime.result_i32, 8);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -324,7 +324,7 @@ fn wasmi_oracle_matches_type_level_globals() {
     let runtime = run_wat_snapshot(MODULE, "main", &[]).expect("wasmi should execute globals");
     assert_eq!(runtime.result_i32, 5);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (global $g (mut i32) (i32.const 2))
@@ -361,7 +361,7 @@ fn wasmi_oracle_matches_type_level_offsets_and_memory_grow() {
     assert_eq!(runtime.result_i32, 1);
     assert_eq!(runtime.memory_pages, Some(2));
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (memory (export "memory") 1 2)
@@ -399,7 +399,7 @@ fn wasmi_oracle_matches_type_level_imported_function_call() {
     .expect("wasmi should execute imported function call");
     assert_eq!(runtime.result_i32, 5);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (import "host" "add" (func $add (param i32 i32) (result i32)))
@@ -456,7 +456,7 @@ fn wasmi_oracle_matches_type_level_imported_global_and_exported_global() {
     assert_eq!(runtime.result_i32, 5);
     assert_eq!(runtime.exported_global_i32, Some(3));
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (import "host" "g" (global (mut i32)))
@@ -516,7 +516,7 @@ fn wasmi_oracle_matches_type_level_imported_memory() {
     assert_eq!(runtime.result_i32, 42);
     assert_eq!(runtime.memory_pages, None);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (import "host" "memory" (memory 1))
@@ -570,7 +570,7 @@ fn wasmi_oracle_matches_type_level_imported_table_call_indirect() {
     .expect("wasmi should execute imported table call_indirect");
     assert_eq!(runtime.result_i32, 7);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (type $ret (func (result i32)))
@@ -628,7 +628,7 @@ fn wasmi_oracle_matches_type_level_export_name_and_exported_state() {
     assert_eq!(runtime.exported_global_i32, Some(9));
     assert_eq!(runtime.memory_prefix.get(1).copied(), Some(8));
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (memory (export "memory") 1)
@@ -668,7 +668,7 @@ fn wasmi_oracle_matches_type_level_active_data_segments() {
     assert_eq!(runtime.result_i32, 42);
     assert_eq!(runtime.memory_prefix.first().copied(), Some(42));
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (memory (export "memory") 1)
@@ -699,7 +699,7 @@ fn wasmi_oracle_matches_type_level_start_execution() {
     let runtime = run_wat_snapshot(MODULE, "main", &[]).expect("wasmi should execute start");
     assert_eq!(runtime.result_i32, 7);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (global $g (mut i32) (i32.const 0))
@@ -736,7 +736,7 @@ fn wasmi_oracle_matches_type_level_default_table_call_indirect() {
         run_wat_snapshot(MODULE, "main", &[]).expect("wasmi should execute default indirect call");
     assert_eq!(runtime.result_i32, 2);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (type $ret (func (result i32)))
@@ -775,7 +775,7 @@ fn wasmi_oracle_matches_type_level_explicit_table_call_indirect() {
         .expect("wasmi should execute explicit indirect call");
     assert_eq!(runtime.result_i32, 3);
 
-    type Module = typelude_macros::wasm_wat! {
+    type Module = typelude_macros::twat! {
         module: r#"
             (module
               (type $ret (func (result i32)))

@@ -14,7 +14,7 @@ pub mod core {
     pub use typenum;
 }
 pub use tstr;
-pub use typelude_macros::{twat, wasm_wat};
+pub use typelude_macros::{twat};
 pub use typelude_std::{Eval, Evaluate};
 pub use typelude_vm as vm;
 pub use typelude_wasm as wasm;

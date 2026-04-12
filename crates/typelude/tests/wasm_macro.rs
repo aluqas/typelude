@@ -9,7 +9,7 @@ use typelude::wasm::{
     StateBranches, StateExportGlobal, StateExportMemory, StateExportTable, StateStack, TArr,
     TTerm, TableEntry, WasmGlobal, WasmHostEnv, WasmI32, WasmI32Type, WasmMemory, WasmTable,
 };
-use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, U9, U42, operator_aliases::Sum};
+use typenum::{twat, Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, U9, U42, operator_aliases::Sum};
 
 type NoArgs = TTerm;
 type OneArg<A> = TArr<WasmI32<A>, TTerm>;
@@ -35,7 +35,7 @@ where
 
 #[test]
 fn wasm_wat_invokes_exported_add() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (func (export "main") (param i32 i32) (result i32)
@@ -52,7 +52,7 @@ fn wasm_wat_invokes_exported_add() {
 
 #[test]
 fn wasm_wat_supports_internal_calls() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (func $add2 (param i32) (result i32)
@@ -71,7 +71,7 @@ fn wasm_wat_supports_internal_calls() {
 
 #[test]
 fn wasm_wat_handles_loop_and_br_if() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -97,7 +97,7 @@ fn wasm_wat_handles_loop_and_br_if() {
 
 #[test]
 fn wasm_wat_supports_if_without_block_results() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -122,7 +122,7 @@ fn wasm_wat_supports_if_without_block_results() {
 
 #[test]
 fn wasm_wat_supports_select() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -139,7 +139,7 @@ fn wasm_wat_supports_select() {
 
 #[test]
 fn wasm_wat_supports_memory_ops_and_size() {
-    type Stored8Module = typelude::wasm_wat! {
+    type Stored8Module = typelude::twat! {
         module: r#"
             (module
               (memory 1)
@@ -153,7 +153,7 @@ fn wasm_wat_supports_memory_ops_and_size() {
     };
     type Stored8 = InvokeFunc<Stored8Module, U0, NoArgs>;
 
-    type StoredModule = typelude::wasm_wat! {
+    type StoredModule = typelude::twat! {
         module: r#"
             (module
               (memory 1)
@@ -167,7 +167,7 @@ fn wasm_wat_supports_memory_ops_and_size() {
     };
     type Stored = InvokeFunc<StoredModule, U0, NoArgs>;
 
-    type SizedModule = typelude::wasm_wat! {
+    type SizedModule = typelude::twat! {
         module: r#"
             (module
               (memory 2)
@@ -187,7 +187,7 @@ fn wasm_wat_supports_memory_ops_and_size() {
 
 #[test]
 fn wasm_wat_zero_initializes_extra_locals() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (func (export "main") (result i32)
@@ -202,7 +202,7 @@ fn wasm_wat_zero_initializes_extra_locals() {
 
 #[test]
 fn wasm_wat_supports_recursive_fibonacci() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (func (export "main") (param i32) (result i32)
@@ -241,7 +241,7 @@ fn wasm_wat_supports_recursive_fibonacci() {
 
 #[test]
 fn wasm_wat_supports_global_get_and_set() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (global $g (mut i32) (i32.const 2))
@@ -260,7 +260,7 @@ fn wasm_wat_supports_global_get_and_set() {
 
 #[test]
 fn wasm_wat_supports_nonzero_offsets_and_memory_grow() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (memory 1 2)
@@ -282,7 +282,7 @@ fn wasm_wat_supports_nonzero_offsets_and_memory_grow() {
 
 #[test]
 fn wasm_wat_supports_active_data_segments() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (memory 1)
@@ -299,7 +299,7 @@ fn wasm_wat_supports_active_data_segments() {
 
 #[test]
 fn wasm_wat_executes_start_before_invocation() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (global $g (mut i32) (i32.const 0))
@@ -318,7 +318,7 @@ fn wasm_wat_executes_start_before_invocation() {
 
 #[test]
 fn wasm_wat_supports_call_indirect_on_default_table() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (type $ret (func (result i32)))
@@ -340,7 +340,7 @@ fn wasm_wat_supports_call_indirect_on_default_table() {
 
 #[test]
 fn wasm_wat_supports_explicit_table_indices_and_table_exports() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (type $ret (func (result i32)))
@@ -361,7 +361,7 @@ fn wasm_wat_supports_explicit_table_indices_and_table_exports() {
 
 #[test]
 fn wasm_wat_supports_imported_functions_via_invoke_export() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (import "host" "add" (func $add (param i32 i32) (result i32)))
@@ -392,7 +392,7 @@ fn wasm_wat_supports_imported_functions_via_invoke_export() {
 
 #[test]
 fn wasm_wat_supports_imported_globals_and_global_exports() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (import "host" "g" (global (mut i32)))
@@ -429,7 +429,7 @@ fn wasm_wat_supports_imported_globals_and_global_exports() {
 
 #[test]
 fn wasm_wat_supports_imported_memory() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (import "host" "memory" (memory 1))
@@ -458,7 +458,7 @@ fn wasm_wat_supports_imported_memory() {
 
 #[test]
 fn wasm_wat_supports_imported_tables_and_call_indirect() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (type $ret (func (result i32)))
@@ -491,7 +491,7 @@ fn wasm_wat_supports_imported_tables_and_call_indirect() {
 
 #[test]
 fn wasm_wat_exposes_memory_and_table_exports_by_name() {
-    type Module = typelude::wasm_wat! {
+    type Module = typelude::twat! {
         module: r#"
             (module
               (memory (export "memory") 1)

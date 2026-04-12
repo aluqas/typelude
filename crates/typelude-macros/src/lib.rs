@@ -3,11 +3,13 @@ use quote::quote;
 use syn::parse_macro_input;
 
 mod dsl;
+mod program;
 mod twat;
 mod ty_fn_impl;
 mod wasm_wat;
 
 use dsl::{BoundDslInput, ImplEvalInput, TyDslInput};
+use program::ProgramInput;
 use ty_fn_impl::TyFnInput;
 use wasm_wat::WasmWatInput;
 
@@ -60,6 +62,13 @@ pub fn ty_fn(input: TokenStream) -> TokenStream {
 pub fn ty_expr(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as TyFnInput);
     TokenStream::from(input.expand_eval())
+}
+
+#[proc_macro]
+pub fn program(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as ProgramInput);
+    let (expanded, _) = program::compile_block(&input.instrs, &[]);
+    TokenStream::from(expanded)
 }
 
 #[proc_macro]
