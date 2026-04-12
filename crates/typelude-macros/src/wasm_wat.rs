@@ -5,8 +5,8 @@ use syn::{
     parse::{Parse, ParseStream},
 };
 use wasmparser::{
-    BlockType, ConstExpr, DataKind, ElementItems, ElementKind, ExternalKind, FuncType, Operator,
-    Parser, Payload, RefType, ValType,
+    BlockType, ConstExpr, DataKind, ElementItems, ElementKind, ExternalKind, FuncType, Imports,
+    Operator, Parser, Payload, RefType, TypeRef, ValType,
 };
 
 pub struct WasmWatInput {
@@ -93,6 +93,7 @@ enum Instr {
 }
 
 struct ModuleDef {
+    imports: Vec<ImportDef>,
     types: Vec<FuncSig>,
     functions: Vec<FunctionDef>,
     memory: Option<MemoryDef>,
@@ -100,6 +101,29 @@ struct ModuleDef {
     globals: Vec<GlobalDef>,
     exports: Vec<ExportDef>,
     start: Option<u32>,
+}
+
+struct ImportDef {
+    module: String,
+    field: String,
+    kind: ImportKindDef,
+}
+
+#[derive(Clone)]
+enum ImportKindDef {
+    Func(FuncSig),
+    Global {
+        mutable: bool,
+        value_type: Val,
+    },
+    Memory {
+        min: u32,
+        max: Option<u32>,
+    },
+    Table {
+        min: u32,
+        max: Option<u32>,
+    },
 }
 
 struct MemoryDef {
@@ -122,6 +146,7 @@ struct GlobalDef {
 #[derive(Clone)]
 enum InitExprDef {
     I32Const(u32),
+    GlobalGet(u32),
 }
 
 struct DataSegmentDef {
@@ -142,6 +167,7 @@ struct ExportDef {
 
 enum ExportKind {
     Func(u32),
+    Global(u32),
     Memory,
     Table(u32),
 }
@@ -155,6 +181,7 @@ pub fn expand(input: WasmWatInput) -> syn::Result<TokenStream> {
     let wasm = wat::parse_str(input.module.value())
         .map_err(|err| Error::new(input.module.span(), format!("WAT parse error: {err}")))?;
     let module = parse_module(&wasm)?;
+    let imports = lower_imports(&module.imports)?;
     let funcs = lower_func_space(&module)?;
     let memory = lower_memory_decl(module.memory.as_ref())?;
     let tables = lower_tables(&module.tables)?;
@@ -164,7 +191,7 @@ pub fn expand(input: WasmWatInput) -> syn::Result<TokenStream> {
 
     Ok(quote!(
         ::typelude::wasm::WasmModule<
-            ::typelude::wasm::TTerm,
+            #imports,
             #funcs,
             #memory,
             #tables,
@@ -176,7 +203,9 @@ pub fn expand(input: WasmWatInput) -> syn::Result<TokenStream> {
 }
 
 fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
+    let mut imports = Vec::new();
     let mut types = Vec::new();
+    let mut imported_function_sigs = Vec::new();
     let mut function_type_indexes = Vec::new();
     let mut function_bodies = Vec::new();
     let mut memory = None;
@@ -244,6 +273,19 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
                     globals.push(parse_global_def(global.map_err(parser_error)?)?);
                 }
             },
+            Payload::ImportSection(reader) => {
+                for group in reader {
+                    parse_import_group(
+                        group.map_err(parser_error)?,
+                        &types,
+                        &mut imports,
+                        &mut imported_function_sigs,
+                        &mut memory,
+                        &mut saw_memory,
+                        &mut tables,
+                    )?;
+                }
+            },
             Payload::ExportSection(reader) => {
                 for export in reader {
                     let export = export.map_err(parser_error)?;
@@ -251,14 +293,9 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
                         ExternalKind::Func | ExternalKind::FuncExact => {
                             ExportKind::Func(export.index)
                         },
+                        ExternalKind::Global => ExportKind::Global(export.index),
                         ExternalKind::Memory => ExportKind::Memory,
                         ExternalKind::Table => ExportKind::Table(export.index),
-                        ExternalKind::Global => {
-                            return Err(Error::new(
-                                Span::call_site(),
-                                "unsupported export: global export is not supported",
-                            ));
-                        },
                         ExternalKind::Tag => {
                             return Err(Error::new(
                                 Span::call_site(),
@@ -289,7 +326,6 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
                     data_segments.push(parse_data_segment(data.map_err(parser_error)?)?);
                 }
             },
-            Payload::ImportSection(_) => return unsupported_section("import"),
             Payload::DataCountSection { .. } => return unsupported_section("data_count"),
             Payload::TagSection(_) => return unsupported_section("tag"),
             Payload::CustomSection(_) | Payload::End(_) => {},
@@ -327,11 +363,12 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
     if let Some(start_func) = start {
         let start_func = usize::try_from(start_func)
             .map_err(|_| Error::new(Span::call_site(), "start function index does not fit in usize"))?;
-        let sig = functions
-            .get(start_func)
-            .ok_or_else(|| Error::new(Span::call_site(), "start function index out of bounds"))?
-            .sig
-            .clone();
+        let sig = imported_function_sigs
+            .iter()
+            .cloned()
+            .chain(functions.iter().map(|function| function.sig.clone()))
+            .nth(start_func)
+            .ok_or_else(|| Error::new(Span::call_site(), "start function index out of bounds"))?;
         if !sig.params.is_empty() || !sig.results.is_empty() {
             return Err(Error::new(
                 Span::call_site(),
@@ -370,6 +407,7 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
     }
 
     Ok(ModuleDef {
+        imports,
         types,
         functions,
         memory,
@@ -377,6 +415,146 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
         globals,
         exports,
         start,
+    })
+}
+
+fn parse_import_group(
+    group: Imports<'_>,
+    types: &[FuncSig],
+    imports: &mut Vec<ImportDef>,
+    imported_function_sigs: &mut Vec<FuncSig>,
+    memory: &mut Option<MemoryDef>,
+    saw_memory: &mut bool,
+    tables: &mut Vec<TableDef>,
+) -> syn::Result<()> {
+    match group {
+        Imports::Single(_, import) => parse_import_item(
+            import.module,
+            import.name,
+            import.ty,
+            types,
+            imports,
+            imported_function_sigs,
+            memory,
+            saw_memory,
+            tables,
+        ),
+        Imports::Compact1 { module, items } => {
+            for item in items {
+                let item = item.map_err(parser_error)?;
+                parse_import_item(
+                    module,
+                    item.name,
+                    item.ty,
+                    types,
+                    imports,
+                    imported_function_sigs,
+                    memory,
+                    saw_memory,
+                    tables,
+                )?;
+            }
+            Ok(())
+        },
+        Imports::Compact2 { module, ty, names } => {
+            for name in names {
+                parse_import_item(
+                    module,
+                    name.map_err(parser_error)?,
+                    ty,
+                    types,
+                    imports,
+                    imported_function_sigs,
+                    memory,
+                    saw_memory,
+                    tables,
+                )?;
+            }
+            Ok(())
+        },
+    }
+}
+
+fn parse_import_item(
+    module_name: &str,
+    field_name: &str,
+    ty: TypeRef,
+    types: &[FuncSig],
+    imports: &mut Vec<ImportDef>,
+    imported_function_sigs: &mut Vec<FuncSig>,
+    memory: &mut Option<MemoryDef>,
+    saw_memory: &mut bool,
+    tables: &mut Vec<TableDef>,
+) -> syn::Result<()> {
+    let kind = match ty {
+        TypeRef::Func(type_index) | TypeRef::FuncExact(type_index) => {
+            let sig = types
+                .get(usize::try_from(type_index).map_err(|_| {
+                    Error::new(Span::call_site(), "import function type index does not fit in usize")
+                })?)
+                .cloned()
+                .ok_or_else(|| Error::new(Span::call_site(), "import function type index out of bounds"))?;
+            imported_function_sigs.push(sig.clone());
+            ImportKindDef::Func(sig)
+        },
+        TypeRef::Global(global_ty) => parse_global_import_kind(global_ty)?,
+        TypeRef::Memory(memory_ty) => {
+            if *saw_memory {
+                return Err(Error::new(
+                    Span::call_site(),
+                    "unsupported section: multiple memories are not supported",
+                ));
+            }
+            *saw_memory = true;
+            let memory_def = parse_memory_def(memory_ty)?;
+            *memory = Some(MemoryDef {
+                min: memory_def.min,
+                max: memory_def.max,
+                data_segments: Vec::new(),
+            });
+            ImportKindDef::Memory {
+                min: memory_def.min,
+                max: memory_def.max,
+            }
+        },
+        TypeRef::Table(table_ty) => {
+            let table_def = parse_table_type(table_ty)?;
+            tables.push(TableDef {
+                min: table_def.min,
+                max: table_def.max,
+                elem_segments: Vec::new(),
+            });
+            ImportKindDef::Table {
+                min: table_def.min,
+                max: table_def.max,
+            }
+        },
+        TypeRef::Tag(_) => {
+            return Err(Error::new(
+                Span::call_site(),
+                "unsupported import: tag import is not supported",
+            ));
+        },
+    };
+
+    imports.push(ImportDef {
+        module: module_name.to_owned(),
+        field: field_name.to_owned(),
+        kind,
+    });
+    Ok(())
+}
+
+fn parse_global_import_kind(global_ty: wasmparser::GlobalType) -> syn::Result<ImportKindDef> {
+    if global_ty.shared {
+        return Err(Error::new(
+            Span::call_site(),
+            "unsupported import: shared globals are not supported",
+        ));
+    }
+    Ok(ImportKindDef::Global {
+        mutable: global_ty.mutable,
+        value_type: lower_val_type(global_ty.content_type)?,
     })
 }
 
@@ -565,6 +743,54 @@ fn lower_func_space(module: &ModuleDef) -> syn::Result<TokenStream> {
     let types = lower_types(&module.types)?;
     let funcs = lower_functions(&module.functions)?;
     Ok(quote!(::typelude::wasm::WasmFuncSpace<#types, #funcs>))
+}
+
+fn lower_imports(imports: &[ImportDef]) -> syn::Result<TokenStream> {
+    let mut lowered = Vec::with_capacity(imports.len());
+    for import in imports {
+        lowered.push(lower_import(import)?);
+    }
+    Ok(lower_list(lowered))
+}
+
+fn lower_import(import: &ImportDef) -> syn::Result<TokenStream> {
+    let module_name = LitStr::new(&import.module, Span::call_site());
+    let field_name = LitStr::new(&import.field, Span::call_site());
+    let kind = match &import.kind {
+        ImportKindDef::Func(sig) => {
+            let sig = lower_func_type(sig)?;
+            quote!(::typelude::wasm::ImportFunc<#sig>)
+        },
+        ImportKindDef::Global {
+            mutable,
+            value_type,
+        } => {
+            let mutability = if *mutable {
+                quote!(::typelude::wasm::GlobalMut)
+            } else {
+                quote!(::typelude::wasm::GlobalConst)
+            };
+            let value_type = lower_value_type(*value_type);
+            quote!(::typelude::wasm::ImportGlobal<#mutability, #value_type>)
+        },
+        ImportKindDef::Memory { min, max } => {
+            let min = uint_type(*min as usize)?;
+            let max = lower_limit(*max)?;
+            quote!(::typelude::wasm::ImportMemory<#min, #max>)
+        },
+        ImportKindDef::Table { min, max } => {
+            let min = uint_type(*min as usize)?;
+            let max = lower_limit(*max)?;
+            quote!(::typelude::wasm::ImportTable<#min, #max>)
+        },
+    };
+    Ok(quote!(
+        ::typelude::wasm::WasmImport<
+            ::typelude::wasm::tstr::TS!(#module_name),
+            ::typelude::wasm::tstr::TS!(#field_name),
+            #kind
+        >
+    ))
 }
 
 fn lower_types(types: &[FuncSig]) -> syn::Result<TokenStream> {
@@ -812,6 +1038,10 @@ fn lower_init_expr(expr: &InitExprDef) -> syn::Result<TokenStream> {
             let value = uint_type(*value as usize)?;
             quote!(::typelude::wasm::InitI32Const<#value>)
         },
+        InitExprDef::GlobalGet(index) => {
+            let index = uint_type(*index as usize)?;
+            quote!(::typelude::wasm::InitGlobalGet<#index>)
+        },
     })
 }
 
@@ -829,6 +1059,10 @@ fn lower_export(export: &ExportDef) -> syn::Result<TokenStream> {
         ExportKind::Func(index) => {
             let index = uint_type(index as usize)?;
             quote!(::typelude::wasm::ExportFunc<#index>)
+        },
+        ExportKind::Global(index) => {
+            let index = uint_type(index as usize)?;
+            quote!(::typelude::wasm::ExportGlobal<#index>)
         },
         ExportKind::Memory => quote!(::typelude::wasm::ExportMemory),
         ExportKind::Table(index) => {
@@ -923,32 +1157,36 @@ fn parse_table_def(table: wasmparser::Table<'_>) -> syn::Result<TableDef> {
             "unsupported section: table init expressions are not supported",
         ));
     }
-    if table.ty.table64 {
+    parse_table_type(table.ty)
+}
+
+fn parse_table_type(table_ty: wasmparser::TableType) -> syn::Result<TableDef> {
+    if table_ty.table64 {
         return Err(Error::new(
             Span::call_site(),
             "unsupported section: table64 is not supported",
         ));
     }
-    if table.ty.shared {
+    if table_ty.shared {
         return Err(Error::new(
             Span::call_site(),
             "unsupported section: shared table is not supported",
         ));
     }
-    if table.ty.element_type != RefType::FUNCREF {
+    if table_ty.element_type != RefType::FUNCREF {
         return Err(Error::new(
             Span::call_site(),
             "unsupported section: only funcref tables are supported",
         ));
     }
     Ok(TableDef {
-        min: u32::try_from(table.ty.initial).map_err(|_| {
+        min: u32::try_from(table_ty.initial).map_err(|_| {
             Error::new(
                 Span::call_site(),
                 "unsupported section: table minimum exceeds u32 element count",
             )
         })?,
-        max: match table.ty.maximum {
+        max: match table_ty.maximum {
             Some(max) => Some(u32::try_from(max).map_err(|_| {
                 Error::new(
                     Span::call_site(),
@@ -968,15 +1206,9 @@ fn parse_global_def(global: wasmparser::Global<'_>) -> syn::Result<GlobalDef> {
             "unsupported section: shared globals are not supported",
         ));
     }
-    if !matches!(lower_val_type(global.ty.content_type)?, Val::I32) {
-        return Err(Error::new(
-            Span::call_site(),
-            "unsupported type: only i32 globals are supported",
-        ));
-    }
     Ok(GlobalDef {
         mutable: global.ty.mutable,
-        init: parse_i32_const_init_expr(&global.init_expr, "global init expr")?,
+        init: parse_init_expr(&global.init_expr, "global init expr")?,
     })
 }
 
@@ -1000,7 +1232,7 @@ fn parse_data_segment(data: wasmparser::Data<'_>) -> syn::Result<DataSegmentDef>
         ));
     }
     Ok(DataSegmentDef {
-        offset: parse_i32_const_init_expr(&offset_expr, "data offset expr")?,
+        offset: parse_init_expr(&offset_expr, "data offset expr")?,
         bytes: data.data.iter().map(|byte| u32::from(*byte)).collect(),
     })
 }
@@ -1040,22 +1272,26 @@ fn parse_elem_segment(element: wasmparser::Element<'_>) -> syn::Result<ElemSegme
 
     Ok(ElemSegmentDef {
         table_index,
-        offset: parse_i32_const_init_expr(&offset_expr, "elem offset expr")?,
+        offset: parse_init_expr(&offset_expr, "elem offset expr")?,
         func_indices,
     })
 }
 
-fn parse_i32_const_init_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<InitExprDef> {
+fn parse_init_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<InitExprDef> {
     let mut operators = expr.get_operators_reader();
     let init = match operators.read().map_err(parser_error)? {
         Operator::I32Const { value } => InitExprDef::I32Const(parse_non_negative_i32_immediate(
             value,
             context,
         )?),
+        Operator::GlobalGet { global_index } => InitExprDef::GlobalGet(global_index),
         other => {
             return Err(Error::new(
                 Span::call_site(),
-                format!("unsupported {context}: expected i32.const, found {}", opcode_name(&other)),
+                format!(
+                    "unsupported {context}: expected i32.const or global.get, found {}",
+                    opcode_name(&other)
+                ),
             ));
         },
     };

@@ -16,9 +16,8 @@ use typelude_macros::wasm_wat;
 type _Bad = wasm_wat! {
     module: r#"
         (module
-          (table 1 funcref)
-          (func $f)
-          (elem (i32.const 0) funcref (ref.func $f)))
+          (import "host" "memory" (memory 1))
+          (memory 1))
     "#,
 };
 

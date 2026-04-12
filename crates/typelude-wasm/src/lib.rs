@@ -14,6 +14,11 @@ pub use frame::ReturnFrame;
 #[doc(hidden)]
 pub use frame::{BranchBlock, BranchLoop, ResolvedBlock, ResolvedLoop};
 pub use func::WasmFunc;
+pub use helpers::call::{HostCall, HostCallResult};
+pub use helpers::export::{
+    ResolveExportFunc, ResolveExportGlobal, ResolveExportKind, ResolveExportMemory,
+    ResolveExportTable,
+};
 pub use module::{
     ExportFunc, ExportGlobal, ExportMemory, ExportTable, GlobalConst, GlobalMut,
     HostFuncBinding, HostGlobalBinding, HostMemoryBinding, HostTableBinding, ImportFunc,
@@ -25,7 +30,8 @@ pub use module::{
 pub use run::{
     EmptyHostEnv, EmptyState, InstantiateModule, InvokeExport, InvokeExportWithEnv, InvokeFunc,
     InvokeFuncWithEnv, ModuleProgramRun, Run, RunWasm, StateBranches, StateGlobals, StateLocals,
-    StateMemory, StateProgram, StateStack, StateStore, StateTables,
+    StateExportGlobal, StateExportMemory, StateExportTable, StateMemory, StateProgram,
+    StateStack, StateStore, StateTables,
 };
 #[doc(hidden)]
 pub use state::MemoryCell;

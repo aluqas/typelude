@@ -1,37 +1,5 @@
 error: expected only the `module` field
-  --> tests/ui/wasm_wat/old_invoke_args_syntax.rs:22:5
+  --> tests/ui/wasm_wat/old_invoke_args_syntax.rs:24:5
    |
-22 |     invoke: "main",
+24 |     invoke: "main",
    |     ^^^^^^
-
-warning: unused import: `typelude_std::core::*`
- --> tests/ui/wasm_wat/old_invoke_args_syntax.rs:3:17
-  |
-3 |         pub use typelude_std::core::*;
-  |                 ^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `typenum`
- --> tests/ui/wasm_wat/old_invoke_args_syntax.rs:4:17
-  |
-4 |         pub use typenum;
-  |                 ^^^^^^^
-
-warning: unused imports: `Eval` and `Evaluate`
- --> tests/ui/wasm_wat/old_invoke_args_syntax.rs:7:28
-  |
-7 |     pub use typelude_std::{Eval, Evaluate};
-  |                            ^^^^  ^^^^^^^^
-
-warning: unused import: `typelude_wasm as wasm`
- --> tests/ui/wasm_wat/old_invoke_args_syntax.rs:8:13
-  |
-8 |     pub use typelude_wasm as wasm;
-  |             ^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused import: `typenum`
- --> tests/ui/wasm_wat/old_invoke_args_syntax.rs:9:13
-  |
-9 |     pub use typenum;
-  |             ^^^^^^^

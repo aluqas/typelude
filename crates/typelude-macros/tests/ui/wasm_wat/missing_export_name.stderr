@@ -1,0 +1,20 @@
+error[E0277]: the trait bound `TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'a', 'i', 'n'>, 4>>: typenum::Cmp<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'i', 's', 's', 'i', 'n', 'g'>, 7>>>` is not satisfied
+  --> tests/ui/wasm_wat/missing_export_name.rs:34:24
+   |
+34 |     let _: PhantomData<Bad>;
+   |                        ^^^ unsatisfied trait bound
+   |
+   = help: the trait `typenum::Cmp<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'i', 's', 's', 'i', 'n', 'g'>, 7>>>` is not implemented for `TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'a', 'i', 'n'>, 4>>`
+   = help: the following other types implement trait `typenum::Cmp<Rhs>`:
+             `B0` implements `typenum::Cmp<B1>`
+             `B0` implements `typenum::Cmp`
+             `B1` implements `typenum::Cmp<B0>`
+             `B1` implements `typenum::Cmp`
+             `NInt<N>` implements `typenum::Cmp<PInt<P>>`
+             `NInt<Nl>` implements `typenum::Cmp<NInt<Nr>>`
+             `NInt<U>` implements `typenum::Cmp<Z0>`
+             `PInt<P>` implements `typenum::Cmp<NInt<N>>`
+           and $N others
+   = note: required for `TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'a', 'i', 'n'>, 4>>` to implement `IsEqual<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'i', 's', 's', 'i', 'n', 'g'>, 7>>>`
+   = note: required for `typelude_wasm::TArr<WasmExport<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'a', 'i', 'n'>, 4>>, ExportFunc<UTerm>>, TTerm>` to implement `ResolveExportKind<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'i', 's', 's', 'i', 'n', 'g'>, 7>>>`
+   = note: required for `WasmResolvedModule<typelude_wasm::TArr<WasmFunc<WasmFuncType<TTerm, typelude_wasm::TArr<WasmI32Type, TTerm>>, TTerm, typelude_wasm::TArr<OpI32Const<UInt<UTerm, B1>>, TTerm>>, TTerm>, typelude_wasm::TArr<WasmFuncType<TTerm, typelude_wasm::TArr<WasmI32Type, TTerm>>, TTerm>, typelude_wasm::TArr<WasmExport<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'a', 'i', 'n'>, 4>>, ExportFunc<UTerm>>, TTerm>>` to implement `ResolveExportFunc<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'m', 'i', 's', 's', 'i', 'n', 'g'>, 7>>>`

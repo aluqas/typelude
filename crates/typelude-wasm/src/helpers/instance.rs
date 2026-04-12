@@ -1,16 +1,22 @@
 use typelude_col::{TArr, TTerm};
-use typelude_std::core::{Append, Get};
+use typelude_std::core::{Append, Concat, Get};
 
 use crate::{
     helpers::{
+        import::{
+            ImportedFuncCompat, ImportedGlobalCompat, ImportedMemoryCompat, ImportedTableCompat,
+            ResolveHostFuncBinding, ResolveHostGlobalBinding, ResolveHostMemoryBinding,
+            ResolveHostTableBinding,
+        },
         i32::U4294967295,
         memory::MemoryWriteBytes,
         table::TableWriteRefs,
     },
     module::{
-        GlobalConst, InitGlobalGet, InitI32Const, NoLimit, WasmDataSegment, WasmElemSegment,
-        WasmFuncSpace, WasmGlobalDecl, WasmHostEnv, WasmInstance, WasmMemoryDecl, WasmModule,
-        WasmResolvedModule, WasmTableDecl,
+        GlobalConst, ImportFunc, ImportGlobal, ImportMemory, ImportTable, InitGlobalGet,
+        InitI32Const, NoLimit, WasmDataSegment, WasmElemSegment, WasmFuncSpace, WasmGlobalDecl,
+        WasmHostEnv, WasmImport, WasmInstance, WasmMemoryDecl, WasmModule, WasmResolvedModule,
+        WasmTableDecl,
     },
     state::{WasmGlobal, WasmMemory, WasmStore, WasmTable},
     value::WasmI32,
@@ -19,6 +25,9 @@ use crate::{
 pub trait Instantiate<Env> {
     type Output;
 }
+
+#[doc(hidden)]
+pub struct NoImportedMemory;
 
 pub trait ToStoreMax {
     type Output;
@@ -215,6 +224,256 @@ impl<Types, Funcs> FuncSpaceFuncs for WasmFuncSpace<Types, Funcs> {
     type Output = Funcs;
 }
 
+pub trait BuildImportedFuncs<Imports, Bindings> {
+    type Output;
+}
+
+impl<Bindings> BuildImportedFuncs<TTerm, Bindings> for () {
+    type Output = TTerm;
+}
+
+impl<ModuleName, FieldName, FuncType, Tail, Bindings> BuildImportedFuncs<TArr<WasmImport<ModuleName, FieldName, ImportFunc<FuncType>>, Tail>, Bindings>
+    for ()
+where
+    Bindings: ResolveHostFuncBinding<ModuleName, FieldName>,
+    <Bindings as ResolveHostFuncBinding<ModuleName, FieldName>>::Output:
+        ImportedFuncCompat<ImportFunc<FuncType>>,
+    (): BuildImportedFuncs<Tail, Bindings>,
+{
+    type Output = TArr<
+        <<Bindings as ResolveHostFuncBinding<ModuleName, FieldName>>::Output as ImportedFuncCompat<
+            ImportFunc<FuncType>,
+        >>::Output,
+        <() as BuildImportedFuncs<Tail, Bindings>>::Output,
+    >;
+}
+
+impl<ModuleName, FieldName, Mutability, ValueType, Tail, Bindings>
+    BuildImportedFuncs<TArr<WasmImport<ModuleName, FieldName, ImportGlobal<Mutability, ValueType>>, Tail>, Bindings>
+    for ()
+where
+    (): BuildImportedFuncs<Tail, Bindings>,
+{
+    type Output = <() as BuildImportedFuncs<Tail, Bindings>>::Output;
+}
+
+impl<ModuleName, FieldName, MinPages, MaxPages, Tail, Bindings>
+    BuildImportedFuncs<TArr<WasmImport<ModuleName, FieldName, ImportMemory<MinPages, MaxPages>>, Tail>, Bindings>
+    for ()
+where
+    (): BuildImportedFuncs<Tail, Bindings>,
+{
+    type Output = <() as BuildImportedFuncs<Tail, Bindings>>::Output;
+}
+
+impl<ModuleName, FieldName, Min, Max, Tail, Bindings>
+    BuildImportedFuncs<TArr<WasmImport<ModuleName, FieldName, ImportTable<Min, Max>>, Tail>, Bindings>
+    for ()
+where
+    (): BuildImportedFuncs<Tail, Bindings>,
+{
+    type Output = <() as BuildImportedFuncs<Tail, Bindings>>::Output;
+}
+
+pub trait BuildImportedGlobals<Imports, Bindings> {
+    type Output;
+}
+
+impl<Bindings> BuildImportedGlobals<TTerm, Bindings> for () {
+    type Output = TTerm;
+}
+
+impl<ModuleName, FieldName, FuncType, Tail, Bindings>
+    BuildImportedGlobals<TArr<WasmImport<ModuleName, FieldName, ImportFunc<FuncType>>, Tail>, Bindings>
+    for ()
+where
+    (): BuildImportedGlobals<Tail, Bindings>,
+{
+    type Output = <() as BuildImportedGlobals<Tail, Bindings>>::Output;
+}
+
+impl<ModuleName, FieldName, Mutability, ValueType, Tail, Bindings>
+    BuildImportedGlobals<TArr<WasmImport<ModuleName, FieldName, ImportGlobal<Mutability, ValueType>>, Tail>, Bindings>
+    for ()
+where
+    Bindings: ResolveHostGlobalBinding<ModuleName, FieldName>,
+    <Bindings as ResolveHostGlobalBinding<ModuleName, FieldName>>::Output:
+        ImportedGlobalCompat<ImportGlobal<Mutability, ValueType>>,
+    (): BuildImportedGlobals<Tail, Bindings>,
+{
+    type Output = TArr<
+        <<Bindings as ResolveHostGlobalBinding<ModuleName, FieldName>>::Output as ImportedGlobalCompat<
+            ImportGlobal<Mutability, ValueType>,
+        >>::Output,
+        <() as BuildImportedGlobals<Tail, Bindings>>::Output,
+    >;
+}
+
+impl<ModuleName, FieldName, MinPages, MaxPages, Tail, Bindings>
+    BuildImportedGlobals<TArr<WasmImport<ModuleName, FieldName, ImportMemory<MinPages, MaxPages>>, Tail>, Bindings>
+    for ()
+where
+    (): BuildImportedGlobals<Tail, Bindings>,
+{
+    type Output = <() as BuildImportedGlobals<Tail, Bindings>>::Output;
+}
+
+impl<ModuleName, FieldName, Min, Max, Tail, Bindings>
+    BuildImportedGlobals<TArr<WasmImport<ModuleName, FieldName, ImportTable<Min, Max>>, Tail>, Bindings>
+    for ()
+where
+    (): BuildImportedGlobals<Tail, Bindings>,
+{
+    type Output = <() as BuildImportedGlobals<Tail, Bindings>>::Output;
+}
+
+pub trait ResolveImportedMemory<Imports, Bindings> {
+    type Output;
+}
+
+impl<Bindings> ResolveImportedMemory<TTerm, Bindings> for () {
+    type Output = NoImportedMemory;
+}
+
+impl<ModuleName, FieldName, FuncType, Tail, Bindings>
+    ResolveImportedMemory<TArr<WasmImport<ModuleName, FieldName, ImportFunc<FuncType>>, Tail>, Bindings>
+    for ()
+where
+    (): ResolveImportedMemory<Tail, Bindings>,
+{
+    type Output = <() as ResolveImportedMemory<Tail, Bindings>>::Output;
+}
+
+impl<ModuleName, FieldName, Mutability, ValueType, Tail, Bindings>
+    ResolveImportedMemory<TArr<WasmImport<ModuleName, FieldName, ImportGlobal<Mutability, ValueType>>, Tail>, Bindings>
+    for ()
+where
+    (): ResolveImportedMemory<Tail, Bindings>,
+{
+    type Output = <() as ResolveImportedMemory<Tail, Bindings>>::Output;
+}
+
+impl<ModuleName, FieldName, MinPages, MaxPages, Tail, Bindings>
+    ResolveImportedMemory<TArr<WasmImport<ModuleName, FieldName, ImportMemory<MinPages, MaxPages>>, Tail>, Bindings>
+    for ()
+where
+    Bindings: ResolveHostMemoryBinding<ModuleName, FieldName>,
+    <Bindings as ResolveHostMemoryBinding<ModuleName, FieldName>>::Output:
+        ImportedMemoryCompat<ImportMemory<MinPages, MaxPages>>,
+{
+    type Output =
+        <<Bindings as ResolveHostMemoryBinding<ModuleName, FieldName>>::Output as ImportedMemoryCompat<
+            ImportMemory<MinPages, MaxPages>,
+        >>::Output;
+}
+
+impl<ModuleName, FieldName, Min, Max, Tail, Bindings>
+    ResolveImportedMemory<TArr<WasmImport<ModuleName, FieldName, ImportTable<Min, Max>>, Tail>, Bindings>
+    for ()
+where
+    (): ResolveImportedMemory<Tail, Bindings>,
+{
+    type Output = <() as ResolveImportedMemory<Tail, Bindings>>::Output;
+}
+
+pub trait MaterializeMemoryStore<ImportedMemory, MemoryDecl, Globals> {
+    type Output;
+}
+
+impl<MemoryDecl, Globals> MaterializeMemoryStore<NoImportedMemory, MemoryDecl, Globals> for ()
+where
+    (): InstantiateMemoryStore<MemoryDecl, Globals>,
+{
+    type Output = <() as InstantiateMemoryStore<MemoryDecl, Globals>>::Output;
+}
+
+impl<Pages, ActualMax, Cells, MinPages, MaxPages, Segments, Globals>
+    MaterializeMemoryStore<WasmMemory<Pages, ActualMax, Cells>, WasmMemoryDecl<MinPages, MaxPages, Segments>, Globals>
+    for ()
+where
+    (): ApplyDataSegments<WasmMemory<Pages, ActualMax, Cells>, Segments, Globals>,
+{
+    type Output =
+        <() as ApplyDataSegments<WasmMemory<Pages, ActualMax, Cells>, Segments, Globals>>::Output;
+}
+
+pub trait InstantiateImportedTables<Imports, Decls, Bindings, Globals> {
+    type Imported;
+    type RemainingDecls;
+}
+
+impl<Decls, Bindings, Globals> InstantiateImportedTables<TTerm, Decls, Bindings, Globals> for () {
+    type Imported = TTerm;
+    type RemainingDecls = Decls;
+}
+
+impl<ModuleName, FieldName, FuncType, Tail, Decls, Bindings, Globals>
+    InstantiateImportedTables<TArr<WasmImport<ModuleName, FieldName, ImportFunc<FuncType>>, Tail>, Decls, Bindings, Globals>
+    for ()
+where
+    (): InstantiateImportedTables<Tail, Decls, Bindings, Globals>,
+{
+    type Imported = <() as InstantiateImportedTables<Tail, Decls, Bindings, Globals>>::Imported;
+    type RemainingDecls =
+        <() as InstantiateImportedTables<Tail, Decls, Bindings, Globals>>::RemainingDecls;
+}
+
+impl<ModuleName, FieldName, Mutability, ValueType, Tail, Decls, Bindings, Globals>
+    InstantiateImportedTables<TArr<WasmImport<ModuleName, FieldName, ImportGlobal<Mutability, ValueType>>, Tail>, Decls, Bindings, Globals>
+    for ()
+where
+    (): InstantiateImportedTables<Tail, Decls, Bindings, Globals>,
+{
+    type Imported = <() as InstantiateImportedTables<Tail, Decls, Bindings, Globals>>::Imported;
+    type RemainingDecls =
+        <() as InstantiateImportedTables<Tail, Decls, Bindings, Globals>>::RemainingDecls;
+}
+
+impl<ModuleName, FieldName, MinPages, MaxPages, Tail, Decls, Bindings, Globals>
+    InstantiateImportedTables<TArr<WasmImport<ModuleName, FieldName, ImportMemory<MinPages, MaxPages>>, Tail>, Decls, Bindings, Globals>
+    for ()
+where
+    (): InstantiateImportedTables<Tail, Decls, Bindings, Globals>,
+{
+    type Imported = <() as InstantiateImportedTables<Tail, Decls, Bindings, Globals>>::Imported;
+    type RemainingDecls =
+        <() as InstantiateImportedTables<Tail, Decls, Bindings, Globals>>::RemainingDecls;
+}
+
+impl<ModuleName, FieldName, Min, Max, TailImports, ElemSegments, TailDecls, Bindings, Globals>
+    InstantiateImportedTables<
+        TArr<WasmImport<ModuleName, FieldName, ImportTable<Min, Max>>, TailImports>,
+        TArr<WasmTableDecl<Min, Max, ElemSegments>, TailDecls>,
+        Bindings,
+        Globals,
+    > for ()
+where
+    Bindings: ResolveHostTableBinding<ModuleName, FieldName>,
+    <Bindings as ResolveHostTableBinding<ModuleName, FieldName>>::Output:
+        ImportedTableCompat<ImportTable<Min, Max>>,
+    (): ApplyElemSegments<
+        <<Bindings as ResolveHostTableBinding<ModuleName, FieldName>>::Output as ImportedTableCompat<
+            ImportTable<Min, Max>,
+        >>::Output,
+        ElemSegments,
+        Globals,
+    >,
+    (): InstantiateImportedTables<TailImports, TailDecls, Bindings, Globals>,
+{
+    type Imported = TArr<
+        <() as ApplyElemSegments<
+            <<Bindings as ResolveHostTableBinding<ModuleName, FieldName>>::Output as ImportedTableCompat<
+                ImportTable<Min, Max>,
+            >>::Output,
+            ElemSegments,
+            Globals,
+        >>::Output,
+        <() as InstantiateImportedTables<TailImports, TailDecls, Bindings, Globals>>::Imported,
+    >;
+    type RemainingDecls =
+        <() as InstantiateImportedTables<TailImports, TailDecls, Bindings, Globals>>::RemainingDecls;
+}
+
 impl<FuncSpace, MemoryDecl, TablesDecl, GlobalsDecl, Exports, Start>
     Instantiate<()> for WasmModule<TTerm, FuncSpace, MemoryDecl, TablesDecl, GlobalsDecl, Exports, Start>
 where
@@ -238,13 +497,119 @@ where
     >;
 }
 
-impl<FuncSpace, MemoryDecl, TablesDecl, GlobalsDecl, Exports, Start>
-    Instantiate<WasmHostEnv<TTerm, TTerm, TTerm, TTerm>>
-    for WasmModule<TTerm, FuncSpace, MemoryDecl, TablesDecl, GlobalsDecl, Exports, Start>
+impl<
+        Imports,
+        FuncSpace,
+        MemoryDecl,
+        TablesDecl,
+        GlobalsDecl,
+        Exports,
+        Start,
+        FuncBindings,
+        GlobalBindings,
+        MemoryBindings,
+        TableBindings,
+    > Instantiate<WasmHostEnv<FuncBindings, GlobalBindings, MemoryBindings, TableBindings>>
+    for WasmModule<Imports, FuncSpace, MemoryDecl, TablesDecl, GlobalsDecl, Exports, Start>
 where
-    WasmModule<TTerm, FuncSpace, MemoryDecl, TablesDecl, GlobalsDecl, Exports, Start>:
-        Instantiate<()>,
+    FuncSpace: FuncSpaceTypes + FuncSpaceFuncs,
+    (): BuildImportedFuncs<Imports, FuncBindings>,
+    <() as BuildImportedFuncs<Imports, FuncBindings>>::Output:
+        Concat<<FuncSpace as FuncSpaceFuncs>::Output>,
+    (): BuildImportedGlobals<Imports, GlobalBindings>,
+    (): AppendDefinedGlobals<
+        <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+        GlobalsDecl,
+    >,
+    (): ResolveImportedMemory<Imports, MemoryBindings>,
+    (): MaterializeMemoryStore<
+        <() as ResolveImportedMemory<Imports, MemoryBindings>>::Output,
+        MemoryDecl,
+        <() as AppendDefinedGlobals<
+            <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+            GlobalsDecl,
+        >>::Output,
+    >,
+    (): InstantiateImportedTables<
+        Imports,
+        TablesDecl,
+        TableBindings,
+        <() as AppendDefinedGlobals<
+            <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+            GlobalsDecl,
+        >>::Output,
+    >,
+    (): AppendDefinedTables<
+        <() as InstantiateImportedTables<
+            Imports,
+            TablesDecl,
+            TableBindings,
+            <() as AppendDefinedGlobals<
+                <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+                GlobalsDecl,
+            >>::Output,
+        >>::Imported,
+        <() as InstantiateImportedTables<
+            Imports,
+            TablesDecl,
+            TableBindings,
+            <() as AppendDefinedGlobals<
+                <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+                GlobalsDecl,
+            >>::Output,
+        >>::RemainingDecls,
+        <() as AppendDefinedGlobals<
+            <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+            GlobalsDecl,
+        >>::Output,
+    >,
 {
-    type Output =
-        <WasmModule<TTerm, FuncSpace, MemoryDecl, TablesDecl, GlobalsDecl, Exports, Start> as Instantiate<()>>::Output;
+    type Output = WasmInstance<
+        WasmResolvedModule<
+            <<() as BuildImportedFuncs<Imports, FuncBindings>>::Output as Concat<
+                <FuncSpace as FuncSpaceFuncs>::Output,
+            >>::Output,
+            <FuncSpace as FuncSpaceTypes>::Output,
+            Exports,
+        >,
+        WasmStore<
+            <() as MaterializeMemoryStore<
+                <() as ResolveImportedMemory<Imports, MemoryBindings>>::Output,
+                MemoryDecl,
+                <() as AppendDefinedGlobals<
+                    <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+                    GlobalsDecl,
+                >>::Output,
+            >>::Output,
+            <() as AppendDefinedTables<
+                <() as InstantiateImportedTables<
+                    Imports,
+                    TablesDecl,
+                    TableBindings,
+                    <() as AppendDefinedGlobals<
+                        <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+                        GlobalsDecl,
+                    >>::Output,
+                >>::Imported,
+                <() as InstantiateImportedTables<
+                    Imports,
+                    TablesDecl,
+                    TableBindings,
+                    <() as AppendDefinedGlobals<
+                        <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+                        GlobalsDecl,
+                    >>::Output,
+                >>::RemainingDecls,
+                <() as AppendDefinedGlobals<
+                    <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+                    GlobalsDecl,
+                >>::Output,
+            >>::Output,
+            <() as AppendDefinedGlobals<
+                <() as BuildImportedGlobals<Imports, GlobalBindings>>::Output,
+                GlobalsDecl,
+            >>::Output,
+        >,
+        Start,
+    >;
 }

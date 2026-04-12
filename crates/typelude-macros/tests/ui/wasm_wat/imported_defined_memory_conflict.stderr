@@ -1,12 +1,12 @@
-error: start function must have empty params and empty results
-  --> tests/ui/wasm_wat/start_signature_mismatch.rs:16:13
+error: unsupported section: multiple memory sections are not supported
+  --> tests/ui/wasm_wat/imported_defined_memory_conflict.rs:16:13
    |
 16 |   type _Bad = wasm_wat! {
    |  _____________^
 17 | |     module: r#"
 18 | |         (module
-19 | |           (func $start (param i32))
-20 | |           (start $start))
+19 | |           (import "host" "memory" (memory 1))
+20 | |           (memory 1))
 21 | |     "#,
 22 | | };
    | |_^

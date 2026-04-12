@@ -7,7 +7,7 @@ use typenum::U0;
 use crate::{
     frame::ReturnFrame,
     helpers::{
-        export::ResolveExportFunc,
+        export::{ResolveExportFunc, ResolveExportGlobal, ResolveExportMemory, ResolveExportTable},
         i32::U4294967295,
         instance::Instantiate,
     },
@@ -186,6 +186,18 @@ pub trait StateBranches {
     type Output;
 }
 
+pub trait StateExportGlobal<Name> {
+    type Output;
+}
+
+pub trait StateExportTable<Name> {
+    type Output;
+}
+
+pub trait StateExportMemory<Name> {
+    type Output;
+}
+
 impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateStore
     for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
 {
@@ -232,4 +244,33 @@ impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateBranches
     for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
 {
     type Output = Branches;
+}
+
+impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program, Name>
+    StateExportGlobal<Name>
+    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+where
+    Module: ResolveExportGlobal<Name>,
+    Globals: typelude_std::core::Get<<Module as ResolveExportGlobal<Name>>::Output>,
+{
+    type Output = <Globals as typelude_std::core::Get<<Module as ResolveExportGlobal<Name>>::Output>>::Output;
+}
+
+impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program, Name>
+    StateExportTable<Name>
+    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+where
+    Module: ResolveExportTable<Name>,
+    Tables: typelude_std::core::Get<<Module as ResolveExportTable<Name>>::Output>,
+{
+    type Output = <Tables as typelude_std::core::Get<<Module as ResolveExportTable<Name>>::Output>>::Output;
+}
+
+impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program, Name>
+    StateExportMemory<Name>
+    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+where
+    Module: ResolveExportMemory<Name>,
+{
+    type Output = Memory;
 }

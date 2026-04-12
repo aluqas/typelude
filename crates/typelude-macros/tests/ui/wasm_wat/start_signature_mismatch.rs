@@ -1,13 +1,15 @@
-mod typelude {
-    pub mod core {
-        pub use typelude_std::core::*;
-        pub use typenum;
-    }
+#![recursion_limit = "65536"]
 
-    pub use typelude_std::{Eval, Evaluate};
-    pub use typelude_wasm as wasm;
+extern crate self as typelude;
+
+pub mod core {
+    pub use typelude_std::core::*;
     pub use typenum;
 }
+
+pub use typelude_std::{Eval, Evaluate};
+pub use typelude_wasm as wasm;
+pub use typenum;
 
 use typelude_macros::wasm_wat;
 

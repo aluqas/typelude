@@ -103,9 +103,9 @@ pub struct ImportFunc<FuncType>(pub PhantomData<FuncType>);
 impl<FuncType> Value for ImportFunc<FuncType> {}
 
 #[derive(Debug, Default)]
-pub struct ImportGlobal<Mutability>(pub PhantomData<Mutability>);
+pub struct ImportGlobal<Mutability, ValueType>(pub PhantomData<(Mutability, ValueType)>);
 
-impl<Mutability> Value for ImportGlobal<Mutability> {}
+impl<Mutability, ValueType> Value for ImportGlobal<Mutability, ValueType> {}
 
 #[derive(Debug, Default)]
 pub struct ImportMemory<MinPages, MaxPages>(pub PhantomData<(MinPages, MaxPages)>);

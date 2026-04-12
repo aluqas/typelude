@@ -1,0 +1,19 @@
+error[E0277]: the trait bound `TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'g'>, 1>>: typenum::Cmp` is not satisfied
+  --> tests/ui/wasm_wat/wrong_kind_export_invoke.rs:33:24
+   |
+33 |     let _: PhantomData<Bad>;
+   |                        ^^^ the trait `typenum::Cmp` is not implemented for `TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'g'>, 1>>`
+   |
+   = help: the following other types implement trait `typenum::Cmp<Rhs>`:
+             `B0` implements `typenum::Cmp<B1>`
+             `B0` implements `typenum::Cmp`
+             `B1` implements `typenum::Cmp<B0>`
+             `B1` implements `typenum::Cmp`
+             `NInt<N>` implements `typenum::Cmp<PInt<P>>`
+             `NInt<Nl>` implements `typenum::Cmp<NInt<Nr>>`
+             `NInt<U>` implements `typenum::Cmp<Z0>`
+             `PInt<P>` implements `typenum::Cmp<NInt<N>>`
+           and $N others
+   = note: required for `TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'g'>, 1>>` to implement `IsEqual`
+   = note: required for `typelude_wasm::TArr<WasmExport<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'g'>, 1>>, ExportGlobal<UTerm>>, TTerm>` to implement `ResolveExportKind<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'g'>, 1>>>`
+   = note: required for `WasmResolvedModule<TTerm, TTerm, typelude_wasm::TArr<WasmExport<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'g'>, 1>>, ExportGlobal<UTerm>>, TTerm>>` to implement `ResolveExportFunc<TStr<typelude_wasm::tstr::___<typelude_wasm::tstr::__<'g'>, 1>>>`

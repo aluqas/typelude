@@ -18,14 +18,16 @@ use typelude_macros::wasm_wat;
 type Module = wasm_wat! {
     module: r#"
         (module
-          (global (mut i32) (i32.const 1))
-          (global i32 (global.get 0)))
+          (global (export "g") i32 (i32.const 1)))
     "#,
 };
 
-type Bad = typelude::Evaluate<
+type Instance = typelude::Evaluate<
     typelude::wasm::InstantiateModule<Module, typelude::wasm::EmptyHostEnv>,
 >;
+type Bad = <Instance as typelude::wasm::ResolveExportFunc<
+    typelude::wasm::tstr::TS!("g"),
+>>::Output;
 
 fn main() {
     let _: PhantomData<Bad>;

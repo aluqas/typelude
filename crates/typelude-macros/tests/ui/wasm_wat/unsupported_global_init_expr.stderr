@@ -1,46 +1,14 @@
-error: unsupported global init expr: expected i32.const, found global.get
-  --> tests/ui/wasm_wat/unsupported_global_init_expr.rs:14:13
+error[E0277]: the trait bound `InstantiateModule<WasmModule<TTerm, WasmFuncSpace<TTerm, TTerm>, WasmMemoryDecl<UTerm, NoLimit, TTerm>, TTerm, typelude_wasm::TArr<WasmGlobalDecl<GlobalMut, InitI32Const<UInt<UTerm, B1>>>, typelude_wasm::TArr<WasmGlobalDecl<GlobalConst, InitGlobalGet<UTerm>>, TTerm>>, TTerm, NoStart>, WasmHostEnv<TTerm, TTerm, TTerm, TTerm>>: Eval` is not satisfied
+  --> tests/ui/wasm_wat/unsupported_global_init_expr.rs:31:24
    |
-14 |   type _Bad = wasm_wat! {
-   |  _____________^
-15 | |     module: r#"
-16 | |         (module
-17 | |           (global i32 (i32.const 1))
-18 | |           (global i32 (global.get 0)))
-19 | |     "#,
-20 | | };
-   | |_^
+31 |     let _: PhantomData<Bad>;
+   |                        ^^^ unsatisfied trait bound
    |
-   = note: this error originates in the macro `wasm_wat` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-warning: unused import: `typelude_std::core::*`
- --> tests/ui/wasm_wat/unsupported_global_init_expr.rs:3:17
-  |
-3 |         pub use typelude_std::core::*;
-  |                 ^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `typenum`
- --> tests/ui/wasm_wat/unsupported_global_init_expr.rs:4:17
-  |
-4 |         pub use typenum;
-  |                 ^^^^^^^
-
-warning: unused imports: `Eval` and `Evaluate`
- --> tests/ui/wasm_wat/unsupported_global_init_expr.rs:7:28
-  |
-7 |     pub use typelude_std::{Eval, Evaluate};
-  |                            ^^^^  ^^^^^^^^
-
-warning: unused import: `typelude_wasm as wasm`
- --> tests/ui/wasm_wat/unsupported_global_init_expr.rs:8:13
-  |
-8 |     pub use typelude_wasm as wasm;
-  |             ^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused import: `typenum`
- --> tests/ui/wasm_wat/unsupported_global_init_expr.rs:9:13
-  |
-9 |     pub use typenum;
-  |             ^^^^^^^
+   = help: the trait `Eval` is not implemented for `InstantiateModule<WasmModule<TTerm, WasmFuncSpace<TTerm, TTerm>, WasmMemoryDecl<UTerm, NoLimit, TTerm>, TTerm, typelude_wasm::TArr<WasmGlobalDecl<GlobalMut, InitI32Const<UInt<UTerm, B1>>>, typelude_wasm::TArr<WasmGlobalDecl<GlobalConst, InitGlobalGet<UTerm>>, TTerm>>, TTerm, NoStart>, WasmHostEnv<TTerm, TTerm, TTerm, TTerm>>`
+help: the trait `Eval` is implemented for `InstantiateModule<Module, Env>`
+  --> $WORKSPACE/crates/typelude-wasm/src/run.rs
+   |
+   | / impl<Module, Env> Eval for InstantiateModule<Module, Env>
+   | | where
+   | |     Module: Instantiate<Env>,
+   | |_____________________________^

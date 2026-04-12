@@ -1,12 +1,34 @@
 #![recursion_limit = "65536"]
 
+use core::ops::Add;
+
 use static_assertions::assert_type_eq_all;
-use typelude::wasm::{InvokeFunc, StateBranches, StateStack, TArr, TTerm, WasmI32};
-use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, U42};
+use typelude::wasm::{
+    GlobalConst, GlobalMut, HostCall, HostCallResult, HostFuncBinding, HostGlobalBinding,
+    HostMemoryBinding, HostTableBinding, InvokeExport, InvokeExportWithEnv, InvokeFunc,
+    StateBranches, StateExportGlobal, StateExportMemory, StateExportTable, StateStack, TArr,
+    TTerm, TableEntry, WasmGlobal, WasmHostEnv, WasmI32, WasmI32Type, WasmMemory, WasmTable,
+};
+use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, U9, U42};
+use typenum::operator_aliases::Sum;
 
 type NoArgs = TTerm;
 type OneArg<A> = TArr<WasmI32<A>, TTerm>;
 type TwoArgs<A, B> = TArr<WasmI32<A>, TArr<WasmI32<B>, TTerm>>;
+type MaxPages = <Const<4294967295> as ToUInt>::Output;
+
+struct HostAdd;
+
+impl<Store, A, B> HostCall<
+    typelude::wasm::WasmFuncType<TArr<WasmI32Type, TArr<WasmI32Type, TTerm>>, TArr<WasmI32Type, TTerm>>,
+    Store,
+    TArr<WasmI32<A>, TArr<WasmI32<B>, TTerm>>,
+> for HostAdd
+where
+    A: Add<B>,
+{
+    type Output = HostCallResult<Store, TArr<WasmI32<Sum<A, B>>, TTerm>>;
+}
 
 #[test]
 fn wasm_wat_invokes_exported_add() {
@@ -332,4 +354,159 @@ fn wasm_wat_supports_explicit_table_indices_and_table_exports() {
     type Final = InvokeFunc<Module, U1, NoArgs>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U3>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_supports_imported_functions_via_invoke_export() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (import "host" "add" (func $add (param i32 i32) (result i32)))
+              (func (export "main") (param i32 i32) (result i32)
+                local.get 0
+                local.get 1
+                call $add))
+        "#,
+    };
+    type Env = WasmHostEnv<
+        TArr<HostFuncBinding<
+            typelude::wasm::tstr::TS!("host"),
+            typelude::wasm::tstr::TS!("add"),
+            HostAdd
+        >, TTerm>,
+        TTerm,
+        TTerm,
+        TTerm,
+    >;
+    type Final =
+        InvokeExportWithEnv<Module, Env, typelude::wasm::tstr::TS!("main"), TwoArgs<U2, U3>>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U5>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_supports_imported_globals_and_global_exports() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (import "host" "g" (global (mut i32)))
+              (global $copy (export "copy") i32 (global.get 0))
+              (func (export "main") (result i32)
+                global.get 0
+                i32.const 2
+                i32.add
+                global.set 0
+                global.get 0))
+        "#,
+    };
+    type Env = WasmHostEnv<
+        TTerm,
+        TArr<HostGlobalBinding<
+            typelude::wasm::tstr::TS!("host"),
+            typelude::wasm::tstr::TS!("g"),
+            WasmGlobal<GlobalMut, WasmI32<U3>>
+        >, TTerm>,
+        TTerm,
+        TTerm,
+    >;
+    type Final = InvokeExportWithEnv<Module, Env, typelude::wasm::tstr::TS!("main"), NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U5>, TTerm>);
+    assert_type_eq_all!(
+        <Final as StateExportGlobal<typelude::wasm::tstr::TS!("copy")>>::Output,
+        WasmGlobal<GlobalConst, WasmI32<U3>>
+    );
+}
+
+#[test]
+fn wasm_wat_supports_imported_memory() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (import "host" "memory" (memory 1))
+              (func (export "main") (result i32)
+                i32.const 0
+                i32.load8_u))
+        "#,
+    };
+    type Env = WasmHostEnv<
+        TTerm,
+        TTerm,
+        TArr<HostMemoryBinding<
+            typelude::wasm::tstr::TS!("host"),
+            typelude::wasm::tstr::TS!("memory"),
+            WasmMemory<U1, U1, TArr<typelude::wasm::MemoryCell<U0, U42>, TTerm>>
+        >, TTerm>,
+        TTerm,
+    >;
+    type Final = InvokeExportWithEnv<Module, Env, typelude::wasm::tstr::TS!("main"), NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U42>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_supports_imported_tables_and_call_indirect() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (type $ret (func (result i32)))
+              (import "host" "table" (table 1 funcref))
+              (elem (i32.const 0) func $seven)
+              (func $seven (type $ret) (result i32)
+                i32.const 7)
+              (func (export "main") (result i32)
+                i32.const 0
+                call_indirect (type $ret)))
+        "#,
+    };
+    type Env = WasmHostEnv<
+        TTerm,
+        TTerm,
+        TTerm,
+        TArr<HostTableBinding<
+            typelude::wasm::tstr::TS!("host"),
+            typelude::wasm::tstr::TS!("table"),
+            WasmTable<U1, U1, TTerm>
+        >, TTerm>,
+    >;
+    type Final = InvokeExportWithEnv<Module, Env, typelude::wasm::tstr::TS!("main"), NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U7>, TTerm>);
+}
+
+#[test]
+fn wasm_wat_exposes_memory_and_table_exports_by_name() {
+    type Module = typelude::wasm_wat! {
+        module: r#"
+            (module
+              (memory (export "memory") 1)
+              (table (export "table") 1 funcref)
+              (global $g (export "g") (mut i32) (i32.const 2))
+              (func $start
+                i32.const 9
+                global.set $g
+                i32.const 1
+                i32.const 8
+                i32.store8)
+              (start $start)
+              (func $main (export "main") (result i32)
+                global.get $g)
+              (elem (i32.const 0) func $main))
+        "#,
+    };
+    type Final = InvokeExport<Module, typelude::wasm::tstr::TS!("main"), NoArgs>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U9>, TTerm>);
+    assert_type_eq_all!(
+        <Final as StateExportGlobal<typelude::wasm::tstr::TS!("g")>>::Output,
+        WasmGlobal<GlobalMut, WasmI32<U9>>
+    );
+    assert_type_eq_all!(
+        <Final as StateExportMemory<typelude::wasm::tstr::TS!("memory")>>::Output,
+        WasmMemory<U1, MaxPages, TArr<typelude::wasm::MemoryCell<U1, U8>, TTerm>>
+    );
+    assert_type_eq_all!(
+        <Final as StateExportTable<typelude::wasm::tstr::TS!("table")>>::Output,
+        WasmTable<U1, U1, TArr<TableEntry<U0, U1>, TTerm>>
+    );
 }

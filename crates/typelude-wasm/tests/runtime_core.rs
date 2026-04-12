@@ -1,13 +1,22 @@
+#![recursion_limit = "65536"]
+
 mod support;
+
+use core::ops::Add;
 
 use static_assertions::assert_type_eq_all;
 use typelude_col::{TTerm, tarr};
 use typelude_std::core::Evaluate;
 use typelude_wasm::{
-    GlobalConst, GlobalMut, InitI32Const, MemoryCell, ModuleProgramRun, NoLimit, NoStart,
-    RunWasm, TableEntry, WasmDataSegment, WasmElemSegment, WasmFunc, WasmFuncSpace, WasmFuncType,
-    WasmGlobal, WasmGlobalDecl, WasmI32, WasmI32Type, WasmMemory, WasmMemoryDecl, WasmModule,
-    WasmResolvedModule, WasmState, WasmStore, WasmTable, WasmTableDecl, StateTables,
+    ExportFunc, ExportGlobal, ExportMemory, ExportTable, GlobalConst, GlobalMut, HostCall,
+    HostCallResult, HostFuncBinding, HostGlobalBinding, HostMemoryBinding, HostTableBinding,
+    ImportFunc, ImportGlobal, ImportMemory, ImportTable, InitGlobalGet, InitI32Const,
+    InvokeFuncWithEnv, ModuleProgramRun, NoLimit, NoStart, RunWasm, StartFunc, TableEntry,
+    MemoryCell, WasmDataSegment, WasmElemSegment, WasmExport, WasmFunc, WasmFuncSpace,
+    WasmFuncType, WasmGlobal, WasmGlobalDecl, WasmHostEnv, WasmI32, WasmI32Type, WasmImport,
+    WasmMemory, WasmMemoryDecl, WasmModule, WasmResolvedModule, WasmState, WasmStore, WasmTable,
+    WasmTableDecl,
+    StateExportGlobal, StateExportMemory, StateExportTable, StateTables,
     opcode::{
         OpBlock, OpBr, OpBrIf, OpCall, OpCallIndirect, OpDrop, OpGlobalGet, OpGlobalSet,
         OpI32Add, OpI32Const, OpI32Eqz, OpI32Load, OpI32Load8U, OpI32Store, OpI32Store8,
@@ -15,7 +24,7 @@ use typelude_wasm::{
         OpReturn, OpSelect,
     },
 };
-use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U6, U7, U8, U9, U42, U258};
+use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U6, U7, U8, U9, U42, U258, operator_aliases::Sum};
 
 use crate::support::{
     StateBranches, StateGlobals, StateLocals, StateMemory, StateProgram, StateStack,
@@ -814,4 +823,296 @@ fn explicit_table_index_is_respected_for_call_indirect() {
     type FinalState = ModuleProgramRun<MultiTableModule, Program>;
 
     assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U3>]);
+}
+
+struct HostAdd;
+
+impl<Memory, Tables, Globals, A, B>
+    HostCall<
+        WasmFuncType<tarr![WasmI32Type, WasmI32Type], tarr![WasmI32Type]>,
+        WasmStore<Memory, Tables, Globals>,
+        tarr![WasmI32<A>, WasmI32<B>],
+    > for HostAdd
+where
+    A: Add<B>,
+{
+    type Output = HostCallResult<WasmStore<Memory, Tables, Globals>, tarr![WasmI32<Sum<A, B>>]>;
+}
+
+type ImportAddMain = Fn2<TTerm, tarr![OpLocalGet<U0>, OpLocalGet<U1>, OpCall<U0>, OpReturn]>;
+type ImportAddModule = WasmModule<
+    tarr![WasmImport<
+        typelude_wasm::tstr::TS!("host"),
+        typelude_wasm::tstr::TS!("add"),
+        ImportFunc<WasmFuncType<tarr![WasmI32Type, WasmI32Type], tarr![WasmI32Type]>>,
+    >],
+    WasmFuncSpace<
+        TTerm,
+        tarr![ImportAddMain],
+    >,
+    WasmMemoryDecl<U0, NoLimit, TTerm>,
+    TTerm,
+    TTerm,
+    tarr![WasmExport<typelude_wasm::tstr::TS!("main"), ExportFunc<U1>>],
+    NoStart,
+>;
+type ImportAddEnv = WasmHostEnv<
+    tarr![HostFuncBinding<
+        typelude_wasm::tstr::TS!("host"),
+        typelude_wasm::tstr::TS!("add"),
+        HostAdd,
+    >],
+    TTerm,
+    TTerm,
+    TTerm,
+>;
+
+#[test]
+fn imported_function_calls_resolve_through_host_env() {
+    type FinalState = InvokeFuncWithEnv<ImportAddModule, ImportAddEnv, U1, tarr![WasmI32<U2>, WasmI32<U3>]>;
+
+    assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U5>]);
+}
+
+type ImportedGlobalsModule = WasmModule<
+    tarr![
+        WasmImport<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("const_g"),
+            ImportGlobal<GlobalConst, WasmI32Type>
+        >,
+        WasmImport<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("mut_g"),
+            ImportGlobal<GlobalMut, WasmI32Type>
+        >
+    ],
+    WasmFuncSpace<
+        TTerm,
+        tarr![Fn0<
+            TTerm,
+            tarr![OpGlobalGet<U0>, OpGlobalGet<U1>, OpI32Add, OpGlobalSet<U1>, OpGlobalGet<U1>, OpReturn]
+        >],
+    >,
+    WasmMemoryDecl<U0, NoLimit, TTerm>,
+    TTerm,
+    TTerm,
+    tarr![WasmExport<typelude_wasm::tstr::TS!("main"), ExportFunc<U0>>],
+    NoStart,
+>;
+type ImportedGlobalsEnv = WasmHostEnv<
+    TTerm,
+    tarr![
+        HostGlobalBinding<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("const_g"),
+            WasmGlobal<GlobalConst, WasmI32<U2>>
+        >,
+        HostGlobalBinding<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("mut_g"),
+            WasmGlobal<GlobalMut, WasmI32<U3>>
+        >
+    ],
+    TTerm,
+    TTerm,
+>;
+
+#[test]
+fn imported_globals_share_the_same_index_space_as_defined_code() {
+    type FinalState = InvokeFuncWithEnv<ImportedGlobalsModule, ImportedGlobalsEnv, U0, TTerm>;
+
+    assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U5>]);
+    assert_type_eq_all!(
+        <FinalState as StateGlobals>::Output,
+        tarr![WasmGlobal<GlobalConst, WasmI32<U2>>, WasmGlobal<GlobalMut, WasmI32<U5>>]
+    );
+}
+
+type ImportedGlobalInitModule = WasmModule<
+    tarr![WasmImport<
+        typelude_wasm::tstr::TS!("host"),
+        typelude_wasm::tstr::TS!("base"),
+        ImportGlobal<GlobalConst, WasmI32Type>
+    >],
+    WasmFuncSpace<TTerm, tarr![Fn0<TTerm, tarr![OpGlobalGet<U1>, OpReturn]>]>,
+    WasmMemoryDecl<U0, NoLimit, TTerm>,
+    TTerm,
+    tarr![WasmGlobalDecl<GlobalConst, InitGlobalGet<U0>>],
+    tarr![WasmExport<typelude_wasm::tstr::TS!("main"), ExportFunc<U0>>],
+    NoStart,
+>;
+type ImportedGlobalInitEnv = WasmHostEnv<
+    TTerm,
+    tarr![HostGlobalBinding<
+        typelude_wasm::tstr::TS!("host"),
+        typelude_wasm::tstr::TS!("base"),
+        WasmGlobal<GlobalConst, WasmI32<U7>>
+    >],
+    TTerm,
+    TTerm,
+>;
+
+#[test]
+fn imported_immutable_global_can_initialize_defined_globals() {
+    type FinalState = InvokeFuncWithEnv<ImportedGlobalInitModule, ImportedGlobalInitEnv, U0, TTerm>;
+
+    assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U7>]);
+    assert_type_eq_all!(
+        <FinalState as StateGlobals>::Output,
+        tarr![WasmGlobal<GlobalConst, WasmI32<U7>>, WasmGlobal<GlobalConst, WasmI32<U7>>]
+    );
+}
+
+#[test]
+fn imported_immutable_global_is_available_to_data_offsets() {
+    type Module = WasmModule<
+        tarr![WasmImport<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("base"),
+            ImportGlobal<GlobalConst, WasmI32Type>
+        >],
+        WasmFuncSpace<TTerm, tarr![Fn0<TTerm, tarr![OpI32Const<U3>, OpI32Load8U<U0>, OpReturn]>]>,
+        WasmMemoryDecl<
+            U1,
+            NoLimit,
+            tarr![WasmDataSegment<InitGlobalGet<U0>, tarr![U7, U8]>]
+        >,
+        TTerm,
+        TTerm,
+        tarr![WasmExport<typelude_wasm::tstr::TS!("main"), ExportFunc<U0>>],
+        NoStart
+    >;
+    type Env = WasmHostEnv<
+        TTerm,
+        tarr![HostGlobalBinding<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("base"),
+            WasmGlobal<GlobalConst, WasmI32<U2>>
+        >],
+        TTerm,
+        TTerm,
+    >;
+    type FinalState = InvokeFuncWithEnv<Module, Env, U0, TTerm>;
+
+    assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U8>]);
+}
+
+#[test]
+fn imported_memory_receives_active_data_segments() {
+    type Module = WasmModule<
+        tarr![WasmImport<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("memory"),
+            ImportMemory<U1, U1>
+        >],
+        WasmFuncSpace<TTerm, tarr![Fn0<TTerm, tarr![OpI32Const<U0>, OpI32Load8U<U0>, OpReturn]>]>,
+        WasmMemoryDecl<U1, U1, tarr![WasmDataSegment<InitI32Const<U0>, tarr![U9]>]>,
+        TTerm,
+        TTerm,
+        tarr![WasmExport<typelude_wasm::tstr::TS!("main"), ExportFunc<U0>>],
+        NoStart
+    >;
+    type Env = WasmHostEnv<
+        TTerm,
+        TTerm,
+        tarr![HostMemoryBinding<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("memory"),
+            WasmMemory<U1, U1, TTerm>
+        >],
+        TTerm,
+    >;
+    type FinalState = InvokeFuncWithEnv<Module, Env, U0, TTerm>;
+
+    assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U9>]);
+    assert_type_eq_all!(
+        <FinalState as StateMemory>::Output,
+        WasmMemory<U1, U1, tarr![MemoryCell<U0, U9>]>
+    );
+}
+
+type ReturnsSeven =
+    WasmFunc<WasmFuncType<TTerm, tarr![WasmI32Type]>, TTerm, tarr![OpI32Const<U7>, OpReturn]>;
+
+#[test]
+fn imported_table_receives_active_elem_segments() {
+    type Module = WasmModule<
+        tarr![WasmImport<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("table"),
+            ImportTable<U1, U1>
+        >],
+        WasmFuncSpace<
+            tarr![WasmFuncType<TTerm, tarr![WasmI32Type]>],
+            tarr![
+                ReturnsSeven,
+                Fn0<TTerm, tarr![OpI32Const<U0>, OpCallIndirect<U0>, OpReturn]>
+            ]
+        >,
+        WasmMemoryDecl<U0, NoLimit, TTerm>,
+        tarr![WasmTableDecl<U1, U1, tarr![WasmElemSegment<U0, InitI32Const<U0>, tarr![U0]>]>],
+        TTerm,
+        tarr![WasmExport<typelude_wasm::tstr::TS!("main"), ExportFunc<U1>>],
+        NoStart
+    >;
+    type Env = WasmHostEnv<
+        TTerm,
+        TTerm,
+        TTerm,
+        tarr![HostTableBinding<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("table"),
+            WasmTable<U1, U1, TTerm>
+        >],
+    >;
+    type FinalState = InvokeFuncWithEnv<Module, Env, U1, TTerm>;
+
+    assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U7>]);
+    assert_type_eq_all!(
+        <FinalState as StateTables>::Output,
+        tarr![WasmTable<U1, U1, tarr![TableEntry<U0, U0>]>]
+    );
+}
+
+type ExportStart = Fn0<
+    TTerm,
+    tarr![OpI32Const<U9>, OpGlobalSet<U0>, OpI32Const<U1>, OpI32Const<U8>, OpI32Store8<U0>, OpReturn],
+>;
+type ExportMain = Fn0<TTerm, tarr![OpGlobalGet<U0>, OpReturn]>;
+type ExportedStateModule = WasmModule<
+    TTerm,
+    WasmFuncSpace<
+        tarr![WasmFuncType<TTerm, TTerm>, WasmFuncType<TTerm, tarr![WasmI32Type]>],
+        tarr![ExportStart, ExportMain]
+    >,
+    WasmMemoryDecl<U1, NoLimit, TTerm>,
+    tarr![WasmTableDecl<U1, U1, tarr![WasmElemSegment<U0, InitI32Const<U0>, tarr![U1]>]>],
+    tarr![WasmGlobalDecl<GlobalMut, InitI32Const<U2>>],
+    tarr![
+        WasmExport<typelude_wasm::tstr::TS!("main"), ExportFunc<U1>>,
+        WasmExport<typelude_wasm::tstr::TS!("g"), ExportGlobal<U0>>,
+        WasmExport<typelude_wasm::tstr::TS!("memory"), ExportMemory>,
+        WasmExport<typelude_wasm::tstr::TS!("table"), ExportTable<U0>>
+    ],
+    StartFunc<U0>
+>;
+
+#[test]
+fn export_accessors_read_live_state_entries_by_name() {
+    type FinalState = typelude_wasm::InvokeExport<ExportedStateModule, typelude_wasm::tstr::TS!("main"), TTerm>;
+
+    assert_type_eq_all!(<FinalState as StateStack>::Output, tarr![WasmI32<U9>]);
+    assert_type_eq_all!(
+        <FinalState as StateExportGlobal<typelude_wasm::tstr::TS!("g")>>::Output,
+        WasmGlobal<GlobalMut, WasmI32<U9>>
+    );
+    assert_type_eq_all!(
+        <FinalState as StateExportMemory<typelude_wasm::tstr::TS!("memory")>>::Output,
+        WasmMemory<U1, MaxPages, tarr![MemoryCell<U1, U8>]>
+    );
+    assert_type_eq_all!(
+        <FinalState as StateExportTable<typelude_wasm::tstr::TS!("table")>>::Output,
+        WasmTable<U1, U1, tarr![TableEntry<U0, U1>]>
+    );
 }

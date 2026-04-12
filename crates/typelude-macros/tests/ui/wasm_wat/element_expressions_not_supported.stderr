@@ -1,46 +1,14 @@
 error: unsupported section: expression elem items are not supported
-  --> tests/ui/wasm_wat/element_expressions_not_supported.rs:14:13
+  --> tests/ui/wasm_wat/element_expressions_not_supported.rs:16:13
    |
-14 |   type _Bad = wasm_wat! {
+16 |   type _Bad = wasm_wat! {
    |  _____________^
-15 | |     module: r#"
-16 | |         (module
-17 | |           (table 1 funcref)
+17 | |     module: r#"
+18 | |         (module
+19 | |           (table 1 funcref)
 ...  |
-20 | |     "#,
-21 | | };
+22 | |     "#,
+23 | | };
    | |_^
    |
    = note: this error originates in the macro `wasm_wat` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-warning: unused import: `typelude_std::core::*`
- --> tests/ui/wasm_wat/element_expressions_not_supported.rs:3:17
-  |
-3 |         pub use typelude_std::core::*;
-  |                 ^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `typenum`
- --> tests/ui/wasm_wat/element_expressions_not_supported.rs:4:17
-  |
-4 |         pub use typenum;
-  |                 ^^^^^^^
-
-warning: unused imports: `Eval` and `Evaluate`
- --> tests/ui/wasm_wat/element_expressions_not_supported.rs:7:28
-  |
-7 |     pub use typelude_std::{Eval, Evaluate};
-  |                            ^^^^  ^^^^^^^^
-
-warning: unused import: `typelude_wasm as wasm`
- --> tests/ui/wasm_wat/element_expressions_not_supported.rs:8:13
-  |
-8 |     pub use typelude_wasm as wasm;
-  |             ^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused import: `typenum`
- --> tests/ui/wasm_wat/element_expressions_not_supported.rs:9:13
-  |
-9 |     pub use typenum;
-  |             ^^^^^^^
