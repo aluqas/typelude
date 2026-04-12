@@ -8,6 +8,8 @@ mod module;
 pub mod opcode;
 mod run;
 mod state;
+#[cfg(test)]
+mod tests;
 mod value;
 
 pub use frame::ReturnFrame;
@@ -23,9 +25,10 @@ pub use module::{
     ExportFunc, ExportGlobal, ExportMemory, ExportTable, GlobalConst, GlobalMut,
     HostFuncBinding, HostGlobalBinding, HostMemoryBinding, HostTableBinding, ImportFunc,
     ImportGlobal, ImportMemory, ImportTable, InitGlobalGet, InitI32Const, InitI64Const, NoLimit,
-    NoStart, StartFunc, WasmDataSegment, WasmElemSegment, WasmExport, WasmFuncSpace,
-    WasmFuncType, WasmHostEnv, WasmHostFunc, WasmImport, WasmInstance, WasmMemoryDecl,
-    WasmModule, WasmResolvedModule, WasmTableDecl, WasmGlobalDecl,
+    NoMemoryDecl, NoStart, StartFunc, WasmConstExpr, WasmDataSegment, WasmElemSegment,
+    WasmExport, WasmFuncSpace, WasmFuncType, WasmGlobalDecl, WasmHostEnv, WasmHostFunc,
+    WasmImport, WasmInstance, WasmMemArg, WasmMemoryDecl, WasmModule, WasmModuleMemory,
+    WasmModuleTables, WasmResolvedModule, WasmTableDecl,
 };
 pub use run::{
     EmptyHostEnv, EmptyState, InstantiateModule, InvokeExport, InvokeExportWithEnv, InvokeFunc,

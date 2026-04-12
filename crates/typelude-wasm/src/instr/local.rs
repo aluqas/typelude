@@ -52,6 +52,13 @@ where
     >;
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::tests::support::*;
+
+    include!("../tests/cases/instr_local.rs");
+}
+
 impl<Module, Store, Idx, ValueT, Stack, Locals, Frames, Branches, Rest> Eval
     for Step<
         WasmState<

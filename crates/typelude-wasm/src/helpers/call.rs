@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 
 use typelude_col::{TArr, TTerm};
 use typelude_std::core::{Append, Concat, Get};
+use typenum::U0;
 
 use crate::{
     func::WasmFunc,
@@ -76,16 +77,45 @@ pub trait BindLocals<FuncType, LocalInits> {
     type Output;
 }
 
-impl<Stack, FuncType, LocalInits> BindLocals<FuncType, LocalInits> for Stack
+pub trait ZeroValueForType {
+    type Output;
+}
+
+impl ZeroValueForType for WasmI32Type {
+    type Output = WasmI32<U0>;
+}
+
+impl ZeroValueForType for WasmI64Type {
+    type Output = WasmI64<U0>;
+}
+
+pub trait MaterializeLocals {
+    type Output;
+}
+
+impl MaterializeLocals for TTerm {
+    type Output = TTerm;
+}
+
+impl<Head, Tail> MaterializeLocals for TArr<Head, Tail>
+where
+    Head: ZeroValueForType,
+    Tail: MaterializeLocals,
+{
+    type Output = TArr<<Head as ZeroValueForType>::Output, <Tail as MaterializeLocals>::Output>;
+}
+
+impl<Stack, FuncType, LocalDecls> BindLocals<FuncType, LocalDecls> for Stack
 where
     FuncType: ParamTypes,
     <FuncType as ParamTypes>::Output: ReverseList,
     Stack: PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>,
+    LocalDecls: MaterializeLocals,
     <Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::Params:
-        Concat<LocalInits>,
+        Concat<<LocalDecls as MaterializeLocals>::Output>,
 {
     type Output = <<Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::Params as Concat<
-        LocalInits,
+        <LocalDecls as MaterializeLocals>::Output,
     >>::Output;
 }
 
@@ -104,7 +134,7 @@ pub trait FuncSignature {
     type Output;
 }
 
-impl<FuncType, LocalInits, Program> FuncSignature for WasmFunc<FuncType, LocalInits, Program> {
+impl<FuncType, LocalDecls, Program> FuncSignature for WasmFunc<FuncType, LocalDecls, Program> {
     type Output = FuncType;
 }
 

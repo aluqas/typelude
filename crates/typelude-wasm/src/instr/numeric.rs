@@ -538,3 +538,10 @@ impl_i64_bin_op!(OpI64DivS, I64DivS);
 impl_i64_bin_op!(OpI64DivU, I64DivU);
 impl_i64_bin_op!(OpI64RemS, I64RemS);
 impl_i64_bin_op!(OpI64RemU, I64RemU);
+
+#[cfg(test)]
+mod tests {
+    use crate::tests::support::*;
+
+    include!("../tests/cases/instr_numeric.rs");
+}

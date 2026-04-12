@@ -689,6 +689,7 @@ name = "typelude"
 version = "0.1.0"
 dependencies = [
  "static_assertions",
+ "trybuild",
  "tstr",
  "typelude-macros",
  "typelude-std",

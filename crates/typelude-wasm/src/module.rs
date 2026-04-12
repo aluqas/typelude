@@ -33,19 +33,29 @@ pub struct WasmFuncType<Params, Results>(PhantomData<(Params, Results)>);
 impl<Params, Results> Value for WasmFuncType<Params, Results> {}
 
 #[derive(Debug, Default)]
-pub struct WasmMemoryDecl<MinPages, MaxPages, DataSegments>(
-    PhantomData<(MinPages, MaxPages, DataSegments)>,
-);
+pub struct WasmModuleMemory<Decl, DataSegments>(PhantomData<(Decl, DataSegments)>);
 
-impl<MinPages, MaxPages, DataSegments> Value
-    for WasmMemoryDecl<MinPages, MaxPages, DataSegments>
-{
-}
+impl<Decl, DataSegments> Value for WasmModuleMemory<Decl, DataSegments> {}
 
 #[derive(Debug, Default)]
-pub struct WasmTableDecl<Min, Max, ElemSegments>(PhantomData<(Min, Max, ElemSegments)>);
+pub struct WasmMemoryDecl<MinPages, MaxPages>(PhantomData<(MinPages, MaxPages)>);
 
-impl<Min, Max, ElemSegments> Value for WasmTableDecl<Min, Max, ElemSegments> {}
+impl<MinPages, MaxPages> Value for WasmMemoryDecl<MinPages, MaxPages> {}
+
+#[derive(Debug, Default)]
+pub struct NoMemoryDecl;
+
+impl Value for NoMemoryDecl {}
+
+#[derive(Debug, Default)]
+pub struct WasmModuleTables<Decls, ElemSegments>(PhantomData<(Decls, ElemSegments)>);
+
+impl<Decls, ElemSegments> Value for WasmModuleTables<Decls, ElemSegments> {}
+
+#[derive(Debug, Default)]
+pub struct WasmTableDecl<Min, Max>(PhantomData<(Min, Max)>);
+
+impl<Min, Max> Value for WasmTableDecl<Min, Max> {}
 
 #[derive(Debug, Default)]
 pub struct WasmGlobalDecl<Mutability, InitExpr>(PhantomData<(Mutability, InitExpr)>);
@@ -146,6 +156,16 @@ impl Value for NoStart {}
 pub struct StartFunc<FuncIdx>(PhantomData<FuncIdx>);
 
 impl<FuncIdx> Value for StartFunc<FuncIdx> {}
+
+#[derive(Debug, Default)]
+pub struct WasmConstExpr<Instrs>(PhantomData<Instrs>);
+
+impl<Instrs> Value for WasmConstExpr<Instrs> {}
+
+#[derive(Debug, Default)]
+pub struct WasmMemArg<MemoryIdx, Align, Offset>(PhantomData<(MemoryIdx, Align, Offset)>);
+
+impl<MemoryIdx, Align, Offset> Value for WasmMemArg<MemoryIdx, Align, Offset> {}
 
 #[derive(Debug, Default)]
 pub struct InitI32Const<ValueT>(PhantomData<ValueT>);

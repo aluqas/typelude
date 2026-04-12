@@ -286,3 +286,11 @@ where
 {
     type Output = WasmTable<ActualMin, ActualMax, Entries>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::support::*;
+
+    include!("../tests/cases/helpers_import.rs");
+}

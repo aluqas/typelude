@@ -148,3 +148,10 @@ where
     Module: ResolveExportMemory<Name>,
 {
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::tests::support::*;
+
+    include!("../tests/cases/helpers_export.rs");
+}

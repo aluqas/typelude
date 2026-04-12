@@ -13,8 +13,8 @@ use crate::{
         instance::Instantiate,
     },
     module::{
-        NoLimit, NoStart, StartFunc, WasmFuncSpace, WasmHostEnv, WasmInstance, WasmMemoryDecl,
-        WasmModule, WasmResolvedModule,
+        NoStart, NoMemoryDecl, StartFunc, WasmFuncSpace, WasmHostEnv, WasmInstance,
+        WasmModule, WasmModuleMemory, WasmModuleTables, WasmResolvedModule,
     },
     opcode::OpCall,
     state::{WasmMemory, WasmState, WasmStore},
@@ -37,7 +37,15 @@ pub struct RunWasm<State>(PhantomData<State>);
 
 pub type EmptyHostEnv = WasmHostEnv<TTerm, TTerm, TTerm, TTerm>;
 pub type EmptyModule =
-    WasmModule<TTerm, WasmFuncSpace<TTerm, TTerm>, WasmMemoryDecl<U0, NoLimit, TTerm>, TTerm, TTerm, TTerm, NoStart>;
+    WasmModule<
+        TTerm,
+        WasmFuncSpace<TTerm, TTerm>,
+        WasmModuleMemory<NoMemoryDecl, TTerm>,
+        WasmModuleTables<TTerm, TTerm>,
+        TTerm,
+        TTerm,
+        NoStart,
+    >;
 
 pub type EmptyState = WasmState<
     WasmResolvedModule<TTerm, TTerm, TTerm>,
@@ -278,4 +286,12 @@ where
     Module: ResolveExportMemory<Name>,
 {
     type Output = Memory;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::support::*;
+
+    include!("tests/cases/run.rs");
 }

@@ -25,3 +25,10 @@ impl<Module, Store, Val, Stack, Locals, Frames, Branches, Rest> Eval
     type Output =
         WasmState<Module, Store, TArr<WasmI64<Val>, Stack>, Locals, Frames, Branches, Rest>;
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::tests::support::*;
+
+    include!("../tests/cases/instr_constant.rs");
+}

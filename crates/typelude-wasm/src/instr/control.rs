@@ -462,3 +462,10 @@ where
         Rest,
     >;
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::tests::support::*;
+
+    include!("../tests/cases/instr_control.rs");
+}

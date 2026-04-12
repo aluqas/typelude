@@ -1,25 +1,26 @@
 use core::marker::PhantomData;
+use typenum::U0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpI32Load<Offset>(pub PhantomData<Offset>);
+pub struct OpI32Load<MemArg = U0>(pub PhantomData<MemArg>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpI32Store<Offset>(pub PhantomData<Offset>);
+pub struct OpI32Store<MemArg = U0>(pub PhantomData<MemArg>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpI32Load8U<Offset>(pub PhantomData<Offset>);
+pub struct OpI32Load8U<MemArg = U0>(pub PhantomData<MemArg>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpI32Store8<Offset>(pub PhantomData<Offset>);
+pub struct OpI32Store8<MemArg = U0>(pub PhantomData<MemArg>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpI64Load<Offset>(pub PhantomData<Offset>);
+pub struct OpI64Load<MemArg = U0>(pub PhantomData<MemArg>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpI64Store<Offset>(pub PhantomData<Offset>);
+pub struct OpI64Store<MemArg = U0>(pub PhantomData<MemArg>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpMemorySize;
+pub struct OpMemorySize<MemoryIdx = U0>(pub PhantomData<MemoryIdx>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct OpMemoryGrow;
+pub struct OpMemoryGrow<MemoryIdx = U0>(pub PhantomData<MemoryIdx>);

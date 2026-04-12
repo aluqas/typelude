@@ -60,7 +60,7 @@ enum Val {
 #[derive(Clone)]
 struct FunctionDef {
     sig: FuncSig,
-    extra_locals: Vec<Val>,
+    local_decls: Vec<Val>,
     body: Vec<Instr>,
 }
 
@@ -110,14 +110,14 @@ enum Instr {
     Call(u32),
     CallIndirect { type_index: u32, table_index: u32 },
     Return,
-    I32Load { offset: u32 },
-    I32Store { offset: u32 },
-    I32Load8U { offset: u32 },
-    I32Store8 { offset: u32 },
-    I64Load { offset: u32 },
-    I64Store { offset: u32 },
-    MemorySize,
-    MemoryGrow,
+    I32Load(MemArgDef),
+    I32Store(MemArgDef),
+    I32Load8U(MemArgDef),
+    I32Store8(MemArgDef),
+    I64Load(MemArgDef),
+    I64Store(MemArgDef),
+    MemorySize(u32),
+    MemoryGrow(u32),
 }
 
 struct ModuleDef {
@@ -127,6 +127,8 @@ struct ModuleDef {
     memory: Option<MemoryDef>,
     tables: Vec<TableDef>,
     globals: Vec<GlobalDef>,
+    data_segments: Vec<DataSegmentDef>,
+    elem_segments: Vec<ElemSegmentDef>,
     exports: Vec<ExportDef>,
     start: Option<u32>,
 }
@@ -157,35 +159,45 @@ enum ImportKindDef {
 struct MemoryDef {
     min: u32,
     max: Option<u32>,
-    data_segments: Vec<DataSegmentDef>,
 }
 
 struct TableDef {
     min: u32,
     max: Option<u32>,
-    elem_segments: Vec<ElemSegmentDef>,
 }
 
 struct GlobalDef {
     mutable: bool,
-    init: InitExprDef,
+    init: ConstExprDef,
 }
 
 #[derive(Clone)]
-enum InitExprDef {
+enum ConstInstrDef {
     I32Const(u32),
     I64Const(u64),
     GlobalGet(u32),
 }
 
+#[derive(Clone)]
+struct ConstExprDef {
+    instrs: Vec<ConstInstrDef>,
+}
+
+#[derive(Clone, Copy)]
+struct MemArgDef {
+    memory_index: u32,
+    align: u8,
+    offset: u32,
+}
+
 struct DataSegmentDef {
-    offset: InitExprDef,
+    offset: ConstExprDef,
     bytes: Vec<u32>,
 }
 
 struct ElemSegmentDef {
     table_index: u32,
-    offset: InitExprDef,
+    offset: ConstExprDef,
     func_indices: Vec<u32>,
 }
 
@@ -212,8 +224,8 @@ pub fn expand(input: WasmWatInput) -> syn::Result<TokenStream> {
     let module = parse_module(&wasm)?;
     let imports = lower_imports(&module.imports)?;
     let funcs = lower_func_space(&module)?;
-    let memory = lower_memory_decl(module.memory.as_ref())?;
-    let tables = lower_tables(&module.tables)?;
+    let memory = lower_memory_section(module.memory.as_ref(), &module.data_segments)?;
+    let tables = lower_tables_section(&module.tables, &module.elem_segments)?;
     let globals = lower_globals(&module.globals)?;
     let exports = lower_exports(&module.exports)?;
     let start = lower_start(module.start)?;
@@ -234,11 +246,9 @@ pub fn expand(input: WasmWatInput) -> syn::Result<TokenStream> {
 fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
     let mut imports = Vec::new();
     let mut types = Vec::new();
-    let mut imported_function_sigs = Vec::new();
     let mut function_type_indexes = Vec::new();
     let mut function_bodies = Vec::new();
     let mut memory = None;
-    let mut saw_memory = false;
     let mut tables = Vec::new();
     let mut globals = Vec::new();
     let mut data_segments = Vec::new();
@@ -272,13 +282,12 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
                 }
             },
             Payload::MemorySection(reader) => {
-                if saw_memory {
+                if memory.is_some() {
                     return Err(Error::new(
                         Span::call_site(),
                         "unsupported section: multiple memory sections are not supported",
                     ));
                 }
-                saw_memory = true;
 
                 let memories =
                     reader.into_iter().collect::<Result<Vec<_>, _>>().map_err(parser_error)?;
@@ -308,10 +317,6 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
                         group.map_err(parser_error)?,
                         &types,
                         &mut imports,
-                        &mut imported_function_sigs,
-                        &mut memory,
-                        &mut saw_memory,
-                        &mut tables,
                     )?;
                 }
             },
@@ -384,55 +389,9 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
             .ok_or_else(|| Error::new(Span::call_site(), "function type index out of bounds"))?;
         functions.push(FunctionDef {
             sig,
-            extra_locals: body.extra_locals,
+            local_decls: body.local_decls,
             body: body.body,
         });
-    }
-
-    if let Some(start_func) = start {
-        let start_func = usize::try_from(start_func)
-            .map_err(|_| Error::new(Span::call_site(), "start function index does not fit in usize"))?;
-        let sig = imported_function_sigs
-            .iter()
-            .cloned()
-            .chain(functions.iter().map(|function| function.sig.clone()))
-            .nth(start_func)
-            .ok_or_else(|| Error::new(Span::call_site(), "start function index out of bounds"))?;
-        if !sig.params.is_empty() || !sig.results.is_empty() {
-            return Err(Error::new(
-                Span::call_site(),
-                "start function must have empty params and empty results",
-            ));
-        }
-    }
-
-    let memory = match (memory, data_segments.is_empty()) {
-        (Some(mut memory), _) => {
-            memory.data_segments = data_segments;
-            Some(memory)
-        },
-        (None, true) => None,
-        (None, false) => {
-            return Err(Error::new(
-                Span::call_site(),
-                "unsupported section: active data requires a defined memory",
-            ));
-        },
-    };
-
-    if !elem_segments.is_empty() && tables.is_empty() {
-        return Err(Error::new(
-            Span::call_site(),
-            "unsupported section: active elem requires a defined table",
-        ));
-    }
-    for elem in elem_segments {
-        let table = tables.get_mut(
-            usize::try_from(elem.table_index)
-                .map_err(|_| Error::new(Span::call_site(), "table index does not fit in usize"))?,
-        )
-        .ok_or_else(|| Error::new(Span::call_site(), "element table index out of bounds"))?;
-        table.elem_segments.push(elem);
     }
 
     Ok(ModuleDef {
@@ -442,6 +401,8 @@ fn parse_module(bytes: &[u8]) -> syn::Result<ModuleDef> {
         memory,
         tables,
         globals,
+        data_segments,
+        elem_segments,
         exports,
         start,
     })
@@ -451,10 +412,6 @@ fn parse_import_group(
     group: Imports<'_>,
     types: &[FuncSig],
     imports: &mut Vec<ImportDef>,
-    imported_function_sigs: &mut Vec<FuncSig>,
-    memory: &mut Option<MemoryDef>,
-    saw_memory: &mut bool,
-    tables: &mut Vec<TableDef>,
 ) -> syn::Result<()> {
     match group {
         Imports::Single(_, import) => parse_import_item(
@@ -463,41 +420,17 @@ fn parse_import_group(
             import.ty,
             types,
             imports,
-            imported_function_sigs,
-            memory,
-            saw_memory,
-            tables,
         ),
         Imports::Compact1 { module, items } => {
             for item in items {
                 let item = item.map_err(parser_error)?;
-                parse_import_item(
-                    module,
-                    item.name,
-                    item.ty,
-                    types,
-                    imports,
-                    imported_function_sigs,
-                    memory,
-                    saw_memory,
-                    tables,
-                )?;
+                parse_import_item(module, item.name, item.ty, types, imports)?;
             }
             Ok(())
         },
         Imports::Compact2 { module, ty, names } => {
             for name in names {
-                parse_import_item(
-                    module,
-                    name.map_err(parser_error)?,
-                    ty,
-                    types,
-                    imports,
-                    imported_function_sigs,
-                    memory,
-                    saw_memory,
-                    tables,
-                )?;
+                parse_import_item(module, name.map_err(parser_error)?, ty, types, imports)?;
             }
             Ok(())
         },
@@ -510,10 +443,6 @@ fn parse_import_item(
     ty: TypeRef,
     types: &[FuncSig],
     imports: &mut Vec<ImportDef>,
-    imported_function_sigs: &mut Vec<FuncSig>,
-    memory: &mut Option<MemoryDef>,
-    saw_memory: &mut bool,
-    tables: &mut Vec<TableDef>,
 ) -> syn::Result<()> {
     let kind = match ty {
         TypeRef::Func(type_index) | TypeRef::FuncExact(type_index) => {
@@ -523,24 +452,11 @@ fn parse_import_item(
                 })?)
                 .cloned()
                 .ok_or_else(|| Error::new(Span::call_site(), "import function type index out of bounds"))?;
-            imported_function_sigs.push(sig.clone());
             ImportKindDef::Func(sig)
         },
         TypeRef::Global(global_ty) => parse_global_import_kind(global_ty)?,
         TypeRef::Memory(memory_ty) => {
-            if *saw_memory {
-                return Err(Error::new(
-                    Span::call_site(),
-                    "unsupported section: multiple memories are not supported",
-                ));
-            }
-            *saw_memory = true;
             let memory_def = parse_memory_def(memory_ty)?;
-            *memory = Some(MemoryDef {
-                min: memory_def.min,
-                max: memory_def.max,
-                data_segments: Vec::new(),
-            });
             ImportKindDef::Memory {
                 min: memory_def.min,
                 max: memory_def.max,
@@ -548,11 +464,6 @@ fn parse_import_item(
         },
         TypeRef::Table(table_ty) => {
             let table_def = parse_table_type(table_ty)?;
-            tables.push(TableDef {
-                min: table_def.min,
-                max: table_def.max,
-                elem_segments: Vec::new(),
-            });
             ImportKindDef::Table {
                 min: table_def.min,
                 max: table_def.max,
@@ -588,19 +499,19 @@ fn parse_global_import_kind(global_ty: wasmparser::GlobalType) -> syn::Result<Im
 }
 
 struct ParsedFunction {
-    extra_locals: Vec<Val>,
+    local_decls: Vec<Val>,
     body: Vec<Instr>,
 }
 
 fn parse_function_body(body: wasmparser::FunctionBody<'_>) -> syn::Result<ParsedFunction> {
-    let mut extra_locals = Vec::new();
+    let mut local_decls = Vec::new();
     let locals = body.get_locals_reader().map_err(parser_error)?;
     for local in locals {
         let (count, ty) = local.map_err(parser_error)?;
         let val = lower_val_type(ty)?;
         let count = usize::try_from(count)
             .map_err(|_| Error::new(Span::call_site(), "local count does not fit in usize"))?;
-        extra_locals.extend(std::iter::repeat_n(val, count));
+        local_decls.extend(std::iter::repeat_n(val, count));
     }
 
     let mut operators = body.get_operators_reader().map_err(parser_error)?;
@@ -614,7 +525,7 @@ fn parse_function_body(body: wasmparser::FunctionBody<'_>) -> syn::Result<Parsed
     operators.finish().map_err(parser_error)?;
 
     Ok(ParsedFunction {
-        extra_locals,
+        local_decls,
         body: instructions,
     })
 }
@@ -671,10 +582,7 @@ fn parse_instruction_sequence(
             },
             Operator::Drop => instructions.push(Instr::Drop),
             Operator::I32Const { value } => {
-                instructions.push(Instr::I32Const(parse_non_negative_i32_immediate(
-                    value,
-                    "opcode i32.const",
-                )?));
+                instructions.push(Instr::I32Const(i32_to_bitpattern(value)));
             },
             Operator::I64Const { value } => {
                 instructions.push(Instr::I64Const(i64_to_bitpattern(value)));
@@ -745,53 +653,25 @@ fn parse_instruction_sequence(
             },
             Operator::Return => instructions.push(Instr::Return),
             Operator::I32Load { memarg } => {
-                instructions.push(Instr::I32Load {
-                    offset: ensure_memarg(memarg, "i32.load")?,
-                });
+                instructions.push(Instr::I32Load(parse_memarg(memarg, "i32.load")?));
             },
             Operator::I32Store { memarg } => {
-                instructions.push(Instr::I32Store {
-                    offset: ensure_memarg(memarg, "i32.store")?,
-                });
+                instructions.push(Instr::I32Store(parse_memarg(memarg, "i32.store")?));
             },
             Operator::I32Load8U { memarg } => {
-                instructions.push(Instr::I32Load8U {
-                    offset: ensure_memarg(memarg, "i32.load8_u")?,
-                });
+                instructions.push(Instr::I32Load8U(parse_memarg(memarg, "i32.load8_u")?));
             },
             Operator::I32Store8 { memarg } => {
-                instructions.push(Instr::I32Store8 {
-                    offset: ensure_memarg(memarg, "i32.store8")?,
-                });
+                instructions.push(Instr::I32Store8(parse_memarg(memarg, "i32.store8")?));
             },
             Operator::I64Load { memarg } => {
-                instructions.push(Instr::I64Load {
-                    offset: ensure_memarg(memarg, "i64.load")?,
-                });
+                instructions.push(Instr::I64Load(parse_memarg(memarg, "i64.load")?));
             },
             Operator::I64Store { memarg } => {
-                instructions.push(Instr::I64Store {
-                    offset: ensure_memarg(memarg, "i64.store")?,
-                });
+                instructions.push(Instr::I64Store(parse_memarg(memarg, "i64.store")?));
             },
-            Operator::MemorySize { mem } => {
-                if mem != 0 {
-                    return Err(Error::new(
-                        Span::call_site(),
-                        format!("opcode memory.size: memory index {mem} is not supported"),
-                    ));
-                }
-                instructions.push(Instr::MemorySize);
-            },
-            Operator::MemoryGrow { mem } => {
-                if mem != 0 {
-                    return Err(Error::new(
-                        Span::call_site(),
-                        format!("opcode memory.grow: memory index {mem} is not supported"),
-                    ));
-                }
-                instructions.push(Instr::MemoryGrow);
-            },
+            Operator::MemorySize { mem } => instructions.push(Instr::MemorySize(mem)),
+            Operator::MemoryGrow { mem } => instructions.push(Instr::MemoryGrow(mem)),
             Operator::BrTable { .. } => {
                 return Err(Error::new(Span::call_site(), "opcode br_table: not supported"));
             },
@@ -878,8 +758,8 @@ fn lower_functions(functions: &[FunctionDef]) -> syn::Result<TokenStream> {
 fn lower_function(function: &FunctionDef) -> syn::Result<TokenStream> {
     let program = lower_instrs(&function.body)?;
     let func_type = lower_func_type(&function.sig)?;
-    let local_inits = lower_local_inits(&function.extra_locals)?;
-    Ok(quote!(::typelude::wasm::WasmFunc<#func_type, #local_inits, #program>))
+    let local_decls = lower_val_types(&function.local_decls)?;
+    Ok(quote!(::typelude::wasm::WasmFunc<#func_type, #local_decls, #program>))
 }
 
 fn lower_func_type(sig: &FuncSig) -> syn::Result<TokenStream> {
@@ -989,56 +869,39 @@ fn lower_instr(instr: &Instr) -> syn::Result<TokenStream> {
             quote!(::typelude::wasm::opcode::OpCallIndirect<#type_index, #table_index>)
         },
         Instr::Return => quote!(::typelude::wasm::opcode::OpReturn),
-        Instr::I32Load { offset } => {
-            let offset = uint_type(*offset as usize)?;
-            quote!(::typelude::wasm::opcode::OpI32Load<#offset>)
+        Instr::I32Load(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(::typelude::wasm::opcode::OpI32Load<#memarg>)
         },
-        Instr::I32Store { offset } => {
-            let offset = uint_type(*offset as usize)?;
-            quote!(::typelude::wasm::opcode::OpI32Store<#offset>)
+        Instr::I32Store(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(::typelude::wasm::opcode::OpI32Store<#memarg>)
         },
-        Instr::I32Load8U { offset } => {
-            let offset = uint_type(*offset as usize)?;
-            quote!(::typelude::wasm::opcode::OpI32Load8U<#offset>)
+        Instr::I32Load8U(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(::typelude::wasm::opcode::OpI32Load8U<#memarg>)
         },
-        Instr::I32Store8 { offset } => {
-            let offset = uint_type(*offset as usize)?;
-            quote!(::typelude::wasm::opcode::OpI32Store8<#offset>)
+        Instr::I32Store8(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(::typelude::wasm::opcode::OpI32Store8<#memarg>)
         },
-        Instr::I64Load { offset } => {
-            let offset = uint_type(*offset as usize)?;
-            quote!(::typelude::wasm::opcode::OpI64Load<#offset>)
+        Instr::I64Load(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(::typelude::wasm::opcode::OpI64Load<#memarg>)
         },
-        Instr::I64Store { offset } => {
-            let offset = uint_type(*offset as usize)?;
-            quote!(::typelude::wasm::opcode::OpI64Store<#offset>)
+        Instr::I64Store(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(::typelude::wasm::opcode::OpI64Store<#memarg>)
         },
-        Instr::MemorySize => quote!(::typelude::wasm::opcode::OpMemorySize),
-        Instr::MemoryGrow => quote!(::typelude::wasm::opcode::OpMemoryGrow),
+        Instr::MemorySize(memory_index) => {
+            let memory_index = uint_type(*memory_index as usize)?;
+            quote!(::typelude::wasm::opcode::OpMemorySize<#memory_index>)
+        },
+        Instr::MemoryGrow(memory_index) => {
+            let memory_index = uint_type(*memory_index as usize)?;
+            quote!(::typelude::wasm::opcode::OpMemoryGrow<#memory_index>)
+        },
     })
-}
-
-fn lower_local_inits(locals: &[Val]) -> syn::Result<TokenStream> {
-    let mut items = Vec::with_capacity(locals.len());
-    for local in locals {
-        items.push(lower_zero_init(*local));
-    }
-    Ok(lower_list(items))
-}
-
-fn lower_zero_init(val: Val) -> TokenStream {
-    match val {
-        Val::I32 => quote!(
-            ::typelude::wasm::WasmI32<
-                <::typelude::typenum::Const<0> as ::typelude::typenum::ToUInt>::Output,
-            >
-        ),
-        Val::I64 => quote!(
-            ::typelude::wasm::WasmI64<
-                <::typelude::typenum::Const<0> as ::typelude::typenum::ToUInt>::Output,
-            >
-        ),
-    }
 }
 
 fn lower_val_types(values: &[Val]) -> syn::Result<TokenStream> {
@@ -1056,21 +919,23 @@ fn lower_value_type(val: Val) -> TokenStream {
     }
 }
 
-fn lower_memory_decl(memory: Option<&MemoryDef>) -> syn::Result<TokenStream> {
+fn lower_memory_section(memory: Option<&MemoryDef>, data_segments: &[DataSegmentDef]) -> syn::Result<TokenStream> {
+    let data_segments = lower_data_segments(data_segments)?;
     match memory {
         Some(memory) => {
             let min = uint_type(memory.min as usize)?;
             let max = lower_limit(memory.max)?;
-            let data_segments = lower_data_segments(&memory.data_segments)?;
             Ok(quote!(
-                ::typelude::wasm::WasmMemoryDecl<#min, #max, #data_segments>
+                ::typelude::wasm::WasmModuleMemory<
+                    ::typelude::wasm::WasmMemoryDecl<#min, #max>,
+                    #data_segments
+                >
             ))
         },
         None => Ok(quote!(
-            ::typelude::wasm::WasmMemoryDecl<
-                ::typelude::typenum::U0,
-                ::typelude::wasm::NoLimit,
-                ::typelude::wasm::TTerm,
+            ::typelude::wasm::WasmModuleMemory<
+                ::typelude::wasm::NoMemoryDecl,
+                #data_segments
             >
         )),
     }
@@ -1085,9 +950,15 @@ fn lower_data_segments(data_segments: &[DataSegmentDef]) -> syn::Result<TokenStr
 }
 
 fn lower_data_segment(data_segment: &DataSegmentDef) -> syn::Result<TokenStream> {
-    let offset = lower_offset_init_expr(&data_segment.offset)?;
+    let offset = lower_const_expr(&data_segment.offset)?;
     let bytes = lower_bytes(&data_segment.bytes)?;
     Ok(quote!(::typelude::wasm::WasmDataSegment<#offset, #bytes>))
+}
+
+fn lower_tables_section(tables: &[TableDef], elem_segments: &[ElemSegmentDef]) -> syn::Result<TokenStream> {
+    let tables = lower_tables(tables)?;
+    let elem_segments = lower_elem_segments(elem_segments)?;
+    Ok(quote!(::typelude::wasm::WasmModuleTables<#tables, #elem_segments>))
 }
 
 fn lower_tables(tables: &[TableDef]) -> syn::Result<TokenStream> {
@@ -1101,8 +972,7 @@ fn lower_tables(tables: &[TableDef]) -> syn::Result<TokenStream> {
 fn lower_table(table: &TableDef) -> syn::Result<TokenStream> {
     let min = uint_type(table.min as usize)?;
     let max = lower_limit(table.max)?;
-    let elem_segments = lower_elem_segments(&table.elem_segments)?;
-    Ok(quote!(::typelude::wasm::WasmTableDecl<#min, #max, #elem_segments>))
+    Ok(quote!(::typelude::wasm::WasmTableDecl<#min, #max>))
 }
 
 fn lower_elem_segments(elem_segments: &[ElemSegmentDef]) -> syn::Result<TokenStream> {
@@ -1115,7 +985,7 @@ fn lower_elem_segments(elem_segments: &[ElemSegmentDef]) -> syn::Result<TokenStr
 
 fn lower_elem_segment(elem_segment: &ElemSegmentDef) -> syn::Result<TokenStream> {
     let table_index = uint_type(elem_segment.table_index as usize)?;
-    let offset = lower_offset_init_expr(&elem_segment.offset)?;
+    let offset = lower_const_expr(&elem_segment.offset)?;
     let func_indices = lower_u32_list(&elem_segment.func_indices)?;
     Ok(quote!(
         ::typelude::wasm::WasmElemSegment<#table_index, #offset, #func_indices>
@@ -1136,44 +1006,30 @@ fn lower_global(global: &GlobalDef) -> syn::Result<TokenStream> {
     } else {
         quote!(::typelude::wasm::GlobalConst)
     };
-    let init = lower_global_init_expr(&global.init)?;
+    let init = lower_const_expr(&global.init)?;
     Ok(quote!(::typelude::wasm::WasmGlobalDecl<#mutability, #init>))
 }
 
-fn lower_global_init_expr(expr: &InitExprDef) -> syn::Result<TokenStream> {
-    Ok(match expr {
-        InitExprDef::I32Const(value) => {
-            let value = uint_type(*value as usize)?;
-            quote!(::typelude::wasm::InitI32Const<#value>)
-        },
-        InitExprDef::I64Const(value) => {
-            let value = u64_type(*value)?;
-            quote!(::typelude::wasm::InitI64Const<#value>)
-        },
-        InitExprDef::GlobalGet(index) => {
-            let index = uint_type(*index as usize)?;
-            quote!(::typelude::wasm::InitGlobalGet<#index>)
-        },
-    })
-}
-
-fn lower_offset_init_expr(expr: &InitExprDef) -> syn::Result<TokenStream> {
-    Ok(match expr {
-        InitExprDef::I32Const(value) => {
-            let value = uint_type(*value as usize)?;
-            quote!(::typelude::wasm::InitI32Const<#value>)
-        },
-        InitExprDef::GlobalGet(index) => {
-            let index = uint_type(*index as usize)?;
-            quote!(::typelude::wasm::InitGlobalGet<#index>)
-        },
-        InitExprDef::I64Const(_) => {
-            return Err(Error::new(
-                Span::call_site(),
-                "unsupported offset expr: i64.const is not supported",
-            ));
-        },
-    })
+fn lower_const_expr(expr: &ConstExprDef) -> syn::Result<TokenStream> {
+    let mut lowered = Vec::with_capacity(expr.instrs.len());
+    for instr in &expr.instrs {
+        lowered.push(match instr {
+            ConstInstrDef::I32Const(value) => {
+                let value = uint_type(*value as usize)?;
+                quote!(::typelude::wasm::opcode::OpI32Const<#value>)
+            },
+            ConstInstrDef::I64Const(value) => {
+                let value = u64_type(*value)?;
+                quote!(::typelude::wasm::opcode::OpI64Const<#value>)
+            },
+            ConstInstrDef::GlobalGet(index) => {
+                let index = uint_type(*index as usize)?;
+                quote!(::typelude::wasm::opcode::OpGlobalGet<#index>)
+            },
+        });
+    }
+    let instrs = lower_list(lowered);
+    Ok(quote!(::typelude::wasm::WasmConstExpr<#instrs>))
 }
 
 fn lower_exports(exports: &[ExportDef]) -> syn::Result<TokenStream> {
@@ -1235,6 +1091,13 @@ fn lower_limit(limit: Option<u32>) -> syn::Result<TokenStream> {
     }
 }
 
+fn lower_memarg(memarg: MemArgDef) -> syn::Result<TokenStream> {
+    let memory_index = uint_type(memarg.memory_index as usize)?;
+    let align = uint_type(usize::from(memarg.align))?;
+    let offset = uint_type(memarg.offset as usize)?;
+    Ok(quote!(::typelude::wasm::WasmMemArg<#memory_index, #align, #offset>))
+}
+
 fn lower_list(items: Vec<TokenStream>) -> TokenStream {
     items.into_iter().rev().fold(
         quote!(::typelude::wasm::TTerm),
@@ -1277,7 +1140,6 @@ fn parse_memory_def(memory: wasmparser::MemoryType) -> syn::Result<MemoryDef> {
             })?),
             None => None,
         },
-        data_segments: Vec::new(),
     })
 }
 
@@ -1326,7 +1188,6 @@ fn parse_table_type(table_ty: wasmparser::TableType) -> syn::Result<TableDef> {
             })?),
             None => None,
         },
-        elem_segments: Vec::new(),
     })
 }
 
@@ -1340,7 +1201,7 @@ fn parse_global_def(global: wasmparser::Global<'_>) -> syn::Result<GlobalDef> {
     lower_val_type(global.ty.content_type)?;
     Ok(GlobalDef {
         mutable: global.ty.mutable,
-        init: parse_global_init_expr(&global.init_expr, "global init expr")?,
+        init: parse_const_expr(&global.init_expr, "global init expr")?,
     })
 }
 
@@ -1364,7 +1225,7 @@ fn parse_data_segment(data: wasmparser::Data<'_>) -> syn::Result<DataSegmentDef>
         ));
     }
     Ok(DataSegmentDef {
-        offset: parse_offset_init_expr(&offset_expr, "data offset expr")?,
+        offset: parse_const_expr(&offset_expr, "data offset expr")?,
         bytes: data.data.iter().map(|byte| u32::from(*byte)).collect(),
     })
 }
@@ -1404,20 +1265,17 @@ fn parse_elem_segment(element: wasmparser::Element<'_>) -> syn::Result<ElemSegme
 
     Ok(ElemSegmentDef {
         table_index,
-        offset: parse_offset_init_expr(&offset_expr, "elem offset expr")?,
+        offset: parse_const_expr(&offset_expr, "elem offset expr")?,
         func_indices,
     })
 }
 
-fn parse_global_init_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<InitExprDef> {
+fn parse_const_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<ConstExprDef> {
     let mut operators = expr.get_operators_reader();
     let init = match operators.read().map_err(parser_error)? {
-        Operator::I32Const { value } => InitExprDef::I32Const(parse_non_negative_i32_immediate(
-            value,
-            context,
-        )?),
-        Operator::I64Const { value } => InitExprDef::I64Const(i64_to_bitpattern(value)),
-        Operator::GlobalGet { global_index } => InitExprDef::GlobalGet(global_index),
+        Operator::I32Const { value } => ConstInstrDef::I32Const(i32_to_bitpattern(value)),
+        Operator::I64Const { value } => ConstInstrDef::I64Const(i64_to_bitpattern(value)),
+        Operator::GlobalGet { global_index } => ConstInstrDef::GlobalGet(global_index),
         other => {
             return Err(Error::new(
                 Span::call_site(),
@@ -1444,44 +1302,7 @@ fn parse_global_init_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<In
         ));
     }
     operators.finish().map_err(parser_error)?;
-    Ok(init)
-}
-
-fn parse_offset_init_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<InitExprDef> {
-    let mut operators = expr.get_operators_reader();
-    let init = match operators.read().map_err(parser_error)? {
-        Operator::I32Const { value } => InitExprDef::I32Const(parse_non_negative_i32_immediate(
-            value,
-            context,
-        )?),
-        Operator::GlobalGet { global_index } => InitExprDef::GlobalGet(global_index),
-        other => {
-            return Err(Error::new(
-                Span::call_site(),
-                format!(
-                    "unsupported {context}: expected i32.const or global.get, found {}",
-                    opcode_name(&other)
-                ),
-            ));
-        },
-    };
-    match operators.read().map_err(parser_error)? {
-        Operator::End => {},
-        other => {
-            return Err(Error::new(
-                Span::call_site(),
-                format!("unsupported {context}: expected end, found {}", opcode_name(&other)),
-            ));
-        },
-    }
-    if !operators.eof() {
-        return Err(Error::new(
-            Span::call_site(),
-            format!("unsupported {context}: trailing operators are not supported"),
-        ));
-    }
-    operators.finish().map_err(parser_error)?;
-    Ok(init)
+    Ok(ConstExprDef { instrs: vec![init] })
 }
 
 fn lower_func_sig(func: &FuncType) -> syn::Result<FuncSig> {
@@ -1531,28 +1352,28 @@ fn ensure_empty_block_type(block_type: BlockType, opcode: &str) -> syn::Result<(
     }
 }
 
-fn ensure_memarg(memarg: wasmparser::MemArg, opcode: &str) -> syn::Result<u32> {
-    if memarg.memory != 0 {
-        return Err(Error::new(
-            Span::call_site(),
-            format!("opcode {opcode}: memory index {} is not supported", memarg.memory),
-        ));
-    }
-    u32::try_from(memarg.offset).map_err(|_| {
+fn parse_memarg(memarg: wasmparser::MemArg, opcode: &str) -> syn::Result<MemArgDef> {
+    let offset = u32::try_from(memarg.offset).map_err(|_| {
         Error::new(
             Span::call_site(),
             format!("opcode {opcode}: offset {} exceeds u32", memarg.offset),
         )
+    })?;
+    let align = u8::try_from(memarg.align).map_err(|_| {
+        Error::new(
+            Span::call_site(),
+            format!("opcode {opcode}: align {} exceeds u8", memarg.align),
+        )
+    })?;
+    Ok(MemArgDef {
+        memory_index: memarg.memory,
+        align,
+        offset,
     })
 }
 
-fn parse_non_negative_i32_immediate(value: i32, context: &str) -> syn::Result<u32> {
-    u32::try_from(value).map_err(|_| {
-        Error::new(
-            Span::call_site(),
-            format!("{context}: negative immediates are not supported ({value})"),
-        )
-    })
+fn i32_to_bitpattern(value: i32) -> u32 {
+    value as u32
 }
 
 fn i64_to_bitpattern(value: i64) -> u64 {
