@@ -6,7 +6,7 @@ use crate::{
     frame::{BranchBlock, BranchLoop, ReturnFrame},
     func::WasmFunc,
     helpers::{
-        branch_stack::{BranchJump, ContinueIfZero, ResolveBranch},
+        branch_stack::{BranchJump, ContinueIfZero, ResolveBranch, SelectBrTableTarget},
         call::{
             BindLocals, FuncSignature, HostCall, HostCallResult, ModuleFuncLookup, ParamTypes,
             PopArgs, ReverseList,
@@ -15,8 +15,8 @@ use crate::{
     },
     module::{WasmFuncType, WasmHostFunc, WasmResolvedModule},
     opcode::{
-        OpBlock, OpBr, OpBrIf, OpCall, OpCallIndirect, OpEndBlock, OpEndFunc, OpEndLoop, OpIf,
-        OpLoop, OpNop, OpReturn, OpSelect,
+        OpBlock, OpBr, OpBrIf, OpBrTable, OpCall, OpCallIndirect, OpEndBlock, OpEndFunc,
+        OpEndLoop, OpIf, OpLoop, OpNop, OpReturn, OpSelect,
     },
     run::Step,
     state::{WasmState, WasmStore},
@@ -431,6 +431,29 @@ where
     >>::Output;
 }
 
+impl<Module, Store, Targets, Default, Index, Stack, Locals, Frames, Branches, Rest> Eval
+    for Step<
+        WasmState<
+            Module,
+            Store,
+            TArr<WasmI32<Index>, Stack>,
+            Locals,
+            Frames,
+            Branches,
+            TArr<OpBrTable<Targets, Default>, Rest>,
+        >,
+    >
+where
+    Targets: SelectBrTableTarget<Default, Index>,
+    Branches: ResolveBranch<<Targets as SelectBrTableTarget<Default, Index>>::Output>,
+    <Branches as ResolveBranch<<Targets as SelectBrTableTarget<Default, Index>>::Output>>::Output:
+        BranchJump<Module, Store, Stack, Locals, Frames>,
+{
+    type Output = <<Branches as ResolveBranch<
+        <Targets as SelectBrTableTarget<Default, Index>>::Output,
+    >>::Output as BranchJump<Module, Store, Stack, Locals, Frames>>::Output;
+}
+
 impl<Module, Store, Then, Else, Cond, Stack, Locals, Frames, Branches, Rest> Eval
     for Step<
         WasmState<
@@ -558,5 +581,57 @@ mod tests {
         type Final = ModuleProgramRun<EmptyModule, Program>;
 
         assert_type_eq_all!(<Final as StateStack>::Output, tarr![WasmI32<U1>]);
+    }
+
+    #[test]
+    fn br_table_selects_indexed_and_default_targets() {
+        type IndexZeroProgram = tarr![
+            OpBlock<tarr![
+                OpBlock<tarr![OpI32Const<U0>, OpBrTable<tarr![U0, U1], U1>, OpI32Const<U9>]>,
+                OpI32Const<U1>
+            ]>
+        ];
+        type IndexZeroFinal = ModuleProgramRun<EmptyModule, IndexZeroProgram>;
+
+        type IndexOneProgram = tarr![
+            OpBlock<tarr![
+                OpBlock<tarr![OpI32Const<U1>, OpBrTable<tarr![U0, U1], U1>, OpI32Const<U9>]>,
+                OpI32Const<U1>
+            ]>
+        ];
+        type IndexOneFinal = ModuleProgramRun<EmptyModule, IndexOneProgram>;
+
+        type DefaultProgram = tarr![
+            OpBlock<tarr![
+                OpBlock<tarr![OpI32Const<U3>, OpBrTable<tarr![U0], U1>, OpI32Const<U9>]>,
+                OpI32Const<U1>
+            ]>
+        ];
+        type DefaultFinal = ModuleProgramRun<EmptyModule, DefaultProgram>;
+
+        assert_type_eq_all!(<IndexZeroFinal as StateStack>::Output, tarr![WasmI32<U1>]);
+        assert_type_eq_all!(<IndexOneFinal as StateStack>::Output, TTerm);
+        assert_type_eq_all!(<DefaultFinal as StateStack>::Output, TTerm);
+    }
+
+    #[test]
+    fn br_table_can_target_loop_back_edge() {
+        type Program = tarr![
+            OpI32Const<U2>,
+            OpLoop<
+                tarr![
+                    OpLocalTee<U0>,
+                    OpI32Eqz,
+                    OpIf<tarr![OpI32Const<U1>], tarr![OpI32Const<U0>]>,
+                    OpBrTable<tarr![U0], U1>,
+                    OpLocalGet<U0>,
+                    OpI32Const<U1>,
+                    OpI32Sub
+                ]
+            >
+        ];
+        type Final = Run<InitialState<TTerm, ZeroPages, tarr![WasmI32<U0>], Program>>;
+
+        assert_type_eq_all!(<Final as StateLocals>::Output, tarr![WasmI32<U0>]);
     }
 }

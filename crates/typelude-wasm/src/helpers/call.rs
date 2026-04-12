@@ -7,7 +7,9 @@ use typenum::U0;
 use crate::{
     func::WasmFunc,
     module::{WasmFuncType, WasmHostFunc, WasmResolvedModule},
-    value::{WasmI32, WasmI32Type, WasmI64, WasmI64Type},
+    value::{
+        WasmF32, WasmF32Type, WasmF64, WasmF64Type, WasmI32, WasmI32Type, WasmI64, WasmI64Type,
+    },
 };
 
 pub trait ReverseList {
@@ -39,6 +41,16 @@ impl<ValueT, Tail> PopArg<WasmI32Type> for TArr<WasmI32<ValueT>, Tail> {
 impl<ValueT, Tail> PopArg<WasmI64Type> for TArr<WasmI64<ValueT>, Tail> {
     type RemainingStack = Tail;
     type Value = WasmI64<ValueT>;
+}
+
+impl<ValueT, Tail> PopArg<WasmF32Type> for TArr<WasmF32<ValueT>, Tail> {
+    type RemainingStack = Tail;
+    type Value = WasmF32<ValueT>;
+}
+
+impl<ValueT, Tail> PopArg<WasmF64Type> for TArr<WasmF64<ValueT>, Tail> {
+    type RemainingStack = Tail;
+    type Value = WasmF64<ValueT>;
 }
 
 pub trait PopArgs<ParamTypes> {
@@ -88,6 +100,14 @@ impl ZeroValueForType for WasmI32Type {
 
 impl ZeroValueForType for WasmI64Type {
     type Output = WasmI64<U0>;
+}
+
+impl ZeroValueForType for WasmF32Type {
+    type Output = WasmF32<U0>;
+}
+
+impl ZeroValueForType for WasmF64Type {
+    type Output = WasmF64<U0>;
 }
 
 pub trait MaterializeLocals {

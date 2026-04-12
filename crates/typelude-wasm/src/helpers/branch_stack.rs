@@ -11,6 +11,26 @@ pub trait ResolveBranch<Depth> {
     type Output;
 }
 
+pub trait SelectBrTableTarget<Default, Index> {
+    type Output;
+}
+
+impl<Default, Index> SelectBrTableTarget<Default, Index> for typelude_col::TTerm {
+    type Output = Default;
+}
+
+impl<Head, Tail, Default> SelectBrTableTarget<Default, UTerm> for TArr<Head, Tail> {
+    type Output = Head;
+}
+
+impl<Head, Tail, Default, N, B> SelectBrTableTarget<Default, UInt<N, B>> for TArr<Head, Tail>
+where
+    UInt<N, B>: Sub<U1>,
+    Tail: SelectBrTableTarget<Default, <UInt<N, B> as Sub<U1>>::Output>,
+{
+    type Output = <Tail as SelectBrTableTarget<Default, <UInt<N, B> as Sub<U1>>::Output>>::Output;
+}
+
 impl<Continuation, Tail> ResolveBranch<UTerm> for TArr<BranchBlock<Continuation>, Tail> {
     type Output = ResolvedBlock<Continuation, Tail>;
 }

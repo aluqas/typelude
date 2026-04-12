@@ -59,4 +59,6 @@ pub use state::{NullFuncRef, TableEntry, WasmGlobal, WasmStore, WasmTable};
 pub use state::{WasmMemory, WasmState};
 pub use tstr;
 pub use typelude_col::{TArr, TTerm};
-pub use value::{WasmI32, WasmI32Type, WasmI64, WasmI64Type};
+pub use value::{
+    WasmF32, WasmF32Type, WasmF64, WasmF64Type, WasmI32, WasmI32Type, WasmI64, WasmI64Type,
+};

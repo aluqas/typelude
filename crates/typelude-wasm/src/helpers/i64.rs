@@ -869,6 +869,17 @@ where
     type Output = <ValueT as Mask32>::Output;
 }
 
+pub trait I32WrapI64 {
+    type Output;
+}
+
+impl<ValueT> I32WrapI64 for ValueT
+where
+    ValueT: Unsigned + Mask32,
+{
+    type Output = <ValueT as Mask32>::Output;
+}
+
 pub trait I64ExtendI32S {
     type Output;
 }

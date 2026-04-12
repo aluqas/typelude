@@ -12,26 +12,27 @@ use crate::{
             I32UnsignedLe, I32UnsignedLt, I32XorValue,
         },
         i64::{
-            I64Add, I64AndValue, I64Clz, I64Ctz, I64DivS, I64DivU, I64EqValue, I64ExtendI32S,
-            I64ExtendI32U, I64Mul, I64OrValue, I64Popcnt, I64RemS, I64RemU, I64RotlValue,
-            I64RotrValue, I64ShlValue, I64ShrSValue, I64ShrUValue, I64SignedGe, I64SignedGt,
-            I64SignedLe, I64SignedLt, I64Sub, I64UnsignedGe, I64UnsignedGt, I64UnsignedLe,
-            I64UnsignedLt, I64XorValue,
+            I32WrapI64, I64Add, I64AndValue, I64Clz, I64Ctz, I64DivS, I64DivU, I64EqValue,
+            I64ExtendI32S, I64ExtendI32U, I64Mul, I64OrValue, I64Popcnt, I64RemS, I64RemU,
+            I64RotlValue, I64RotrValue, I64ShlValue, I64ShrSValue, I64ShrUValue, I64SignedGe,
+            I64SignedGt, I64SignedLe, I64SignedLt, I64Sub, I64UnsignedGe, I64UnsignedGt,
+            I64UnsignedLe, I64UnsignedLt, I64XorValue,
         },
     },
     opcode::{
-        OpDrop, OpI32Add, OpI32And, OpI32Clz, OpI32Ctz, OpI32DivS, OpI32DivU, OpI32Eq, OpI32Eqz,
-        OpI32Extend8S, OpI32Extend16S, OpI32GeS, OpI32GeU, OpI32GtS, OpI32GtU, OpI32LeS, OpI32LeU,
-        OpI32LtS, OpI32LtU, OpI32Mul, OpI32Ne, OpI32Or, OpI32Popcnt, OpI32RemS, OpI32RemU,
-        OpI32Rotl, OpI32Rotr, OpI32Shl, OpI32ShrS, OpI32ShrU, OpI32Sub, OpI32Xor, OpI64Add,
-        OpI64And, OpI64Clz, OpI64Ctz, OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64ExtendI32S,
+        OpDrop, OpF32ReinterpretI32, OpF64ReinterpretI64, OpI32Add, OpI32And, OpI32Clz,
+        OpI32Ctz, OpI32DivS, OpI32DivU, OpI32Eq, OpI32Eqz, OpI32Extend8S, OpI32Extend16S,
+        OpI32GeS, OpI32GeU, OpI32GtS, OpI32GtU, OpI32LeS, OpI32LeU, OpI32LtS, OpI32LtU,
+        OpI32Mul, OpI32Ne, OpI32Or, OpI32Popcnt, OpI32RemS, OpI32RemU, OpI32Rotl, OpI32Rotr,
+        OpI32Shl, OpI32ShrS, OpI32ShrU, OpI32Sub, OpI32WrapI64, OpI32Xor, OpI64Add, OpI64And,
+        OpI64Clz, OpI64Ctz, OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64ExtendI32S,
         OpI64ExtendI32U, OpI64GeS, OpI64GeU, OpI64GtS, OpI64GtU, OpI64LeS, OpI64LeU, OpI64LtS,
-        OpI64LtU, OpI64Mul, OpI64Ne, OpI64Or, OpI64Popcnt, OpI64RemS, OpI64RemU, OpI64Rotl,
-        OpI64Rotr, OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Sub, OpI64Xor,
+        OpI64LtU, OpI64Mul, OpI64Ne, OpI64Or, OpI64Popcnt, OpI64ReinterpretF64, OpI64RemS,
+        OpI64RemU, OpI64Rotl, OpI64Rotr, OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Sub, OpI64Xor,
     },
     run::Step,
     state::WasmState,
-    value::{WasmI32, WasmI64},
+    value::{WasmF32, WasmF64, WasmI32, WasmI64},
 };
 
 #[doc(hidden)]
@@ -158,6 +159,83 @@ where
         Branches,
         Rest,
     >;
+}
+
+impl<Module, Store, ValueT, Tail, Locals, Frames, Branches, Rest> Eval
+    for Step<
+        WasmState<
+            Module,
+            Store,
+            TArr<WasmI64<ValueT>, Tail>,
+            Locals,
+            Frames,
+            Branches,
+            TArr<OpI32WrapI64, Rest>,
+        >,
+    >
+where
+    ValueT: I32WrapI64,
+{
+    type Output = WasmState<
+        Module,
+        Store,
+        TArr<WasmI32<<ValueT as I32WrapI64>::Output>, Tail>,
+        Locals,
+        Frames,
+        Branches,
+        Rest,
+    >;
+}
+
+impl<Module, Store, Bits, Tail, Locals, Frames, Branches, Rest> Eval
+    for Step<
+        WasmState<
+            Module,
+            Store,
+            TArr<WasmI32<Bits>, Tail>,
+            Locals,
+            Frames,
+            Branches,
+            TArr<OpF32ReinterpretI32, Rest>,
+        >,
+    >
+{
+    type Output =
+        WasmState<Module, Store, TArr<WasmF32<Bits>, Tail>, Locals, Frames, Branches, Rest>;
+}
+
+impl<Module, Store, Bits, Tail, Locals, Frames, Branches, Rest> Eval
+    for Step<
+        WasmState<
+            Module,
+            Store,
+            TArr<WasmI64<Bits>, Tail>,
+            Locals,
+            Frames,
+            Branches,
+            TArr<OpF64ReinterpretI64, Rest>,
+        >,
+    >
+{
+    type Output =
+        WasmState<Module, Store, TArr<WasmF64<Bits>, Tail>, Locals, Frames, Branches, Rest>;
+}
+
+impl<Module, Store, Bits, Tail, Locals, Frames, Branches, Rest> Eval
+    for Step<
+        WasmState<
+            Module,
+            Store,
+            TArr<WasmF64<Bits>, Tail>,
+            Locals,
+            Frames,
+            Branches,
+            TArr<OpI64ReinterpretF64, Rest>,
+        >,
+    >
+{
+    type Output =
+        WasmState<Module, Store, TArr<WasmI64<Bits>, Tail>, Locals, Frames, Branches, Rest>;
 }
 
 macro_rules! impl_i32_unary_value_op {
@@ -768,5 +846,40 @@ mod tests {
         assert_type_eq_all!(<ExtendUFinal as StateStack>::Output, tarr![
             WasmI64<typenum::U4294967295>
         ]);
+    }
+
+    #[test]
+    fn wrap_and_reinterpret_ops_preserve_expected_bitpatterns() {
+        type U1065353216 = <typenum::Const<1065353216> as typenum::ToUInt>::Output;
+        type WrapProgram = tarr![OpI64Const<U18446744073709551615>, OpI32WrapI64];
+        type WrapFinal = ModuleProgramRun<EmptyModule, WrapProgram>;
+        type F32Program = tarr![OpI32Const<U1065353216>, OpF32ReinterpretI32];
+        type F32Final = ModuleProgramRun<EmptyModule, F32Program>;
+        type F64Program = tarr![OpI64Const<U18446744073709551615>, OpF64ReinterpretI64];
+        type F64Final = ModuleProgramRun<EmptyModule, F64Program>;
+        type RoundTripProgram =
+            tarr![OpI64Const<U18446744073709551615>, OpF64ReinterpretI64, OpI64ReinterpretF64];
+        type RoundTripFinal = ModuleProgramRun<EmptyModule, RoundTripProgram>;
+
+        assert_type_eq_all!(<WrapFinal as StateStack>::Output, tarr![WasmI32<typenum::U4294967295>]);
+        assert_type_eq_all!(<F32Final as StateStack>::Output, tarr![WasmF32<U1065353216>]);
+        assert_type_eq_all!(<F64Final as StateStack>::Output, tarr![WasmF64<U18446744073709551615>]);
+        assert_type_eq_all!(<RoundTripFinal as StateStack>::Output, tarr![
+            WasmI64<U18446744073709551615>
+        ]);
+    }
+
+    #[test]
+    fn float_carriers_flow_through_direct_call() {
+        type ReinterpretEcho = WasmFunc<
+            WasmFuncType<tarr![WasmF64Type], tarr![WasmF64Type]>,
+            TTerm,
+            tarr![OpLocalGet<U0>, OpReturn],
+        >;
+        type FloatModule = Module<tarr![ReinterpretEcho], U0>;
+        type Program = tarr![OpI64Const<U18446744073709551615>, OpF64ReinterpretI64, OpCall<U0>];
+        type Final = ModuleProgramRun<FloatModule, Program>;
+
+        assert_type_eq_all!(<Final as StateStack>::Output, tarr![WasmF64<U18446744073709551615>]);
     }
 }

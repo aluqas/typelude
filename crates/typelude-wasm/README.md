@@ -16,13 +16,13 @@ Legend:
 | `block`               | Y       | Y       |                                |
 | `br`                  | Y       | Y       |                                |
 | `br_if`               | Y       | Y       |                                |
-| `br_table`            | N       | N       |                                |
+| `br_table`            | Y       | N       | runtime-only                   |
 | `call`                | Y       | Y       |                                |
 | `call_indirect`       | Y       | Y       |                                |
 | `drop`                | Y       | Y       |                                |
 | `else`                | -       | Y       | `if` 構文の一部として parse    |
-| `f32.reinterpret_i32` | N       | N       |                                |
-| `f64.reinterpret_i64` | N       | N       |                                |
+| `f32.reinterpret_i32` | Y       | N       | runtime-only / no float math   |
+| `f64.reinterpret_i64` | Y       | N       | runtime-only / no float math   |
 | `global.get`          | Y       | Y       |                                |
 | `global.set`          | Y       | Y       |                                |
 | `i32.add`             | Y       | Y       |                                |
@@ -68,7 +68,7 @@ Legend:
 | `i32.trunc_f32_s`     | N       | N       |                                |
 | `i32.trunc_f64_s`     | N       | N       |                                |
 | `i32.trunc_f64_u`     | N       | N       |                                |
-| `i32.wrap_i64`        | N       | N       |                                |
+| `i32.wrap_i64`        | Y       | N       | runtime-only                   |
 | `i32.xor`             | Y       | N       | runtime 先行                   |
 | `i64.add`             | Y       | Y       |                                |
 | `i64.and`             | Y       | Y       |                                |
@@ -100,7 +100,7 @@ Legend:
 | `i64.ne`              | Y       | Y       |                                |
 | `i64.or`              | Y       | Y       |                                |
 | `i64.popcnt`          | Y       | N       | runtime 先行                   |
-| `i64.reinterpret_f64` | N       | N       |                                |
+| `i64.reinterpret_f64` | Y       | N       | runtime-only / no float math   |
 | `i64.rem_s`           | Y       | Y       |                                |
 | `i64.rem_u`           | Y       | Y       |                                |
 | `i64.rotl`            | Y       | N       | runtime 先行                   |

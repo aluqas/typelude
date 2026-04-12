@@ -35,6 +35,9 @@ pub struct OpBr<Depth>(PhantomData<Depth>);
 pub struct OpBrIf<Depth>(PhantomData<Depth>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct OpBrTable<Targets, Default>(PhantomData<(Targets, Default)>);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpIf<Then, Else>(PhantomData<(Then, Else)>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
