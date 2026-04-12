@@ -20,6 +20,7 @@ impl<T: Nat> Nat for Succ<T> {
     const VAL: usize = T::VAL + 1;
 }
 
+
 impl<Rhs: Nat> Add<Rhs> for Zero {
     type Output = Rhs;
 }

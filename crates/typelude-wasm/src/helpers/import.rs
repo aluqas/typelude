@@ -14,7 +14,7 @@ use crate::{
         ImportMemory, ImportTable, NoLimit, WasmHostFunc,
     },
     state::{WasmGlobal, WasmMemory, WasmTable},
-    value::{WasmI32, WasmI32Type},
+    value::{WasmI32, WasmI32Type, WasmI64, WasmI64Type},
 };
 
 pub struct MissingHostFuncBinding<ModuleName, FieldName>(pub PhantomData<(ModuleName, FieldName)>);
@@ -239,6 +239,12 @@ impl<Mutability, ValueT> ImportedGlobalCompat<ImportGlobal<Mutability, WasmI32Ty
     for WasmGlobal<Mutability, WasmI32<ValueT>>
 {
     type Output = WasmGlobal<Mutability, WasmI32<ValueT>>;
+}
+
+impl<Mutability, ValueT> ImportedGlobalCompat<ImportGlobal<Mutability, WasmI64Type>>
+    for WasmGlobal<Mutability, WasmI64<ValueT>>
+{
+    type Output = WasmGlobal<Mutability, WasmI64<ValueT>>;
 }
 
 pub trait ImportMaxCompat<ActualMax> {}

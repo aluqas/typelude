@@ -10,21 +10,26 @@ use typelude_std::core::Evaluate;
 use typelude_wasm::{
     ExportFunc, ExportGlobal, ExportMemory, ExportTable, GlobalConst, GlobalMut, HostCall,
     HostCallResult, HostFuncBinding, HostGlobalBinding, HostMemoryBinding, HostTableBinding,
-    ImportFunc, ImportGlobal, ImportMemory, ImportTable, InitGlobalGet, InitI32Const,
+    ImportFunc, ImportGlobal, ImportMemory, ImportTable, InitGlobalGet, InitI32Const, InitI64Const,
     InvokeFuncWithEnv, ModuleProgramRun, NoLimit, NoStart, RunWasm, StartFunc, TableEntry,
     MemoryCell, WasmDataSegment, WasmElemSegment, WasmExport, WasmFunc, WasmFuncSpace,
-    WasmFuncType, WasmGlobal, WasmGlobalDecl, WasmHostEnv, WasmI32, WasmI32Type, WasmImport,
-    WasmMemory, WasmMemoryDecl, WasmModule, WasmResolvedModule, WasmState, WasmStore, WasmTable,
-    WasmTableDecl,
+    WasmFuncType, WasmGlobal, WasmGlobalDecl, WasmHostEnv, WasmI32, WasmI32Type, WasmI64,
+    WasmI64Type, WasmImport, WasmMemory, WasmMemoryDecl, WasmModule, WasmResolvedModule,
+    WasmState, WasmStore, WasmTable, WasmTableDecl,
     StateExportGlobal, StateExportMemory, StateExportTable, StateTables,
     opcode::{
         OpBlock, OpBr, OpBrIf, OpCall, OpCallIndirect, OpDrop, OpGlobalGet, OpGlobalSet,
         OpI32Add, OpI32Const, OpI32Eqz, OpI32Load, OpI32Load8U, OpI32Store, OpI32Store8,
-        OpI32Sub, OpIf, OpLocalGet, OpLocalSet, OpLocalTee, OpLoop, OpMemoryGrow, OpMemorySize,
+        OpI32Sub, OpI64Add, OpI64Const, OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64GtU,
+        OpI64Load, OpI64LtS, OpI64Mul, OpI64RemS, OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Store,
+        OpI64Sub, OpIf, OpLocalGet, OpLocalSet, OpLocalTee, OpLoop, OpMemoryGrow, OpMemorySize,
         OpReturn, OpSelect,
     },
 };
-use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U6, U7, U8, U9, U42, U258, operator_aliases::Sum};
+use typenum::{
+    Const, ToUInt, U0, U1, U2, U3, U4, U5, U6, U7, U8, U9, U42, U258,
+    operator_aliases::{Diff, Or, Sum},
+};
 
 use crate::support::{
     StateBranches, StateGlobals, StateLocals, StateMemory, StateProgram, StateStack,
@@ -32,6 +37,11 @@ use crate::support::{
 
 type MaxPages = <Const<4294967295> as ToUInt>::Output;
 type PageBytes = <Const<65536> as ToUInt>::Output;
+type U9223372036854775807 = <Const<9223372036854775807usize> as ToUInt>::Output;
+type U9223372036854775808 = <Const<9223372036854775808usize> as ToUInt>::Output;
+type U18446744073709551615 = Or<U9223372036854775808, U9223372036854775807>;
+type U18446744073709551614 = Diff<U18446744073709551615, U1>;
+type U18446744073709551611 = Diff<U18446744073709551614, U3>;
 type LittleEndian258Cells = tarr![
     MemoryCell<U3, U0>,
     MemoryCell<U2, U0>,
@@ -79,6 +89,8 @@ type Fn1<LocalInits, Program> =
     WasmFunc<WasmFuncType<tarr![WasmI32Type], TTerm>, LocalInits, Program>;
 type Fn2<LocalInits, Program> =
     WasmFunc<WasmFuncType<tarr![WasmI32Type, WasmI32Type], TTerm>, LocalInits, Program>;
+type Fn1I64<LocalInits, Program> =
+    WasmFunc<WasmFuncType<tarr![WasmI64Type], tarr![WasmI64Type]>, LocalInits, Program>;
 
 #[test]
 fn const_and_add_produce_expected_stack() {
@@ -1114,5 +1126,226 @@ fn export_accessors_read_live_state_entries_by_name() {
     assert_type_eq_all!(
         <FinalState as StateExportTable<typelude_wasm::tstr::TS!("table")>>::Output,
         WasmTable<U1, U1, tarr![TableEntry<U0, U1>]>
+    );
+}
+
+type I64AddOne = Fn1I64<TTerm, tarr![OpLocalGet<U0>, OpI64Const<U1>, OpI64Add, OpReturn]>;
+type I64DirectModule = Module<tarr![I64AddOne], U0>;
+
+type MixedEchoI64 = WasmFunc<
+    WasmFuncType<tarr![WasmI32Type, WasmI64Type], tarr![WasmI64Type]>,
+    TTerm,
+    tarr![OpLocalGet<U1>, OpReturn],
+>;
+type MixedDirectModule = Module<tarr![MixedEchoI64], U0>;
+
+type I64IndirectTypes = tarr![WasmFuncType<TTerm, tarr![WasmI64Type]>];
+type ReturnI64Two =
+    WasmFunc<WasmFuncType<TTerm, tarr![WasmI64Type]>, TTerm, tarr![OpI64Const<U2>, OpReturn]>;
+type I64IndirectModule = ModuleWithTables<
+    tarr![ReturnI64Two],
+    I64IndirectTypes,
+    tarr![WasmTableDecl<U1, U1, tarr![WasmElemSegment<U0, InitI32Const<U0>, tarr![U0]>]>],
+>;
+
+struct HostMixedAdd;
+
+impl<Memory, Tables, Globals, A, B>
+    HostCall<
+        WasmFuncType<tarr![WasmI32Type, WasmI64Type], tarr![WasmI64Type]>,
+        WasmStore<Memory, Tables, Globals>,
+        tarr![WasmI32<A>, tarr![WasmI64<B>, TTerm]],
+    > for HostMixedAdd
+where
+    A: Add<B>,
+{
+    type Output = HostCallResult<WasmStore<Memory, Tables, Globals>, tarr![WasmI64<Sum<A, B>>]>;
+}
+
+type ImportedI64AddModule = WasmModule<
+    tarr![WasmImport<
+        typelude_wasm::tstr::TS!("host"),
+        typelude_wasm::tstr::TS!("mix_add"),
+        ImportFunc<WasmFuncType<tarr![WasmI32Type, WasmI64Type], tarr![WasmI64Type]>>,
+    >],
+    WasmFuncSpace<
+        TTerm,
+        tarr![WasmFunc<
+            WasmFuncType<tarr![WasmI32Type, WasmI64Type], tarr![WasmI64Type]>,
+            TTerm,
+            tarr![OpLocalGet<U0>, OpLocalGet<U1>, OpCall<U0>, OpReturn]
+        >],
+    >,
+    WasmMemoryDecl<U0, NoLimit, TTerm>,
+    TTerm,
+    TTerm,
+    tarr![WasmExport<typelude_wasm::tstr::TS!("main"), ExportFunc<U1>>],
+    NoStart,
+>;
+
+type ImportedI64AddEnv = WasmHostEnv<
+    tarr![HostFuncBinding<
+        typelude_wasm::tstr::TS!("host"),
+        typelude_wasm::tstr::TS!("mix_add"),
+        HostMixedAdd,
+    >],
+    TTerm,
+    TTerm,
+    TTerm,
+>;
+
+type ImportedI64GlobalsModule = WasmModule<
+    tarr![
+        WasmImport<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("const64"),
+            ImportGlobal<GlobalConst, WasmI64Type>
+        >,
+        WasmImport<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("mut64"),
+            ImportGlobal<GlobalMut, WasmI64Type>
+        >
+    ],
+    WasmFuncSpace<
+        TTerm,
+        tarr![WasmFunc<
+            WasmFuncType<TTerm, tarr![WasmI64Type]>,
+            TTerm,
+            tarr![OpGlobalGet<U0>, OpGlobalSet<U1>, OpGlobalGet<U1>, OpReturn]
+        >],
+    >,
+    WasmMemoryDecl<U0, NoLimit, TTerm>,
+    TTerm,
+    TTerm,
+    tarr![WasmExport<typelude_wasm::tstr::TS!("main"), ExportFunc<U0>>],
+    NoStart,
+>;
+
+type ImportedI64GlobalsEnv = WasmHostEnv<
+    TTerm,
+    tarr![
+        HostGlobalBinding<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("const64"),
+            WasmGlobal<GlobalConst, WasmI64<U2>>
+        >,
+        HostGlobalBinding<
+            typelude_wasm::tstr::TS!("host"),
+            typelude_wasm::tstr::TS!("mut64"),
+            WasmGlobal<GlobalMut, WasmI64<U3>>
+        >
+    ],
+    TTerm,
+    TTerm,
+>;
+
+#[test]
+fn i64_wrapping_add_and_sub_follow_64bit_bitpatterns() {
+    type AddProgram = tarr![OpI64Const<U18446744073709551615>, OpI64Const<U1>, OpI64Add];
+    type AddState = ModuleProgramRun<EmptyModule, AddProgram>;
+    type SubProgram = tarr![OpI64Const<U0>, OpI64Const<U1>, OpI64Sub];
+    type SubState = ModuleProgramRun<EmptyModule, SubProgram>;
+
+    assert_type_eq_all!(<AddState as StateStack>::Output, tarr![WasmI64<U0>]);
+    assert_type_eq_all!(
+        <SubState as StateStack>::Output,
+        tarr![WasmI64<U18446744073709551615>]
+    );
+}
+
+#[test]
+fn i64_signed_unsigned_compare_and_shift_behave_correctly() {
+    type SignedLtProgram = tarr![OpI64Const<U18446744073709551615>, OpI64Const<U1>, OpI64LtS];
+    type SignedLtState = ModuleProgramRun<EmptyModule, SignedLtProgram>;
+    type UnsignedGtProgram = tarr![OpI64Const<U18446744073709551615>, OpI64Const<U1>, OpI64GtU];
+    type UnsignedGtState = ModuleProgramRun<EmptyModule, UnsignedGtProgram>;
+    type ShiftProgram = tarr![OpI64Const<U18446744073709551614>, OpI64Const<U1>, OpI64ShrS];
+    type ShiftState = ModuleProgramRun<EmptyModule, ShiftProgram>;
+
+    assert_type_eq_all!(<SignedLtState as StateStack>::Output, tarr![WasmI32<U1>]);
+    assert_type_eq_all!(<UnsignedGtState as StateStack>::Output, tarr![WasmI32<U1>]);
+    assert_type_eq_all!(
+        <ShiftState as StateStack>::Output,
+        tarr![WasmI64<U18446744073709551615>]
+    );
+}
+
+#[test]
+fn i64_division_and_remainder_cover_signed_and_unsigned_paths() {
+    type DivUProgram = tarr![OpI64Const<U5>, OpI64Const<U2>, OpI64DivU];
+    type DivUState = ModuleProgramRun<EmptyModule, DivUProgram>;
+    type DivSProgram = tarr![OpI64Const<U18446744073709551611>, OpI64Const<U2>, OpI64DivS];
+    type DivSState = ModuleProgramRun<EmptyModule, DivSProgram>;
+    type RemSProgram = tarr![OpI64Const<U18446744073709551611>, OpI64Const<U2>, OpI64RemS];
+    type RemSState = ModuleProgramRun<EmptyModule, RemSProgram>;
+
+    assert_type_eq_all!(<DivUState as StateStack>::Output, tarr![WasmI64<U2>]);
+    assert_type_eq_all!(
+        <DivSState as StateStack>::Output,
+        tarr![WasmI64<U18446744073709551614>]
+    );
+    assert_type_eq_all!(
+        <RemSState as StateStack>::Output,
+        tarr![WasmI64<U18446744073709551615>]
+    );
+}
+
+#[test]
+fn i64_direct_and_mixed_calls_bind_params_by_type() {
+    type I64Final = typelude_wasm::InvokeFunc<I64DirectModule, U0, tarr![WasmI64<U2>]>;
+    type MixedFinal =
+        typelude_wasm::InvokeFunc<MixedDirectModule, U0, tarr![WasmI32<U2>, WasmI64<U3>]>;
+
+    assert_type_eq_all!(<I64Final as StateStack>::Output, tarr![WasmI64<U3>]);
+    assert_type_eq_all!(<MixedFinal as StateStack>::Output, tarr![WasmI64<U3>]);
+}
+
+#[test]
+fn i64_host_calls_and_indirect_calls_are_supported() {
+    type HostFinal =
+        InvokeFuncWithEnv<ImportedI64AddModule, ImportedI64AddEnv, U1, tarr![WasmI32<U2>, WasmI64<U3>]>;
+    type IndirectFinal = ModuleProgramRun<I64IndirectModule, tarr![OpI32Const<U0>, OpCallIndirect<U0>]>;
+
+    assert_type_eq_all!(<HostFinal as StateStack>::Output, tarr![WasmI64<U5>]);
+    assert_type_eq_all!(<IndirectFinal as StateStack>::Output, tarr![WasmI64<U2>]);
+}
+
+#[test]
+fn i64_globals_and_imported_globals_round_trip() {
+    type Decls = tarr![WasmGlobalDecl<GlobalMut, InitI64Const<U2>>];
+    type Module = ModuleWithGlobals<TTerm, U0, Decls>;
+    type Program = tarr![OpI64Const<U5>, OpGlobalSet<U0>, OpGlobalGet<U0>];
+    type Final = ModuleProgramRun<Module, Program>;
+    type ImportedFinal = InvokeFuncWithEnv<ImportedI64GlobalsModule, ImportedI64GlobalsEnv, U0, TTerm>;
+
+    assert_type_eq_all!(<Final as StateStack>::Output, tarr![WasmI64<U5>]);
+    assert_type_eq_all!(
+        <Final as StateGlobals>::Output,
+        tarr![WasmGlobal<GlobalMut, WasmI64<U5>>]
+    );
+    assert_type_eq_all!(<ImportedFinal as StateStack>::Output, tarr![WasmI64<U2>]);
+    assert_type_eq_all!(
+        <ImportedFinal as StateGlobals>::Output,
+        tarr![WasmGlobal<GlobalConst, WasmI64<U2>>, WasmGlobal<GlobalMut, WasmI64<U2>>]
+    );
+}
+
+#[test]
+fn i64_memory_round_trips_with_nonzero_offset_and_little_endian_layout() {
+    type Program = tarr![
+        OpI32Const<U0>,
+        OpI64Const<U258>,
+        OpI64Store<U4>,
+        OpI32Const<U0>,
+        OpI64Load<U4>,
+        OpI32Const<U4>,
+        OpI32Load8U<U0>
+    ];
+    type Final = ModuleProgramRun<OnePageModule, Program>;
+
+    assert_type_eq_all!(
+        <Final as StateStack>::Output,
+        tarr![WasmI32<U2>, WasmI64<U258>]
     );
 }

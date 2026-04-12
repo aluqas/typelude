@@ -101,6 +101,24 @@ impl IsBool for False {
     type Xor<B: IsBool> = B;
 }
 
+mod primitive {
+    use super::*;
+
+    trait NandHelper<Lhs: IsBool, Rhs: IsBool> {
+        type Output: IsBool;
+    }
+
+    impl NandHelper<True, True> for () { type Output = False; }
+    impl NandHelper<True, False> for () { type Output = True; }
+    impl NandHelper<False, True> for () { type Output = True; }
+    impl NandHelper<False, False> for () { type Output = True; }
+
+    type Nand<Lhs, Rhs> = <() as NandHelper<Lhs, Rhs>>::Output;
+    type Not<T> = Nand<T, T>;
+    type And<Lhs, Rhs> = Not<Nand<Lhs, Rhs>>;
+    type Or<Lhs, Rhs> = Nand<Not<Lhs>, Not<Rhs>>;
+    type Xor<Lhs, Rhs> = Nand<And<Lhs, Rhs>, Or<Lhs, Rhs>>;
+}
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;

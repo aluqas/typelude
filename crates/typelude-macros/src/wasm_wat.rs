@@ -51,9 +51,10 @@ struct FuncSig {
     results: Vec<Val>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Val {
     I32,
+    I64,
 }
 
 #[derive(Clone)]
@@ -67,6 +68,7 @@ struct FunctionDef {
 enum Instr {
     Drop,
     I32Const(u32),
+    I64Const(u64),
     LocalGet(u32),
     LocalSet(u32),
     LocalTee(u32),
@@ -75,6 +77,30 @@ enum Instr {
     I32Add,
     I32Sub,
     I32Eqz,
+    I64Add,
+    I64Sub,
+    I64Eqz,
+    I64Eq,
+    I64Ne,
+    I64LtS,
+    I64LtU,
+    I64GtS,
+    I64GtU,
+    I64LeS,
+    I64LeU,
+    I64GeS,
+    I64GeU,
+    I64And,
+    I64Or,
+    I64Xor,
+    I64Shl,
+    I64ShrS,
+    I64ShrU,
+    I64Mul,
+    I64DivS,
+    I64DivU,
+    I64RemS,
+    I64RemU,
     Block(Vec<Instr>),
     Loop(Vec<Instr>),
     Br(u32),
@@ -88,6 +114,8 @@ enum Instr {
     I32Store { offset: u32 },
     I32Load8U { offset: u32 },
     I32Store8 { offset: u32 },
+    I64Load { offset: u32 },
+    I64Store { offset: u32 },
     MemorySize,
     MemoryGrow,
 }
@@ -146,6 +174,7 @@ struct GlobalDef {
 #[derive(Clone)]
 enum InitExprDef {
     I32Const(u32),
+    I64Const(u64),
     GlobalGet(u32),
 }
 
@@ -647,6 +676,9 @@ fn parse_instruction_sequence(
                     "opcode i32.const",
                 )?));
             },
+            Operator::I64Const { value } => {
+                instructions.push(Instr::I64Const(i64_to_bitpattern(value)));
+            },
             Operator::LocalGet { local_index } => instructions.push(Instr::LocalGet(local_index)),
             Operator::LocalSet { local_index } => instructions.push(Instr::LocalSet(local_index)),
             Operator::LocalTee { local_index } => instructions.push(Instr::LocalTee(local_index)),
@@ -659,14 +691,38 @@ fn parse_instruction_sequence(
             Operator::I32Add => instructions.push(Instr::I32Add),
             Operator::I32Sub => instructions.push(Instr::I32Sub),
             Operator::I32Eqz => instructions.push(Instr::I32Eqz),
+            Operator::I64Add => instructions.push(Instr::I64Add),
+            Operator::I64Sub => instructions.push(Instr::I64Sub),
+            Operator::I64Eqz => instructions.push(Instr::I64Eqz),
+            Operator::I64Eq => instructions.push(Instr::I64Eq),
+            Operator::I64Ne => instructions.push(Instr::I64Ne),
+            Operator::I64LtS => instructions.push(Instr::I64LtS),
+            Operator::I64LtU => instructions.push(Instr::I64LtU),
+            Operator::I64GtS => instructions.push(Instr::I64GtS),
+            Operator::I64GtU => instructions.push(Instr::I64GtU),
+            Operator::I64LeS => instructions.push(Instr::I64LeS),
+            Operator::I64LeU => instructions.push(Instr::I64LeU),
+            Operator::I64GeS => instructions.push(Instr::I64GeS),
+            Operator::I64GeU => instructions.push(Instr::I64GeU),
+            Operator::I64And => instructions.push(Instr::I64And),
+            Operator::I64Or => instructions.push(Instr::I64Or),
+            Operator::I64Xor => instructions.push(Instr::I64Xor),
+            Operator::I64Shl => instructions.push(Instr::I64Shl),
+            Operator::I64ShrS => instructions.push(Instr::I64ShrS),
+            Operator::I64ShrU => instructions.push(Instr::I64ShrU),
+            Operator::I64Mul => instructions.push(Instr::I64Mul),
+            Operator::I64DivS => instructions.push(Instr::I64DivS),
+            Operator::I64DivU => instructions.push(Instr::I64DivU),
+            Operator::I64RemS => instructions.push(Instr::I64RemS),
+            Operator::I64RemU => instructions.push(Instr::I64RemU),
             Operator::Br { relative_depth } => instructions.push(Instr::Br(relative_depth)),
             Operator::BrIf { relative_depth } => instructions.push(Instr::BrIf(relative_depth)),
             Operator::Select => instructions.push(Instr::Select),
             Operator::TypedSelect { ty } => {
-                if !matches!(lower_val_type(ty)?, Val::I32) {
+                if !matches!(lower_val_type(ty)?, Val::I32 | Val::I64) {
                     return Err(Error::new(
                         Span::call_site(),
-                        "opcode typed select: only i32 typed select is supported",
+                        "opcode typed select: only i32/i64 typed select is supported",
                     ));
                 }
                 instructions.push(Instr::Select);
@@ -706,6 +762,16 @@ fn parse_instruction_sequence(
             Operator::I32Store8 { memarg } => {
                 instructions.push(Instr::I32Store8 {
                     offset: ensure_memarg(memarg, "i32.store8")?,
+                });
+            },
+            Operator::I64Load { memarg } => {
+                instructions.push(Instr::I64Load {
+                    offset: ensure_memarg(memarg, "i64.load")?,
+                });
+            },
+            Operator::I64Store { memarg } => {
+                instructions.push(Instr::I64Store {
+                    offset: ensure_memarg(memarg, "i64.store")?,
                 });
             },
             Operator::MemorySize { mem } => {
@@ -837,6 +903,10 @@ fn lower_instr(instr: &Instr) -> syn::Result<TokenStream> {
             let value = uint_type(*value as usize)?;
             quote!(::typelude::wasm::opcode::OpI32Const<#value>)
         },
+        Instr::I64Const(value) => {
+            let value = u64_type(*value)?;
+            quote!(::typelude::wasm::opcode::OpI64Const<#value>)
+        },
         Instr::LocalGet(index) => {
             let index = uint_type(*index as usize)?;
             quote!(::typelude::wasm::opcode::OpLocalGet<#index>)
@@ -860,6 +930,30 @@ fn lower_instr(instr: &Instr) -> syn::Result<TokenStream> {
         Instr::I32Add => quote!(::typelude::wasm::opcode::OpI32Add),
         Instr::I32Sub => quote!(::typelude::wasm::opcode::OpI32Sub),
         Instr::I32Eqz => quote!(::typelude::wasm::opcode::OpI32Eqz),
+        Instr::I64Add => quote!(::typelude::wasm::opcode::OpI64Add),
+        Instr::I64Sub => quote!(::typelude::wasm::opcode::OpI64Sub),
+        Instr::I64Eqz => quote!(::typelude::wasm::opcode::OpI64Eqz),
+        Instr::I64Eq => quote!(::typelude::wasm::opcode::OpI64Eq),
+        Instr::I64Ne => quote!(::typelude::wasm::opcode::OpI64Ne),
+        Instr::I64LtS => quote!(::typelude::wasm::opcode::OpI64LtS),
+        Instr::I64LtU => quote!(::typelude::wasm::opcode::OpI64LtU),
+        Instr::I64GtS => quote!(::typelude::wasm::opcode::OpI64GtS),
+        Instr::I64GtU => quote!(::typelude::wasm::opcode::OpI64GtU),
+        Instr::I64LeS => quote!(::typelude::wasm::opcode::OpI64LeS),
+        Instr::I64LeU => quote!(::typelude::wasm::opcode::OpI64LeU),
+        Instr::I64GeS => quote!(::typelude::wasm::opcode::OpI64GeS),
+        Instr::I64GeU => quote!(::typelude::wasm::opcode::OpI64GeU),
+        Instr::I64And => quote!(::typelude::wasm::opcode::OpI64And),
+        Instr::I64Or => quote!(::typelude::wasm::opcode::OpI64Or),
+        Instr::I64Xor => quote!(::typelude::wasm::opcode::OpI64Xor),
+        Instr::I64Shl => quote!(::typelude::wasm::opcode::OpI64Shl),
+        Instr::I64ShrS => quote!(::typelude::wasm::opcode::OpI64ShrS),
+        Instr::I64ShrU => quote!(::typelude::wasm::opcode::OpI64ShrU),
+        Instr::I64Mul => quote!(::typelude::wasm::opcode::OpI64Mul),
+        Instr::I64DivS => quote!(::typelude::wasm::opcode::OpI64DivS),
+        Instr::I64DivU => quote!(::typelude::wasm::opcode::OpI64DivU),
+        Instr::I64RemS => quote!(::typelude::wasm::opcode::OpI64RemS),
+        Instr::I64RemU => quote!(::typelude::wasm::opcode::OpI64RemU),
         Instr::Block(body) => {
             let body = lower_instrs(body)?;
             quote!(::typelude::wasm::opcode::OpBlock<#body>)
@@ -911,6 +1005,14 @@ fn lower_instr(instr: &Instr) -> syn::Result<TokenStream> {
             let offset = uint_type(*offset as usize)?;
             quote!(::typelude::wasm::opcode::OpI32Store8<#offset>)
         },
+        Instr::I64Load { offset } => {
+            let offset = uint_type(*offset as usize)?;
+            quote!(::typelude::wasm::opcode::OpI64Load<#offset>)
+        },
+        Instr::I64Store { offset } => {
+            let offset = uint_type(*offset as usize)?;
+            quote!(::typelude::wasm::opcode::OpI64Store<#offset>)
+        },
         Instr::MemorySize => quote!(::typelude::wasm::opcode::OpMemorySize),
         Instr::MemoryGrow => quote!(::typelude::wasm::opcode::OpMemoryGrow),
     })
@@ -931,6 +1033,11 @@ fn lower_zero_init(val: Val) -> TokenStream {
                 <::typelude::typenum::Const<0> as ::typelude::typenum::ToUInt>::Output,
             >
         ),
+        Val::I64 => quote!(
+            ::typelude::wasm::WasmI64<
+                <::typelude::typenum::Const<0> as ::typelude::typenum::ToUInt>::Output,
+            >
+        ),
     }
 }
 
@@ -945,6 +1052,7 @@ fn lower_val_types(values: &[Val]) -> syn::Result<TokenStream> {
 fn lower_value_type(val: Val) -> TokenStream {
     match val {
         Val::I32 => quote!(::typelude::wasm::WasmI32Type),
+        Val::I64 => quote!(::typelude::wasm::WasmI64Type),
     }
 }
 
@@ -977,7 +1085,7 @@ fn lower_data_segments(data_segments: &[DataSegmentDef]) -> syn::Result<TokenStr
 }
 
 fn lower_data_segment(data_segment: &DataSegmentDef) -> syn::Result<TokenStream> {
-    let offset = lower_init_expr(&data_segment.offset)?;
+    let offset = lower_offset_init_expr(&data_segment.offset)?;
     let bytes = lower_bytes(&data_segment.bytes)?;
     Ok(quote!(::typelude::wasm::WasmDataSegment<#offset, #bytes>))
 }
@@ -1007,7 +1115,7 @@ fn lower_elem_segments(elem_segments: &[ElemSegmentDef]) -> syn::Result<TokenStr
 
 fn lower_elem_segment(elem_segment: &ElemSegmentDef) -> syn::Result<TokenStream> {
     let table_index = uint_type(elem_segment.table_index as usize)?;
-    let offset = lower_init_expr(&elem_segment.offset)?;
+    let offset = lower_offset_init_expr(&elem_segment.offset)?;
     let func_indices = lower_u32_list(&elem_segment.func_indices)?;
     Ok(quote!(
         ::typelude::wasm::WasmElemSegment<#table_index, #offset, #func_indices>
@@ -1028,11 +1136,28 @@ fn lower_global(global: &GlobalDef) -> syn::Result<TokenStream> {
     } else {
         quote!(::typelude::wasm::GlobalConst)
     };
-    let init = lower_init_expr(&global.init)?;
+    let init = lower_global_init_expr(&global.init)?;
     Ok(quote!(::typelude::wasm::WasmGlobalDecl<#mutability, #init>))
 }
 
-fn lower_init_expr(expr: &InitExprDef) -> syn::Result<TokenStream> {
+fn lower_global_init_expr(expr: &InitExprDef) -> syn::Result<TokenStream> {
+    Ok(match expr {
+        InitExprDef::I32Const(value) => {
+            let value = uint_type(*value as usize)?;
+            quote!(::typelude::wasm::InitI32Const<#value>)
+        },
+        InitExprDef::I64Const(value) => {
+            let value = u64_type(*value)?;
+            quote!(::typelude::wasm::InitI64Const<#value>)
+        },
+        InitExprDef::GlobalGet(index) => {
+            let index = uint_type(*index as usize)?;
+            quote!(::typelude::wasm::InitGlobalGet<#index>)
+        },
+    })
+}
+
+fn lower_offset_init_expr(expr: &InitExprDef) -> syn::Result<TokenStream> {
     Ok(match expr {
         InitExprDef::I32Const(value) => {
             let value = uint_type(*value as usize)?;
@@ -1041,6 +1166,12 @@ fn lower_init_expr(expr: &InitExprDef) -> syn::Result<TokenStream> {
         InitExprDef::GlobalGet(index) => {
             let index = uint_type(*index as usize)?;
             quote!(::typelude::wasm::InitGlobalGet<#index>)
+        },
+        InitExprDef::I64Const(_) => {
+            return Err(Error::new(
+                Span::call_site(),
+                "unsupported offset expr: i64.const is not supported",
+            ));
         },
     })
 }
@@ -1206,9 +1337,10 @@ fn parse_global_def(global: wasmparser::Global<'_>) -> syn::Result<GlobalDef> {
             "unsupported section: shared globals are not supported",
         ));
     }
+    lower_val_type(global.ty.content_type)?;
     Ok(GlobalDef {
         mutable: global.ty.mutable,
-        init: parse_init_expr(&global.init_expr, "global init expr")?,
+        init: parse_global_init_expr(&global.init_expr, "global init expr")?,
     })
 }
 
@@ -1232,7 +1364,7 @@ fn parse_data_segment(data: wasmparser::Data<'_>) -> syn::Result<DataSegmentDef>
         ));
     }
     Ok(DataSegmentDef {
-        offset: parse_init_expr(&offset_expr, "data offset expr")?,
+        offset: parse_offset_init_expr(&offset_expr, "data offset expr")?,
         bytes: data.data.iter().map(|byte| u32::from(*byte)).collect(),
     })
 }
@@ -1272,12 +1404,50 @@ fn parse_elem_segment(element: wasmparser::Element<'_>) -> syn::Result<ElemSegme
 
     Ok(ElemSegmentDef {
         table_index,
-        offset: parse_init_expr(&offset_expr, "elem offset expr")?,
+        offset: parse_offset_init_expr(&offset_expr, "elem offset expr")?,
         func_indices,
     })
 }
 
-fn parse_init_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<InitExprDef> {
+fn parse_global_init_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<InitExprDef> {
+    let mut operators = expr.get_operators_reader();
+    let init = match operators.read().map_err(parser_error)? {
+        Operator::I32Const { value } => InitExprDef::I32Const(parse_non_negative_i32_immediate(
+            value,
+            context,
+        )?),
+        Operator::I64Const { value } => InitExprDef::I64Const(i64_to_bitpattern(value)),
+        Operator::GlobalGet { global_index } => InitExprDef::GlobalGet(global_index),
+        other => {
+            return Err(Error::new(
+                Span::call_site(),
+                format!(
+                    "unsupported {context}: expected i32.const, i64.const or global.get, found {}",
+                    opcode_name(&other)
+                ),
+            ));
+        },
+    };
+    match operators.read().map_err(parser_error)? {
+        Operator::End => {},
+        other => {
+            return Err(Error::new(
+                Span::call_site(),
+                format!("unsupported {context}: expected end, found {}", opcode_name(&other)),
+            ));
+        },
+    }
+    if !operators.eof() {
+        return Err(Error::new(
+            Span::call_site(),
+            format!("unsupported {context}: trailing operators are not supported"),
+        ));
+    }
+    operators.finish().map_err(parser_error)?;
+    Ok(init)
+}
+
+fn parse_offset_init_expr(expr: &ConstExpr<'_>, context: &str) -> syn::Result<InitExprDef> {
     let mut operators = expr.get_operators_reader();
     let init = match operators.read().map_err(parser_error)? {
         Operator::I32Const { value } => InitExprDef::I32Const(parse_non_negative_i32_immediate(
@@ -1339,7 +1509,7 @@ fn lower_func_sig(func: &FuncType) -> syn::Result<FuncSig> {
 fn lower_val_type(ty: ValType) -> syn::Result<Val> {
     match ty {
         ValType::I32 => Ok(Val::I32),
-        ValType::I64 => Err(Error::new(Span::call_site(), "unsupported type: i64")),
+        ValType::I64 => Ok(Val::I64),
         ValType::F32 => Err(Error::new(Span::call_site(), "unsupported type: f32")),
         ValType::F64 => Err(Error::new(Span::call_site(), "unsupported type: f64")),
         ValType::V128 => Err(Error::new(Span::call_site(), "unsupported type: v128")),
@@ -1383,6 +1553,32 @@ fn parse_non_negative_i32_immediate(value: i32, context: &str) -> syn::Result<u3
             format!("{context}: negative immediates are not supported ({value})"),
         )
     })
+}
+
+fn i64_to_bitpattern(value: i64) -> u64 {
+    value as u64
+}
+
+fn u64_type(value: u64) -> syn::Result<TokenStream> {
+    if value == u64::MAX {
+        return Ok(quote!(
+            ::typelude::typenum::operator_aliases::Or<
+                <::typelude::typenum::Const<9223372036854775808> as ::typelude::typenum::ToUInt>::Output,
+                <::typelude::typenum::Const<9223372036854775807> as ::typelude::typenum::ToUInt>::Output
+            >
+        ));
+    }
+
+    let value = usize::try_from(value).map_err(|_| {
+        Error::new(
+            Span::call_site(),
+            format!("value {value} exceeds usize-backed typenum::Const support"),
+        )
+    })?;
+    let literal = syn::LitInt::new(&format!("{value}usize"), Span::call_site());
+    Ok(
+        quote!(<::typelude::typenum::Const<#literal> as ::typelude::typenum::ToUInt>::Output),
+    )
 }
 
 fn unsupported_section<T>(name: &str) -> syn::Result<T> {

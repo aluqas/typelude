@@ -2,6 +2,7 @@ pub mod branch_stack;
 pub mod call;
 pub mod export;
 pub mod i32;
+pub mod i64;
 pub mod import;
 pub mod instance;
 pub mod local_index;

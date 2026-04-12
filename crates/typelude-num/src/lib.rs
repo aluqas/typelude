@@ -17,7 +17,7 @@
 //! `typenum` is re-exported for interoperability, but its foreign types are
 //! not part of the shared self-based trait integration in this phase.
 
-#![recursion_limit = "1024"]
+#![recursion_limit = "256"]
 
 pub use typelude_std::core::{Add, Div, Mul, Sub};
 pub use typenum::*;

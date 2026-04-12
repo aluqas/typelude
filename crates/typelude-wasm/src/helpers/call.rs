@@ -1,78 +1,92 @@
 use core::marker::PhantomData;
 
 use typelude_col::{TArr, TTerm};
-use typelude_num::peano::{Succ, Zero};
-use typelude_std::core::{Concat, Get, Len};
+use typelude_std::core::{Append, Concat, Get};
 
 use crate::{
     func::WasmFunc,
     module::{WasmFuncType, WasmHostFunc, WasmResolvedModule},
-    value::WasmI32,
+    value::{WasmI32, WasmI32Type, WasmI64, WasmI64Type},
 };
 
-pub trait PopArgs<ParamCount> {
+pub trait ReverseList {
+    type Output;
+}
+
+impl ReverseList for TTerm {
+    type Output = TTerm;
+}
+
+impl<Head, Tail> ReverseList for TArr<Head, Tail>
+where
+    Tail: ReverseList,
+    <Tail as ReverseList>::Output: Append<Head>,
+{
+    type Output = <<Tail as ReverseList>::Output as Append<Head>>::Output;
+}
+
+pub trait PopArg<ExpectedType> {
+    type RemainingStack;
+    type Value;
+}
+
+impl<ValueT, Tail> PopArg<WasmI32Type> for TArr<WasmI32<ValueT>, Tail> {
+    type RemainingStack = Tail;
+    type Value = WasmI32<ValueT>;
+}
+
+impl<ValueT, Tail> PopArg<WasmI64Type> for TArr<WasmI64<ValueT>, Tail> {
+    type RemainingStack = Tail;
+    type Value = WasmI64<ValueT>;
+}
+
+pub trait PopArgs<ParamTypes> {
     type RemainingStack;
     type Params;
 }
 
-impl<Stack> PopArgs<typenum::U0> for Stack {
+impl<Stack> PopArgs<TTerm> for Stack {
     type RemainingStack = Stack;
     type Params = TTerm;
 }
 
-impl<Stack> PopArgs<Zero> for Stack {
-    type RemainingStack = Stack;
-    type Params = TTerm;
-}
-
-impl<ValueT, Tail, N, B> PopArgs<typenum::UInt<N, B>> for TArr<WasmI32<ValueT>, Tail>
+impl<Stack, ParamType, TailTypes> PopArgs<TArr<ParamType, TailTypes>> for Stack
 where
-    typenum::UInt<N, B>: core::ops::Sub<typenum::U1>,
-    Tail: PopArgs<<typenum::UInt<N, B> as core::ops::Sub<typenum::U1>>::Output>,
-    <Tail as PopArgs<<typenum::UInt<N, B> as core::ops::Sub<typenum::U1>>::Output>>::Params:
-        typelude_std::core::Append<WasmI32<ValueT>>,
+    Stack: PopArg<ParamType>,
+    <Stack as PopArg<ParamType>>::RemainingStack: PopArgs<TailTypes>,
+    <<Stack as PopArg<ParamType>>::RemainingStack as PopArgs<TailTypes>>::Params:
+        Append<<Stack as PopArg<ParamType>>::Value>,
 {
     type RemainingStack =
-        <Tail as PopArgs<<typenum::UInt<N, B> as core::ops::Sub<typenum::U1>>::Output>>::RemainingStack;
-    type Params = <<Tail as PopArgs<<typenum::UInt<N, B> as core::ops::Sub<typenum::U1>>::Output>>::Params as typelude_std::core::Append<WasmI32<ValueT>>>::Output;
+        <<Stack as PopArg<ParamType>>::RemainingStack as PopArgs<TailTypes>>::RemainingStack;
+    type Params = <<<Stack as PopArg<ParamType>>::RemainingStack as PopArgs<TailTypes>>::Params as Append<
+        <Stack as PopArg<ParamType>>::Value,
+    >>::Output;
 }
 
-impl<ValueT, Tail, N> PopArgs<Succ<N>> for TArr<WasmI32<ValueT>, Tail>
-where
-    Tail: PopArgs<N>,
-    <Tail as PopArgs<N>>::Params: typelude_std::core::Append<WasmI32<ValueT>>,
-{
-    type RemainingStack = <Tail as PopArgs<N>>::RemainingStack;
-    type Params =
-        <<Tail as PopArgs<N>>::Params as typelude_std::core::Append<WasmI32<ValueT>>>::Output;
-}
-
-pub trait ParamCount {
+pub trait ParamTypes {
     type Output;
 }
 
-impl<Params, Results> ParamCount for WasmFuncType<Params, Results>
-where
-    Params: Len,
-{
-    type Output = <Params as Len>::Output;
+impl<Params, Results> ParamTypes for WasmFuncType<Params, Results> {
+    type Output = Params;
 }
 
-pub trait BindLocals<FuncType, LocalInits>: PopArgs<<FuncType as ParamCount>::Output>
-where
-    FuncType: ParamCount,
-{
+pub trait BindLocals<FuncType, LocalInits> {
     type Output;
 }
 
 impl<Stack, FuncType, LocalInits> BindLocals<FuncType, LocalInits> for Stack
 where
-    FuncType: ParamCount,
-    Stack: PopArgs<<FuncType as ParamCount>::Output>,
-    <Stack as PopArgs<<FuncType as ParamCount>::Output>>::Params: Concat<LocalInits>,
+    FuncType: ParamTypes,
+    <FuncType as ParamTypes>::Output: ReverseList,
+    Stack: PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>,
+    <Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::Params:
+        Concat<LocalInits>,
 {
-    type Output =
-        <<Stack as PopArgs<<FuncType as ParamCount>::Output>>::Params as Concat<LocalInits>>::Output;
+    type Output = <<Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::Params as Concat<
+        LocalInits,
+    >>::Output;
 }
 
 pub trait ModuleFuncLookup<FuncIdx> {

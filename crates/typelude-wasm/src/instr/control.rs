@@ -7,7 +7,10 @@ use crate::{
     func::WasmFunc,
     helpers::{
         branch_stack::{BranchJump, ContinueIfZero, ResolveBranch},
-        call::{BindLocals, FuncSignature, HostCall, HostCallResult, ModuleFuncLookup, ParamCount, PopArgs},
+        call::{
+            BindLocals, FuncSignature, HostCall, HostCallResult, ModuleFuncLookup, ParamTypes,
+            PopArgs, ReverseList,
+        },
         table::TableReadRef,
     },
     module::{WasmFuncType, WasmHostFunc, WasmResolvedModule},
@@ -61,14 +64,16 @@ impl<Module, Store, FuncType, LocalInits, FuncProgram, Stack, Locals, Frames, Br
     InvokeCall<Module, Store, Stack, Locals, Frames, Branches, Rest>
     for WasmFunc<FuncType, LocalInits, FuncProgram>
 where
-    FuncType: ParamCount,
-    Stack: PopArgs<<FuncType as ParamCount>::Output> + BindLocals<FuncType, LocalInits>,
+    FuncType: ParamTypes,
+    <FuncType as ParamTypes>::Output: ReverseList,
+    Stack: PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>
+        + BindLocals<FuncType, LocalInits>,
     FuncProgram: Concat<TArr<OpEndFunc, TTerm>>,
 {
     type Output = WasmState<
         Module,
         Store,
-        <Stack as PopArgs<<FuncType as ParamCount>::Output>>::RemainingStack,
+        <Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::RemainingStack,
         <Stack as BindLocals<FuncType, LocalInits>>::Output,
         TArr<ReturnFrame<Locals, Branches, Rest>, Frames>,
         TTerm,
@@ -79,19 +84,34 @@ where
 impl<Module, Store, FuncType, Host, Stack, Locals, Frames, Branches, Rest>
     InvokeCall<Module, Store, Stack, Locals, Frames, Branches, Rest> for WasmHostFunc<FuncType, Host>
 where
-    FuncType: ParamCount,
-    Stack: PopArgs<<FuncType as ParamCount>::Output>,
-    Host: HostCall<FuncType, Store, <Stack as PopArgs<<FuncType as ParamCount>::Output>>::Params>,
-    <Host as HostCall<FuncType, Store, <Stack as PopArgs<<FuncType as ParamCount>::Output>>::Params>>::Output:
-        HostCallOutput<Module, <Stack as PopArgs<<FuncType as ParamCount>::Output>>::RemainingStack, Locals, Frames, Branches, Rest>,
+    FuncType: ParamTypes,
+    <FuncType as ParamTypes>::Output: ReverseList,
+    Stack: PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>,
+    Host: HostCall<
+        FuncType,
+        Store,
+        <Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::Params,
+    >,
+    <Host as HostCall<
+        FuncType,
+        Store,
+        <Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::Params,
+    >>::Output: HostCallOutput<
+        Module,
+        <Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::RemainingStack,
+        Locals,
+        Frames,
+        Branches,
+        Rest,
+    >,
 {
     type Output = <<Host as HostCall<
         FuncType,
         Store,
-        <Stack as PopArgs<<FuncType as ParamCount>::Output>>::Params,
+        <Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::Params,
     >>::Output as HostCallOutput<
         Module,
-        <Stack as PopArgs<<FuncType as ParamCount>::Output>>::RemainingStack,
+        <Stack as PopArgs<<<FuncType as ParamTypes>::Output as ReverseList>::Output>>::RemainingStack,
         Locals,
         Frames,
         Branches,

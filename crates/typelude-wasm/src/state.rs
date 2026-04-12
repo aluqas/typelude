@@ -13,29 +13,29 @@ impl<Module, Store, Stack, Locals, Frames, Branches, Program> Value
 }
 
 #[derive(Debug, Default)]
-pub struct WasmStore<Memory, Tables, Globals>(pub PhantomData<(Memory, Tables, Globals)>);
+pub struct WasmStore<Memory, Tables, Globals>(PhantomData<(Memory, Tables, Globals)>);
 
 impl<Memory, Tables, Globals> Value for WasmStore<Memory, Tables, Globals> {}
 
 #[derive(Debug, Default)]
-pub struct WasmMemory<Pages, MaxPages, Cells>(pub PhantomData<(Pages, MaxPages, Cells)>);
+pub struct WasmMemory<Pages, MaxPages, Cells>(PhantomData<(Pages, MaxPages, Cells)>);
 
 impl<Pages, MaxPages, Cells> Value for WasmMemory<Pages, MaxPages, Cells> {}
 
 #[doc(hidden)]
 #[derive(Debug, Default)]
-pub struct MemoryCell<Addr, Byte>(pub PhantomData<(Addr, Byte)>);
+pub struct MemoryCell<Addr, Byte>(PhantomData<(Addr, Byte)>);
 
 impl<Addr, Byte> Value for MemoryCell<Addr, Byte> {}
 
 #[derive(Debug, Default)]
-pub struct WasmTable<Min, Max, Entries>(pub PhantomData<(Min, Max, Entries)>);
+pub struct WasmTable<Min, Max, Entries>(PhantomData<(Min, Max, Entries)>);
 
 impl<Min, Max, Entries> Value for WasmTable<Min, Max, Entries> {}
 
 #[doc(hidden)]
 #[derive(Debug, Default)]
-pub struct TableEntry<SlotIdx, FuncIdx>(pub PhantomData<(SlotIdx, FuncIdx)>);
+pub struct TableEntry<SlotIdx, FuncIdx>(PhantomData<(SlotIdx, FuncIdx)>);
 
 impl<SlotIdx, FuncIdx> Value for TableEntry<SlotIdx, FuncIdx> {}
 
@@ -45,6 +45,6 @@ pub struct NullFuncRef;
 impl Value for NullFuncRef {}
 
 #[derive(Debug, Default)]
-pub struct WasmGlobal<Mutability, ValueT>(pub PhantomData<(Mutability, ValueT)>);
+pub struct WasmGlobal<Mutability, ValueT>(PhantomData<(Mutability, ValueT)>);
 
 impl<Mutability, ValueT> Value for WasmGlobal<Mutability, ValueT> {}

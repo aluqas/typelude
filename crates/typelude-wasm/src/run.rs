@@ -7,6 +7,7 @@ use typenum::U0;
 use crate::{
     frame::ReturnFrame,
     helpers::{
+        call::ReverseList,
         export::{ResolveExportFunc, ResolveExportGlobal, ResolveExportMemory, ResolveExportTable},
         i32::U4294967295,
         instance::Instantiate,
@@ -77,11 +78,13 @@ impl<Module, Store, StartIdx, Program> Eval
 
 impl<Module, Store, FuncIdx, Args> Eval
     for BuildInvokeState<WasmInstance<Module, Store, NoStart>, FuncIdx, Args>
+where
+    Args: ReverseList,
 {
     type Output = WasmState<
         Module,
         Store,
-        Args,
+        <Args as ReverseList>::Output,
         TTerm,
         TArr<ReturnFrame<TTerm, TTerm, TTerm>, TTerm>,
         TTerm,
@@ -91,11 +94,13 @@ impl<Module, Store, FuncIdx, Args> Eval
 
 impl<Module, Store, StartIdx, FuncIdx, Args> Eval
     for BuildInvokeState<WasmInstance<Module, Store, StartFunc<StartIdx>>, FuncIdx, Args>
+where
+    Args: ReverseList,
 {
     type Output = WasmState<
         Module,
         Store,
-        Args,
+        <Args as ReverseList>::Output,
         TTerm,
         TArr<ReturnFrame<TTerm, TTerm, TTerm>, TTerm>,
         TTerm,

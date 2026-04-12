@@ -14,12 +14,12 @@ use crate::{
     },
     module::{
         GlobalConst, ImportFunc, ImportGlobal, ImportMemory, ImportTable, InitGlobalGet,
-        InitI32Const, NoLimit, WasmDataSegment, WasmElemSegment, WasmFuncSpace, WasmGlobalDecl,
-        WasmHostEnv, WasmImport, WasmInstance, WasmMemoryDecl, WasmModule, WasmResolvedModule,
-        WasmTableDecl,
+        InitI32Const, InitI64Const, NoLimit, WasmDataSegment, WasmElemSegment, WasmFuncSpace,
+        WasmGlobalDecl, WasmHostEnv, WasmImport, WasmInstance, WasmMemoryDecl, WasmModule,
+        WasmResolvedModule, WasmTableDecl,
     },
     state::{WasmGlobal, WasmMemory, WasmStore, WasmTable},
-    value::WasmI32,
+    value::{WasmI32, WasmI64},
 };
 
 pub trait Instantiate<Env> {
@@ -44,12 +44,16 @@ where
     type Output = MaxPages;
 }
 
-pub trait ResolveInitExprValue<Expr, Globals> {
+pub trait ResolveInitExprRuntime<Expr, Globals> {
     type Output;
 }
 
-impl<ValueT, Globals> ResolveInitExprValue<InitI32Const<ValueT>, Globals> for () {
-    type Output = ValueT;
+impl<ValueT, Globals> ResolveInitExprRuntime<InitI32Const<ValueT>, Globals> for () {
+    type Output = WasmI32<ValueT>;
+}
+
+impl<ValueT, Globals> ResolveInitExprRuntime<InitI64Const<ValueT>, Globals> for () {
+    type Output = WasmI64<ValueT>;
 }
 
 pub trait GlobalInitGet<Idx> {
@@ -58,16 +62,37 @@ pub trait GlobalInitGet<Idx> {
 
 impl<Globals, Idx, ValueT> GlobalInitGet<Idx> for Globals
 where
-    Globals: Get<Idx, Output = WasmGlobal<GlobalConst, WasmI32<ValueT>>>,
+    Globals: Get<Idx, Output = WasmGlobal<GlobalConst, ValueT>>,
 {
     type Output = ValueT;
 }
 
-impl<Idx, Globals> ResolveInitExprValue<InitGlobalGet<Idx>, Globals> for ()
+impl<Idx, Globals> ResolveInitExprRuntime<InitGlobalGet<Idx>, Globals> for ()
 where
     Globals: GlobalInitGet<Idx>,
 {
     type Output = <Globals as GlobalInitGet<Idx>>::Output;
+}
+
+pub trait InitExprOffsetValue {
+    type Output;
+}
+
+impl<ValueT> InitExprOffsetValue for WasmI32<ValueT> {
+    type Output = ValueT;
+}
+
+pub trait ResolveInitExprValue<Expr, Globals> {
+    type Output;
+}
+
+impl<Expr, Globals> ResolveInitExprValue<Expr, Globals> for ()
+where
+    (): ResolveInitExprRuntime<Expr, Globals>,
+    <() as ResolveInitExprRuntime<Expr, Globals>>::Output: InitExprOffsetValue,
+{
+    type Output =
+        <<() as ResolveInitExprRuntime<Expr, Globals>>::Output as InitExprOffsetValue>::Output;
 }
 
 pub trait AppendDefinedGlobal<Existing, Mutability, InitExpr> {
@@ -76,11 +101,11 @@ pub trait AppendDefinedGlobal<Existing, Mutability, InitExpr> {
 
 impl<Existing, Mutability, InitExpr> AppendDefinedGlobal<Existing, Mutability, InitExpr> for ()
 where
-    (): ResolveInitExprValue<InitExpr, Existing>,
-    Existing: Append<WasmGlobal<Mutability, WasmI32<<() as ResolveInitExprValue<InitExpr, Existing>>::Output>>>,
+    (): ResolveInitExprRuntime<InitExpr, Existing>,
+    Existing: Append<WasmGlobal<Mutability, <() as ResolveInitExprRuntime<InitExpr, Existing>>::Output>>,
 {
     type Output =
-        <Existing as Append<WasmGlobal<Mutability, WasmI32<<() as ResolveInitExprValue<InitExpr, Existing>>::Output>>>>::Output;
+        <Existing as Append<WasmGlobal<Mutability, <() as ResolveInitExprRuntime<InitExpr, Existing>>::Output>>>::Output;
 }
 
 pub trait AppendDefinedGlobals<Existing, Decls> {
