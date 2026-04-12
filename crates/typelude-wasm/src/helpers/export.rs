@@ -31,7 +31,8 @@ where
     type Output = <Tail as ResolveExportKind<Name>>::Output;
 }
 
-impl<Name, ExportName, Kind, Tail> ResolveExportKind<Name> for TArr<WasmExport<ExportName, Kind>, Tail>
+impl<Name, ExportName, Kind, Tail> ResolveExportKind<Name>
+    for TArr<WasmExport<ExportName, Kind>, Tail>
 where
     ExportName: NameEq<Name>,
     <ExportName as NameEq<Name>>::Output: BoolOutput,
@@ -81,7 +82,8 @@ pub trait ResolveExportFunc<Name> {
     type Output;
 }
 
-impl<Funcs, Types, Exports, Name> ResolveExportFunc<Name> for WasmResolvedModule<Funcs, Types, Exports>
+impl<Funcs, Types, Exports, Name> ResolveExportFunc<Name>
+    for WasmResolvedModule<Funcs, Types, Exports>
 where
     Exports: ResolveExportKind<Name>,
     <Exports as ResolveExportKind<Name>>::Output: ExportKindToFunc,
@@ -100,7 +102,8 @@ pub trait ResolveExportGlobal<Name> {
     type Output;
 }
 
-impl<Funcs, Types, Exports, Name> ResolveExportGlobal<Name> for WasmResolvedModule<Funcs, Types, Exports>
+impl<Funcs, Types, Exports, Name> ResolveExportGlobal<Name>
+    for WasmResolvedModule<Funcs, Types, Exports>
 where
     Exports: ResolveExportKind<Name>,
     <Exports as ResolveExportKind<Name>>::Output: ExportKindToGlobal,
@@ -119,7 +122,8 @@ pub trait ResolveExportTable<Name> {
     type Output;
 }
 
-impl<Funcs, Types, Exports, Name> ResolveExportTable<Name> for WasmResolvedModule<Funcs, Types, Exports>
+impl<Funcs, Types, Exports, Name> ResolveExportTable<Name>
+    for WasmResolvedModule<Funcs, Types, Exports>
 where
     Exports: ResolveExportKind<Name>,
     <Exports as ResolveExportKind<Name>>::Output: ExportKindToTable,
@@ -136,16 +140,16 @@ where
 
 pub trait ResolveExportMemory<Name> {}
 
-impl<Funcs, Types, Exports, Name> ResolveExportMemory<Name> for WasmResolvedModule<Funcs, Types, Exports>
+impl<Funcs, Types, Exports, Name> ResolveExportMemory<Name>
+    for WasmResolvedModule<Funcs, Types, Exports>
 where
     Exports: ResolveExportKind<Name>,
     <Exports as ResolveExportKind<Name>>::Output: ExportKindToMemory,
 {
 }
 
-impl<Module, Store, Start, Name> ResolveExportMemory<Name> for WasmInstance<Module, Store, Start>
-where
-    Module: ResolveExportMemory<Name>,
+impl<Module, Store, Start, Name> ResolveExportMemory<Name> for WasmInstance<Module, Store, Start> where
+    Module: ResolveExportMemory<Name>
 {
 }
 

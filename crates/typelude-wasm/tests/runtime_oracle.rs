@@ -28,11 +28,15 @@ type TwoArgs<A, B> = TArr<WasmI32<A>, TArr<WasmI32<B>, TTerm>>;
 
 struct HostAdd;
 
-impl<Store, A, B> HostCall<
-    typelude_wasm::WasmFuncType<TArr<WasmI32Type, TArr<WasmI32Type, TTerm>>, TArr<WasmI32Type, TTerm>>,
-    Store,
-    TArr<WasmI32<A>, TArr<WasmI32<B>, TTerm>>,
-> for HostAdd
+impl<Store, A, B>
+    HostCall<
+        typelude_wasm::WasmFuncType<
+            TArr<WasmI32Type, TArr<WasmI32Type, TTerm>>,
+            TArr<WasmI32Type, TTerm>,
+        >,
+        Store,
+        TArr<WasmI32<A>, TArr<WasmI32<B>, TTerm>>,
+    > for HostAdd
 where
     A: core::ops::Add<B>,
 {
@@ -50,15 +54,12 @@ fn wasmi_oracle_matches_type_level_add() {
     "#;
 
     let runtime = run_wat_snapshot(MODULE, "main", &[2, 3]).expect("wasmi should execute add");
-    assert_eq!(
-        runtime,
-        RuntimeSnapshot {
-            result_i32: 5,
-            memory_pages: None,
-            memory_prefix: Vec::new(),
-            exported_global_i32: None,
-        }
-    );
+    assert_eq!(runtime, RuntimeSnapshot {
+        result_i32: 5,
+        memory_pages: None,
+        memory_prefix: Vec::new(),
+        exported_global_i32: None,
+    });
 
     type Module = typelude_macros::wasm_wat! {
         module: r#"
@@ -391,15 +392,10 @@ fn wasmi_oracle_matches_type_level_imported_function_call() {
             call $add))
     "#;
 
-    let runtime = run_wat_snapshot_with_env(
-        MODULE,
-        "main",
-        &[2, 3],
-        &RuntimeEnv {
-            add_func: Some(("host", "add")),
-            ..RuntimeEnv::default()
-        },
-    )
+    let runtime = run_wat_snapshot_with_env(MODULE, "main", &[2, 3], &RuntimeEnv {
+        add_func: Some(("host", "add")),
+        ..RuntimeEnv::default()
+    })
     .expect("wasmi should execute imported function call");
     assert_eq!(runtime.result_i32, 5);
 
@@ -414,11 +410,14 @@ fn wasmi_oracle_matches_type_level_imported_function_call() {
         "#,
     };
     type Env = WasmHostEnv<
-        TArr<HostFuncBinding<
-            typelude_wasm::tstr::TS!("host"),
-            typelude_wasm::tstr::TS!("add"),
-            HostAdd
-        >, TTerm>,
+        TArr<
+            HostFuncBinding<
+                typelude_wasm::tstr::TS!("host"),
+                typelude_wasm::tstr::TS!("add"),
+                HostAdd,
+            >,
+            TTerm,
+        >,
         TTerm,
         TTerm,
         TTerm,
@@ -443,21 +442,16 @@ fn wasmi_oracle_matches_type_level_imported_global_and_exported_global() {
             global.get 0))
     "#;
 
-    let runtime = run_wat_snapshot_with_env(
-        MODULE,
-        "main",
-        &[],
-        &RuntimeEnv {
-            global: Some(RuntimeGlobalImport {
-                module: "host",
-                field: "g",
-                value: 3,
-                mutable: true,
-            }),
-            observed_global_export: Some("copy"),
-            ..RuntimeEnv::default()
-        },
-    )
+    let runtime = run_wat_snapshot_with_env(MODULE, "main", &[], &RuntimeEnv {
+        global: Some(RuntimeGlobalImport {
+            module: "host",
+            field: "g",
+            value: 3,
+            mutable: true,
+        }),
+        observed_global_export: Some("copy"),
+        ..RuntimeEnv::default()
+    })
     .expect("wasmi should execute imported global program");
     assert_eq!(runtime.result_i32, 5);
     assert_eq!(runtime.exported_global_i32, Some(3));
@@ -477,11 +471,14 @@ fn wasmi_oracle_matches_type_level_imported_global_and_exported_global() {
     };
     type Env = WasmHostEnv<
         TTerm,
-        TArr<HostGlobalBinding<
-            typelude_wasm::tstr::TS!("host"),
-            typelude_wasm::tstr::TS!("g"),
-            WasmGlobal<GlobalMut, WasmI32<U3>>
-        >, TTerm>,
+        TArr<
+            HostGlobalBinding<
+                typelude_wasm::tstr::TS!("host"),
+                typelude_wasm::tstr::TS!("g"),
+                WasmGlobal<GlobalMut, WasmI32<U3>>,
+            >,
+            TTerm,
+        >,
         TTerm,
         TTerm,
     >;
@@ -505,21 +502,16 @@ fn wasmi_oracle_matches_type_level_imported_memory() {
             i32.load8_u))
     "#;
 
-    let runtime = run_wat_snapshot_with_env(
-        MODULE,
-        "main",
-        &[],
-        &RuntimeEnv {
-            memory: Some(RuntimeMemoryImport {
-                module: "host",
-                field: "memory",
-                min: 1,
-                max: Some(1),
-            }),
-            observed_memory_export: Some("memory"),
-            ..RuntimeEnv::default()
-        },
-    )
+    let runtime = run_wat_snapshot_with_env(MODULE, "main", &[], &RuntimeEnv {
+        memory: Some(RuntimeMemoryImport {
+            module: "host",
+            field: "memory",
+            min: 1,
+            max: Some(1),
+        }),
+        observed_memory_export: Some("memory"),
+        ..RuntimeEnv::default()
+    })
     .expect("wasmi should execute imported memory program");
     assert_eq!(runtime.result_i32, 42);
     assert_eq!(runtime.memory_pages, None);
@@ -537,11 +529,14 @@ fn wasmi_oracle_matches_type_level_imported_memory() {
     type Env = WasmHostEnv<
         TTerm,
         TTerm,
-        TArr<HostMemoryBinding<
-            typelude_wasm::tstr::TS!("host"),
-            typelude_wasm::tstr::TS!("memory"),
-            WasmMemory<U1, U1, TTerm>
-        >, TTerm>,
+        TArr<
+            HostMemoryBinding<
+                typelude_wasm::tstr::TS!("host"),
+                typelude_wasm::tstr::TS!("memory"),
+                WasmMemory<U1, U1, TTerm>,
+            >,
+            TTerm,
+        >,
         TTerm,
     >;
     type Final = InvokeExportWithEnv<Module, Env, typelude_wasm::tstr::TS!("main"), NoArgs>;
@@ -563,20 +558,15 @@ fn wasmi_oracle_matches_type_level_imported_table_call_indirect() {
             call_indirect (type $ret)))
     "#;
 
-    let runtime = run_wat_snapshot_with_env(
-        MODULE,
-        "main",
-        &[],
-        &RuntimeEnv {
-            table: Some(RuntimeTableImport {
-                module: "host",
-                field: "table",
-                min: 1,
-                max: Some(1),
-            }),
-            ..RuntimeEnv::default()
-        },
-    )
+    let runtime = run_wat_snapshot_with_env(MODULE, "main", &[], &RuntimeEnv {
+        table: Some(RuntimeTableImport {
+            module: "host",
+            field: "table",
+            min: 1,
+            max: Some(1),
+        }),
+        ..RuntimeEnv::default()
+    })
     .expect("wasmi should execute imported table call_indirect");
     assert_eq!(runtime.result_i32, 7);
 
@@ -597,11 +587,14 @@ fn wasmi_oracle_matches_type_level_imported_table_call_indirect() {
         TTerm,
         TTerm,
         TTerm,
-        TArr<HostTableBinding<
-            typelude_wasm::tstr::TS!("host"),
-            typelude_wasm::tstr::TS!("table"),
-            WasmTable<U1, U1, TTerm>
-        >, TTerm>,
+        TArr<
+            HostTableBinding<
+                typelude_wasm::tstr::TS!("host"),
+                typelude_wasm::tstr::TS!("table"),
+                WasmTable<U1, U1, TTerm>,
+            >,
+            TTerm,
+        >,
     >;
     type Final = InvokeExportWithEnv<Module, Env, typelude_wasm::tstr::TS!("main"), NoArgs>;
 
@@ -625,16 +618,11 @@ fn wasmi_oracle_matches_type_level_export_name_and_exported_state() {
             global.get $g))
     "#;
 
-    let runtime = run_wat_snapshot_with_env(
-        MODULE,
-        "main",
-        &[],
-        &RuntimeEnv {
-            observed_memory_export: Some("memory"),
-            observed_global_export: Some("g"),
-            ..RuntimeEnv::default()
-        },
-    )
+    let runtime = run_wat_snapshot_with_env(MODULE, "main", &[], &RuntimeEnv {
+        observed_memory_export: Some("memory"),
+        observed_global_export: Some("g"),
+        ..RuntimeEnv::default()
+    })
     .expect("wasmi should execute start and export observation");
     assert_eq!(runtime.result_i32, 9);
     assert_eq!(runtime.exported_global_i32, Some(9));
@@ -783,8 +771,8 @@ fn wasmi_oracle_matches_type_level_explicit_table_call_indirect() {
             call_indirect $t1 (type $ret)))
     "#;
 
-    let runtime =
-        run_wat_snapshot(MODULE, "main", &[]).expect("wasmi should execute explicit indirect call");
+    let runtime = run_wat_snapshot(MODULE, "main", &[])
+        .expect("wasmi should execute explicit indirect call");
     assert_eq!(runtime.result_i32, 3);
 
     type Module = typelude_macros::wasm_wat! {

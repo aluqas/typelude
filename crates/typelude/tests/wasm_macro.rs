@@ -9,8 +9,7 @@ use typelude::wasm::{
     StateBranches, StateExportGlobal, StateExportMemory, StateExportTable, StateStack, TArr,
     TTerm, TableEntry, WasmGlobal, WasmHostEnv, WasmI32, WasmI32Type, WasmMemory, WasmTable,
 };
-use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, U9, U42};
-use typenum::operator_aliases::Sum;
+use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, U9, U42, operator_aliases::Sum};
 
 type NoArgs = TTerm;
 type OneArg<A> = TArr<WasmI32<A>, TTerm>;
@@ -19,11 +18,15 @@ type MaxPages = <Const<4294967295> as ToUInt>::Output;
 
 struct HostAdd;
 
-impl<Store, A, B> HostCall<
-    typelude::wasm::WasmFuncType<TArr<WasmI32Type, TArr<WasmI32Type, TTerm>>, TArr<WasmI32Type, TTerm>>,
-    Store,
-    TArr<WasmI32<A>, TArr<WasmI32<B>, TTerm>>,
-> for HostAdd
+impl<Store, A, B>
+    HostCall<
+        typelude::wasm::WasmFuncType<
+            TArr<WasmI32Type, TArr<WasmI32Type, TTerm>>,
+            TArr<WasmI32Type, TTerm>,
+        >,
+        Store,
+        TArr<WasmI32<A>, TArr<WasmI32<B>, TTerm>>,
+    > for HostAdd
 where
     A: Add<B>,
 {
@@ -369,11 +372,14 @@ fn wasm_wat_supports_imported_functions_via_invoke_export() {
         "#,
     };
     type Env = WasmHostEnv<
-        TArr<HostFuncBinding<
-            typelude::wasm::tstr::TS!("host"),
-            typelude::wasm::tstr::TS!("add"),
-            HostAdd
-        >, TTerm>,
+        TArr<
+            HostFuncBinding<
+                typelude::wasm::tstr::TS!("host"),
+                typelude::wasm::tstr::TS!("add"),
+                HostAdd,
+            >,
+            TTerm,
+        >,
         TTerm,
         TTerm,
         TTerm,
@@ -401,11 +407,14 @@ fn wasm_wat_supports_imported_globals_and_global_exports() {
     };
     type Env = WasmHostEnv<
         TTerm,
-        TArr<HostGlobalBinding<
-            typelude::wasm::tstr::TS!("host"),
-            typelude::wasm::tstr::TS!("g"),
-            WasmGlobal<GlobalMut, WasmI32<U3>>
-        >, TTerm>,
+        TArr<
+            HostGlobalBinding<
+                typelude::wasm::tstr::TS!("host"),
+                typelude::wasm::tstr::TS!("g"),
+                WasmGlobal<GlobalMut, WasmI32<U3>>,
+            >,
+            TTerm,
+        >,
         TTerm,
         TTerm,
     >;
@@ -432,11 +441,14 @@ fn wasm_wat_supports_imported_memory() {
     type Env = WasmHostEnv<
         TTerm,
         TTerm,
-        TArr<HostMemoryBinding<
-            typelude::wasm::tstr::TS!("host"),
-            typelude::wasm::tstr::TS!("memory"),
-            WasmMemory<U1, U1, TArr<typelude::wasm::MemoryCell<U0, U42>, TTerm>>
-        >, TTerm>,
+        TArr<
+            HostMemoryBinding<
+                typelude::wasm::tstr::TS!("host"),
+                typelude::wasm::tstr::TS!("memory"),
+                WasmMemory<U1, U1, TArr<typelude::wasm::MemoryCell<U0, U42>, TTerm>>,
+            >,
+            TTerm,
+        >,
         TTerm,
     >;
     type Final = InvokeExportWithEnv<Module, Env, typelude::wasm::tstr::TS!("main"), NoArgs>;
@@ -463,11 +475,14 @@ fn wasm_wat_supports_imported_tables_and_call_indirect() {
         TTerm,
         TTerm,
         TTerm,
-        TArr<HostTableBinding<
-            typelude::wasm::tstr::TS!("host"),
-            typelude::wasm::tstr::TS!("table"),
-            WasmTable<U1, U1, TTerm>
-        >, TTerm>,
+        TArr<
+            HostTableBinding<
+                typelude::wasm::tstr::TS!("host"),
+                typelude::wasm::tstr::TS!("table"),
+                WasmTable<U1, U1, TTerm>,
+            >,
+            TTerm,
+        >,
     >;
     type Final = InvokeExportWithEnv<Module, Env, typelude::wasm::tstr::TS!("main"), NoArgs>;
 

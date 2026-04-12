@@ -35,8 +35,7 @@ impl<Continuation, RemainingBranches, Module, Store, Stack, Locals, Frames>
     BranchJump<Module, Store, Stack, Locals, Frames>
     for ResolvedBlock<Continuation, RemainingBranches>
 {
-    type Output =
-        WasmState<Module, Store, Stack, Locals, Frames, RemainingBranches, Continuation>;
+    type Output = WasmState<Module, Store, Stack, Locals, Frames, RemainingBranches, Continuation>;
 }
 
 impl<LoopProgram, RemainingBranches, Module, Store, Stack, Locals, Frames>

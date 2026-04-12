@@ -60,9 +60,10 @@ where
 {
     type RemainingStack =
         <<Stack as PopArg<ParamType>>::RemainingStack as PopArgs<TailTypes>>::RemainingStack;
-    type Params = <<<Stack as PopArg<ParamType>>::RemainingStack as PopArgs<TailTypes>>::Params as Append<
-        <Stack as PopArg<ParamType>>::Value,
-    >>::Output;
+    type Params =
+        <<<Stack as PopArg<ParamType>>::RemainingStack as PopArgs<TailTypes>>::Params as Append<
+            <Stack as PopArg<ParamType>>::Value,
+        >>::Output;
 }
 
 pub trait ParamTypes {
@@ -123,7 +124,8 @@ pub trait ModuleFuncLookup<FuncIdx> {
     type Output;
 }
 
-impl<Funcs, Types, Exports, FuncIdx> ModuleFuncLookup<FuncIdx> for WasmResolvedModule<Funcs, Types, Exports>
+impl<Funcs, Types, Exports, FuncIdx> ModuleFuncLookup<FuncIdx>
+    for WasmResolvedModule<Funcs, Types, Exports>
 where
     Funcs: Get<FuncIdx>,
 {

@@ -5,10 +5,7 @@ use typelude_std::core::Le;
 use typenum::{B0, B1};
 
 use crate::{
-    helpers::{
-        i32::TrueBit,
-        name::NameEq,
-    },
+    helpers::{i32::TrueBit, name::NameEq},
     module::{
         HostFuncBinding, HostGlobalBinding, HostMemoryBinding, HostTableBinding, ImportGlobal,
         ImportMemory, ImportTable, NoLimit, WasmHostFunc,
@@ -18,9 +15,15 @@ use crate::{
 };
 
 pub struct MissingHostFuncBinding<ModuleName, FieldName>(pub PhantomData<(ModuleName, FieldName)>);
-pub struct MissingHostGlobalBinding<ModuleName, FieldName>(pub PhantomData<(ModuleName, FieldName)>);
-pub struct MissingHostMemoryBinding<ModuleName, FieldName>(pub PhantomData<(ModuleName, FieldName)>);
-pub struct MissingHostTableBinding<ModuleName, FieldName>(pub PhantomData<(ModuleName, FieldName)>);
+pub struct MissingHostGlobalBinding<ModuleName, FieldName>(
+    pub PhantomData<(ModuleName, FieldName)>,
+);
+pub struct MissingHostMemoryBinding<ModuleName, FieldName>(
+    pub PhantomData<(ModuleName, FieldName)>,
+);
+pub struct MissingHostTableBinding<ModuleName, FieldName>(
+    pub PhantomData<(ModuleName, FieldName)>,
+);
 pub struct ResolvedHostFunc<Host>(pub PhantomData<Host>);
 
 pub trait ResolveHostFuncBinding<ModuleName, FieldName> {
@@ -60,14 +63,14 @@ pub trait ResolveHostFuncBindingHelper<ModuleName, FieldName, Host, Tail> {
     type Output;
 }
 
-impl<ModuleName, FieldName, Host, Tail> ResolveHostFuncBindingHelper<ModuleName, FieldName, Host, Tail>
-    for B1
+impl<ModuleName, FieldName, Host, Tail>
+    ResolveHostFuncBindingHelper<ModuleName, FieldName, Host, Tail> for B1
 {
     type Output = ResolvedHostFunc<Host>;
 }
 
-impl<ModuleName, FieldName, Host, Tail> ResolveHostFuncBindingHelper<ModuleName, FieldName, Host, Tail>
-    for B0
+impl<ModuleName, FieldName, Host, Tail>
+    ResolveHostFuncBindingHelper<ModuleName, FieldName, Host, Tail> for B0
 where
     Tail: ResolveHostFuncBinding<ModuleName, FieldName>,
 {
@@ -227,7 +230,9 @@ pub trait ImportedFuncCompat<ImportKind> {
     type Output;
 }
 
-impl<FuncType, Host> ImportedFuncCompat<crate::module::ImportFunc<FuncType>> for ResolvedHostFunc<Host> {
+impl<FuncType, Host> ImportedFuncCompat<crate::module::ImportFunc<FuncType>>
+    for ResolvedHostFunc<Host>
+{
     type Output = WasmHostFunc<FuncType, Host>;
 }
 
@@ -263,8 +268,8 @@ pub trait ImportedMemoryCompat<ImportKind> {
     type Output;
 }
 
-impl<MinPages, MaxPages, Pages, ActualMax, Cells> ImportedMemoryCompat<ImportMemory<MinPages, MaxPages>>
-    for WasmMemory<Pages, ActualMax, Cells>
+impl<MinPages, MaxPages, Pages, ActualMax, Cells>
+    ImportedMemoryCompat<ImportMemory<MinPages, MaxPages>> for WasmMemory<Pages, ActualMax, Cells>
 where
     MinPages: Le<Pages>,
     <MinPages as Le<Pages>>::Output: TrueBit,

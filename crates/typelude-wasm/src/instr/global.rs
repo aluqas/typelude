@@ -73,7 +73,10 @@ where
         WasmStore<
             Memory,
             Tables,
-            <Globals as Set<Idx, <<Globals as Get<Idx>>::Output as MutableGlobalWith<ValueT>>::Output>>::Output,
+            <Globals as Set<
+                Idx,
+                <<Globals as Get<Idx>>::Output as MutableGlobalWith<ValueT>>::Output,
+            >>::Output,
         >,
         Stack,
         Locals,

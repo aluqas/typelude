@@ -1,4 +1,5 @@
 use core::marker::PhantomData;
+
 use typenum::U0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]

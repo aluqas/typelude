@@ -124,7 +124,8 @@ pub trait HostCallOutput<Module, Stack, Locals, Frames, Branches, Rest> {
 }
 
 impl<Module, Store, Results, Stack, Locals, Frames, Branches, Rest>
-    HostCallOutput<Module, Stack, Locals, Frames, Branches, Rest> for HostCallResult<Store, Results>
+    HostCallOutput<Module, Stack, Locals, Frames, Branches, Rest>
+    for HostCallResult<Store, Results>
 where
     Results: Concat<Stack>,
 {
@@ -161,7 +162,10 @@ where
 
 pub trait SameFuncType<Expected> {}
 
-impl<Params, Results> SameFuncType<WasmFuncType<Params, Results>> for WasmFuncType<Params, Results> {}
+impl<Params, Results> SameFuncType<WasmFuncType<Params, Results>>
+    for WasmFuncType<Params, Results>
+{
+}
 
 pub trait CallIndirectTarget<TypeIdx, FuncIdx, Store, Stack, Locals, Frames, Branches, Rest> {
     type Output;
@@ -196,8 +200,20 @@ where
     >>::Output;
 }
 
-impl<Module, Memory, Tables, Globals, TypeIdx, TableIdx, SlotIdx, Stack, Locals, Frames, Branches, Rest>
-    Eval
+impl<
+    Module,
+    Memory,
+    Tables,
+    Globals,
+    TypeIdx,
+    TableIdx,
+    SlotIdx,
+    Stack,
+    Locals,
+    Frames,
+    Branches,
+    Rest,
+> Eval
     for Step<
         WasmState<
             Module,
@@ -213,15 +229,15 @@ where
     Tables: Get<TableIdx>,
     <Tables as Get<TableIdx>>::Output: TableReadRef<SlotIdx>,
     Module: CallIndirectTarget<
-        TypeIdx,
-        <<Tables as Get<TableIdx>>::Output as TableReadRef<SlotIdx>>::Output,
-        WasmStore<Memory, Tables, Globals>,
-        Stack,
-        Locals,
-        Frames,
-        Branches,
-        Rest,
-    >,
+            TypeIdx,
+            <<Tables as Get<TableIdx>>::Output as TableReadRef<SlotIdx>>::Output,
+            WasmStore<Memory, Tables, Globals>,
+            Stack,
+            Locals,
+            Frames,
+            Branches,
+            Rest,
+        >,
 {
     type Output = <Module as CallIndirectTarget<
         TypeIdx,

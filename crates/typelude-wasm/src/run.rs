@@ -8,13 +8,15 @@ use crate::{
     frame::ReturnFrame,
     helpers::{
         call::ReverseList,
-        export::{ResolveExportFunc, ResolveExportGlobal, ResolveExportMemory, ResolveExportTable},
+        export::{
+            ResolveExportFunc, ResolveExportGlobal, ResolveExportMemory, ResolveExportTable,
+        },
         i32::U4294967295,
         instance::Instantiate,
     },
     module::{
-        NoStart, NoMemoryDecl, StartFunc, WasmFuncSpace, WasmHostEnv, WasmInstance,
-        WasmModule, WasmModuleMemory, WasmModuleTables, WasmResolvedModule,
+        NoMemoryDecl, NoStart, StartFunc, WasmFuncSpace, WasmHostEnv, WasmInstance, WasmModule,
+        WasmModuleMemory, WasmModuleTables, WasmResolvedModule,
     },
     opcode::OpCall,
     state::{WasmMemory, WasmState, WasmStore},
@@ -36,16 +38,15 @@ pub struct InstantiateModule<Module, Env>(PhantomData<(Module, Env)>);
 pub struct RunWasm<State>(PhantomData<State>);
 
 pub type EmptyHostEnv = WasmHostEnv<TTerm, TTerm, TTerm, TTerm>;
-pub type EmptyModule =
-    WasmModule<
-        TTerm,
-        WasmFuncSpace<TTerm, TTerm>,
-        WasmModuleMemory<NoMemoryDecl, TTerm>,
-        WasmModuleTables<TTerm, TTerm>,
-        TTerm,
-        TTerm,
-        NoStart,
-    >;
+pub type EmptyModule = WasmModule<
+    TTerm,
+    WasmFuncSpace<TTerm, TTerm>,
+    WasmModuleMemory<NoMemoryDecl, TTerm>,
+    WasmModuleTables<TTerm, TTerm>,
+    TTerm,
+    TTerm,
+    NoStart,
+>;
 
 pub type EmptyState = WasmState<
     WasmResolvedModule<TTerm, TTerm, TTerm>,
@@ -59,7 +60,8 @@ pub type EmptyState = WasmState<
 pub type Run<State> = Evaluate<RunWasm<State>>;
 pub type ModuleProgramRun<Module, Program> =
     Run<Evaluate<BuildProgramState<Evaluate<InstantiateModule<Module, EmptyHostEnv>>, Program>>>;
-pub type InvokeFunc<Module, FuncIdx, Args> = InvokeFuncWithEnv<Module, EmptyHostEnv, FuncIdx, Args>;
+pub type InvokeFunc<Module, FuncIdx, Args> =
+    InvokeFuncWithEnv<Module, EmptyHostEnv, FuncIdx, Args>;
 pub type InvokeFuncWithEnv<Module, Env, FuncIdx, Args> =
     Run<Evaluate<BuildInvokeState<Evaluate<InstantiateModule<Module, Env>>, FuncIdx, Args>>>;
 pub type InvokeExport<Module, Name, Args> = InvokeExportWithEnv<Module, EmptyHostEnv, Name, Args>;
@@ -73,7 +75,9 @@ where
     type Output = <Module as Instantiate<Env>>::Output;
 }
 
-impl<Module, Store, Program> Eval for BuildProgramState<WasmInstance<Module, Store, NoStart>, Program> {
+impl<Module, Store, Program> Eval
+    for BuildProgramState<WasmInstance<Module, Store, NoStart>, Program>
+{
     type Output = WasmState<Module, Store, TTerm, TTerm, TTerm, TTerm, Program>;
 }
 
@@ -120,8 +124,11 @@ impl<Module, Store, Name, Args, Start> Eval
     for BuildInvokeExportState<WasmInstance<Module, Store, Start>, Name, Args>
 where
     Module: ResolveExportFunc<Name>,
-    BuildInvokeState<WasmInstance<Module, Store, Start>, <Module as ResolveExportFunc<Name>>::Output, Args>:
-        Eval,
+    BuildInvokeState<
+        WasmInstance<Module, Store, Start>,
+        <Module as ResolveExportFunc<Name>>::Output,
+        Args,
+    >: Eval,
 {
     type Output = Evaluate<
         BuildInvokeState<
@@ -151,17 +158,7 @@ where
     type Output = Evaluate<
         RunWasm<
             Evaluate<
-                Step<
-                    WasmState<
-                        Module,
-                        Store,
-                        Stack,
-                        Locals,
-                        Frames,
-                        Branches,
-                        TArr<Instr, Rest>,
-                    >,
-                >,
+                Step<WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>>,
             >,
         >,
     >;
@@ -236,19 +233,43 @@ impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateProgram
 }
 
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> StateMemory
-    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+    for WasmState<
+        Module,
+        WasmStore<Memory, Tables, Globals>,
+        Stack,
+        Locals,
+        Frames,
+        Branches,
+        Program,
+    >
 {
     type Output = Memory;
 }
 
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> StateTables
-    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+    for WasmState<
+        Module,
+        WasmStore<Memory, Tables, Globals>,
+        Stack,
+        Locals,
+        Frames,
+        Branches,
+        Program,
+    >
 {
     type Output = Tables;
 }
 
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> StateGlobals
-    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+    for WasmState<
+        Module,
+        WasmStore<Memory, Tables, Globals>,
+        Stack,
+        Locals,
+        Frames,
+        Branches,
+        Program,
+    >
 {
     type Output = Globals;
 }
@@ -261,27 +282,54 @@ impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateBranches
 
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program, Name>
     StateExportGlobal<Name>
-    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+    for WasmState<
+        Module,
+        WasmStore<Memory, Tables, Globals>,
+        Stack,
+        Locals,
+        Frames,
+        Branches,
+        Program,
+    >
 where
     Module: ResolveExportGlobal<Name>,
     Globals: typelude_std::core::Get<<Module as ResolveExportGlobal<Name>>::Output>,
 {
-    type Output = <Globals as typelude_std::core::Get<<Module as ResolveExportGlobal<Name>>::Output>>::Output;
+    type Output = <Globals as typelude_std::core::Get<
+        <Module as ResolveExportGlobal<Name>>::Output,
+    >>::Output;
 }
 
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program, Name>
     StateExportTable<Name>
-    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+    for WasmState<
+        Module,
+        WasmStore<Memory, Tables, Globals>,
+        Stack,
+        Locals,
+        Frames,
+        Branches,
+        Program,
+    >
 where
     Module: ResolveExportTable<Name>,
     Tables: typelude_std::core::Get<<Module as ResolveExportTable<Name>>::Output>,
 {
-    type Output = <Tables as typelude_std::core::Get<<Module as ResolveExportTable<Name>>::Output>>::Output;
+    type Output =
+        <Tables as typelude_std::core::Get<<Module as ResolveExportTable<Name>>::Output>>::Output;
 }
 
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program, Name>
     StateExportMemory<Name>
-    for WasmState<Module, WasmStore<Memory, Tables, Globals>, Stack, Locals, Frames, Branches, Program>
+    for WasmState<
+        Module,
+        WasmStore<Memory, Tables, Globals>,
+        Stack,
+        Locals,
+        Frames,
+        Branches,
+        Program,
+    >
 where
     Module: ResolveExportMemory<Name>,
 {

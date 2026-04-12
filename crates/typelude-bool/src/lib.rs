@@ -108,10 +108,18 @@ mod primitive {
         type Output: IsBool;
     }
 
-    impl NandHelper<True, True> for () { type Output = False; }
-    impl NandHelper<True, False> for () { type Output = True; }
-    impl NandHelper<False, True> for () { type Output = True; }
-    impl NandHelper<False, False> for () { type Output = True; }
+    impl NandHelper<True, True> for () {
+        type Output = False;
+    }
+    impl NandHelper<True, False> for () {
+        type Output = True;
+    }
+    impl NandHelper<False, True> for () {
+        type Output = True;
+    }
+    impl NandHelper<False, False> for () {
+        type Output = True;
+    }
 
     type Nand<Lhs, Rhs> = <() as NandHelper<Lhs, Rhs>>::Output;
     type Not<T> = Nand<T, T>;

@@ -32,7 +32,8 @@ where
     type Output = <Tail as FindFuncRef<SlotIdx>>::Output;
 }
 
-impl<QueryIdx, EntryIdx, FuncRef, Tail> FindFuncRef<QueryIdx> for TArr<TableEntry<EntryIdx, FuncRef>, Tail>
+impl<QueryIdx, EntryIdx, FuncRef, Tail> FindFuncRef<QueryIdx>
+    for TArr<TableEntry<EntryIdx, FuncRef>, Tail>
 where
     QueryIdx: Eq<EntryIdx>,
     <QueryIdx as Eq<EntryIdx>>::Output: FindFuncRefHelper<QueryIdx, FuncRef, Tail>,
@@ -58,7 +59,8 @@ pub trait TableWriteRef<SlotIdx, FuncRef> {
     type Output;
 }
 
-impl<Min, Max, Entries, SlotIdx, FuncRef> TableWriteRef<SlotIdx, FuncRef> for WasmTable<Min, Max, Entries>
+impl<Min, Max, Entries, SlotIdx, FuncRef> TableWriteRef<SlotIdx, FuncRef>
+    for WasmTable<Min, Max, Entries>
 where
     SlotIdx: Lt<Min>,
     <SlotIdx as Lt<Min>>::Output: TrueBit,
@@ -80,6 +82,8 @@ where
     SlotIdx: Add<U1>,
     <Table as TableWriteRef<SlotIdx, FuncRef>>::Output: TableWriteRefs<Sum<SlotIdx, U1>, Tail>,
 {
-    type Output =
-        <<Table as TableWriteRef<SlotIdx, FuncRef>>::Output as TableWriteRefs<Sum<SlotIdx, U1>, Tail>>::Output;
+    type Output = <<Table as TableWriteRef<SlotIdx, FuncRef>>::Output as TableWriteRefs<
+        Sum<SlotIdx, U1>,
+        Tail,
+    >>::Output;
 }

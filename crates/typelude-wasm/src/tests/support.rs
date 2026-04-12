@@ -3,9 +3,9 @@
 use core::ops::Add;
 
 pub use static_assertions::assert_type_eq_all;
+pub use tstr;
 pub use typelude_col::{TTerm, tarr};
 pub use typelude_std::core::{Evaluate, Get};
-pub use tstr;
 pub use typenum::{
     Const, ToUInt, U0, U1, U2, U3, U4, U5, U6, U7, U8, U9, U42, U258,
     operator_aliases::{Diff, Or, Sum},
@@ -14,24 +14,23 @@ pub use typenum::{
 pub use crate::{
     ExportFunc, ExportGlobal, ExportMemory, ExportTable, GlobalConst, GlobalMut, HostCall,
     HostCallResult, HostFuncBinding, HostGlobalBinding, HostMemoryBinding, HostTableBinding,
-    ImportFunc, ImportGlobal, ImportMemory, ImportTable, InitGlobalGet, InitI32Const, InitI64Const,
-    InvokeFuncWithEnv, MemoryCell, ModuleProgramRun, NoLimit, NoMemoryDecl, NoStart, RunWasm,
-    StartFunc, StateExportGlobal, StateExportMemory, StateExportTable, StateTables, TableEntry,
-    WasmConstExpr, WasmDataSegment, WasmElemSegment, WasmExport, WasmFunc, WasmFuncSpace,
-    WasmFuncType, WasmGlobal, WasmGlobalDecl, WasmHostEnv, WasmI32, WasmI32Type, WasmI64,
-    WasmI64Type, WasmImport, WasmMemArg, WasmMemory, WasmMemoryDecl, WasmModule, WasmModuleMemory,
-    WasmModuleTables, WasmResolvedModule, WasmState, WasmStore, WasmTable, WasmTableDecl,
+    ImportFunc, ImportGlobal, ImportMemory, ImportTable, InitGlobalGet, InitI32Const,
+    InitI64Const, InvokeFuncWithEnv, MemoryCell, ModuleProgramRun, NoLimit, NoMemoryDecl, NoStart,
+    RunWasm, StartFunc, StateExportGlobal, StateExportMemory, StateExportTable, StateTables,
+    TableEntry, WasmConstExpr, WasmDataSegment, WasmElemSegment, WasmExport, WasmFunc,
+    WasmFuncSpace, WasmFuncType, WasmGlobal, WasmGlobalDecl, WasmHostEnv, WasmI32, WasmI32Type,
+    WasmI64, WasmI64Type, WasmImport, WasmMemArg, WasmMemory, WasmMemoryDecl, WasmModule,
+    WasmModuleMemory, WasmModuleTables, WasmResolvedModule, WasmState, WasmStore, WasmTable,
+    WasmTableDecl,
     opcode::{
-        OpBlock, OpBr, OpBrIf, OpCall, OpCallIndirect, OpDrop, OpGlobalGet, OpGlobalSet,
-        OpI32Add, OpI32Const, OpI32Eqz, OpI32Load, OpI32Load8U, OpI32Store, OpI32Store8,
-        OpI32Sub, OpI64Add, OpI64Const, OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64GtU,
-        OpI64Load, OpI64LtS, OpI64Mul, OpI64RemS, OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Store,
-        OpI64Sub, OpIf, OpLocalGet, OpLocalSet, OpLocalTee, OpLoop, OpMemoryGrow, OpMemorySize,
-        OpReturn, OpSelect,
+        OpBlock, OpBr, OpBrIf, OpCall, OpCallIndirect, OpDrop, OpGlobalGet, OpGlobalSet, OpI32Add,
+        OpI32Const, OpI32Eqz, OpI32Load, OpI32Load8U, OpI32Store, OpI32Store8, OpI32Sub, OpI64Add,
+        OpI64Const, OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64GtU, OpI64Load, OpI64LtS,
+        OpI64Mul, OpI64RemS, OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Store, OpI64Sub, OpIf,
+        OpLocalGet, OpLocalSet, OpLocalTee, OpLoop, OpMemoryGrow, OpMemorySize, OpReturn,
+        OpSelect,
     },
-    run::{
-        StateBranches, StateGlobals, StateLocals, StateMemory, StateProgram, StateStack,
-    },
+    run::{StateBranches, StateGlobals, StateLocals, StateMemory, StateProgram, StateStack},
 };
 
 pub type MaxPages = <Const<4294967295> as ToUInt>::Output;

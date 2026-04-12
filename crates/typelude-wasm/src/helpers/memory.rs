@@ -41,7 +41,8 @@ where
     type Output = <Tail as FindByte<Addr>>::Output;
 }
 
-impl<QueryAddr, CellAddr, Byte, Tail> FindByte<QueryAddr> for TArr<MemoryCell<CellAddr, Byte>, Tail>
+impl<QueryAddr, CellAddr, Byte, Tail> FindByte<QueryAddr>
+    for TArr<MemoryCell<CellAddr, Byte>, Tail>
 where
     QueryAddr: Eq<CellAddr>,
     <QueryAddr as Eq<CellAddr>>::Output: FindByteHelper<QueryAddr, Byte, Tail>,
@@ -68,7 +69,8 @@ pub trait MemoryWriteByte<Addr, Byte> {
     type Output;
 }
 
-impl<Pages, MaxPages, Cells, Addr, Byte> MemoryWriteByte<Addr, Byte> for WasmMemory<Pages, MaxPages, Cells>
+impl<Pages, MaxPages, Cells, Addr, Byte> MemoryWriteByte<Addr, Byte>
+    for WasmMemory<Pages, MaxPages, Cells>
 where
     Pages: Mul<U65536>,
     Addr: Lt<Prod<Pages, U65536>>,
@@ -91,8 +93,10 @@ where
     Addr: Add<U1>,
     <Memory as MemoryWriteByte<Addr, Byte>>::Output: MemoryWriteBytes<Sum<Addr, U1>, Tail>,
 {
-    type Output =
-        <<Memory as MemoryWriteByte<Addr, Byte>>::Output as MemoryWriteBytes<Sum<Addr, U1>, Tail>>::Output;
+    type Output = <<Memory as MemoryWriteByte<Addr, Byte>>::Output as MemoryWriteBytes<
+        Sum<Addr, U1>,
+        Tail,
+    >>::Output;
 }
 
 #[doc(hidden)]
@@ -141,10 +145,8 @@ where
     Or<B0V, Shleft<B1V, U8>>: BitOr<Or<Shleft<B2V, U16>, Shleft<B3V, U24>>>,
     Or<Or<B0V, Shleft<B1V, U8>>, Or<Shleft<B2V, U16>, Shleft<B3V, U24>>>: BitAnd<U4294967295>,
 {
-    type Output = And<
-        Or<Or<B0V, Shleft<B1V, U8>>, Or<Shleft<B2V, U16>, Shleft<B3V, U24>>>,
-        U4294967295,
-    >;
+    type Output =
+        And<Or<Or<B0V, Shleft<B1V, U8>>, Or<Shleft<B2V, U16>, Shleft<B3V, U24>>>, U4294967295>;
 }
 
 pub trait MemoryReadI32<Addr> {
@@ -177,7 +179,8 @@ pub trait MemoryWriteI32<Addr, ValueT> {
     type Output;
 }
 
-impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI32<Addr, ValueT> for WasmMemory<Pages, MaxPages, Cells>
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI32<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
 where
     Addr: Add<U1> + Add<U2> + Add<U3>,
     ValueT: EncodeI32,
@@ -228,7 +231,8 @@ pub trait EncodeI64 {
 
 impl<ValueT> EncodeI64 for ValueT
 where
-    ValueT: BitAnd<U255> + Shr<U8> + Shr<U16> + Shr<U24> + Shr<U32> + Shr<U40> + Shr<U48> + Shr<U56>,
+    ValueT:
+        BitAnd<U255> + Shr<U8> + Shr<U16> + Shr<U24> + Shr<U32> + Shr<U40> + Shr<U48> + Shr<U56>,
     Shright<ValueT, U8>: BitAnd<U255>,
     Shright<ValueT, U16>: BitAnd<U255>,
     Shright<ValueT, U24>: BitAnd<U255>,
@@ -266,17 +270,11 @@ where
     B0V: BitOr<Shleft<B1V, U8>>,
     Or<B0V, Shleft<B1V, U8>>: BitOr<Shleft<B2V, U16>>,
     Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>: BitOr<Shleft<B3V, U24>>,
-    Or<Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>, Shleft<B3V, U24>>:
-        BitOr<Shleft<B4V, U32>>,
+    Or<Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>, Shleft<B3V, U24>>: BitOr<Shleft<B4V, U32>>,
+    Or<Or<Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>, Shleft<B3V, U24>>, Shleft<B4V, U32>>:
+        BitOr<Shleft<B5V, U40>>,
     Or<
-        Or<Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>, Shleft<B3V, U24>>,
-        Shleft<B4V, U32>,
-    >: BitOr<Shleft<B5V, U40>>,
-    Or<
-        Or<
-            Or<Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>, Shleft<B3V, U24>>,
-            Shleft<B4V, U32>,
-        >,
+        Or<Or<Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>, Shleft<B3V, U24>>, Shleft<B4V, U32>>,
         Shleft<B5V, U40>,
     >: BitOr<Shleft<B6V, U48>>,
     Or<
@@ -424,12 +422,16 @@ pub trait MemoryGrowWithinMax<Pages, MaxPages, Cells, NewPages> {
     type Result;
 }
 
-impl<Pages, MaxPages, Cells, NewPages> MemoryGrowWithinMax<Pages, MaxPages, Cells, NewPages> for B1 {
+impl<Pages, MaxPages, Cells, NewPages> MemoryGrowWithinMax<Pages, MaxPages, Cells, NewPages>
+    for B1
+{
     type OutputMemory = WasmMemory<Pages, MaxPages, Cells>;
     type Result = U4294967295;
 }
 
-impl<Pages, MaxPages, Cells, NewPages> MemoryGrowWithinMax<Pages, MaxPages, Cells, NewPages> for B0 {
+impl<Pages, MaxPages, Cells, NewPages> MemoryGrowWithinMax<Pages, MaxPages, Cells, NewPages>
+    for B0
+{
     type OutputMemory = WasmMemory<NewPages, MaxPages, Cells>;
     type Result = Pages;
 }
@@ -438,15 +440,15 @@ impl<Pages, MaxPages, Cells, Delta> MemoryGrow<Delta> for WasmMemory<Pages, MaxP
 where
     Pages: Add<Delta>,
     Sum<Pages, Delta>: Gt<MaxPages>,
-    <Sum<Pages, Delta> as Gt<MaxPages>>::Output: MemoryGrowWithinMax<Pages, MaxPages, Cells, Sum<Pages, Delta>>,
+    <Sum<Pages, Delta> as Gt<MaxPages>>::Output:
+        MemoryGrowWithinMax<Pages, MaxPages, Cells, Sum<Pages, Delta>>,
 {
-    type OutputMemory =
-        <<Sum<Pages, Delta> as Gt<MaxPages>>::Output as MemoryGrowWithinMax<
-            Pages,
-            MaxPages,
-            Cells,
-            Sum<Pages, Delta>,
-        >>::OutputMemory;
+    type OutputMemory = <<Sum<Pages, Delta> as Gt<MaxPages>>::Output as MemoryGrowWithinMax<
+        Pages,
+        MaxPages,
+        Cells,
+        Sum<Pages, Delta>,
+    >>::OutputMemory;
     type Result = <<Sum<Pages, Delta> as Gt<MaxPages>>::Output as MemoryGrowWithinMax<
         Pages,
         MaxPages,

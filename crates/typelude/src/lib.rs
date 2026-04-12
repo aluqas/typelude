@@ -9,13 +9,13 @@
 //! - **Macros**: DSL for intuitive type-level programming.
 
 pub mod core {
-    pub use typelude_std::core::*;
     pub use tstr;
+    pub use typelude_std::core::*;
     pub use typenum;
 }
-pub use typelude_macros::{program, wasm_wat};
+pub use tstr;
+pub use typelude_macros::{twat, wasm_wat};
 pub use typelude_std::{Eval, Evaluate};
 pub use typelude_vm as vm;
 pub use typelude_wasm as wasm;
-pub use tstr;
 pub use typenum;

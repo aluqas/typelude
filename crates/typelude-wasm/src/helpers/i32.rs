@@ -1,6 +1,4 @@
-use core::{
-    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Shl, Shr, Sub},
-};
+use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Shl, Shr, Sub};
 
 use typenum::{
     B0, B1, Const, IsEqual, IsGreater, IsLess, ToUInt, U0, Unsigned,

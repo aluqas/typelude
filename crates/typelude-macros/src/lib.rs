@@ -3,32 +3,13 @@ use quote::quote;
 use syn::parse_macro_input;
 
 mod dsl;
-mod program;
+mod twat;
 mod ty_fn_impl;
 mod wasm_wat;
 
 use dsl::{BoundDslInput, ImplEvalInput, TyDslInput};
-use program::ProgramInput;
 use ty_fn_impl::TyFnInput;
 use wasm_wat::WasmWatInput;
-
-#[proc_macro]
-pub fn program(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as ProgramInput);
-    let (prog, _) = program::compile_block(&input.instrs, &[]);
-
-    let expanded = quote! {
-        <
-            typelude::core::Evaluate<
-                typelude::vm::vm::run::direct::ERun<
-                    typelude::vm::vm::surface::aliases::ProgramVm<#prog>
-                >
-            >
-            as typelude::vm::vm::state::GetStack
-        >::Output
-    };
-    TokenStream::from(expanded)
-}
 
 #[proc_macro]
 pub fn ty(input: TokenStream) -> TokenStream {
@@ -82,10 +63,15 @@ pub fn ty_expr(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
-pub fn wasm_wat(input: TokenStream) -> TokenStream {
+pub fn twat(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as WasmWatInput);
-    match wasm_wat::expand(input) {
+    match twat::expand(input) {
         Ok(tokens) => TokenStream::from(tokens),
         Err(err) => err.into_compile_error().into(),
     }
+}
+
+#[proc_macro]
+pub fn wasm_wat(input: TokenStream) -> TokenStream {
+    twat(input)
 }

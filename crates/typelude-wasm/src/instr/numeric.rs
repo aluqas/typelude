@@ -3,25 +3,27 @@ use typelude_std::core::{Eq, Eval};
 use typenum::U0;
 
 use crate::{
-    helpers::i32::{
-        BoolNot, BoolToI32, I32Add, I32AndValue, I32DivS, I32DivU, I32EqValue, I32Mul, I32OrValue,
-        I32RemS, I32RemU, I32ShlValue, I32ShrSValue, I32ShrUValue, I32SignedGe, I32SignedGt,
-        I32SignedLe, I32SignedLt, I32Sub, I32UnsignedGe, I32UnsignedGt, I32UnsignedLe,
-        I32UnsignedLt, I32XorValue,
-    },
-    helpers::i64::{
-        I64Add, I64AndValue, I64DivS, I64DivU, I64EqValue, I64Mul, I64OrValue, I64RemS, I64RemU,
-        I64ShlValue, I64ShrSValue, I64ShrUValue, I64SignedGe, I64SignedGt, I64SignedLe,
-        I64SignedLt, I64Sub, I64UnsignedGe, I64UnsignedGt, I64UnsignedLe, I64UnsignedLt,
-        I64XorValue,
+    helpers::{
+        i32::{
+            BoolNot, BoolToI32, I32Add, I32AndValue, I32DivS, I32DivU, I32EqValue, I32Mul,
+            I32OrValue, I32RemS, I32RemU, I32ShlValue, I32ShrSValue, I32ShrUValue, I32SignedGe,
+            I32SignedGt, I32SignedLe, I32SignedLt, I32Sub, I32UnsignedGe, I32UnsignedGt,
+            I32UnsignedLe, I32UnsignedLt, I32XorValue,
+        },
+        i64::{
+            I64Add, I64AndValue, I64DivS, I64DivU, I64EqValue, I64Mul, I64OrValue, I64RemS,
+            I64RemU, I64ShlValue, I64ShrSValue, I64ShrUValue, I64SignedGe, I64SignedGt,
+            I64SignedLe, I64SignedLt, I64Sub, I64UnsignedGe, I64UnsignedGt, I64UnsignedLe,
+            I64UnsignedLt, I64XorValue,
+        },
     },
     opcode::{
         OpDrop, OpI32Add, OpI32And, OpI32DivS, OpI32DivU, OpI32Eq, OpI32Eqz, OpI32GeS, OpI32GeU,
         OpI32GtS, OpI32GtU, OpI32LeS, OpI32LeU, OpI32LtS, OpI32LtU, OpI32Mul, OpI32Ne, OpI32Or,
         OpI32RemS, OpI32RemU, OpI32Shl, OpI32ShrS, OpI32ShrU, OpI32Sub, OpI32Xor, OpI64Add,
-        OpI64And, OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64GeS, OpI64GeU, OpI64GtS,
-        OpI64GtU, OpI64LeS, OpI64LeU, OpI64LtS, OpI64LtU, OpI64Mul, OpI64Ne, OpI64Or,
-        OpI64RemS, OpI64RemU, OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Sub, OpI64Xor,
+        OpI64And, OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64GeS, OpI64GeU, OpI64GtS, OpI64GtU,
+        OpI64LeS, OpI64LeU, OpI64LtS, OpI64LtU, OpI64Mul, OpI64Ne, OpI64Or, OpI64RemS, OpI64RemU,
+        OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Sub, OpI64Xor,
     },
     run::Step,
     state::WasmState,
@@ -43,15 +45,7 @@ impl BoolResult for typenum::B1 {
 
 impl<Module, Store, ValueT, Tail, Locals, Frames, Branches, Rest> Eval
     for Step<
-        WasmState<
-            Module,
-            Store,
-            TArr<ValueT, Tail>,
-            Locals,
-            Frames,
-            Branches,
-            TArr<OpDrop, Rest>,
-        >,
+        WasmState<Module, Store, TArr<ValueT, Tail>, Locals, Frames, Branches, TArr<OpDrop, Rest>>,
     >
 {
     type Output = WasmState<Module, Store, Tail, Locals, Frames, Branches, Rest>;

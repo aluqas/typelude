@@ -35,21 +35,20 @@ impl<Align, Offset> ResolveMemArg for WasmMemArg<U0, Align, Offset> {
 }
 
 impl<
-        Module,
-        Pages,
-        MaxPages,
-        Cells,
-        Tables,
-        Globals,
-        Addr,
-        Tail,
-        Locals,
-        Frames,
-        Branches,
-        Rest,
-        MemArg,
-    >
-    Eval
+    Module,
+    Pages,
+    MaxPages,
+    Cells,
+    Tables,
+    Globals,
+    Addr,
+    Tail,
+    Locals,
+    Frames,
+    Branches,
+    Rest,
+    MemArg,
+> Eval
     for Step<
         WasmState<
             Module,
@@ -86,21 +85,20 @@ where
 }
 
 impl<
-        Module,
-        Pages,
-        MaxPages,
-        Cells,
-        Tables,
-        Globals,
-        Addr,
-        Tail,
-        Locals,
-        Frames,
-        Branches,
-        Rest,
-        MemArg,
-    >
-    Eval
+    Module,
+    Pages,
+    MaxPages,
+    Cells,
+    Tables,
+    Globals,
+    Addr,
+    Tail,
+    Locals,
+    Frames,
+    Branches,
+    Rest,
+    MemArg,
+> Eval
     for Step<
         WasmState<
             Module,
@@ -120,8 +118,8 @@ where
 {
     type Output = WasmState<
         Module,
-            WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
-            TArr<
+        WasmStore<WasmMemory<Pages, MaxPages, Cells>, Tables, Globals>,
+        TArr<
             WasmI64<
                 <WasmMemory<Pages, MaxPages, Cells> as MemoryReadI64<
                     Sum<Addr, <MemArg as ResolveMemArg>::Offset>,
@@ -137,22 +135,21 @@ where
 }
 
 impl<
-        Module,
-        Pages,
-        MaxPages,
-        Cells,
-        Tables,
-        Globals,
-        Addr,
-        ValueT,
-        Tail,
-        Locals,
-        Frames,
-        Branches,
-        Rest,
-        MemArg,
-    >
-    Eval
+    Module,
+    Pages,
+    MaxPages,
+    Cells,
+    Tables,
+    Globals,
+    Addr,
+    ValueT,
+    Tail,
+    Locals,
+    Frames,
+    Branches,
+    Rest,
+    MemArg,
+> Eval
     for Step<
         WasmState<
             Module,
@@ -189,22 +186,21 @@ where
 }
 
 impl<
-        Module,
-        Pages,
-        MaxPages,
-        Cells,
-        Tables,
-        Globals,
-        Addr,
-        ValueT,
-        Tail,
-        Locals,
-        Frames,
-        Branches,
-        Rest,
-        MemArg,
-    >
-    Eval
+    Module,
+    Pages,
+    MaxPages,
+    Cells,
+    Tables,
+    Globals,
+    Addr,
+    ValueT,
+    Tail,
+    Locals,
+    Frames,
+    Branches,
+    Rest,
+    MemArg,
+> Eval
     for Step<
         WasmState<
             Module,
@@ -241,21 +237,20 @@ where
 }
 
 impl<
-        Module,
-        Pages,
-        MaxPages,
-        Cells,
-        Tables,
-        Globals,
-        Addr,
-        Tail,
-        Locals,
-        Frames,
-        Branches,
-        Rest,
-        MemArg,
-    >
-    Eval
+    Module,
+    Pages,
+    MaxPages,
+    Cells,
+    Tables,
+    Globals,
+    Addr,
+    Tail,
+    Locals,
+    Frames,
+    Branches,
+    Rest,
+    MemArg,
+> Eval
     for Step<
         WasmState<
             Module,
@@ -292,22 +287,21 @@ where
 }
 
 impl<
-        Module,
-        Pages,
-        MaxPages,
-        Cells,
-        Tables,
-        Globals,
-        Addr,
-        ValueT,
-        Tail,
-        Locals,
-        Frames,
-        Branches,
-        Rest,
-        MemArg,
-    >
-    Eval
+    Module,
+    Pages,
+    MaxPages,
+    Cells,
+    Tables,
+    Globals,
+    Addr,
+    ValueT,
+    Tail,
+    Locals,
+    Frames,
+    Branches,
+    Rest,
+    MemArg,
+> Eval
     for Step<
         WasmState<
             Module,
@@ -324,8 +318,7 @@ where
     Addr: Add<<MemArg as ResolveMemArg>::Offset>,
     ValueT: EncodeI32,
     <ValueT as EncodeI32>::Output: LowByte,
-    WasmMemory<Pages, MaxPages, Cells>:
-        MemoryWriteByte<
+    WasmMemory<Pages, MaxPages, Cells>: MemoryWriteByte<
             Sum<Addr, <MemArg as ResolveMemArg>::Offset>,
             <<ValueT as EncodeI32>::Output as LowByte>::Output,
         >,
