@@ -27,7 +27,7 @@ type Instance = typelude::Evaluate<
     typelude::wasm::InstantiateModule<Module, typelude::wasm::EmptyHostEnv>,
 >;
 type Bad = <Instance as typelude::wasm::ResolveExportFunc<
-    typelude::wasm::tstr::TS!("missing"),
+    typelude::wasm::typelude_str::tstr!("missing"),
 >>::Output;
 
 fn main() {

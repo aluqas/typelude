@@ -31,8 +31,8 @@ type Env = typelude::wasm::WasmHostEnv<
     typelude::wasm::TTerm,
     typelude::wasm::TArr<
         typelude::wasm::HostGlobalBinding<
-            typelude::wasm::tstr::TS!("host"),
-            typelude::wasm::tstr::TS!("base"),
+            typelude::wasm::typelude_str::tstr!("host"),
+            typelude::wasm::typelude_str::tstr!("base"),
             typelude::wasm::WasmGlobal<
                 typelude::wasm::GlobalMut,
                 typelude::wasm::WasmI32<typenum::U0>,

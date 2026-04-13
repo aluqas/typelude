@@ -773,8 +773,8 @@ mod tests {
     type ImportAddMain = Fn2<TTerm, tarr![OpLocalGet<U0>, OpLocalGet<U1>, OpCall<U0>, OpReturn]>;
     type ImportAddModule = WasmModule<
         tarr![WasmImport<
-            tstr::TS!("host"),
-            tstr::TS!("add"),
+            typelude_str::tstr!("host"),
+            typelude_str::tstr!("add"),
             ImportFunc<WasmFuncType<tarr![WasmI32Type, WasmI32Type], tarr![WasmI32Type]>>,
         >],
         WasmFuncSpace<
@@ -784,7 +784,7 @@ mod tests {
         WasmModuleMemory<NoMemoryDecl, TTerm>,
         WasmModuleTables<TTerm, TTerm>,
         TTerm,
-        tarr![WasmExport<tstr::TS!("main"), ExportFunc<U1>>],
+        tarr![WasmExport<typelude_str::tstr!("main"), ExportFunc<U1>>],
         NoStart,
     >;
 
@@ -801,7 +801,7 @@ mod tests {
     }
 
     type ImportAddEnv = WasmHostEnv<
-        tarr![HostFuncBinding<tstr::TS!("host"), tstr::TS!("add"), HostAdd>],
+        tarr![HostFuncBinding<typelude_str::tstr!("host"), typelude_str::tstr!("add"), HostAdd>],
         TTerm,
         TTerm,
         TTerm,

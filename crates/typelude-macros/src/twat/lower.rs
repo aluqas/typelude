@@ -61,8 +61,8 @@ pub fn lower_import(import: &ImportDef) -> syn::Result<TokenStream> {
     };
     Ok(quote!(
         ::typelude::wasm::WasmImport<
-            ::typelude::wasm::tstr::TS!(#module_name),
-            ::typelude::wasm::tstr::TS!(#field_name),
+            ::typelude::wasm::typelude_str::tstr!(#module_name),
+            ::typelude::wasm::typelude_str::tstr!(#field_name),
             #kind
         >
     ))
@@ -393,7 +393,7 @@ pub fn lower_export(export: &ExportDef) -> syn::Result<TokenStream> {
         },
     };
     Ok(quote!(
-        ::typelude::wasm::WasmExport<::typelude::wasm::tstr::TS!(#name), #kind>
+        ::typelude::wasm::WasmExport<::typelude::wasm::typelude_str::tstr!(#name), #kind>
     ))
 }
 

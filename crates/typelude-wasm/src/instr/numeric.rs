@@ -20,15 +20,15 @@ use crate::{
         },
     },
     opcode::{
-        OpDrop, OpF32ReinterpretI32, OpF64ReinterpretI64, OpI32Add, OpI32And, OpI32Clz,
-        OpI32Ctz, OpI32DivS, OpI32DivU, OpI32Eq, OpI32Eqz, OpI32Extend8S, OpI32Extend16S,
-        OpI32GeS, OpI32GeU, OpI32GtS, OpI32GtU, OpI32LeS, OpI32LeU, OpI32LtS, OpI32LtU,
-        OpI32Mul, OpI32Ne, OpI32Or, OpI32Popcnt, OpI32RemS, OpI32RemU, OpI32Rotl, OpI32Rotr,
-        OpI32Shl, OpI32ShrS, OpI32ShrU, OpI32Sub, OpI32WrapI64, OpI32Xor, OpI64Add, OpI64And,
-        OpI64Clz, OpI64Ctz, OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64ExtendI32S,
-        OpI64ExtendI32U, OpI64GeS, OpI64GeU, OpI64GtS, OpI64GtU, OpI64LeS, OpI64LeU, OpI64LtS,
-        OpI64LtU, OpI64Mul, OpI64Ne, OpI64Or, OpI64Popcnt, OpI64ReinterpretF64, OpI64RemS,
-        OpI64RemU, OpI64Rotl, OpI64Rotr, OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Sub, OpI64Xor,
+        OpDrop, OpF32ReinterpretI32, OpF64ReinterpretI64, OpI32Add, OpI32And, OpI32Clz, OpI32Ctz,
+        OpI32DivS, OpI32DivU, OpI32Eq, OpI32Eqz, OpI32Extend8S, OpI32Extend16S, OpI32GeS,
+        OpI32GeU, OpI32GtS, OpI32GtU, OpI32LeS, OpI32LeU, OpI32LtS, OpI32LtU, OpI32Mul, OpI32Ne,
+        OpI32Or, OpI32Popcnt, OpI32RemS, OpI32RemU, OpI32Rotl, OpI32Rotr, OpI32Shl, OpI32ShrS,
+        OpI32ShrU, OpI32Sub, OpI32WrapI64, OpI32Xor, OpI64Add, OpI64And, OpI64Clz, OpI64Ctz,
+        OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64ExtendI32S, OpI64ExtendI32U, OpI64GeS,
+        OpI64GeU, OpI64GtS, OpI64GtU, OpI64LeS, OpI64LeU, OpI64LtS, OpI64LtU, OpI64Mul, OpI64Ne,
+        OpI64Or, OpI64Popcnt, OpI64ReinterpretF64, OpI64RemS, OpI64RemU, OpI64Rotl, OpI64Rotr,
+        OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Sub, OpI64Xor,
     },
     run::Step,
     state::WasmState,
@@ -861,9 +861,13 @@ mod tests {
             tarr![OpI64Const<U18446744073709551615>, OpF64ReinterpretI64, OpI64ReinterpretF64];
         type RoundTripFinal = ModuleProgramRun<EmptyModule, RoundTripProgram>;
 
-        assert_type_eq_all!(<WrapFinal as StateStack>::Output, tarr![WasmI32<typenum::U4294967295>]);
+        assert_type_eq_all!(<WrapFinal as StateStack>::Output, tarr![
+            WasmI32<typenum::U4294967295>
+        ]);
         assert_type_eq_all!(<F32Final as StateStack>::Output, tarr![WasmF32<U1065353216>]);
-        assert_type_eq_all!(<F64Final as StateStack>::Output, tarr![WasmF64<U18446744073709551615>]);
+        assert_type_eq_all!(<F64Final as StateStack>::Output, tarr![
+            WasmF64<U18446744073709551615>
+        ]);
         assert_type_eq_all!(<RoundTripFinal as StateStack>::Output, tarr![
             WasmI64<U18446744073709551615>
         ]);

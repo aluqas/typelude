@@ -350,10 +350,10 @@ mod tests {
             WasmModuleMemory<NoMemoryDecl, TTerm>,
             WasmModuleTables<TTerm, TTerm>,
             TTerm,
-            tarr![WasmExport<tstr::TS!("main"), ExportFunc<U0>>],
+            tarr![WasmExport<typelude_str::tstr!("main"), ExportFunc<U0>>],
             NoStart,
         >;
-        type Final = InvokeExport<Module, tstr::TS!("main"), TTerm>;
+        type Final = InvokeExport<Module, typelude_str::tstr!("main"), TTerm>;
 
         assert_type_eq_all!(<Final as StateStack>::Output, tarr![WasmI32<U1>]);
     }

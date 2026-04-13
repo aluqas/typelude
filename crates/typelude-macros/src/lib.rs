@@ -20,6 +20,7 @@ use syn::parse_macro_input;
 
 mod dsl;
 mod program;
+mod str_lit;
 mod twat;
 mod ty_fn_impl;
 
@@ -233,4 +234,13 @@ pub fn twat(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn wasm_wat(input: TokenStream) -> TokenStream {
     twat(input)
+}
+
+/// 文字列リテラルを `typelude_str::TStr` 連鎖へ展開する。
+#[proc_macro]
+pub fn tstr(input: TokenStream) -> TokenStream {
+    match str_lit::expand(parse_macro_input!(input as syn::LitStr)) {
+        Ok(tokens) => TokenStream::from(tokens),
+        Err(err) => err.into_compile_error().into(),
+    }
 }

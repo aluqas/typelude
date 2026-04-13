@@ -31,8 +31,8 @@ pub use numeric::{
     OpI32GtS, OpI32GtU, OpI32LeS, OpI32LeU, OpI32LtS, OpI32LtU, OpI32Mul, OpI32Ne, OpI32Or,
     OpI32Popcnt, OpI32RemS, OpI32RemU, OpI32Rotl, OpI32Rotr, OpI32Shl, OpI32ShrS, OpI32ShrU,
     OpI32Sub, OpI32WrapI64, OpI32Xor, OpI64Add, OpI64And, OpI64Clz, OpI64Ctz, OpI64DivS,
-    OpI64DivU, OpI64Eq, OpI64Eqz, OpI64ExtendI32S, OpI64ExtendI32U, OpI64GeS, OpI64GeU,
-    OpI64GtS, OpI64GtU, OpI64LeS, OpI64LeU, OpI64LtS, OpI64LtU, OpI64Mul, OpI64Ne, OpI64Or,
-    OpI64Popcnt, OpI64ReinterpretF64, OpI64RemS, OpI64RemU, OpI64Rotl, OpI64Rotr, OpI64Shl,
-    OpI64ShrS, OpI64ShrU, OpI64Sub, OpI64Xor,
+    OpI64DivU, OpI64Eq, OpI64Eqz, OpI64ExtendI32S, OpI64ExtendI32U, OpI64GeS, OpI64GeU, OpI64GtS,
+    OpI64GtU, OpI64LeS, OpI64LeU, OpI64LtS, OpI64LtU, OpI64Mul, OpI64Ne, OpI64Or, OpI64Popcnt,
+    OpI64ReinterpretF64, OpI64RemS, OpI64RemU, OpI64Rotl, OpI64Rotr, OpI64Shl, OpI64ShrS,
+    OpI64ShrU, OpI64Sub, OpI64Xor,
 };

@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
-use tstr::IsTStr;
-use typenum::{B0, B1, IsEqual};
+use typelude_str::{IsStr, StrEq};
+use typenum::{B0, B1};
 
 pub trait NameEq<Rhs> {
     type Output;
@@ -9,10 +9,10 @@ pub trait NameEq<Rhs> {
 
 impl<Lhs, Rhs> NameEq<Rhs> for Lhs
 where
-    Lhs: IsTStr + IsEqual<Rhs>,
-    Rhs: IsTStr,
+    Lhs: IsStr + StrEq<Rhs>,
+    Rhs: IsStr,
 {
-    type Output = <Lhs as IsEqual<Rhs>>::Output;
+    type Output = <Lhs as StrEq<Rhs>>::Output;
 }
 
 pub trait BoolOutput {

@@ -172,10 +172,10 @@ mod tests {
         >,
         tarr![WasmGlobalDecl<GlobalMut, InitI32Const<U2>>],
         tarr![
-            WasmExport<tstr::TS!("main"), ExportFunc<U1>>,
-            WasmExport<tstr::TS!("counter"), ExportGlobal<U0>>,
-            WasmExport<tstr::TS!("mem"), ExportMemory>,
-            WasmExport<tstr::TS!("table"), ExportTable<U0>>
+            WasmExport<typelude_str::tstr!("main"), ExportFunc<U1>>,
+            WasmExport<typelude_str::tstr!("counter"), ExportGlobal<U0>>,
+            WasmExport<typelude_str::tstr!("mem"), ExportMemory>,
+            WasmExport<typelude_str::tstr!("table"), ExportTable<U0>>
         ],
         StartFunc<U0>,
     >;
@@ -185,15 +185,15 @@ mod tests {
         type Final = ModuleProgramRun<ExportedStateModule, tarr![OpCall<U1>]>;
 
         assert_type_eq_all!(
-            <Final as StateExportGlobal<tstr::TS!("counter")>>::Output,
+            <Final as StateExportGlobal<typelude_str::tstr!("counter")>>::Output,
             WasmGlobal<GlobalMut, WasmI32<U7>>
         );
         assert_type_eq_all!(
-            <Final as StateExportMemory<tstr::TS!("mem")>>::Output,
+            <Final as StateExportMemory<typelude_str::tstr!("mem")>>::Output,
             WasmMemory<U1, MaxPages, TTerm>
         );
         assert_type_eq_all!(
-            <Final as StateExportTable<tstr::TS!("table")>>::Output,
+            <Final as StateExportTable<typelude_str::tstr!("table")>>::Output,
             WasmTable<U1, U1, tarr![TableEntry<U0, U1>]>
         );
     }

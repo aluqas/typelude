@@ -18,13 +18,13 @@
 //! 型レベル計算は Eval トレイトで統一インターフェース化する。
 
 pub mod core {
-    pub use tstr;
     pub use typelude_std::core::*;
+    pub use typelude_str;
     pub use typenum;
 }
-pub use tstr;
-pub use typelude_macros::twat;
+pub use typelude_macros::{tstr, twat};
 pub use typelude_std::{Eval, Evaluate};
+pub use typelude_str;
 pub use typelude_vm as vm;
 pub use typelude_wasm as wasm;
 pub use typenum;

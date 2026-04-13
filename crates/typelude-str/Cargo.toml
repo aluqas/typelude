@@ -1,27 +1,23 @@
 [package]
-name = "typelude-wasm"
+name = "typelude-str"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.91.0"
-description = "Type-level WebAssembly runtime for typelude"
+description = "Type-level string carrier types for typelude"
 license = "MIT"
 
 [features]
 default = ["nightly"]
-nightly = ["typelude-std/nightly", "typelude-str/nightly"]
+nightly = ["typelude-std/nightly"]
 
 [dependencies]
 typelude-col = { path = "../typelude-col", default-features = false }
-typelude-num = { path = "../typelude-num", default-features = false }
-typelude-str = { path = "../typelude-str", default-features = false }
 typelude-std = { path = "../typelude-std", default-features = false }
+typelude-macros = { path = "../typelude-macros" }
 typenum = { version = "1.19.0", features = ["const-generics"] }
 
 [dev-dependencies]
 static_assertions = "1.1.0"
-typelude-macros = { path = "../typelude-macros" }
-trybuild = "1.0.114"
-wasmi = "1.0.9"
 
 [lints]
 workspace = true

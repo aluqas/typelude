@@ -3,9 +3,9 @@
 use core::ops::Add;
 
 pub use static_assertions::assert_type_eq_all;
-pub use tstr;
 pub use typelude_col::{TTerm, tarr};
 pub use typelude_std::core::{Evaluate, Get};
+pub use typelude_str;
 pub use typenum::{
     Const, ToUInt, U0, U1, U2, U3, U4, U5, U6, U7, U8, U9, U42, U258,
     operator_aliases::{Diff, Or, Sum},
@@ -27,13 +27,13 @@ pub use crate::{
         OpF64ReinterpretI64, OpGlobalGet, OpGlobalSet, OpI32Add, OpI32Clz, OpI32Const, OpI32Ctz,
         OpI32Eqz, OpI32Extend8S, OpI32Extend16S, OpI32Load, OpI32Load8S, OpI32Load8U,
         OpI32Load16S, OpI32Load16U, OpI32Popcnt, OpI32Rotl, OpI32Rotr, OpI32Store, OpI32Store8,
-        OpI32Store16, OpI32Sub, OpI32WrapI64, OpI64Add, OpI64Clz, OpI64Const, OpI64Ctz,
-        OpI64DivS, OpI64DivU, OpI64Eq, OpI64Eqz, OpI64ExtendI32S, OpI64ExtendI32U, OpI64GtU,
-        OpI64Load, OpI64Load8S, OpI64Load8U, OpI64Load16S, OpI64Load16U, OpI64Load32S,
-        OpI64Load32U, OpI64LtS, OpI64Mul, OpI64Popcnt, OpI64ReinterpretF64, OpI64RemS,
-        OpI64Rotl, OpI64Rotr, OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Store, OpI64Store8,
-        OpI64Store16, OpI64Store32, OpI64Sub, OpIf, OpLocalGet, OpLocalSet, OpLocalTee, OpLoop,
-        OpMemoryGrow, OpMemorySize, OpNop, OpReturn, OpSelect, OpUnreachable,
+        OpI32Store16, OpI32Sub, OpI32WrapI64, OpI64Add, OpI64Clz, OpI64Const, OpI64Ctz, OpI64DivS,
+        OpI64DivU, OpI64Eq, OpI64Eqz, OpI64ExtendI32S, OpI64ExtendI32U, OpI64GtU, OpI64Load,
+        OpI64Load8S, OpI64Load8U, OpI64Load16S, OpI64Load16U, OpI64Load32S, OpI64Load32U,
+        OpI64LtS, OpI64Mul, OpI64Popcnt, OpI64ReinterpretF64, OpI64RemS, OpI64Rotl, OpI64Rotr,
+        OpI64Shl, OpI64ShrS, OpI64ShrU, OpI64Store, OpI64Store8, OpI64Store16, OpI64Store32,
+        OpI64Sub, OpIf, OpLocalGet, OpLocalSet, OpLocalTee, OpLoop, OpMemoryGrow, OpMemorySize,
+        OpNop, OpReturn, OpSelect, OpUnreachable,
     },
     run::{StateBranches, StateGlobals, StateLocals, StateMemory, StateProgram, StateStack},
 };

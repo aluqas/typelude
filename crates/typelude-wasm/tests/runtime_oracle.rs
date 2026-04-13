@@ -412,8 +412,8 @@ fn wasmi_oracle_matches_type_level_imported_function_call() {
     type Env = WasmHostEnv<
         TArr<
             HostFuncBinding<
-                typelude_wasm::tstr::TS!("host"),
-                typelude_wasm::tstr::TS!("add"),
+                typelude_wasm::typelude_str::tstr!("host"),
+                typelude_wasm::typelude_str::tstr!("add"),
                 HostAdd,
             >,
             TTerm,
@@ -422,8 +422,12 @@ fn wasmi_oracle_matches_type_level_imported_function_call() {
         TTerm,
         TTerm,
     >;
-    type Final =
-        InvokeExportWithEnv<Module, Env, typelude_wasm::tstr::TS!("main"), TwoArgs<U2, U3>>;
+    type Final = InvokeExportWithEnv<
+        Module,
+        Env,
+        typelude_wasm::typelude_str::tstr!("main"),
+        TwoArgs<U2, U3>,
+    >;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U5>, TTerm>);
 }
@@ -473,8 +477,8 @@ fn wasmi_oracle_matches_type_level_imported_global_and_exported_global() {
         TTerm,
         TArr<
             HostGlobalBinding<
-                typelude_wasm::tstr::TS!("host"),
-                typelude_wasm::tstr::TS!("g"),
+                typelude_wasm::typelude_str::tstr!("host"),
+                typelude_wasm::typelude_str::tstr!("g"),
                 WasmGlobal<GlobalMut, WasmI32<U3>>,
             >,
             TTerm,
@@ -482,11 +486,12 @@ fn wasmi_oracle_matches_type_level_imported_global_and_exported_global() {
         TTerm,
         TTerm,
     >;
-    type Final = InvokeExportWithEnv<Module, Env, typelude_wasm::tstr::TS!("main"), NoArgs>;
+    type Final =
+        InvokeExportWithEnv<Module, Env, typelude_wasm::typelude_str::tstr!("main"), NoArgs>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U5>, TTerm>);
     assert_type_eq_all!(
-        <Final as StateExportGlobal<typelude_wasm::tstr::TS!("copy")>>::Output,
+        <Final as StateExportGlobal<typelude_wasm::typelude_str::tstr!("copy")>>::Output,
         WasmGlobal<GlobalConst, WasmI32<U3>>
     );
 }
@@ -531,15 +536,16 @@ fn wasmi_oracle_matches_type_level_imported_memory() {
         TTerm,
         TArr<
             HostMemoryBinding<
-                typelude_wasm::tstr::TS!("host"),
-                typelude_wasm::tstr::TS!("memory"),
+                typelude_wasm::typelude_str::tstr!("host"),
+                typelude_wasm::typelude_str::tstr!("memory"),
                 WasmMemory<U1, U1, TTerm>,
             >,
             TTerm,
         >,
         TTerm,
     >;
-    type Final = InvokeExportWithEnv<Module, Env, typelude_wasm::tstr::TS!("main"), NoArgs>;
+    type Final =
+        InvokeExportWithEnv<Module, Env, typelude_wasm::typelude_str::tstr!("main"), NoArgs>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U42>, TTerm>);
 }
@@ -589,14 +595,15 @@ fn wasmi_oracle_matches_type_level_imported_table_call_indirect() {
         TTerm,
         TArr<
             HostTableBinding<
-                typelude_wasm::tstr::TS!("host"),
-                typelude_wasm::tstr::TS!("table"),
+                typelude_wasm::typelude_str::tstr!("host"),
+                typelude_wasm::typelude_str::tstr!("table"),
                 WasmTable<U1, U1, TTerm>,
             >,
             TTerm,
         >,
     >;
-    type Final = InvokeExportWithEnv<Module, Env, typelude_wasm::tstr::TS!("main"), NoArgs>;
+    type Final =
+        InvokeExportWithEnv<Module, Env, typelude_wasm::typelude_str::tstr!("main"), NoArgs>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U7>, TTerm>);
 }
@@ -644,11 +651,11 @@ fn wasmi_oracle_matches_type_level_export_name_and_exported_state() {
                 global.get $g))
         "#,
     };
-    type Final = InvokeExport<Module, typelude_wasm::tstr::TS!("main"), NoArgs>;
+    type Final = InvokeExport<Module, typelude_wasm::typelude_str::tstr!("main"), NoArgs>;
 
     assert_type_eq_all!(<Final as StateStack>::Output, TArr<WasmI32<U9>, TTerm>);
     assert_type_eq_all!(
-        <Final as StateExportGlobal<typelude_wasm::tstr::TS!("g")>>::Output,
+        <Final as StateExportGlobal<typelude_wasm::typelude_str::tstr!("g")>>::Output,
         WasmGlobal<GlobalMut, WasmI32<U9>>
     );
 }

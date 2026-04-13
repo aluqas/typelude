@@ -586,26 +586,32 @@ mod tests {
     #[test]
     fn br_table_selects_indexed_and_default_targets() {
         type IndexZeroProgram = tarr![
-            OpBlock<tarr![
-                OpBlock<tarr![OpI32Const<U0>, OpBrTable<tarr![U0, U1], U1>, OpI32Const<U9>]>,
-                OpI32Const<U1>
-            ]>
+            OpBlock<
+                tarr![
+                    OpBlock<tarr![OpI32Const<U0>, OpBrTable<tarr![U0, U1], U1>, OpI32Const<U9>]>,
+                    OpI32Const<U1>
+                ],
+            >
         ];
         type IndexZeroFinal = ModuleProgramRun<EmptyModule, IndexZeroProgram>;
 
         type IndexOneProgram = tarr![
-            OpBlock<tarr![
-                OpBlock<tarr![OpI32Const<U1>, OpBrTable<tarr![U0, U1], U1>, OpI32Const<U9>]>,
-                OpI32Const<U1>
-            ]>
+            OpBlock<
+                tarr![
+                    OpBlock<tarr![OpI32Const<U1>, OpBrTable<tarr![U0, U1], U1>, OpI32Const<U9>]>,
+                    OpI32Const<U1>
+                ],
+            >
         ];
         type IndexOneFinal = ModuleProgramRun<EmptyModule, IndexOneProgram>;
 
         type DefaultProgram = tarr![
-            OpBlock<tarr![
-                OpBlock<tarr![OpI32Const<U3>, OpBrTable<tarr![U0], U1>, OpI32Const<U9>]>,
-                OpI32Const<U1>
-            ]>
+            OpBlock<
+                tarr![
+                    OpBlock<tarr![OpI32Const<U3>, OpBrTable<tarr![U0], U1>, OpI32Const<U9>]>,
+                    OpI32Const<U1>
+                ],
+            >
         ];
         type DefaultFinal = ModuleProgramRun<EmptyModule, DefaultProgram>;
 
@@ -627,7 +633,7 @@ mod tests {
                     OpLocalGet<U0>,
                     OpI32Const<U1>,
                     OpI32Sub
-                ]
+                ],
             >
         ];
         type Final = Run<InitialState<TTerm, ZeroPages, tarr![WasmI32<U0>], Program>>;

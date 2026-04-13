@@ -4,6 +4,7 @@ members = [
     "crates/typelude-bool",
     "crates/typelude-col",
     "crates/typelude-num",
+    "crates/typelude-str",
     # "crates/typelude-core",
     "crates/typelude-std",
     "crates/typelude-vm",
