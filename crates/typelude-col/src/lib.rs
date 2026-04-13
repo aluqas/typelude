@@ -20,4 +20,4 @@
 mod array;
 
 pub use array::{TArr, TTerm};
-pub use typelude_std::core::{Append, Concat, Get, Head, Len, Prepend, Set, Tail};
+pub use typelude_std::core::{Append, Concat, Fold, Get, Head, Len, Map, Prepend, Set, Tail};

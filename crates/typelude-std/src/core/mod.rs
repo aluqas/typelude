@@ -17,6 +17,7 @@ mod assert;
 mod bridge;
 mod convert;
 mod eval;
+mod expr;
 mod op;
 mod op_adapters;
 mod ops;
@@ -28,14 +29,18 @@ pub use assert::{Assert, Unwrap, UnwrapOr};
 pub use bridge::{IntoValue, Lift, Reflect, Reify};
 pub use convert::{From, Into};
 pub use eval::{Eval, Evaluate};
+pub use expr::{
+    EAdd, EAnd, EAppend, EConcat, EDiv, EEq, EFold, EGet, EGt, EHead, EInto, ELe, ELen, ELt, EMap,
+    EMul, ENand, ENeq, ENot, EOr, EPow, EPrepend, ERem, ESet, ESub, ETail, EXor,
+};
 pub use op::{Apply, Op, Op as TyFn};
 pub use ops::{
-    OpAdd, OpAnd, OpConcat, OpDiv, OpEq, OpFold, OpGet, OpGt, OpHead, OpIf, OpInto, OpLe, OpLen,
-    OpLt, OpMap, OpMul, OpNand, OpNeq, OpNot, OpOr, OpPow, OpRem, OpSet, OpSub, OpTail, OpWhile,
-    OpXor,
+    OpAdd, OpAnd, OpAppend, OpConcat, OpDiv, OpEq, OpFold, OpGet, OpGt, OpHead, OpIf, OpInto,
+    OpLe, OpLen, OpLt, OpMap, OpMul, OpNand, OpNeq, OpNot, OpOr, OpPow, OpPrepend, OpRem, OpSet,
+    OpSub, OpTail, OpWhile, OpXor,
 };
 pub use traits::{
-    Add, And, Append, Concat, Div, Eq, Get, Gt, Head, Le, Len, Lt, Mul, Nand, Neq, Not, Or,
-    Prepend, Set, Sub, Tail, Xor,
+    Add, And, Append, Concat, Div, Eq, Fold, Get, Gt, Head, Le, Len, Lt, Map, Mul, Nand, Neq, Not,
+    Or, Pow, Prepend, Rem, Set, Sub, Tail, Xor,
 };
 pub use value::Value;

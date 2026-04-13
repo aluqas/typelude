@@ -16,10 +16,3 @@ where
 {
     type Output = <Target as From<Source>>::Output;
 }
-
-impl<Source, Target> From<Source> for Target
-where
-    Source: Into<Target>,
-{
-    type Output = <Source as Into<Target>>::Output;
-}

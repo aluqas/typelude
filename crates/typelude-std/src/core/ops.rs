@@ -11,15 +11,19 @@
 //! - Comparison: `OpEq`, `OpNeq`, `OpLt`, `OpLe`, `OpGt`
 //! - Boolean: `OpNot`, `OpAnd`, `OpOr`, `OpXor`, `OpNand`
 //! - Collections: `OpLen`, `OpHead`, `OpTail`, `OpGet`, `OpSet`, `OpConcat`,
-//!   `OpMap`, `OpFold`
+//!   `OpAppend`, `OpPrepend`, `OpMap`, `OpFold`
 //! - Control flow: `OpIf`, `OpWhile`
 //! - Conversion: `OpInto`
+
+use super::value::Value;
 
 macro_rules! define_ops {
     ($($name:ident),+ $(,)?) => {
         $(
             #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
             pub struct $name;
+
+            impl Value for $name {}
         )+
     };
 }
@@ -27,5 +31,5 @@ macro_rules! define_ops {
 define_ops!(
     OpAdd, OpSub, OpMul, OpDiv, OpRem, OpPow, OpEq, OpNeq, OpLt, OpGt, OpLe, OpLen, OpHead,
     OpTail, OpNot, OpAnd, OpOr, OpXor, OpNand, OpConcat, OpGet, OpSet, OpMap, OpFold, OpIf,
-    OpWhile, OpInto
+    OpWhile, OpInto, OpAppend, OpPrepend
 );

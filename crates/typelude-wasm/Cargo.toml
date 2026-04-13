@@ -13,7 +13,7 @@ nightly = ["typelude-std/nightly", "typelude-str/nightly"]
 [dependencies]
 typelude-col = { path = "../typelude-col", default-features = false }
 typelude-num = { path = "../typelude-num", default-features = false }
-typelude-str = { path = "../typelude-str", default-features = false }
+typelude-str = { path = "../typelude-str", default-features = false, features = ["nightly"] }
 typelude-std = { path = "../typelude-std", default-features = false }
 typenum = { version = "1.19.0", features = ["const-generics"] }
 

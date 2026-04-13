@@ -16,7 +16,10 @@ use typelude_num::{
     peano::{Nat, Succ, Zero},
 };
 use typelude_std::{
-    core::{Append as ColAppend, Concat, Get, Head, Len, Prepend, Set, Tail as TlTail, Value},
+    core::{
+        Append as ColAppend, Apply, Concat, Evaluate, Fold as ColFold, Get, Head, Len,
+        Map as ColMap, Prepend, Set, Tail as TlTail, Value,
+    },
     effect::Append as FxAppend,
 };
 
@@ -119,6 +122,30 @@ impl<HeadVal, Tail, Elem> Prepend<Elem> for TArr<HeadVal, Tail> {
     type Output = TArr<Elem, TArr<HeadVal, Tail>>;
 }
 
+impl<Op> ColMap<Op> for TTerm {
+    type Output = TTerm;
+}
+
+impl<HeadVal, Tail, Op> ColMap<Op> for TArr<HeadVal, Tail>
+where
+    Apply<Op, HeadVal>: typelude_std::Eval,
+    Tail: ColMap<Op>,
+{
+    type Output = TArr<Evaluate<Apply<Op, HeadVal>>, <Tail as ColMap<Op>>::Output>;
+}
+
+impl<Op, Init> ColFold<Op, Init> for TTerm {
+    type Output = Init;
+}
+
+impl<HeadVal, Tail, Op, Init> ColFold<Op, Init> for TArr<HeadVal, Tail>
+where
+    Apply<Op, (Init, HeadVal)>: typelude_std::Eval,
+    Tail: ColFold<Op, Evaluate<Apply<Op, (Init, HeadVal)>>>,
+{
+    type Output = <Tail as ColFold<Op, Evaluate<Apply<Op, (Init, HeadVal)>>>>::Output;
+}
+
 impl<HeadVal, Tail> Get<UTerm> for TArr<HeadVal, Tail> {
     type Output = HeadVal;
 }
@@ -165,8 +192,9 @@ mod tests {
     };
     use typelude_std::{
         core::{
-            Append, Apply, Concat, Evaluate, Get, Head, Len, OpConcat, OpGet, OpHead, OpLen,
-            OpSet, Prepend, Set, Tail, Value,
+            Append, Apply, Concat, EAppend, EConcat, EFold, EGet, ELen, EMap, EPrepend, ESet,
+            Evaluate, Get, Head, Len, Map, OpAdd, OpConcat, OpFold, OpGet, OpHead, OpLen, OpSet,
+            Prepend, Set, Tail, Value,
         },
         effect::Append as FxAppend,
     };
@@ -179,6 +207,7 @@ mod tests {
     struct I8Ty;
     struct I16Ty;
     struct I64Ty;
+    struct AddOne;
 
     impl Value for U8Ty {}
     impl Value for U16Ty {}
@@ -186,6 +215,14 @@ mod tests {
     impl Value for I8Ty {}
     impl Value for I16Ty {}
     impl Value for I64Ty {}
+    impl Value for AddOne {}
+
+    impl<N> typelude_std::Op<N> for AddOne
+    where
+        N: typelude_std::core::Add<typelude_num::U1>,
+    {
+        type Output = <N as typelude_std::core::Add<typelude_num::U1>>::Output;
+    }
 
     type Arr = TArr<U8Ty, TArr<U16Ty, TArr<U32Ty, TTerm>>>;
     type Arr2 = TArr<I8Ty, TArr<I16Ty, TTerm>>;
@@ -215,7 +252,8 @@ mod tests {
         assert_type_eq_all!(<Arr as Get<U0>>::Output, U8Ty);
         assert_type_eq_all!(<Arr as Get<U1>>::Output, U16Ty);
         assert_type_eq_all!(Evaluate<Apply<OpGet, (Arr, N1)>>, U16Ty);
-        // assert_type_eq_all!(Evaluate<Apply<OpGet, (Arr, U1)>>, U16Ty);
+        assert_type_eq_all!(Evaluate<Apply<OpGet, (Arr, U1)>>, U16Ty);
+        assert_type_eq_all!(Evaluate<EGet<Arr, U1>>, U16Ty);
     }
 
     #[test]
@@ -227,8 +265,8 @@ mod tests {
         assert_type_eq_all!(<NewArr as Get<N2>>::Output, U32Ty);
         assert_type_eq_all!(Evaluate<Apply<OpSet, (Arr, N1, I16Ty)>>, NewArr);
         assert_type_eq_all!(<Arr as Set<U1, I16Ty>>::Output, NewArr);
-        // assert_type_eq_all!(Evaluate<Apply<OpSet, (Arr, U1, I16Ty)>>,
-        // NewArr);
+        assert_type_eq_all!(Evaluate<Apply<OpSet, (Arr, U1, I16Ty)>>, NewArr);
+        assert_type_eq_all!(Evaluate<ESet<Arr, U1, I16Ty>>, NewArr);
     }
 
     #[test]
@@ -237,6 +275,7 @@ mod tests {
 
         assert_type_eq_all!(<Arr as Concat<Arr2>>::Output, Joined);
         assert_type_eq_all!(Evaluate<Apply<OpConcat, (Arr, Arr2)>>, Joined);
+        assert_type_eq_all!(Evaluate<EConcat<Arr, Arr2>>, Joined);
     }
 
     #[test]
@@ -246,6 +285,8 @@ mod tests {
 
         assert_type_eq_all!(<Arr as Append<I64Ty>>::Output, Appended);
         assert_type_eq_all!(<Arr as Prepend<I64Ty>>::Output, Prepended);
+        assert_type_eq_all!(Evaluate<EAppend<Arr, I64Ty>>, Appended);
+        assert_type_eq_all!(Evaluate<EPrepend<I64Ty, Arr>>, Prepended);
     }
 
     #[test]
@@ -254,5 +295,26 @@ mod tests {
         type Expected = TArr<U8Ty, TArr<U16Ty, TArr<U32Ty, TArr<I8Ty, TArr<I16Ty, TTerm>>>>>;
 
         assert_type_eq_all!(Joined, Expected);
+    }
+
+    #[test]
+    fn test_map_and_fold() {
+        type Numbers =
+            TArr<typelude_num::U1, TArr<typelude_num::U2, TArr<typelude_num::U3, TTerm>>>;
+        type Mapped =
+            TArr<typelude_num::U2, TArr<typelude_num::U3, TArr<typelude_num::U4, TTerm>>>;
+
+        assert_type_eq_all!(<Numbers as Map<AddOne>>::Output, Mapped);
+        assert_type_eq_all!(
+            Evaluate<Apply<OpFold, (OpAdd, typelude_num::U0, Numbers)>>,
+            typelude_num::U6
+        );
+        assert_type_eq_all!(Evaluate<EMap<AddOne, Numbers>>, Mapped);
+        assert_type_eq_all!(Evaluate<EFold<OpAdd, typelude_num::U0, Numbers>>, typelude_num::U6);
+    }
+
+    #[test]
+    fn test_expr_aliases() {
+        assert_type_eq_all!(Evaluate<ELen<Arr>>, N3);
     }
 }

@@ -40,10 +40,17 @@ pub struct If<Cond, Then, Else>(pub PhantomData<(Cond, Then, Else)>);
 mod tests {
     use static_assertions::assert_type_eq_all;
 
-    use crate::{Eval, Evaluate, If};
+    use crate::{Apply, Eval, Evaluate, If, Value, core::OpIf};
 
     struct Yes;
     struct No;
+    struct U8Ty;
+    struct U16Ty;
+
+    impl Value for Yes {}
+    impl Value for No {}
+    impl Value for U8Ty {}
+    impl Value for U16Ty {}
 
     impl<Then, Else> Eval for If<Yes, Then, Else> {
         type Output = Then;
@@ -55,7 +62,9 @@ mod tests {
 
     #[test]
     fn if_supports_direct_eval_semantics() {
-        assert_type_eq_all!(Evaluate<If<Yes, u8, u16>>, u8);
-        assert_type_eq_all!(Evaluate<If<No, u8, u16>>, u16);
+        assert_type_eq_all!(Evaluate<If<Yes, U8Ty, U16Ty>>, U8Ty);
+        assert_type_eq_all!(Evaluate<If<No, U8Ty, U16Ty>>, U16Ty);
+        assert_type_eq_all!(Evaluate<Apply<OpIf, (Yes, U8Ty, U16Ty)>>, U8Ty);
+        assert_type_eq_all!(Evaluate<Apply<OpIf, (No, U8Ty, U16Ty)>>, U16Ty);
     }
 }

@@ -1,10 +1,13 @@
 //! Generic adapters from shared capability traits to canonical `Op*` markers.
 
 use super::{
-    Add, And, Concat, Div, Eq, Get, Gt, Head, Le, Len, Lt, Mul, Nand, Neq, Not, Op, OpAdd, OpAnd,
-    OpConcat, OpDiv, OpEq, OpGet, OpGt, OpHead, OpLe, OpLen, OpLt, OpMul, OpNand, OpNeq, OpNot,
-    OpOr, OpSet, OpSub, OpTail, OpXor, Or, Set, Sub, Tail, Xor,
+    Add, And, Append, Concat, Div, Eq, Evaluate, Fold, Get, Gt, Head, Into, Le, Len, Lt, Map, Mul,
+    Nand, Neq, Not, Op, OpAdd, OpAnd, OpAppend, OpConcat, OpDiv, OpEq, OpFold, OpGet, OpGt,
+    OpHead, OpIf, OpInto, OpLe, OpLen, OpLt, OpMap, OpMul, OpNand, OpNeq, OpNot, OpOr, OpPow,
+    OpPrepend, OpRem, OpSet, OpSub, OpTail, OpWhile, OpXor, Or, Pow, Prepend, Rem, Set, Sub, Tail,
+    Xor,
 };
+use crate::control::{If, While};
 
 impl<Arg> Op<Arg> for OpNot
 where
@@ -67,6 +70,20 @@ where
     Lhs: Div<Rhs>,
 {
     type Output = <Lhs as Div<Rhs>>::Output;
+}
+
+impl<Lhs, Rhs> Op<(Lhs, Rhs)> for OpRem
+where
+    Lhs: Rem<Rhs>,
+{
+    type Output = <Lhs as Rem<Rhs>>::Output;
+}
+
+impl<Lhs, Rhs> Op<(Lhs, Rhs)> for OpPow
+where
+    Lhs: Pow<Rhs>,
+{
+    type Output = <Lhs as Pow<Rhs>>::Output;
 }
 
 impl<Lhs, Rhs> Op<(Lhs, Rhs)> for OpEq
@@ -146,13 +163,63 @@ where
     type Output = <Lhs as Concat<Rhs>>::Output;
 }
 
+impl<Col, Elem> Op<(Col, Elem)> for OpAppend
+where
+    Col: Append<Elem>,
+{
+    type Output = <Col as Append<Elem>>::Output;
+}
+
+impl<Elem, Col> Op<(Elem, Col)> for OpPrepend
+where
+    Col: Prepend<Elem>,
+{
+    type Output = <Col as Prepend<Elem>>::Output;
+}
+
+impl<Func, Col> Op<(Func, Col)> for OpMap
+where
+    Col: Map<Func>,
+{
+    type Output = <Col as Map<Func>>::Output;
+}
+
+impl<Func, Init, Col> Op<(Func, Init, Col)> for OpFold
+where
+    Col: Fold<Func, Init>,
+{
+    type Output = <Col as Fold<Func, Init>>::Output;
+}
+
+impl<Source, Target> Op<(Source, Target)> for OpInto
+where
+    Source: Into<Target>,
+{
+    type Output = <Source as Into<Target>>::Output;
+}
+
+impl<Cond, Then, Else> Op<(Cond, Then, Else)> for OpIf
+where
+    If<Cond, Then, Else>: super::Eval,
+{
+    type Output = Evaluate<If<Cond, Then, Else>>;
+}
+
+impl<Pred, Step, State> Op<(Pred, Step, State)> for OpWhile
+where
+    While<Pred, Step, State>: super::Eval,
+{
+    type Output = Evaluate<While<Pred, Step, State>>;
+}
+
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_type_eq_all;
 
     use crate::core::{
-        Add, And, Apply, Concat, Eq, Evaluate, Get, Gt, Len, Lt, Not, OpAdd, OpAnd, OpConcat,
-        OpEq, OpGet, OpGt, OpLen, OpLt, OpNot, OpSet, Set, Value,
+        Add, And, Append, Apply, Concat, Eq, Evaluate, Fold, From, Get, Gt, Len, Lt, Map, Not,
+        OpAdd, OpAnd, OpAppend, OpConcat, OpEq, OpFold, OpGet, OpGt, OpInto, OpLen, OpLt, OpMap,
+        OpNot, OpSet, Prepend, Set, Value,
     };
 
     struct A;
@@ -164,6 +231,8 @@ mod tests {
     struct Col;
     struct Col2;
     struct Col3;
+    struct Col4;
+    struct Out;
 
     impl Value for A {}
     impl Value for B {}
@@ -174,6 +243,8 @@ mod tests {
     impl Value for Col {}
     impl Value for Col2 {}
     impl Value for Col3 {}
+    impl Value for Col4 {}
+    impl Value for Out {}
 
     impl Not for A {
         type Output = B;
@@ -215,6 +286,26 @@ mod tests {
         type Output = Col3;
     }
 
+    impl Append<Val> for Col {
+        type Output = Col4;
+    }
+
+    impl Prepend<Idx> for Col {
+        type Output = Col4;
+    }
+
+    impl Map<A> for Col {
+        type Output = Col2;
+    }
+
+    impl Fold<A, B> for Col {
+        type Output = D;
+    }
+
+    impl From<Col> for Out {
+        type Output = Col3;
+    }
+
     #[test]
     fn adapters_work_without_primitive_crate_dependencies() {
         assert_type_eq_all!(Evaluate<Apply<OpNot, A>>, B);
@@ -227,5 +318,9 @@ mod tests {
         assert_type_eq_all!(Evaluate<Apply<OpGet, (Col, Idx)>>, Val);
         assert_type_eq_all!(Evaluate<Apply<OpSet, (Col, Idx, Val)>>, Col2);
         assert_type_eq_all!(Evaluate<Apply<OpConcat, (Col, Col2)>>, Col3);
+        assert_type_eq_all!(Evaluate<Apply<OpAppend, (Col, Val)>>, Col4);
+        assert_type_eq_all!(Evaluate<Apply<OpMap, (A, Col)>>, Col2);
+        assert_type_eq_all!(Evaluate<Apply<OpFold, (A, B, Col)>>, D);
+        assert_type_eq_all!(Evaluate<Apply<OpInto, (Col, Out)>>, Col3);
     }
 }

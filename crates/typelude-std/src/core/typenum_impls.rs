@@ -1,13 +1,13 @@
 //! `typenum` interoperability for the shared core traits.
 
-use core::ops::{Add as StdAdd, Div as StdDiv, Mul as StdMul, Sub as StdSub};
+use core::ops::{Add as StdAdd, Div as StdDiv, Mul as StdMul, Rem as StdRem, Sub as StdSub};
 
 use typenum::{
-    B0, B1, IsEqual, IsGreater, IsLess, IsLessOrEqual, NInt, NonZero, PInt, UInt, UTerm, Unsigned,
-    Z0,
+    B0, B1, IsEqual, IsGreater, IsLess, IsLessOrEqual, NInt, NonZero, PInt, Pow as TypenumPow,
+    UInt, UTerm, Unsigned, Z0,
 };
 
-use super::{Add, And, Div, Eq, Gt, Le, Lt, Mul, Nand, Neq, Not, Or, Sub, Xor};
+use super::{Add, And, Div, Eq, Gt, Le, Lt, Mul, Nand, Neq, Not, Or, Pow, Rem, Sub, Value, Xor};
 
 macro_rules! impl_typenum_arithmetic {
     ($lhs:ty) => {
@@ -37,6 +37,20 @@ macro_rules! impl_typenum_arithmetic {
             $lhs: StdDiv<Rhs>,
         {
             type Output = <$lhs as StdDiv<Rhs>>::Output;
+        }
+
+        impl<Rhs> Rem<Rhs> for $lhs
+        where
+            $lhs: StdRem<Rhs>,
+        {
+            type Output = <$lhs as StdRem<Rhs>>::Output;
+        }
+
+        impl<Rhs> Pow<Rhs> for $lhs
+        where
+            $lhs: TypenumPow<Rhs>,
+        {
+            type Output = <$lhs as TypenumPow<Rhs>>::Output;
         }
     };
 }
@@ -153,6 +167,15 @@ impl Nand<B1> for B1 {
     type Output = B0;
 }
 
+impl Value for B0 {}
+impl Value for B1 {}
+impl Value for UTerm {}
+impl<N, B> Value for UInt<N, B> {}
+impl<U> Value for PInt<U> where U: Unsigned + NonZero {}
+
+impl<U> Value for NInt<U> where U: Unsigned + NonZero {}
+impl Value for Z0 {}
+
 impl_typenum_arithmetic!(UTerm);
 impl_typenum_compare!(UTerm);
 
@@ -182,6 +205,20 @@ where
     UInt<N, B>: StdDiv<Rhs>,
 {
     type Output = <UInt<N, B> as StdDiv<Rhs>>::Output;
+}
+
+impl<N, B, Rhs> Rem<Rhs> for UInt<N, B>
+where
+    UInt<N, B>: StdRem<Rhs>,
+{
+    type Output = <UInt<N, B> as StdRem<Rhs>>::Output;
+}
+
+impl<N, B, Rhs> Pow<Rhs> for UInt<N, B>
+where
+    UInt<N, B>: TypenumPow<Rhs>,
+{
+    type Output = <UInt<N, B> as TypenumPow<Rhs>>::Output;
 }
 
 impl<N, B, Rhs> Eq<Rhs> for UInt<N, B>
@@ -250,6 +287,22 @@ where
     PInt<U>: StdDiv<Rhs>,
 {
     type Output = <PInt<U> as StdDiv<Rhs>>::Output;
+}
+
+impl<U, Rhs> Rem<Rhs> for PInt<U>
+where
+    U: Unsigned + NonZero,
+    PInt<U>: StdRem<Rhs>,
+{
+    type Output = <PInt<U> as StdRem<Rhs>>::Output;
+}
+
+impl<U, Rhs> Pow<Rhs> for PInt<U>
+where
+    U: Unsigned + NonZero,
+    PInt<U>: TypenumPow<Rhs>,
+{
+    type Output = <PInt<U> as TypenumPow<Rhs>>::Output;
 }
 
 impl<U, Rhs> Eq<Rhs> for PInt<U>
@@ -323,6 +376,22 @@ where
     NInt<U>: StdDiv<Rhs>,
 {
     type Output = <NInt<U> as StdDiv<Rhs>>::Output;
+}
+
+impl<U, Rhs> Rem<Rhs> for NInt<U>
+where
+    U: Unsigned + NonZero,
+    NInt<U>: StdRem<Rhs>,
+{
+    type Output = <NInt<U> as StdRem<Rhs>>::Output;
+}
+
+impl<U, Rhs> Pow<Rhs> for NInt<U>
+where
+    U: Unsigned + NonZero,
+    NInt<U>: TypenumPow<Rhs>,
+{
+    type Output = <NInt<U> as TypenumPow<Rhs>>::Output;
 }
 
 impl<U, Rhs> Eq<Rhs> for NInt<U>

@@ -37,10 +37,15 @@ pub struct While<Pred, Step, State>(pub PhantomData<(Pred, Step, State)>);
 mod tests {
     use static_assertions::assert_type_eq_all;
 
-    use crate::{Eval, Evaluate, While};
+    use crate::{Apply, Eval, Evaluate, Value, While, core::OpWhile};
 
     struct Halt;
     struct Step;
+    struct State;
+
+    impl Value for Halt {}
+    impl Value for Step {}
+    impl Value for State {}
 
     impl<State> Eval for While<Halt, Step, State> {
         type Output = State;
@@ -48,6 +53,7 @@ mod tests {
 
     #[test]
     fn while_supports_direct_eval_semantics() {
-        assert_type_eq_all!(Evaluate<While<Halt, Step, u8>>, u8);
+        assert_type_eq_all!(Evaluate<While<Halt, Step, State>>, State);
+        assert_type_eq_all!(Evaluate<Apply<OpWhile, (Halt, Step, State)>>, State);
     }
 }

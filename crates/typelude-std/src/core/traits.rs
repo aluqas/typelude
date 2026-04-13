@@ -45,6 +45,16 @@ pub trait Div<Rhs> {
     type Output;
 }
 
+/// Binary remainder.
+pub trait Rem<Rhs> {
+    type Output;
+}
+
+/// Binary exponentiation.
+pub trait Pow<Rhs> {
+    type Output;
+}
+
 /// Equality comparison.
 pub trait Eq<Rhs> {
     type Output;
@@ -107,5 +117,15 @@ pub trait Append<Elem> {
 
 /// Prepend a single element to the front of a collection.
 pub trait Prepend<Elem> {
+    type Output;
+}
+
+/// Map a first-class operator over a collection.
+pub trait Map<Op> {
+    type Output;
+}
+
+/// Fold a collection with a first-class operator and initial accumulator.
+pub trait Fold<Op, Init> {
     type Output;
 }

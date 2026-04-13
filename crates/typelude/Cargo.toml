@@ -21,7 +21,7 @@ nightly = [
 typelude-std = { path = "../typelude-std", default-features = false }
 typelude-vm = { path = "../typelude-vm", default-features = false }
 typelude-wasm = { path = "../typelude-wasm", default-features = false }
-typelude-str = { path = "../typelude-str", default-features = false }
+typelude-str = { path = "../typelude-str", default-features = false, features = ["nightly"] }
 typelude-macros = { path = "../typelude-macros" }
 typenum = { version = "1.19.0", features = ["const-generics"] }
 

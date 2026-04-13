@@ -13,7 +13,7 @@ use core::marker::PhantomData;
 
 use typelude_col::{TArr, TTerm};
 pub use typelude_macros::tstr;
-use typelude_std::core::Value;
+use typelude_std::core::{Apply, Op, Value};
 use typenum::{B0, B1};
 
 #[derive(Debug, Default)]
@@ -94,6 +94,20 @@ where
     type Output = <LhsTail as StrEqHelper<{ L == R }, RhsTail>>::Output;
 }
 
+#[derive(Debug, Default)]
+pub struct OpStrEq;
+
+impl Value for OpStrEq {}
+
+impl<Lhs, Rhs> Op<(Lhs, Rhs)> for OpStrEq
+where
+    Lhs: StrEq<Rhs>,
+{
+    type Output = <Lhs as StrEq<Rhs>>::Output;
+}
+
+pub type EStrEq<Lhs, Rhs> = Apply<OpStrEq, (Lhs, Rhs)>;
+
 pub trait IntoCol {
     type Output;
 }
@@ -113,9 +127,10 @@ where
 mod tests {
     use static_assertions::assert_type_eq_all;
     use typelude_col::{TArr, TTerm};
+    use typelude_std::core::{Evaluate, Op};
     use typenum::{B0, B1};
 
-    use super::{IntoCol, STail, StrEq, TStr};
+    use super::{EStrEq, IntoCol, OpStrEq, STail, StrEq, TStr};
 
     type ABC = TStr<'A', TStr<'B', TStr<'C', STail>>>;
     type ABD = TStr<'A', TStr<'B', TStr<'D', STail>>>;
@@ -126,6 +141,8 @@ mod tests {
         assert_type_eq_all!(<ABC as StrEq<ABC>>::Output, B1);
         assert_type_eq_all!(<ABC as StrEq<ABD>>::Output, B0);
         assert_type_eq_all!(<ABC as StrEq<TStr<'A', STail>>>::Output, B0);
+        assert_type_eq_all!(Evaluate<EStrEq<ABC, ABC>>, B1);
+        assert_type_eq_all!(<OpStrEq as Op<(ABC, ABD)>>::Output, B0);
     }
 
     #[test]
