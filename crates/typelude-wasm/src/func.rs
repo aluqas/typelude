@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 
 use typelude_std::core::Value;
 
+/// 関数定義
 #[derive(Debug, Default)]
 pub struct WasmFunc<FuncType, LocalDecls, Program>(
     pub PhantomData<(FuncType, LocalDecls, Program)>,

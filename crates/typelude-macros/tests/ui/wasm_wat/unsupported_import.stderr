@@ -1,13 +1,19 @@
-error: unsupported type: f32
+error[E0433]: cannot find `typelude_str` in the crate root
   --> tests/ui/wasm_wat/unsupported_import.rs:16:13
    |
-16 |   type _Bad = wasm_wat! {
+16 |   type _Bad = twat! {
    |  _____________^
 17 | |     module: r#"
 18 | |         (module
 19 | |           (import "env" "x" (func (param f32))))
 20 | |     "#,
 21 | | };
-   | |_^
+   | |_^ could not find `typelude_str` in the list of imported crates
    |
-   = note: this error originates in the macro `wasm_wat` (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `::typelude::wasm::typelude_str::tstr` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider importing one of these crates
+   |
+10 + use crate::wasm::typelude_str;
+   |
+10 + use typelude_wasm::typelude_str;
+   |

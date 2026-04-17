@@ -1,7 +1,7 @@
 error: unsupported section: expression elem items are not supported
   --> tests/ui/wasm_wat/element_expressions_not_supported.rs:16:13
    |
-16 |   type _Bad = wasm_wat! {
+16 |   type _Bad = twat! {
    |  _____________^
 17 | |     module: r#"
 18 | |         (module
@@ -11,4 +11,4 @@ error: unsupported section: expression elem items are not supported
 23 | | };
    | |_^
    |
-   = note: this error originates in the macro `wasm_wat` (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `twat` (in Nightly builds, run with -Z macro-backtrace for more info)

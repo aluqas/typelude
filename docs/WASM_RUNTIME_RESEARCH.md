@@ -218,6 +218,24 @@ output extraction はその後段で行われる。
 
 つまり、C 由来の「char* を返す」系の出力に向いた generic reader である。
 
+## 追記: `typelude-wasm` frontend parity メモ
+
+`typelude-wasm` の `twat!` は parser-only 方針を維持しつつ、runtime が既に持っている
+整数系 opcode と memory/control の大半に追従し始めている。
+
+現時点で frontend parity に入った代表例:
+
+- `br_table`
+- `nop`, `unreachable`
+- `i32` の compare / bitwise / shift / `mul/div/rem` / sign-extension / `wrap_i64`
+- `i32.load8_s/load16_s/load16_u/store16`
+- `i64.clz/ctz/popcnt/rotl/rotr/extend_i32_*`
+- `i64.load8/16/32_*`, `i64.store8/16/32`
+- `f32.reinterpret_i32`, `f64.reinterpret_i64`, `i64.reinterpret_f64`
+
+未対応の主眼は引き続き float arithmetic / compare、multi-value、一般 reference types、
+passive/declarative segment、その他 runtime 未実装領域である。
+
 ### 6.3 Doom の描画
 
 Doom は generic output reader ではなく、専用 renderer を使う。

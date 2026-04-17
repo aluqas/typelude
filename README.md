@@ -1,3 +1,6 @@
 # typelude
 
-Rustの型システムで型レベル計算を行うフレームワーク。型をファーストクラス値として扱い、コンパイル時に任意の計算（条件分岐・再帰・ループ・スタックマシン実行）を実現する。
+Rustの型レベルプログラミングの実験。
+
+> [!IMPORTANT]
+> This codebase for only experimental propose.

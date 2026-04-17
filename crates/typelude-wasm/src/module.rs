@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 
 use typelude_std::core::Value;
 
+/// モジュール定義
 #[derive(Debug, Default)]
 pub struct WasmModule<Imports, Funcs, Memory, Tables, Globals, Exports, Start>(
     PhantomData<(Imports, Funcs, Memory, Tables, Globals, Exports, Start)>,
@@ -12,46 +13,55 @@ impl<Imports, Funcs, Memory, Tables, Globals, Exports, Start> Value
 {
 }
 
+/// モジュール定義（インスタンス化前の状態）
 #[derive(Debug, Default)]
 pub struct WasmResolvedModule<Funcs, Types, Exports>(PhantomData<(Funcs, Types, Exports)>);
 
 impl<Funcs, Types, Exports> Value for WasmResolvedModule<Funcs, Types, Exports> {}
 
+/// インスタンス化されたモジュール
 #[derive(Debug, Default)]
 pub struct WasmInstance<Module, Store, Start = NoStart>(PhantomData<(Module, Store, Start)>);
 
 impl<Module, Store, Start> Value for WasmInstance<Module, Store, Start> {}
 
+///
 #[derive(Debug, Default)]
 pub struct WasmFuncSpace<Types, Funcs>(PhantomData<(Types, Funcs)>);
 
 impl<Types, Funcs> Value for WasmFuncSpace<Types, Funcs> {}
 
+///
 #[derive(Debug, Default)]
 pub struct WasmFuncType<Params, Results>(PhantomData<(Params, Results)>);
 
 impl<Params, Results> Value for WasmFuncType<Params, Results> {}
 
+///
 #[derive(Debug, Default)]
 pub struct WasmModuleMemory<Decl, DataSegments>(PhantomData<(Decl, DataSegments)>);
 
 impl<Decl, DataSegments> Value for WasmModuleMemory<Decl, DataSegments> {}
 
+///
 #[derive(Debug, Default)]
 pub struct WasmMemoryDecl<MinPages, MaxPages>(PhantomData<(MinPages, MaxPages)>);
 
 impl<MinPages, MaxPages> Value for WasmMemoryDecl<MinPages, MaxPages> {}
 
+///
 #[derive(Debug, Default)]
 pub struct NoMemoryDecl;
 
 impl Value for NoMemoryDecl {}
 
+///
 #[derive(Debug, Default)]
 pub struct WasmModuleTables<Decls, ElemSegments>(PhantomData<(Decls, ElemSegments)>);
 
 impl<Decls, ElemSegments> Value for WasmModuleTables<Decls, ElemSegments> {}
 
+///
 #[derive(Debug, Default)]
 pub struct WasmTableDecl<Min, Max>(PhantomData<(Min, Max)>);
 

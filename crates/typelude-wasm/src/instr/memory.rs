@@ -1255,8 +1255,10 @@ mod tests {
     fn i32_narrow_loads_and_store16_work() {
         type U128T = <typenum::Const<128> as typenum::ToUInt>::Output;
         type U32768T = <typenum::Const<32768> as typenum::ToUInt>::Output;
-        type U4294967168 = <typenum::Const<4294967168usize> as typenum::ToUInt>::Output;
-        type U4294934528 = <typenum::Const<4294934528usize> as typenum::ToUInt>::Output;
+        type U4294967168 =
+            typenum::operator_aliases::Diff<crate::helpers::i32::U4294967296, crate::helpers::i32::U128>;
+        type U4294934528 =
+            typenum::operator_aliases::Diff<crate::helpers::i32::U4294967296, crate::helpers::i32::U32768>;
 
         type Load8SProgram =
             tarr![OpI32Const<U0>, OpI32Const<U128T>, OpI32Store8, OpI32Const<U0>, OpI32Load8S];
@@ -1278,13 +1280,13 @@ mod tests {
         type U128T = <typenum::Const<128> as typenum::ToUInt>::Output;
         type U32768T = <typenum::Const<32768> as typenum::ToUInt>::Output;
         type U65535T = <typenum::Const<65535> as typenum::ToUInt>::Output;
-        type U4294967168 = <typenum::Const<4294967168usize> as typenum::ToUInt>::Output;
+        type U4294967168 =
+            typenum::operator_aliases::Diff<crate::helpers::i32::U4294967296, crate::helpers::i32::U128>;
         type U18446744073709518848 =
-            <typenum::Const<18446744073709518848usize> as typenum::ToUInt>::Output;
+            typenum::operator_aliases::Diff<crate::helpers::i64::U18446744073709551615, crate::helpers::i32::U32767>;
         type U18446744073709551488 =
-            <typenum::Const<18446744073709551488usize> as typenum::ToUInt>::Output;
-        type U18446744073709551615T =
-            <typenum::Const<18446744073709551615usize> as typenum::ToUInt>::Output;
+            typenum::operator_aliases::Diff<crate::helpers::i64::U18446744073709551615, crate::helpers::i32::U127>;
+        type U18446744073709551615T = crate::helpers::i64::U18446744073709551615;
 
         type Load8SProgram =
             tarr![OpI32Const<U0>, OpI64Const<U128T>, OpI64Store8, OpI32Const<U0>, OpI64Load8S];

@@ -362,6 +362,8 @@ fn parse_instruction_sequence(
                 instructions.push(Instr::If(then_body, else_body));
             },
             Operator::Drop => instructions.push(Instr::Drop),
+            Operator::Nop => instructions.push(Instr::Nop),
+            Operator::Unreachable => instructions.push(Instr::Unreachable),
             Operator::I32Const {
                 value,
             } => instructions.push(Instr::I32Const(i32_to_bitpattern(value))),
@@ -384,12 +386,48 @@ fn parse_instruction_sequence(
                 global_index,
             } => instructions.push(Instr::GlobalSet(global_index)),
             Operator::I32Add => instructions.push(Instr::I32Add),
+            Operator::I32And => instructions.push(Instr::I32And),
+            Operator::I32Clz => instructions.push(Instr::I32Clz),
             Operator::I32Sub => instructions.push(Instr::I32Sub),
+            Operator::I32Ctz => instructions.push(Instr::I32Ctz),
+            Operator::I32DivS => instructions.push(Instr::I32DivS),
+            Operator::I32DivU => instructions.push(Instr::I32DivU),
+            Operator::I32Eq => instructions.push(Instr::I32Eq),
             Operator::I32Eqz => instructions.push(Instr::I32Eqz),
+            Operator::I32Extend8S => instructions.push(Instr::I32Extend8S),
+            Operator::I32Extend16S => instructions.push(Instr::I32Extend16S),
+            Operator::I32GeS => instructions.push(Instr::I32GeS),
+            Operator::I32GeU => instructions.push(Instr::I32GeU),
+            Operator::I32GtS => instructions.push(Instr::I32GtS),
+            Operator::I32GtU => instructions.push(Instr::I32GtU),
+            Operator::I32LeS => instructions.push(Instr::I32LeS),
+            Operator::I32LeU => instructions.push(Instr::I32LeU),
+            Operator::I32LtS => instructions.push(Instr::I32LtS),
+            Operator::I32LtU => instructions.push(Instr::I32LtU),
+            Operator::I32Mul => instructions.push(Instr::I32Mul),
+            Operator::I32Ne => instructions.push(Instr::I32Ne),
+            Operator::I32Or => instructions.push(Instr::I32Or),
+            Operator::I32Popcnt => instructions.push(Instr::I32Popcnt),
+            Operator::I32RemS => instructions.push(Instr::I32RemS),
+            Operator::I32RemU => instructions.push(Instr::I32RemU),
+            Operator::I32Rotl => instructions.push(Instr::I32Rotl),
+            Operator::I32Rotr => instructions.push(Instr::I32Rotr),
+            Operator::I32Shl => instructions.push(Instr::I32Shl),
+            Operator::I32ShrS => instructions.push(Instr::I32ShrS),
+            Operator::I32ShrU => instructions.push(Instr::I32ShrU),
+            Operator::I32WrapI64 => instructions.push(Instr::I32WrapI64),
+            Operator::I32Xor => instructions.push(Instr::I32Xor),
+            Operator::F32ReinterpretI32 => instructions.push(Instr::F32ReinterpretI32),
+            Operator::F64ReinterpretI64 => instructions.push(Instr::F64ReinterpretI64),
             Operator::I64Add => instructions.push(Instr::I64Add),
+            Operator::I64And => instructions.push(Instr::I64And),
+            Operator::I64Clz => instructions.push(Instr::I64Clz),
             Operator::I64Sub => instructions.push(Instr::I64Sub),
+            Operator::I64Ctz => instructions.push(Instr::I64Ctz),
             Operator::I64Eqz => instructions.push(Instr::I64Eqz),
             Operator::I64Eq => instructions.push(Instr::I64Eq),
+            Operator::I64ExtendI32S => instructions.push(Instr::I64ExtendI32S),
+            Operator::I64ExtendI32U => instructions.push(Instr::I64ExtendI32U),
             Operator::I64Ne => instructions.push(Instr::I64Ne),
             Operator::I64LtS => instructions.push(Instr::I64LtS),
             Operator::I64LtU => instructions.push(Instr::I64LtU),
@@ -399,23 +437,32 @@ fn parse_instruction_sequence(
             Operator::I64LeU => instructions.push(Instr::I64LeU),
             Operator::I64GeS => instructions.push(Instr::I64GeS),
             Operator::I64GeU => instructions.push(Instr::I64GeU),
-            Operator::I64And => instructions.push(Instr::I64And),
             Operator::I64Or => instructions.push(Instr::I64Or),
+            Operator::I64Popcnt => instructions.push(Instr::I64Popcnt),
             Operator::I64Xor => instructions.push(Instr::I64Xor),
             Operator::I64Shl => instructions.push(Instr::I64Shl),
             Operator::I64ShrS => instructions.push(Instr::I64ShrS),
             Operator::I64ShrU => instructions.push(Instr::I64ShrU),
+            Operator::I64Rotl => instructions.push(Instr::I64Rotl),
+            Operator::I64Rotr => instructions.push(Instr::I64Rotr),
             Operator::I64Mul => instructions.push(Instr::I64Mul),
             Operator::I64DivS => instructions.push(Instr::I64DivS),
             Operator::I64DivU => instructions.push(Instr::I64DivU),
             Operator::I64RemS => instructions.push(Instr::I64RemS),
             Operator::I64RemU => instructions.push(Instr::I64RemU),
+            Operator::I64ReinterpretF64 => instructions.push(Instr::I64ReinterpretF64),
             Operator::Br {
                 relative_depth,
             } => instructions.push(Instr::Br(relative_depth)),
             Operator::BrIf {
                 relative_depth,
             } => instructions.push(Instr::BrIf(relative_depth)),
+            Operator::BrTable {
+                targets,
+            } => instructions.push(Instr::BrTable {
+                targets: targets.targets().collect::<Result<Vec<_>, _>>().map_err(parser_error)?,
+                default: targets.default(),
+            }),
             Operator::Select => instructions.push(Instr::Select),
             Operator::TypedSelect {
                 ty,
@@ -455,15 +502,54 @@ fn parse_instruction_sequence(
             Operator::I32Store {
                 memarg,
             } => instructions.push(Instr::I32Store(parse_memarg(memarg, "i32.store")?)),
+            Operator::I32Load8S {
+                memarg,
+            } => instructions.push(Instr::I32Load8S(parse_memarg(memarg, "i32.load8_s")?)),
             Operator::I32Load8U {
                 memarg,
             } => instructions.push(Instr::I32Load8U(parse_memarg(memarg, "i32.load8_u")?)),
+            Operator::I32Load16S {
+                memarg,
+            } => instructions.push(Instr::I32Load16S(parse_memarg(memarg, "i32.load16_s")?)),
+            Operator::I32Load16U {
+                memarg,
+            } => instructions.push(Instr::I32Load16U(parse_memarg(memarg, "i32.load16_u")?)),
             Operator::I32Store8 {
                 memarg,
             } => instructions.push(Instr::I32Store8(parse_memarg(memarg, "i32.store8")?)),
+            Operator::I32Store16 {
+                memarg,
+            } => instructions.push(Instr::I32Store16(parse_memarg(memarg, "i32.store16")?)),
+            Operator::I64Load8S {
+                memarg,
+            } => instructions.push(Instr::I64Load8S(parse_memarg(memarg, "i64.load8_s")?)),
+            Operator::I64Load8U {
+                memarg,
+            } => instructions.push(Instr::I64Load8U(parse_memarg(memarg, "i64.load8_u")?)),
+            Operator::I64Load16S {
+                memarg,
+            } => instructions.push(Instr::I64Load16S(parse_memarg(memarg, "i64.load16_s")?)),
+            Operator::I64Load16U {
+                memarg,
+            } => instructions.push(Instr::I64Load16U(parse_memarg(memarg, "i64.load16_u")?)),
+            Operator::I64Load32S {
+                memarg,
+            } => instructions.push(Instr::I64Load32S(parse_memarg(memarg, "i64.load32_s")?)),
+            Operator::I64Load32U {
+                memarg,
+            } => instructions.push(Instr::I64Load32U(parse_memarg(memarg, "i64.load32_u")?)),
             Operator::I64Load {
                 memarg,
             } => instructions.push(Instr::I64Load(parse_memarg(memarg, "i64.load")?)),
+            Operator::I64Store8 {
+                memarg,
+            } => instructions.push(Instr::I64Store8(parse_memarg(memarg, "i64.store8")?)),
+            Operator::I64Store16 {
+                memarg,
+            } => instructions.push(Instr::I64Store16(parse_memarg(memarg, "i64.store16")?)),
+            Operator::I64Store32 {
+                memarg,
+            } => instructions.push(Instr::I64Store32(parse_memarg(memarg, "i64.store32")?)),
             Operator::I64Store {
                 memarg,
             } => instructions.push(Instr::I64Store(parse_memarg(memarg, "i64.store")?)),
@@ -473,11 +559,6 @@ fn parse_instruction_sequence(
             Operator::MemoryGrow {
                 mem,
             } => instructions.push(Instr::MemoryGrow(mem)),
-            Operator::BrTable {
-                ..
-            } => {
-                return Err(Error::new(Span::call_site(), "opcode br_table: not supported"));
-            },
             other => {
                 return Err(Error::new(
                     Span::call_site(),
@@ -716,8 +797,8 @@ pub fn lower_val_type(ty: ValType) -> syn::Result<Val> {
     match ty {
         ValType::I32 => Ok(Val::I32),
         ValType::I64 => Ok(Val::I64),
-        ValType::F32 => Err(Error::new(Span::call_site(), "unsupported type: f32")),
-        ValType::F64 => Err(Error::new(Span::call_site(), "unsupported type: f64")),
+        ValType::F32 => Ok(Val::F32),
+        ValType::F64 => Ok(Val::F64),
         ValType::V128 => Err(Error::new(Span::call_site(), "unsupported type: v128")),
         ValType::Ref(_) => Err(Error::new(Span::call_site(), "unsupported type: reference type")),
     }

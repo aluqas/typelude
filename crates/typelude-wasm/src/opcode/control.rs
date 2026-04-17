@@ -28,32 +28,41 @@ pub struct OpBlock<Body>(PhantomData<Body>);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpLoop<Body>(PhantomData<Body>);
 
+/// ブロック構造（制御フロー標準化）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpBr<Depth>(PhantomData<Depth>);
 
+/// 条件付き分岐。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpBrIf<Depth>(PhantomData<Depth>);
 
+/// テーブル分岐。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpBrTable<Targets, Default>(PhantomData<(Targets, Default)>);
 
+/// 条件分岐。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpIf<Then, Else>(PhantomData<(Then, Else)>);
 
+/// 条件分岐（elseなし）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpSelect;
 
+/// 関数復帰。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpReturn;
 
+/// 関数の終端。
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpEndFunc;
 
+/// ブロックの終端。
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpEndBlock;
 
+/// ループの終端。
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct OpEndLoop;

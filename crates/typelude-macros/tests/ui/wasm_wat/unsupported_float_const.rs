@@ -16,9 +16,8 @@ use typelude_macros::twat;
 type _Bad = twat! {
     module: r#"
         (module
-          (func (export "main") (param f32) (result i32)
-            local.get 0
-            i32.reinterpret_f32))
+          (func (export "main") (result f32)
+            f32.const 1.0))
     "#,
 };
 

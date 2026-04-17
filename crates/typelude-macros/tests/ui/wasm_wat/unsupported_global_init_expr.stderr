@@ -1,10 +1,10 @@
-error[E0277]: the trait bound `InstantiateModule<WasmModule<TTerm, WasmFuncSpace<TTerm, TTerm>, WasmMemoryDecl<UTerm, NoLimit, TTerm>, TTerm, typelude_wasm::TArr<WasmGlobalDecl<GlobalMut, InitI32Const<UInt<UTerm, B1>>>, typelude_wasm::TArr<WasmGlobalDecl<GlobalConst, InitGlobalGet<UTerm>>, TTerm>>, TTerm, NoStart>, WasmHostEnv<TTerm, TTerm, TTerm, TTerm>>: Eval` is not satisfied
+error[E0277]: the trait bound `InstantiateModule<WasmModule<TTerm, WasmFuncSpace<TTerm, TTerm>, WasmModuleMemory<NoMemoryDecl, TTerm>, WasmModuleTables<TTerm, TTerm>, typelude_wasm::TArr<WasmGlobalDecl<GlobalMut, WasmConstExpr<typelude_wasm::TArr<OpI32Const<UInt<UTerm, B1>>, TTerm>>>, typelude_wasm::TArr<WasmGlobalDecl<GlobalConst, WasmConstExpr<typelude_wasm::TArr<OpGlobalGet<UTerm>, TTerm>>>, TTerm>>, TTerm, NoStart>, WasmHostEnv<TTerm, TTerm, TTerm, TTerm>>: Eval` is not satisfied
   --> tests/ui/wasm_wat/unsupported_global_init_expr.rs:31:24
    |
 31 |     let _: PhantomData<Bad>;
    |                        ^^^ unsatisfied trait bound
    |
-   = help: the trait `Eval` is not implemented for `InstantiateModule<WasmModule<TTerm, WasmFuncSpace<TTerm, TTerm>, WasmMemoryDecl<UTerm, NoLimit, TTerm>, TTerm, typelude_wasm::TArr<WasmGlobalDecl<GlobalMut, InitI32Const<UInt<UTerm, B1>>>, typelude_wasm::TArr<WasmGlobalDecl<GlobalConst, InitGlobalGet<UTerm>>, TTerm>>, TTerm, NoStart>, WasmHostEnv<TTerm, TTerm, TTerm, TTerm>>`
+   = help: the trait `Eval` is not implemented for `InstantiateModule<WasmModule<TTerm, WasmFuncSpace<TTerm, TTerm>, WasmModuleMemory<NoMemoryDecl, TTerm>, WasmModuleTables<TTerm, TTerm>, typelude_wasm::TArr<WasmGlobalDecl<GlobalMut, WasmConstExpr<typelude_wasm::TArr<OpI32Const<UInt<UTerm, B1>>, TTerm>>>, typelude_wasm::TArr<WasmGlobalDecl<GlobalConst, WasmConstExpr<typelude_wasm::TArr<OpGlobalGet<UTerm>, TTerm>>>, TTerm>>, TTerm, NoStart>, WasmHostEnv<TTerm, TTerm, TTerm, TTerm>>`
 help: the trait `Eval` is implemented for `InstantiateModule<Module, Env>`
   --> $WORKSPACE/crates/typelude-wasm/src/run.rs
    |

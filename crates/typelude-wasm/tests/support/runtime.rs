@@ -19,6 +19,14 @@ pub fn run_wat_snapshot(
     run_wat_snapshot_with_env(module_wat, export, args, &RuntimeEnv::default())
 }
 
+pub fn run_wat_i64_result(
+    module_wat: &str,
+    export: &str,
+    args: &[i32],
+) -> Result<i64, wasmi::Error> {
+    run_wat_i64_result_with_env(module_wat, export, args, &RuntimeEnv::default())
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct RuntimeGlobalImport {
     pub module: &'static str,
@@ -123,6 +131,61 @@ pub fn run_wat_snapshot_with_env(
         memory_prefix,
         exported_global_i32,
     })
+}
+
+pub fn run_wat_i64_result_with_env(
+    module_wat: &str,
+    export: &str,
+    args: &[i32],
+    env: &RuntimeEnv,
+) -> Result<i64, wasmi::Error> {
+    let engine = Engine::default();
+    let module = Module::new(&engine, module_wat)?;
+    let mut store = Store::new(&engine, ());
+    let mut linker = Linker::new(&engine);
+
+    if let Some((module_name, field_name)) = env.add_func {
+        linker.func_wrap(module_name, field_name, |lhs: i32, rhs: i32| -> i32 { lhs + rhs })?;
+    }
+    if let Some(global_import) = env.global {
+        let global = Global::new(
+            &mut store,
+            Val::I32(global_import.value),
+            if global_import.mutable {
+                Mutability::Var
+            } else {
+                Mutability::Const
+            },
+        );
+        linker.define(global_import.module, global_import.field, global)?;
+    }
+    if let Some(memory_import) = env.memory {
+        let memory =
+            Memory::new(&mut store, MemoryType::new(memory_import.min, memory_import.max))?;
+        linker.define(memory_import.module, memory_import.field, memory)?;
+    }
+    if let Some(table_import) = env.table {
+        let table = Table::new(
+            &mut store,
+            TableType::new(ValType::FuncRef, table_import.min, table_import.max),
+            Val::default(ValType::FuncRef),
+        )?;
+        linker.define(table_import.module, table_import.field, table)?;
+    }
+
+    let instance = linker.instantiate_and_start(&mut store, &module)?;
+
+    match args {
+        [] => instance.get_typed_func::<(), i64>(&store, export)?.call(&mut store, ()),
+        [arg0] => instance.get_typed_func::<i32, i64>(&store, export)?.call(&mut store, *arg0),
+        [arg0, arg1] => instance
+            .get_typed_func::<(i32, i32), i64>(&store, export)?
+            .call(&mut store, (*arg0, *arg1)),
+        [arg0, arg1, arg2] => instance
+            .get_typed_func::<(i32, i32, i32), i64>(&store, export)?
+            .call(&mut store, (*arg0, *arg1, *arg2)),
+        _ => panic!("run_wat_i64_result supports up to 3 i32 args"),
+    }
 }
 
 fn snapshot_memory(memory: Memory, store: &Store<()>) -> (Option<u32>, Vec<u8>) {

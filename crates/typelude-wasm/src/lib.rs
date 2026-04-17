@@ -14,6 +14,28 @@
 
 #![recursion_limit = "65536"]
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! wasm_uint {
+    ($value:literal) => {
+        <::typelude::typenum::Const<$value> as ::typelude::typenum::ToUInt>::Output
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! wasm_u64_uint {
+    (18446744073709551615) => {
+        ::typelude::typenum::operator_aliases::Or<
+            <::typelude::typenum::Const<9223372036854775808> as ::typelude::typenum::ToUInt>::Output,
+            <::typelude::typenum::Const<9223372036854775807> as ::typelude::typenum::ToUInt>::Output
+        >
+    };
+    ($value:literal) => {
+        $crate::wasm_uint!($value)
+    };
+}
+
 mod frame;
 mod func;
 mod helpers;
@@ -62,3 +84,18 @@ pub use typelude_str;
 pub use value::{
     WasmF32, WasmF32Type, WasmF64, WasmF64Type, WasmI32, WasmI32Type, WasmI64, WasmI64Type,
 };
+
+#[doc(hidden)]
+pub mod twat_prelude {
+    pub use crate::{wasm_u64_uint, wasm_uint};
+    pub use crate::opcode::*;
+    pub use crate::{
+        ExportFunc, ExportGlobal, ExportMemory, ExportTable, GlobalConst, GlobalMut, ImportFunc,
+        ImportGlobal, ImportMemory, ImportTable, NoLimit, NoMemoryDecl, NoStart, StartFunc,
+        WasmConstExpr, WasmDataSegment, WasmElemSegment, WasmExport, WasmFunc, WasmFuncSpace,
+        WasmFuncType, WasmGlobalDecl, WasmImport, WasmMemArg, WasmMemoryDecl, WasmModuleMemory,
+        WasmModuleTables, WasmTableDecl, WasmF32Type, WasmF64Type, WasmI32Type, WasmI64Type,
+    };
+    pub use typelude_col::{tarr, TArr, TTerm};
+    pub use typelude_str::tstr;
+}

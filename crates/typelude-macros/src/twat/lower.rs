@@ -9,9 +9,10 @@ use super::ir::{
 };
 
 pub fn lower_func_space(module: &ModuleDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let types = lower_types(&module.types)?;
     let funcs = lower_functions(&module.functions)?;
-    Ok(quote!(::typelude::wasm::WasmFuncSpace<#types, #funcs>))
+    Ok(quote!(#p::WasmFuncSpace<#types, #funcs>))
 }
 
 pub fn lower_imports(imports: &[ImportDef]) -> syn::Result<TokenStream> {
@@ -23,24 +24,25 @@ pub fn lower_imports(imports: &[ImportDef]) -> syn::Result<TokenStream> {
 }
 
 pub fn lower_import(import: &ImportDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let module_name = LitStr::new(&import.module, Span::call_site());
     let field_name = LitStr::new(&import.field, Span::call_site());
     let kind = match &import.kind {
         ImportKindDef::Func(sig) => {
             let sig = lower_func_type(sig)?;
-            quote!(::typelude::wasm::ImportFunc<#sig>)
+            quote!(#p::ImportFunc<#sig>)
         },
         ImportKindDef::Global {
             mutable,
             value_type,
         } => {
             let mutability = if *mutable {
-                quote!(::typelude::wasm::GlobalMut)
+                quote!(#p::GlobalMut)
             } else {
-                quote!(::typelude::wasm::GlobalConst)
+                quote!(#p::GlobalConst)
             };
             let value_type = lower_value_type(*value_type);
-            quote!(::typelude::wasm::ImportGlobal<#mutability, #value_type>)
+            quote!(#p::ImportGlobal<#mutability, #value_type>)
         },
         ImportKindDef::Memory {
             min,
@@ -48,7 +50,7 @@ pub fn lower_import(import: &ImportDef) -> syn::Result<TokenStream> {
         } => {
             let min = uint_type(*min as usize)?;
             let max = lower_limit(*max)?;
-            quote!(::typelude::wasm::ImportMemory<#min, #max>)
+            quote!(#p::ImportMemory<#min, #max>)
         },
         ImportKindDef::Table {
             min,
@@ -56,13 +58,13 @@ pub fn lower_import(import: &ImportDef) -> syn::Result<TokenStream> {
         } => {
             let min = uint_type(*min as usize)?;
             let max = lower_limit(*max)?;
-            quote!(::typelude::wasm::ImportTable<#min, #max>)
+            quote!(#p::ImportTable<#min, #max>)
         },
     };
     Ok(quote!(
-        ::typelude::wasm::WasmImport<
-            ::typelude::wasm::typelude_str::tstr!(#module_name),
-            ::typelude::wasm::typelude_str::tstr!(#field_name),
+        #p::WasmImport<
+            #p::tstr!(#module_name),
+            #p::tstr!(#field_name),
             #kind
         >
     ))
@@ -85,16 +87,18 @@ pub fn lower_functions(functions: &[FunctionDef]) -> syn::Result<TokenStream> {
 }
 
 pub fn lower_function(function: &FunctionDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let program = lower_instrs(&function.body)?;
     let func_type = lower_func_type(&function.sig)?;
     let local_decls = lower_val_types(&function.local_decls)?;
-    Ok(quote!(::typelude::wasm::WasmFunc<#func_type, #local_decls, #program>))
+    Ok(quote!(#p::WasmFunc<#func_type, #local_decls, #program>))
 }
 
 pub fn lower_func_type(sig: &FuncSig) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let params = lower_val_types(&sig.params)?;
     let results = lower_val_types(&sig.results)?;
-    Ok(quote!(::typelude::wasm::WasmFuncType<#params, #results>))
+    Ok(quote!(#p::WasmFuncType<#params, #results>))
 }
 
 pub fn lower_instrs(instructions: &[Instr]) -> syn::Result<TokenStream> {
@@ -106,88 +110,138 @@ pub fn lower_instrs(instructions: &[Instr]) -> syn::Result<TokenStream> {
 }
 
 pub fn lower_instr(instr: &Instr) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     Ok(match instr {
-        Instr::Drop => quote!(::typelude::wasm::opcode::OpDrop),
+        Instr::Drop => quote!(#p::OpDrop),
+        Instr::Nop => quote!(#p::OpNop),
+        Instr::Unreachable => quote!(#p::OpUnreachable),
         Instr::I32Const(value) => {
             let value = uint_type(*value as usize)?;
-            quote!(::typelude::wasm::opcode::OpI32Const<#value>)
+            quote!(#p::OpI32Const<#value>)
         },
         Instr::I64Const(value) => {
             let value = u64_type(*value)?;
-            quote!(::typelude::wasm::opcode::OpI64Const<#value>)
+            quote!(#p::OpI64Const<#value>)
         },
         Instr::LocalGet(index) => {
             let index = uint_type(*index as usize)?;
-            quote!(::typelude::wasm::opcode::OpLocalGet<#index>)
+            quote!(#p::OpLocalGet<#index>)
         },
         Instr::LocalSet(index) => {
             let index = uint_type(*index as usize)?;
-            quote!(::typelude::wasm::opcode::OpLocalSet<#index>)
+            quote!(#p::OpLocalSet<#index>)
         },
         Instr::LocalTee(index) => {
             let index = uint_type(*index as usize)?;
-            quote!(::typelude::wasm::opcode::OpLocalTee<#index>)
+            quote!(#p::OpLocalTee<#index>)
         },
         Instr::GlobalGet(index) => {
             let index = uint_type(*index as usize)?;
-            quote!(::typelude::wasm::opcode::OpGlobalGet<#index>)
+            quote!(#p::OpGlobalGet<#index>)
         },
         Instr::GlobalSet(index) => {
             let index = uint_type(*index as usize)?;
-            quote!(::typelude::wasm::opcode::OpGlobalSet<#index>)
+            quote!(#p::OpGlobalSet<#index>)
         },
-        Instr::I32Add => quote!(::typelude::wasm::opcode::OpI32Add),
-        Instr::I32Sub => quote!(::typelude::wasm::opcode::OpI32Sub),
-        Instr::I32Eqz => quote!(::typelude::wasm::opcode::OpI32Eqz),
-        Instr::I64Add => quote!(::typelude::wasm::opcode::OpI64Add),
-        Instr::I64Sub => quote!(::typelude::wasm::opcode::OpI64Sub),
-        Instr::I64Eqz => quote!(::typelude::wasm::opcode::OpI64Eqz),
-        Instr::I64Eq => quote!(::typelude::wasm::opcode::OpI64Eq),
-        Instr::I64Ne => quote!(::typelude::wasm::opcode::OpI64Ne),
-        Instr::I64LtS => quote!(::typelude::wasm::opcode::OpI64LtS),
-        Instr::I64LtU => quote!(::typelude::wasm::opcode::OpI64LtU),
-        Instr::I64GtS => quote!(::typelude::wasm::opcode::OpI64GtS),
-        Instr::I64GtU => quote!(::typelude::wasm::opcode::OpI64GtU),
-        Instr::I64LeS => quote!(::typelude::wasm::opcode::OpI64LeS),
-        Instr::I64LeU => quote!(::typelude::wasm::opcode::OpI64LeU),
-        Instr::I64GeS => quote!(::typelude::wasm::opcode::OpI64GeS),
-        Instr::I64GeU => quote!(::typelude::wasm::opcode::OpI64GeU),
-        Instr::I64And => quote!(::typelude::wasm::opcode::OpI64And),
-        Instr::I64Or => quote!(::typelude::wasm::opcode::OpI64Or),
-        Instr::I64Xor => quote!(::typelude::wasm::opcode::OpI64Xor),
-        Instr::I64Shl => quote!(::typelude::wasm::opcode::OpI64Shl),
-        Instr::I64ShrS => quote!(::typelude::wasm::opcode::OpI64ShrS),
-        Instr::I64ShrU => quote!(::typelude::wasm::opcode::OpI64ShrU),
-        Instr::I64Mul => quote!(::typelude::wasm::opcode::OpI64Mul),
-        Instr::I64DivS => quote!(::typelude::wasm::opcode::OpI64DivS),
-        Instr::I64DivU => quote!(::typelude::wasm::opcode::OpI64DivU),
-        Instr::I64RemS => quote!(::typelude::wasm::opcode::OpI64RemS),
-        Instr::I64RemU => quote!(::typelude::wasm::opcode::OpI64RemU),
+        Instr::I32Add => quote!(#p::OpI32Add),
+        Instr::I32And => quote!(#p::OpI32And),
+        Instr::I32Clz => quote!(#p::OpI32Clz),
+        Instr::I32Sub => quote!(#p::OpI32Sub),
+        Instr::I32Ctz => quote!(#p::OpI32Ctz),
+        Instr::I32DivS => quote!(#p::OpI32DivS),
+        Instr::I32DivU => quote!(#p::OpI32DivU),
+        Instr::I32Eq => quote!(#p::OpI32Eq),
+        Instr::I32Eqz => quote!(#p::OpI32Eqz),
+        Instr::I32Extend8S => quote!(#p::OpI32Extend8S),
+        Instr::I32Extend16S => quote!(#p::OpI32Extend16S),
+        Instr::I32GeS => quote!(#p::OpI32GeS),
+        Instr::I32GeU => quote!(#p::OpI32GeU),
+        Instr::I32GtS => quote!(#p::OpI32GtS),
+        Instr::I32GtU => quote!(#p::OpI32GtU),
+        Instr::I32LeS => quote!(#p::OpI32LeS),
+        Instr::I32LeU => quote!(#p::OpI32LeU),
+        Instr::I32LtS => quote!(#p::OpI32LtS),
+        Instr::I32LtU => quote!(#p::OpI32LtU),
+        Instr::I32Mul => quote!(#p::OpI32Mul),
+        Instr::I32Ne => quote!(#p::OpI32Ne),
+        Instr::I32Or => quote!(#p::OpI32Or),
+        Instr::I32Popcnt => quote!(#p::OpI32Popcnt),
+        Instr::I32RemS => quote!(#p::OpI32RemS),
+        Instr::I32RemU => quote!(#p::OpI32RemU),
+        Instr::I32Rotl => quote!(#p::OpI32Rotl),
+        Instr::I32Rotr => quote!(#p::OpI32Rotr),
+        Instr::I32Shl => quote!(#p::OpI32Shl),
+        Instr::I32ShrS => quote!(#p::OpI32ShrS),
+        Instr::I32ShrU => quote!(#p::OpI32ShrU),
+        Instr::I32WrapI64 => quote!(#p::OpI32WrapI64),
+        Instr::I32Xor => quote!(#p::OpI32Xor),
+        Instr::F32ReinterpretI32 => quote!(#p::OpF32ReinterpretI32),
+        Instr::F64ReinterpretI64 => quote!(#p::OpF64ReinterpretI64),
+        Instr::I64Add => quote!(#p::OpI64Add),
+        Instr::I64And => quote!(#p::OpI64And),
+        Instr::I64Clz => quote!(#p::OpI64Clz),
+        Instr::I64Sub => quote!(#p::OpI64Sub),
+        Instr::I64Ctz => quote!(#p::OpI64Ctz),
+        Instr::I64Eqz => quote!(#p::OpI64Eqz),
+        Instr::I64Eq => quote!(#p::OpI64Eq),
+        Instr::I64ExtendI32S => quote!(#p::OpI64ExtendI32S),
+        Instr::I64ExtendI32U => quote!(#p::OpI64ExtendI32U),
+        Instr::I64Ne => quote!(#p::OpI64Ne),
+        Instr::I64LtS => quote!(#p::OpI64LtS),
+        Instr::I64LtU => quote!(#p::OpI64LtU),
+        Instr::I64GtS => quote!(#p::OpI64GtS),
+        Instr::I64GtU => quote!(#p::OpI64GtU),
+        Instr::I64LeS => quote!(#p::OpI64LeS),
+        Instr::I64LeU => quote!(#p::OpI64LeU),
+        Instr::I64GeS => quote!(#p::OpI64GeS),
+        Instr::I64GeU => quote!(#p::OpI64GeU),
+        Instr::I64Or => quote!(#p::OpI64Or),
+        Instr::I64Popcnt => quote!(#p::OpI64Popcnt),
+        Instr::I64Xor => quote!(#p::OpI64Xor),
+        Instr::I64Shl => quote!(#p::OpI64Shl),
+        Instr::I64ShrS => quote!(#p::OpI64ShrS),
+        Instr::I64ShrU => quote!(#p::OpI64ShrU),
+        Instr::I64Rotl => quote!(#p::OpI64Rotl),
+        Instr::I64Rotr => quote!(#p::OpI64Rotr),
+        Instr::I64Mul => quote!(#p::OpI64Mul),
+        Instr::I64DivS => quote!(#p::OpI64DivS),
+        Instr::I64DivU => quote!(#p::OpI64DivU),
+        Instr::I64RemS => quote!(#p::OpI64RemS),
+        Instr::I64RemU => quote!(#p::OpI64RemU),
+        Instr::I64ReinterpretF64 => quote!(#p::OpI64ReinterpretF64),
         Instr::Block(body) => {
             let body = lower_instrs(body)?;
-            quote!(::typelude::wasm::opcode::OpBlock<#body>)
+            quote!(#p::OpBlock<#body>)
         },
         Instr::Loop(body) => {
             let body = lower_instrs(body)?;
-            quote!(::typelude::wasm::opcode::OpLoop<#body>)
+            quote!(#p::OpLoop<#body>)
         },
         Instr::Br(depth) => {
             let depth = uint_type(*depth as usize)?;
-            quote!(::typelude::wasm::opcode::OpBr<#depth>)
+            quote!(#p::OpBr<#depth>)
         },
         Instr::BrIf(depth) => {
             let depth = uint_type(*depth as usize)?;
-            quote!(::typelude::wasm::opcode::OpBrIf<#depth>)
+            quote!(#p::OpBrIf<#depth>)
+        },
+        Instr::BrTable {
+            targets,
+            default,
+        } => {
+            let targets = lower_u32_list(targets)?;
+            let default = uint_type(*default as usize)?;
+            quote!(#p::OpBrTable<#targets, #default>)
         },
         Instr::If(then_body, else_body) => {
             let then_body = lower_instrs(then_body)?;
             let else_body = lower_instrs(else_body)?;
-            quote!(::typelude::wasm::opcode::OpIf<#then_body, #else_body>)
+            quote!(#p::OpIf<#then_body, #else_body>)
         },
-        Instr::Select => quote!(::typelude::wasm::opcode::OpSelect),
+        Instr::Select => quote!(#p::OpSelect),
         Instr::Call(index) => {
             let index = uint_type(*index as usize)?;
-            quote!(::typelude::wasm::opcode::OpCall<#index>)
+            quote!(#p::OpCall<#index>)
         },
         Instr::CallIndirect {
             type_index,
@@ -195,40 +249,92 @@ pub fn lower_instr(instr: &Instr) -> syn::Result<TokenStream> {
         } => {
             let type_index = uint_type(*type_index as usize)?;
             let table_index = uint_type(*table_index as usize)?;
-            quote!(::typelude::wasm::opcode::OpCallIndirect<#type_index, #table_index>)
+            quote!(#p::OpCallIndirect<#type_index, #table_index>)
         },
-        Instr::Return => quote!(::typelude::wasm::opcode::OpReturn),
+        Instr::Return => quote!(#p::OpReturn),
         Instr::I32Load(memarg) => {
             let memarg = lower_memarg(*memarg)?;
-            quote!(::typelude::wasm::opcode::OpI32Load<#memarg>)
+            quote!(#p::OpI32Load<#memarg>)
         },
         Instr::I32Store(memarg) => {
             let memarg = lower_memarg(*memarg)?;
-            quote!(::typelude::wasm::opcode::OpI32Store<#memarg>)
+            quote!(#p::OpI32Store<#memarg>)
+        },
+        Instr::I32Load8S(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI32Load8S<#memarg>)
         },
         Instr::I32Load8U(memarg) => {
             let memarg = lower_memarg(*memarg)?;
-            quote!(::typelude::wasm::opcode::OpI32Load8U<#memarg>)
+            quote!(#p::OpI32Load8U<#memarg>)
+        },
+        Instr::I32Load16S(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI32Load16S<#memarg>)
+        },
+        Instr::I32Load16U(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI32Load16U<#memarg>)
         },
         Instr::I32Store8(memarg) => {
             let memarg = lower_memarg(*memarg)?;
-            quote!(::typelude::wasm::opcode::OpI32Store8<#memarg>)
+            quote!(#p::OpI32Store8<#memarg>)
+        },
+        Instr::I32Store16(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI32Store16<#memarg>)
+        },
+        Instr::I64Load8S(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI64Load8S<#memarg>)
+        },
+        Instr::I64Load8U(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI64Load8U<#memarg>)
+        },
+        Instr::I64Load16S(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI64Load16S<#memarg>)
+        },
+        Instr::I64Load16U(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI64Load16U<#memarg>)
+        },
+        Instr::I64Load32S(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI64Load32S<#memarg>)
+        },
+        Instr::I64Load32U(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI64Load32U<#memarg>)
         },
         Instr::I64Load(memarg) => {
             let memarg = lower_memarg(*memarg)?;
-            quote!(::typelude::wasm::opcode::OpI64Load<#memarg>)
+            quote!(#p::OpI64Load<#memarg>)
+        },
+        Instr::I64Store8(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI64Store8<#memarg>)
+        },
+        Instr::I64Store16(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI64Store16<#memarg>)
+        },
+        Instr::I64Store32(memarg) => {
+            let memarg = lower_memarg(*memarg)?;
+            quote!(#p::OpI64Store32<#memarg>)
         },
         Instr::I64Store(memarg) => {
             let memarg = lower_memarg(*memarg)?;
-            quote!(::typelude::wasm::opcode::OpI64Store<#memarg>)
+            quote!(#p::OpI64Store<#memarg>)
         },
         Instr::MemorySize(memory_index) => {
             let memory_index = uint_type(*memory_index as usize)?;
-            quote!(::typelude::wasm::opcode::OpMemorySize<#memory_index>)
+            quote!(#p::OpMemorySize<#memory_index>)
         },
         Instr::MemoryGrow(memory_index) => {
             let memory_index = uint_type(*memory_index as usize)?;
-            quote!(::typelude::wasm::opcode::OpMemoryGrow<#memory_index>)
+            quote!(#p::OpMemoryGrow<#memory_index>)
         },
     })
 }
@@ -242,9 +348,12 @@ pub fn lower_val_types(values: &[Val]) -> syn::Result<TokenStream> {
 }
 
 pub fn lower_value_type(val: Val) -> TokenStream {
+    let p = quote!(::typelude::wasm::twat_prelude);
     match val {
-        Val::I32 => quote!(::typelude::wasm::WasmI32Type),
-        Val::I64 => quote!(::typelude::wasm::WasmI64Type),
+        Val::I32 => quote!(#p::WasmI32Type),
+        Val::I64 => quote!(#p::WasmI64Type),
+        Val::F32 => quote!(#p::WasmF32Type),
+        Val::F64 => quote!(#p::WasmF64Type),
     }
 }
 
@@ -252,24 +361,15 @@ pub fn lower_memory_section(
     memory: Option<&MemoryDef>,
     data_segments: &[DataSegmentDef],
 ) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let data_segments = lower_data_segments(data_segments)?;
     match memory {
         Some(memory) => {
             let min = uint_type(memory.min as usize)?;
             let max = lower_limit(memory.max)?;
-            Ok(quote!(
-                ::typelude::wasm::WasmModuleMemory<
-                    ::typelude::wasm::WasmMemoryDecl<#min, #max>,
-                    #data_segments
-                >
-            ))
+            Ok(quote!(#p::WasmModuleMemory<#p::WasmMemoryDecl<#min, #max>, #data_segments>))
         },
-        None => Ok(quote!(
-            ::typelude::wasm::WasmModuleMemory<
-                ::typelude::wasm::NoMemoryDecl,
-                #data_segments
-            >
-        )),
+        None => Ok(quote!(#p::WasmModuleMemory<#p::NoMemoryDecl, #data_segments>)),
     }
 }
 
@@ -282,18 +382,20 @@ pub fn lower_data_segments(data_segments: &[DataSegmentDef]) -> syn::Result<Toke
 }
 
 pub fn lower_data_segment(data_segment: &DataSegmentDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let offset = lower_const_expr(&data_segment.offset)?;
     let bytes = lower_bytes(&data_segment.bytes)?;
-    Ok(quote!(::typelude::wasm::WasmDataSegment<#offset, #bytes>))
+    Ok(quote!(#p::WasmDataSegment<#offset, #bytes>))
 }
 
 pub fn lower_tables_section(
     tables: &[TableDef],
     elem_segments: &[ElemSegmentDef],
 ) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let tables = lower_tables(tables)?;
     let elem_segments = lower_elem_segments(elem_segments)?;
-    Ok(quote!(::typelude::wasm::WasmModuleTables<#tables, #elem_segments>))
+    Ok(quote!(#p::WasmModuleTables<#tables, #elem_segments>))
 }
 
 pub fn lower_tables(tables: &[TableDef]) -> syn::Result<TokenStream> {
@@ -305,9 +407,10 @@ pub fn lower_tables(tables: &[TableDef]) -> syn::Result<TokenStream> {
 }
 
 pub fn lower_table(table: &TableDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let min = uint_type(table.min as usize)?;
     let max = lower_limit(table.max)?;
-    Ok(quote!(::typelude::wasm::WasmTableDecl<#min, #max>))
+    Ok(quote!(#p::WasmTableDecl<#min, #max>))
 }
 
 pub fn lower_elem_segments(elem_segments: &[ElemSegmentDef]) -> syn::Result<TokenStream> {
@@ -319,12 +422,11 @@ pub fn lower_elem_segments(elem_segments: &[ElemSegmentDef]) -> syn::Result<Toke
 }
 
 pub fn lower_elem_segment(elem_segment: &ElemSegmentDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let table_index = uint_type(elem_segment.table_index as usize)?;
     let offset = lower_const_expr(&elem_segment.offset)?;
     let func_indices = lower_u32_list(&elem_segment.func_indices)?;
-    Ok(quote!(
-        ::typelude::wasm::WasmElemSegment<#table_index, #offset, #func_indices>
-    ))
+    Ok(quote!(#p::WasmElemSegment<#table_index, #offset, #func_indices>))
 }
 
 pub fn lower_globals(globals: &[GlobalDef]) -> syn::Result<TokenStream> {
@@ -336,35 +438,37 @@ pub fn lower_globals(globals: &[GlobalDef]) -> syn::Result<TokenStream> {
 }
 
 pub fn lower_global(global: &GlobalDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let mutability = if global.mutable {
-        quote!(::typelude::wasm::GlobalMut)
+        quote!(#p::GlobalMut)
     } else {
-        quote!(::typelude::wasm::GlobalConst)
+        quote!(#p::GlobalConst)
     };
     let init = lower_const_expr(&global.init)?;
-    Ok(quote!(::typelude::wasm::WasmGlobalDecl<#mutability, #init>))
+    Ok(quote!(#p::WasmGlobalDecl<#mutability, #init>))
 }
 
 pub fn lower_const_expr(expr: &ConstExprDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let mut lowered = Vec::with_capacity(expr.instrs.len());
     for instr in &expr.instrs {
         lowered.push(match instr {
             ConstInstrDef::I32Const(value) => {
                 let value = uint_type(*value as usize)?;
-                quote!(::typelude::wasm::opcode::OpI32Const<#value>)
+                quote!(#p::OpI32Const<#value>)
             },
             ConstInstrDef::I64Const(value) => {
                 let value = u64_type(*value)?;
-                quote!(::typelude::wasm::opcode::OpI64Const<#value>)
+                quote!(#p::OpI64Const<#value>)
             },
             ConstInstrDef::GlobalGet(index) => {
                 let index = uint_type(*index as usize)?;
-                quote!(::typelude::wasm::opcode::OpGlobalGet<#index>)
+                quote!(#p::OpGlobalGet<#index>)
             },
         });
     }
     let instrs = lower_list(lowered);
-    Ok(quote!(::typelude::wasm::WasmConstExpr<#instrs>))
+    Ok(quote!(#p::WasmConstExpr<#instrs>))
 }
 
 pub fn lower_exports(exports: &[ExportDef]) -> syn::Result<TokenStream> {
@@ -376,34 +480,34 @@ pub fn lower_exports(exports: &[ExportDef]) -> syn::Result<TokenStream> {
 }
 
 pub fn lower_export(export: &ExportDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let name = LitStr::new(&export.name, Span::call_site());
     let kind = match export.kind {
         ExportKind::Func(index) => {
             let index = uint_type(index as usize)?;
-            quote!(::typelude::wasm::ExportFunc<#index>)
+            quote!(#p::ExportFunc<#index>)
         },
         ExportKind::Global(index) => {
             let index = uint_type(index as usize)?;
-            quote!(::typelude::wasm::ExportGlobal<#index>)
+            quote!(#p::ExportGlobal<#index>)
         },
-        ExportKind::Memory => quote!(::typelude::wasm::ExportMemory),
+        ExportKind::Memory => quote!(#p::ExportMemory),
         ExportKind::Table(index) => {
             let index = uint_type(index as usize)?;
-            quote!(::typelude::wasm::ExportTable<#index>)
+            quote!(#p::ExportTable<#index>)
         },
     };
-    Ok(quote!(
-        ::typelude::wasm::WasmExport<::typelude::wasm::typelude_str::tstr!(#name), #kind>
-    ))
+    Ok(quote!(#p::WasmExport<#p::tstr!(#name), #kind>))
 }
 
 pub fn lower_start(start: Option<u32>) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     match start {
         Some(index) => {
             let index = uint_type(index as usize)?;
-            Ok(quote!(::typelude::wasm::StartFunc<#index>))
+            Ok(quote!(#p::StartFunc<#index>))
         },
-        None => Ok(quote!(::typelude::wasm::NoStart)),
+        None => Ok(quote!(#p::NoStart)),
     }
 }
 
@@ -422,45 +526,38 @@ pub fn lower_u32_list(values: &[u32]) -> syn::Result<TokenStream> {
 pub fn lower_limit(limit: Option<u32>) -> syn::Result<TokenStream> {
     match limit {
         Some(limit) => uint_type(limit as usize),
-        None => Ok(quote!(::typelude::wasm::NoLimit)),
+        None => Ok(quote!(::typelude::wasm::twat_prelude::NoLimit)),
     }
 }
 
 pub fn lower_memarg(memarg: MemArgDef) -> syn::Result<TokenStream> {
+    let p = quote!(::typelude::wasm::twat_prelude);
     let memory_index = uint_type(memarg.memory_index as usize)?;
     let align = uint_type(usize::from(memarg.align))?;
     let offset = uint_type(memarg.offset as usize)?;
-    Ok(quote!(::typelude::wasm::WasmMemArg<#memory_index, #align, #offset>))
+    Ok(quote!(#p::WasmMemArg<#memory_index, #align, #offset>))
 }
 
 pub fn lower_list(items: Vec<TokenStream>) -> TokenStream {
-    items.into_iter().rev().fold(
-        quote!(::typelude::wasm::TTerm),
-        |tail, head| quote!(::typelude::wasm::TArr<#head, #tail>),
-    )
+    if items.is_empty() {
+        quote!(::typelude::wasm::twat_prelude::TTerm)
+    } else {
+        quote!(::typelude::wasm::twat_prelude::tarr![#(#items),*])
+    }
 }
 
 fn u64_type(value: u64) -> syn::Result<TokenStream> {
-    if value == u64::MAX {
-        return Ok(quote!(
-            ::typelude::typenum::operator_aliases::Or<
-                <::typelude::typenum::Const<9223372036854775808> as ::typelude::typenum::ToUInt>::Output,
-                <::typelude::typenum::Const<9223372036854775807> as ::typelude::typenum::ToUInt>::Output
-            >
-        ));
-    }
-
     let value = usize::try_from(value).map_err(|_| {
         Error::new(
             Span::call_site(),
             format!("value {value} exceeds usize-backed typenum::Const support"),
         )
     })?;
-    let literal = syn::LitInt::new(&format!("{value}usize"), Span::call_site());
-    Ok(quote!(<::typelude::typenum::Const<#literal> as ::typelude::typenum::ToUInt>::Output))
+    let literal = syn::LitInt::new(&value.to_string(), Span::call_site());
+    Ok(quote!(::typelude::wasm::twat_prelude::wasm_u64_uint!(#literal)))
 }
 
 fn uint_type(value: usize) -> syn::Result<TokenStream> {
     let lit = syn::LitInt::new(&value.to_string(), Span::call_site());
-    Ok(quote!(<::typelude::typenum::Const<#lit> as ::typelude::typenum::ToUInt>::Output))
+    Ok(quote!(::typelude::wasm::twat_prelude::wasm_uint!(#lit)))
 }

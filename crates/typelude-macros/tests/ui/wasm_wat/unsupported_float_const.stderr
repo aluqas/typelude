@@ -1,14 +1,14 @@
-error: unsupported type: multi-value results are not supported
-  --> tests/ui/wasm_wat/multi_value_result.rs:16:13
+error: unsupported opcode: unknown opcode
+  --> tests/ui/wasm_wat/unsupported_float_const.rs:16:13
    |
 16 |   type _Bad = twat! {
    |  _____________^
 17 | |     module: r#"
 18 | |         (module
-19 | |           (func (export "main") (result i32 i32)
-...  |
-22 | |     "#,
-23 | | };
+19 | |           (func (export "main") (result f32)
+20 | |             f32.const 1.0))
+21 | |     "#,
+22 | | };
    | |_^
    |
    = note: this error originates in the macro `twat` (in Nightly builds, run with -Z macro-backtrace for more info)

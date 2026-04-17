@@ -1,7 +1,7 @@
-error: unsupported global init expr: expected i32.const or global.get, found unknown opcode
+error: unsupported global init expr: expected i32.const, i64.const or global.get, found unknown opcode
   --> tests/ui/wasm_wat/unsupported_global_type.rs:16:13
    |
-16 |   type _Bad = wasm_wat! {
+16 |   type _Bad = twat! {
    |  _____________^
 17 | |     module: r#"
 18 | |         (module
@@ -10,4 +10,4 @@ error: unsupported global init expr: expected i32.const or global.get, found unk
 21 | | };
    | |_^
    |
-   = note: this error originates in the macro `wasm_wat` (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `twat` (in Nightly builds, run with -Z macro-backtrace for more info)
