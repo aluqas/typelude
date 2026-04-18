@@ -18,7 +18,7 @@
 #[macro_export]
 macro_rules! wasm_uint {
     ($value:literal) => {
-        <::typelude::typenum::Const<$value> as ::typelude::typenum::ToUInt>::Output
+        <$crate::typenum::Const<$value> as $crate::typenum::ToUInt>::Output
     };
 }
 
@@ -26,13 +26,92 @@ macro_rules! wasm_uint {
 #[macro_export]
 macro_rules! wasm_u64_uint {
     (18446744073709551615) => {
-        ::typelude::typenum::operator_aliases::Or<
-            <::typelude::typenum::Const<9223372036854775808> as ::typelude::typenum::ToUInt>::Output,
-            <::typelude::typenum::Const<9223372036854775807> as ::typelude::typenum::ToUInt>::Output
+        $crate::typenum::operator_aliases::Or<
+            <$crate::typenum::Const<9223372036854775808> as $crate::typenum::ToUInt>::Output,
+            <$crate::typenum::Const<9223372036854775807> as $crate::typenum::ToUInt>::Output
         >
     };
     ($value:literal) => {
         $crate::wasm_uint!($value)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! wasm_u32_bits_le {
+    ($b0:literal, $b1:literal, $b2:literal, $b3:literal) => {
+        $crate::typenum::operator_aliases::Or<
+            $crate::typenum::operator_aliases::Or<
+                $crate::wasm_uint!($b0),
+                $crate::typenum::operator_aliases::Shleft<
+                    $crate::wasm_uint!($b1),
+                    $crate::wasm_uint!(8),
+                >,
+            >,
+            $crate::typenum::operator_aliases::Or<
+                $crate::typenum::operator_aliases::Shleft<
+                    $crate::wasm_uint!($b2),
+                    $crate::wasm_uint!(16),
+                >,
+                $crate::typenum::operator_aliases::Shleft<
+                    $crate::wasm_uint!($b3),
+                    $crate::wasm_uint!(24),
+                >,
+            >,
+        >
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! wasm_u64_bits_le {
+    (
+        $b0:literal, $b1:literal, $b2:literal, $b3:literal,
+        $b4:literal, $b5:literal, $b6:literal, $b7:literal
+    ) => {
+        $crate::typenum::operator_aliases::Or<
+            $crate::typenum::operator_aliases::Or<
+                $crate::typenum::operator_aliases::Or<
+                    $crate::wasm_uint!($b0),
+                    $crate::typenum::operator_aliases::Shleft<
+                        $crate::wasm_uint!($b1),
+                        $crate::wasm_uint!(8),
+                    >,
+                >,
+                $crate::typenum::operator_aliases::Or<
+                    $crate::typenum::operator_aliases::Shleft<
+                        $crate::wasm_uint!($b2),
+                        $crate::wasm_uint!(16),
+                    >,
+                    $crate::typenum::operator_aliases::Shleft<
+                        $crate::wasm_uint!($b3),
+                        $crate::wasm_uint!(24),
+                    >,
+                >,
+            >,
+            $crate::typenum::operator_aliases::Or<
+                $crate::typenum::operator_aliases::Or<
+                    $crate::typenum::operator_aliases::Shleft<
+                        $crate::wasm_uint!($b4),
+                        $crate::wasm_uint!(32),
+                    >,
+                    $crate::typenum::operator_aliases::Shleft<
+                        $crate::wasm_uint!($b5),
+                        $crate::wasm_uint!(40),
+                    >,
+                >,
+                $crate::typenum::operator_aliases::Or<
+                    $crate::typenum::operator_aliases::Shleft<
+                        $crate::wasm_uint!($b6),
+                        $crate::wasm_uint!(48),
+                    >,
+                    $crate::typenum::operator_aliases::Shleft<
+                        $crate::wasm_uint!($b7),
+                        $crate::wasm_uint!(56),
+                    >,
+                >,
+            >,
+        >
     };
 }
 
@@ -44,8 +123,6 @@ mod module;
 pub mod opcode;
 mod run;
 mod state;
-#[cfg(test)]
-mod tests;
 mod value;
 
 pub use frame::ReturnFrame;
@@ -69,10 +146,13 @@ pub use module::{
     WasmResolvedModule, WasmTableDecl,
 };
 pub use run::{
-    EmptyHostEnv, EmptyState, InstantiateModule, InvokeExport, InvokeExportWithEnv, InvokeFunc,
-    InvokeFuncWithEnv, ModuleProgramRun, Run, RunWasm, StateBranches, StateExportGlobal,
-    StateExportMemory, StateExportTable, StateGlobals, StateLocals, StateMemory, StateProgram,
-    StateStack, StateStore, StateTables,
+    CheckedStep, EmptyHostEnv, EmptyState, InstantiateModule, InvokeExport, InvokeExportChecked,
+    InvokeExportCheckedWithEnv, InvokeExportWithEnv, InvokeFunc, InvokeFuncChecked,
+    InvokeFuncCheckedWithEnv, InvokeFuncWithEnv, ModuleProgramRun, ModuleProgramRunChecked, Run,
+    RunChecked, RunCheckedWasm, RunWasm, StateBranches, StateExportGlobal, StateExportMemory,
+    StateExportTable, StateGlobals, StateLocals, StateMemory, StateProgram, StateStack,
+    StateStore, StateTables, TrapCallIndirectNull, TrapCallIndirectTableOob,
+    TrapCallIndirectTypeMismatch, TrapMemoryOob, TrapUnreachable, WasmDone, WasmTrap,
 };
 #[doc(hidden)]
 pub use state::MemoryCell;
@@ -81,21 +161,22 @@ pub use state::{NullFuncRef, TableEntry, WasmGlobal, WasmStore, WasmTable};
 pub use state::{WasmMemory, WasmState};
 pub use typelude_col::{TArr, TTerm};
 pub use typelude_str;
+pub use typenum;
 pub use value::{
     WasmF32, WasmF32Type, WasmF64, WasmF64Type, WasmI32, WasmI32Type, WasmI64, WasmI64Type,
 };
 
 #[doc(hidden)]
 pub mod twat_prelude {
-    pub use crate::{wasm_u64_uint, wasm_uint};
-    pub use crate::opcode::*;
+    pub use typelude_col::{TArr, TTerm, tarr};
+    pub use typelude_str::tstr;
+
     pub use crate::{
         ExportFunc, ExportGlobal, ExportMemory, ExportTable, GlobalConst, GlobalMut, ImportFunc,
         ImportGlobal, ImportMemory, ImportTable, NoLimit, NoMemoryDecl, NoStart, StartFunc,
-        WasmConstExpr, WasmDataSegment, WasmElemSegment, WasmExport, WasmFunc, WasmFuncSpace,
-        WasmFuncType, WasmGlobalDecl, WasmImport, WasmMemArg, WasmMemoryDecl, WasmModuleMemory,
-        WasmModuleTables, WasmTableDecl, WasmF32Type, WasmF64Type, WasmI32Type, WasmI64Type,
+        WasmConstExpr, WasmDataSegment, WasmElemSegment, WasmExport, WasmF32Type, WasmF64Type,
+        WasmFunc, WasmFuncSpace, WasmFuncType, WasmGlobalDecl, WasmI32Type, WasmI64Type,
+        WasmImport, WasmMemArg, WasmMemoryDecl, WasmModuleMemory, WasmModuleTables, WasmTableDecl,
+        opcode::*, wasm_u32_bits_le, wasm_u64_bits_le, wasm_u64_uint, wasm_uint,
     };
-    pub use typelude_col::{tarr, TArr, TTerm};
-    pub use typelude_str::tstr;
 }

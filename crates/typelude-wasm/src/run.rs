@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use typelude_col::{TArr, TTerm};
-use typelude_std::core::{Eval, Evaluate};
+use typelude_std::core::{Eval, Evaluate, Value};
 use typenum::U0;
 
 use crate::{
@@ -26,6 +26,9 @@ use crate::{
 pub struct Step<State>(PhantomData<State>);
 
 #[doc(hidden)]
+pub struct CheckedStep<State>(PhantomData<State>);
+
+#[doc(hidden)]
 pub struct BuildProgramState<Instance, Program>(PhantomData<(Instance, Program)>);
 
 #[doc(hidden)]
@@ -36,6 +39,26 @@ pub struct BuildInvokeExportState<Instance, Name, Args>(PhantomData<(Instance, N
 
 pub struct InstantiateModule<Module, Env>(PhantomData<(Module, Env)>);
 pub struct RunWasm<State>(PhantomData<State>);
+pub struct RunCheckedWasm<Outcome>(PhantomData<Outcome>);
+
+pub struct WasmDone<State>(PhantomData<State>);
+pub struct WasmTrap<Reason>(PhantomData<Reason>);
+
+pub struct TrapUnreachable;
+pub struct TrapCallIndirectNull;
+pub struct TrapCallIndirectTableOob;
+pub struct TrapCallIndirectTypeMismatch;
+pub struct TrapMemoryOob;
+
+pub trait InfallibleOpcode {}
+
+impl<State> Value for WasmDone<State> {}
+impl<Reason> Value for WasmTrap<Reason> {}
+impl Value for TrapUnreachable {}
+impl Value for TrapCallIndirectNull {}
+impl Value for TrapCallIndirectTableOob {}
+impl Value for TrapCallIndirectTypeMismatch {}
+impl Value for TrapMemoryOob {}
 
 pub type EmptyHostEnv = WasmHostEnv<TTerm, TTerm, TTerm, TTerm>;
 pub type EmptyModule = WasmModule<
@@ -58,15 +81,29 @@ pub type EmptyState = WasmState<
     TTerm,
 >;
 pub type Run<State> = Evaluate<RunWasm<State>>;
+pub type RunChecked<State> = Evaluate<RunCheckedWasm<WasmDone<State>>>;
 pub type ModuleProgramRun<Module, Program> =
     Run<Evaluate<BuildProgramState<Evaluate<InstantiateModule<Module, EmptyHostEnv>>, Program>>>;
+pub type ModuleProgramRunChecked<Module, Program> = RunChecked<
+    Evaluate<BuildProgramState<Evaluate<InstantiateModule<Module, EmptyHostEnv>>, Program>>,
+>;
 pub type InvokeFunc<Module, FuncIdx, Args> =
     InvokeFuncWithEnv<Module, EmptyHostEnv, FuncIdx, Args>;
 pub type InvokeFuncWithEnv<Module, Env, FuncIdx, Args> =
     Run<Evaluate<BuildInvokeState<Evaluate<InstantiateModule<Module, Env>>, FuncIdx, Args>>>;
+pub type InvokeFuncChecked<Module, FuncIdx, Args> =
+    InvokeFuncCheckedWithEnv<Module, EmptyHostEnv, FuncIdx, Args>;
+pub type InvokeFuncCheckedWithEnv<Module, Env, FuncIdx, Args> = RunChecked<
+    Evaluate<BuildInvokeState<Evaluate<InstantiateModule<Module, Env>>, FuncIdx, Args>>,
+>;
 pub type InvokeExport<Module, Name, Args> = InvokeExportWithEnv<Module, EmptyHostEnv, Name, Args>;
 pub type InvokeExportWithEnv<Module, Env, Name, Args> =
     Run<Evaluate<BuildInvokeExportState<Evaluate<InstantiateModule<Module, Env>>, Name, Args>>>;
+pub type InvokeExportChecked<Module, Name, Args> =
+    InvokeExportCheckedWithEnv<Module, EmptyHostEnv, Name, Args>;
+pub type InvokeExportCheckedWithEnv<Module, Env, Name, Args> = RunChecked<
+    Evaluate<BuildInvokeExportState<Evaluate<InstantiateModule<Module, Env>>, Name, Args>>,
+>;
 
 impl<Module, Env> Eval for InstantiateModule<Module, Env>
 where
@@ -164,6 +201,42 @@ where
     >;
 }
 
+impl<Reason> Eval for RunCheckedWasm<WasmTrap<Reason>> {
+    type Output = WasmTrap<Reason>;
+}
+
+impl<Module, Store, Stack, Locals, Frames, Branches> Eval
+    for RunCheckedWasm<WasmDone<WasmState<Module, Store, Stack, Locals, Frames, Branches, TTerm>>>
+{
+    type Output = WasmDone<WasmState<Module, Store, Stack, Locals, Frames, Branches, TTerm>>;
+}
+
+impl<Module, Store, Stack, Locals, Frames, Branches, Instr, Rest> Eval
+    for RunCheckedWasm<
+        WasmDone<WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>>,
+    >
+where
+    CheckedStep<WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>>:
+        Eval,
+    RunCheckedWasm<
+        Evaluate<
+            CheckedStep<
+                WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>,
+            >,
+        >,
+    >: Eval,
+{
+    type Output = Evaluate<
+        RunCheckedWasm<
+            Evaluate<
+                CheckedStep<
+                    WasmState<Module, Store, Stack, Locals, Frames, Branches, TArr<Instr, Rest>>,
+                >,
+            >,
+        >,
+    >;
+}
+
 pub trait StateStore {
     type Output;
 }
@@ -214,10 +287,24 @@ impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateStore
     type Output = Store;
 }
 
+impl<State> StateStore for WasmDone<State>
+where
+    State: StateStore,
+{
+    type Output = <State as StateStore>::Output;
+}
+
 impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateStack
     for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
 {
     type Output = Stack;
+}
+
+impl<State> StateStack for WasmDone<State>
+where
+    State: StateStack,
+{
+    type Output = <State as StateStack>::Output;
 }
 
 impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateLocals
@@ -226,10 +313,24 @@ impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateLocals
     type Output = Locals;
 }
 
+impl<State> StateLocals for WasmDone<State>
+where
+    State: StateLocals,
+{
+    type Output = <State as StateLocals>::Output;
+}
+
 impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateProgram
     for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
 {
     type Output = Program;
+}
+
+impl<State> StateProgram for WasmDone<State>
+where
+    State: StateProgram,
+{
+    type Output = <State as StateProgram>::Output;
 }
 
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> StateMemory
@@ -246,6 +347,13 @@ impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> 
     type Output = Memory;
 }
 
+impl<State> StateMemory for WasmDone<State>
+where
+    State: StateMemory,
+{
+    type Output = <State as StateMemory>::Output;
+}
+
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> StateTables
     for WasmState<
         Module,
@@ -258,6 +366,13 @@ impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> 
     >
 {
     type Output = Tables;
+}
+
+impl<State> StateTables for WasmDone<State>
+where
+    State: StateTables,
+{
+    type Output = <State as StateTables>::Output;
 }
 
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> StateGlobals
@@ -274,10 +389,24 @@ impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program> 
     type Output = Globals;
 }
 
+impl<State> StateGlobals for WasmDone<State>
+where
+    State: StateGlobals,
+{
+    type Output = <State as StateGlobals>::Output;
+}
+
 impl<Module, Store, Stack, Locals, Frames, Branches, Program> StateBranches
     for WasmState<Module, Store, Stack, Locals, Frames, Branches, Program>
 {
     type Output = Branches;
+}
+
+impl<State> StateBranches for WasmDone<State>
+where
+    State: StateBranches,
+{
+    type Output = <State as StateBranches>::Output;
 }
 
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program, Name>
@@ -300,6 +429,13 @@ where
     >>::Output;
 }
 
+impl<State, Name> StateExportGlobal<Name> for WasmDone<State>
+where
+    State: StateExportGlobal<Name>,
+{
+    type Output = <State as StateExportGlobal<Name>>::Output;
+}
+
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program, Name>
     StateExportTable<Name>
     for WasmState<
@@ -319,6 +455,13 @@ where
         <Tables as typelude_std::core::Get<<Module as ResolveExportTable<Name>>::Output>>::Output;
 }
 
+impl<State, Name> StateExportTable<Name> for WasmDone<State>
+where
+    State: StateExportTable<Name>,
+{
+    type Output = <State as StateExportTable<Name>>::Output;
+}
+
 impl<Module, Memory, Tables, Globals, Stack, Locals, Frames, Branches, Program, Name>
     StateExportMemory<Name>
     for WasmState<
@@ -334,6 +477,13 @@ where
     Module: ResolveExportMemory<Name>,
 {
     type Output = Memory;
+}
+
+impl<State, Name> StateExportMemory<Name> for WasmDone<State>
+where
+    State: StateExportMemory<Name>,
+{
+    type Output = <State as StateExportMemory<Name>>::Output;
 }
 
 #[cfg(test)]

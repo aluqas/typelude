@@ -1,13 +1,15 @@
 #![recursion_limit = "65536"]
 
 use static_assertions::assert_type_eq_all;
-use typelude::wasm::{
-    GlobalConst, GlobalMut, HostCall, HostCallResult, HostFuncBinding, HostGlobalBinding,
-    HostMemoryBinding, HostTableBinding, InvokeExport, InvokeExportWithEnv, StateExportGlobal,
-    StateExportMemory, StateExportTable, StateStack, TArr, TTerm, WasmF32, WasmGlobal,
-    WasmHostEnv, WasmI32, WasmI32Type, WasmI64, WasmMemory, WasmTable,
+use typelude::{
+    typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, operator_aliases::Sum},
+    wasm::{
+        GlobalConst, GlobalMut, HostCall, HostCallResult, HostFuncBinding, HostGlobalBinding,
+        HostMemoryBinding, HostTableBinding, InvokeExport, InvokeExportWithEnv, StateExportGlobal,
+        StateExportMemory, StateExportTable, StateStack, TArr, TTerm, WasmF32, WasmGlobal,
+        WasmHostEnv, WasmI32, WasmI32Type, WasmI64, WasmMemory, WasmTable,
+    },
 };
-use typelude::typenum::{operator_aliases::Sum, Const, ToUInt, U0, U1, U2, U3, U5, U7, U8};
 
 type NoArgs = TTerm;
 type OneArg<A> = TArr<WasmI32<A>, TTerm>;
@@ -16,10 +18,12 @@ type U42 = <Const<42> as ToUInt>::Output;
 type U247 = <Const<247> as ToUInt>::Output;
 type U255 = <Const<255> as ToUInt>::Output;
 type U258 = <Const<258> as ToUInt>::Output;
-type U4660 = <Const<4660> as ToUInt>::Output;
-type U4607182418800017408 = <Const<4607182418800017408usize> as ToUInt>::Output;
-type U18446744073709551614 = <Const<18446744073709551614usize> as ToUInt>::Output;
-type U1065353216 = <Const<1065353216usize> as ToUInt>::Output;
+type U4660 = typelude::wasm::wasm_u32_bits_le!(0x34, 0x12, 0x00, 0x00);
+type F32OneBits = typelude::wasm::wasm_u32_bits_le!(0x00, 0x00, 0x80, 0x3F);
+type F64OneBits =
+    typelude::wasm::wasm_u64_bits_le!(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F);
+type I64NegTwoBits =
+    typelude::wasm::wasm_u64_bits_le!(0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
 
 struct HostAdd;
 
@@ -282,10 +286,7 @@ type ImportMemoryTableModule = typelude::twat! {
 };
 
 type FunctionEnv = WasmHostEnv<
-    TArr<
-        HostFuncBinding<typelude::tstr!("host"), typelude::tstr!("add"), HostAdd>,
-        TTerm,
-    >,
+    TArr<HostFuncBinding<typelude::tstr!("host"), typelude::tstr!("add"), HostAdd>, TTerm>,
     TTerm,
     TTerm,
     TTerm,
@@ -341,7 +342,8 @@ fn core_module_covers_basic_execution_paths() {
     type IfSelectTrue = InvokeExport<CoreModule, typelude::tstr!("if_select"), OneArg<U1>>;
     type IfSelectFalse = InvokeExport<CoreModule, typelude::tstr!("if_select"), OneArg<U0>>;
     type ZeroLocal = InvokeExport<CoreModule, typelude::tstr!("zero_local"), NoArgs>;
-    type Fib = InvokeExport<CoreModule, typelude::tstr!("fib"), OneArg<<Const<6> as ToUInt>::Output>>;
+    type Fib =
+        InvokeExport<CoreModule, typelude::tstr!("fib"), OneArg<<Const<6> as ToUInt>::Output>>;
 
     assert_type_eq_all!(<Add as StateStack>::Output, TArr<WasmI32<U5>, TTerm>);
     assert_type_eq_all!(<InternalCall as StateStack>::Output, TArr<WasmI32<U5>, TTerm>);
@@ -381,29 +383,51 @@ fn state_module_covers_memory_globals_and_start() {
 
 #[test]
 fn parity_module_covers_tables_dispatch_and_runtime_parity_ops() {
-    type DefaultIndirect = InvokeExport<DispatchModule, typelude::tstr!("default_indirect"), NoArgs>;
-    type ExplicitIndirect = InvokeExport<DispatchModule, typelude::tstr!("explicit_indirect"), NoArgs>;
+    type DefaultIndirect =
+        InvokeExport<DispatchModule, typelude::tstr!("default_indirect"), NoArgs>;
+    type ExplicitIndirect =
+        InvokeExport<DispatchModule, typelude::tstr!("explicit_indirect"), NoArgs>;
     type BrTable0 = InvokeExport<DispatchModule, typelude::tstr!("br_table"), OneArg<U0>>;
     type BrTable1 = InvokeExport<DispatchModule, typelude::tstr!("br_table"), OneArg<U1>>;
-    type BrTableDefault = InvokeExport<DispatchModule, typelude::tstr!("br_table"), OneArg<<Const<9> as ToUInt>::Output>>;
+    type BrTableDefault = InvokeExport<
+        DispatchModule,
+        typelude::tstr!("br_table"),
+        OneArg<<Const<9> as ToUInt>::Output>,
+    >;
     type I32Parity = InvokeExport<RuntimeParityModule, typelude::tstr!("i32_parity"), NoArgs>;
     type WrapI64 = InvokeExport<RuntimeParityModule, typelude::tstr!("wrap_i64"), NoArgs>;
-    type PartialWidthI32 = InvokeExport<RuntimeParityModule, typelude::tstr!("partial_width_i32"), NoArgs>;
-    type PartialWidthI64 = InvokeExport<RuntimeParityModule, typelude::tstr!("partial_width_i64"), NoArgs>;
-    type ReinterpretI64 = InvokeExport<RuntimeParityModule, typelude::tstr!("reinterpret_i64"), NoArgs>;
-    type ReinterpretF32 = InvokeExport<RuntimeParityModule, typelude::tstr!("reinterpret_f32"), NoArgs>;
+    type PartialWidthI32 =
+        InvokeExport<RuntimeParityModule, typelude::tstr!("partial_width_i32"), NoArgs>;
+    type PartialWidthI64 =
+        InvokeExport<RuntimeParityModule, typelude::tstr!("partial_width_i64"), NoArgs>;
+    type ReinterpretI64 =
+        InvokeExport<RuntimeParityModule, typelude::tstr!("reinterpret_i64"), NoArgs>;
+    type ReinterpretF32 =
+        InvokeExport<RuntimeParityModule, typelude::tstr!("reinterpret_f32"), NoArgs>;
 
     assert_type_eq_all!(<DefaultIndirect as StateStack>::Output, TArr<WasmI32<U2>, TTerm>);
     assert_type_eq_all!(<ExplicitIndirect as StateStack>::Output, TArr<WasmI32<U3>, TTerm>);
-    assert_type_eq_all!(<BrTable0 as StateStack>::Output, TArr<WasmI32<<Const<10> as ToUInt>::Output>, TTerm>);
-    assert_type_eq_all!(<BrTable1 as StateStack>::Output, TArr<WasmI32<<Const<20> as ToUInt>::Output>, TTerm>);
-    assert_type_eq_all!(<BrTableDefault as StateStack>::Output, TArr<WasmI32<<Const<40> as ToUInt>::Output>, TTerm>);
+    assert_type_eq_all!(
+        <BrTable0 as StateStack>::Output,
+        TArr<WasmI32<<Const<10> as ToUInt>::Output>, TTerm>
+    );
+    assert_type_eq_all!(
+        <BrTable1 as StateStack>::Output,
+        TArr<WasmI32<<Const<20> as ToUInt>::Output>, TTerm>
+    );
+    assert_type_eq_all!(
+        <BrTableDefault as StateStack>::Output,
+        TArr<WasmI32<<Const<40> as ToUInt>::Output>, TTerm>
+    );
     assert_type_eq_all!(<I32Parity as StateStack>::Output, TArr<WasmI32<U247>, TTerm>);
     assert_type_eq_all!(<WrapI64 as StateStack>::Output, TArr<WasmI32<U2>, TTerm>);
     assert_type_eq_all!(<PartialWidthI32 as StateStack>::Output, TArr<WasmI32<U4660>, TTerm>);
-    assert_type_eq_all!(<PartialWidthI64 as StateStack>::Output, TArr<WasmI64<U18446744073709551614>, TTerm>);
-    assert_type_eq_all!(<ReinterpretI64 as StateStack>::Output, TArr<WasmI64<U4607182418800017408>, TTerm>);
-    assert_type_eq_all!(<ReinterpretF32 as StateStack>::Output, TArr<WasmF32<U1065353216>, TTerm>);
+    assert_type_eq_all!(
+        <PartialWidthI64 as StateStack>::Output,
+        TArr<WasmI64<I64NegTwoBits>, TTerm>
+    );
+    assert_type_eq_all!(<ReinterpretI64 as StateStack>::Output, TArr<WasmI64<F64OneBits>, TTerm>);
+    assert_type_eq_all!(<ReinterpretF32 as StateStack>::Output, TArr<WasmF32<F32OneBits>, TTerm>);
     type _TableExport = <DefaultIndirect as StateExportTable<typelude::tstr!("table")>>::Output;
 }
 

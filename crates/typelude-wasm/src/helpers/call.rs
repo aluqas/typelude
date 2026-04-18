@@ -1,8 +1,8 @@
 use core::marker::PhantomData;
 
 use typelude_col::{TArr, TTerm};
-use typelude_std::core::{Append, Concat, Get};
-use typenum::U0;
+use typelude_std::core::{And, Append, Concat, Get};
+use typenum::{B0, B1, U0};
 
 use crate::{
     func::WasmFunc,
@@ -162,6 +162,78 @@ impl<FuncType, LocalDecls, Program> FuncSignature for WasmFunc<FuncType, LocalDe
 
 impl<FuncType, Host> FuncSignature for WasmHostFunc<FuncType, Host> {
     type Output = FuncType;
+}
+
+pub trait ValTypeEq<Rhs> {
+    type Output;
+}
+
+macro_rules! impl_val_type_eq {
+    ($lhs:ty, $rhs:ty => $out:ty) => {
+        impl ValTypeEq<$rhs> for $lhs {
+            type Output = $out;
+        }
+    };
+}
+
+impl_val_type_eq!(WasmI32Type, WasmI32Type => B1);
+impl_val_type_eq!(WasmI32Type, WasmI64Type => B0);
+impl_val_type_eq!(WasmI32Type, WasmF32Type => B0);
+impl_val_type_eq!(WasmI32Type, WasmF64Type => B0);
+impl_val_type_eq!(WasmI64Type, WasmI32Type => B0);
+impl_val_type_eq!(WasmI64Type, WasmI64Type => B1);
+impl_val_type_eq!(WasmI64Type, WasmF32Type => B0);
+impl_val_type_eq!(WasmI64Type, WasmF64Type => B0);
+impl_val_type_eq!(WasmF32Type, WasmI32Type => B0);
+impl_val_type_eq!(WasmF32Type, WasmI64Type => B0);
+impl_val_type_eq!(WasmF32Type, WasmF32Type => B1);
+impl_val_type_eq!(WasmF32Type, WasmF64Type => B0);
+impl_val_type_eq!(WasmF64Type, WasmI32Type => B0);
+impl_val_type_eq!(WasmF64Type, WasmI64Type => B0);
+impl_val_type_eq!(WasmF64Type, WasmF32Type => B0);
+impl_val_type_eq!(WasmF64Type, WasmF64Type => B1);
+
+pub trait ValListEq<Rhs> {
+    type Output;
+}
+
+impl ValListEq<TTerm> for TTerm {
+    type Output = B1;
+}
+
+impl<Head, Tail> ValListEq<TTerm> for TArr<Head, Tail> {
+    type Output = B0;
+}
+
+impl<Head, Tail> ValListEq<TArr<Head, Tail>> for TTerm {
+    type Output = B0;
+}
+
+impl<Head, Tail, RhsHead, RhsTail> ValListEq<TArr<RhsHead, RhsTail>> for TArr<Head, Tail>
+where
+    Head: ValTypeEq<RhsHead>,
+    Tail: ValListEq<RhsTail>,
+    <Head as ValTypeEq<RhsHead>>::Output: And<<Tail as ValListEq<RhsTail>>::Output>,
+{
+    type Output = <<Head as ValTypeEq<RhsHead>>::Output as And<
+        <Tail as ValListEq<RhsTail>>::Output,
+    >>::Output;
+}
+
+pub trait FuncTypeEq<Rhs> {
+    type Output;
+}
+
+impl<Params, Results, RhsParams, RhsResults> FuncTypeEq<WasmFuncType<RhsParams, RhsResults>>
+    for WasmFuncType<Params, Results>
+where
+    Params: ValListEq<RhsParams>,
+    Results: ValListEq<RhsResults>,
+    <Params as ValListEq<RhsParams>>::Output: And<<Results as ValListEq<RhsResults>>::Output>,
+{
+    type Output = <<Params as ValListEq<RhsParams>>::Output as And<
+        <Results as ValListEq<RhsResults>>::Output,
+    >>::Output;
 }
 
 #[derive(Debug, Default)]

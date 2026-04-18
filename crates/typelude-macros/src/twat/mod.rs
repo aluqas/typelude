@@ -2,6 +2,7 @@ mod input;
 mod ir;
 mod lower;
 mod parse;
+mod validate;
 
 pub use input::WasmWatInput;
 use proc_macro2::TokenStream;
@@ -11,7 +12,7 @@ use syn::Error;
 pub fn expand(input: WasmWatInput) -> syn::Result<TokenStream> {
     let wasm = wat::parse_str(input.module.value())
         .map_err(|err| Error::new(input.module.span(), format!("WAT parse error: {err}")))?;
-    let module = parse::parse_module(&wasm)?;
+    let module = validate::validate_module(parse::parse_module(&wasm)?)?;
     let imports = lower::lower_imports(&module.imports)?;
     let funcs = lower::lower_func_space(&module)?;
     let memory = lower::lower_memory_section(module.memory.as_ref(), &module.data_segments)?;

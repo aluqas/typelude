@@ -6,7 +6,7 @@ use core::{
 use typelude_col::{TArr, TTerm};
 use typelude_std::core::{Eq, Gt, Lt, Value};
 use typenum::{
-    B0, B1, IsGreater, U0, U1, U2, U3, U4, U5, U6, U7, U8, U16, U24, U32, U40, U48, U56, U65536,
+    B0, B1, U0, U1, U2, U3, U4, U5, U6, U7, U8, U16, U24, U32, U40, U48, U56, U65536,
     operator_aliases::{And, Or, Prod, Shleft, Shright, Sum},
 };
 
@@ -17,6 +17,21 @@ use crate::{
     },
     state::{MemoryCell, WasmMemory},
 };
+
+#[derive(Debug, Default)]
+pub struct MemoryAccessOutOfBounds;
+
+impl Value for MemoryAccessOutOfBounds {}
+
+#[derive(Debug, Default)]
+pub struct CheckedMemoryRead<ValueT>(pub PhantomData<ValueT>);
+
+impl<ValueT> Value for CheckedMemoryRead<ValueT> {}
+
+#[derive(Debug, Default)]
+pub struct CheckedMemoryWrite<Memory>(pub PhantomData<Memory>);
+
+impl<Memory> Value for CheckedMemoryWrite<Memory> {}
 
 pub trait FindByte<Addr> {
     type Output;
@@ -96,6 +111,84 @@ where
     type Output = <<Memory as MemoryWriteByte<Addr, Byte>>::Output as MemoryWriteBytes<
         Sum<Addr, U1>,
         Tail,
+    >>::Output;
+}
+
+pub trait MemoryAccessWithin<LastAddr> {
+    type Output;
+}
+
+impl<Pages, MaxPages, Cells, LastAddr> MemoryAccessWithin<LastAddr>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Pages: Mul<U65536>,
+    LastAddr: Lt<Prod<Pages, U65536>>,
+{
+    type Output = <LastAddr as Lt<Prod<Pages, U65536>>>::Output;
+}
+
+pub trait MemoryReadByteChecked<Addr> {
+    type Output;
+}
+
+pub trait MemoryReadByteCheckedHelper<Memory, Addr> {
+    type Output;
+}
+
+impl<Memory, Addr> MemoryReadByteCheckedHelper<Memory, Addr> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr> MemoryReadByteCheckedHelper<Memory, Addr> for B1
+where
+    Memory: MemoryReadByte<Addr>,
+{
+    type Output = CheckedMemoryRead<<Memory as MemoryReadByte<Addr>>::Output>;
+}
+
+impl<Pages, MaxPages, Cells, Addr> MemoryReadByteChecked<Addr>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Addr>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Addr>>::Output:
+        MemoryReadByteCheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Addr>>::Output as MemoryReadByteCheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+    >>::Output;
+}
+
+pub trait MemoryWriteByteChecked<Addr, Byte> {
+    type Output;
+}
+
+pub trait MemoryWriteByteCheckedHelper<Memory, Addr, Byte> {
+    type Output;
+}
+
+impl<Memory, Addr, Byte> MemoryWriteByteCheckedHelper<Memory, Addr, Byte> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr, Byte> MemoryWriteByteCheckedHelper<Memory, Addr, Byte> for B1
+where
+    Memory: MemoryWriteByte<Addr, Byte>,
+{
+    type Output = CheckedMemoryWrite<<Memory as MemoryWriteByte<Addr, Byte>>::Output>;
+}
+
+impl<Pages, MaxPages, Cells, Addr, Byte> MemoryWriteByteChecked<Addr, Byte>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Addr>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Addr>>::Output:
+        MemoryWriteByteCheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr, Byte>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Addr>>::Output as MemoryWriteByteCheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+        Byte,
     >>::Output;
 }
 
@@ -199,6 +292,39 @@ where
     > as DecodeI32>::Output;
 }
 
+pub trait MemoryReadI32Checked<Addr> {
+    type Output;
+}
+
+pub trait MemoryReadI32CheckedHelper<Memory, Addr> {
+    type Output;
+}
+
+impl<Memory, Addr> MemoryReadI32CheckedHelper<Memory, Addr> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr> MemoryReadI32CheckedHelper<Memory, Addr> for B1
+where
+    Memory: MemoryReadI32<Addr>,
+{
+    type Output = CheckedMemoryRead<<Memory as MemoryReadI32<Addr>>::Output>;
+}
+
+impl<Pages, MaxPages, Cells, Addr> MemoryReadI32Checked<Addr>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U3>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U3>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U3>>>::Output:
+        MemoryReadI32CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U3>>>::Output as MemoryReadI32CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+    >>::Output;
+}
+
 pub trait MemoryWriteI32<Addr, ValueT> {
     type Output;
 }
@@ -213,6 +339,40 @@ where
     type Output = <<ValueT as EncodeI32>::Output as WriteEncodedI32<
         WasmMemory<Pages, MaxPages, Cells>,
         Addr,
+    >>::Output;
+}
+
+pub trait MemoryWriteI32Checked<Addr, ValueT> {
+    type Output;
+}
+
+pub trait MemoryWriteI32CheckedHelper<Memory, Addr, ValueT> {
+    type Output;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI32CheckedHelper<Memory, Addr, ValueT> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI32CheckedHelper<Memory, Addr, ValueT> for B1
+where
+    Memory: MemoryWriteI32<Addr, ValueT>,
+{
+    type Output = CheckedMemoryWrite<<Memory as MemoryWriteI32<Addr, ValueT>>::Output>;
+}
+
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI32Checked<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U3>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U3>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U3>>>::Output:
+        MemoryWriteI32CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr, ValueT>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U3>>>::Output as MemoryWriteI32CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+        ValueT,
     >>::Output;
 }
 
@@ -405,6 +565,39 @@ where
     > as DecodeI64>::Output;
 }
 
+pub trait MemoryReadI64Checked<Addr> {
+    type Output;
+}
+
+pub trait MemoryReadI64CheckedHelper<Memory, Addr> {
+    type Output;
+}
+
+impl<Memory, Addr> MemoryReadI64CheckedHelper<Memory, Addr> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr> MemoryReadI64CheckedHelper<Memory, Addr> for B1
+where
+    Memory: MemoryReadI64<Addr>,
+{
+    type Output = CheckedMemoryRead<<Memory as MemoryReadI64<Addr>>::Output>;
+}
+
+impl<Pages, MaxPages, Cells, Addr> MemoryReadI64Checked<Addr>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U7>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U7>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U7>>>::Output:
+        MemoryReadI64CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U7>>>::Output as MemoryReadI64CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+    >>::Output;
+}
+
 pub trait MemoryWriteI64<Addr, ValueT> {
     type Output;
 }
@@ -419,6 +612,40 @@ where
     type Output = <<ValueT as EncodeI64>::Output as WriteEncodedI64<
         WasmMemory<Pages, MaxPages, Cells>,
         Addr,
+    >>::Output;
+}
+
+pub trait MemoryWriteI64Checked<Addr, ValueT> {
+    type Output;
+}
+
+pub trait MemoryWriteI64CheckedHelper<Memory, Addr, ValueT> {
+    type Output;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI64CheckedHelper<Memory, Addr, ValueT> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI64CheckedHelper<Memory, Addr, ValueT> for B1
+where
+    Memory: MemoryWriteI64<Addr, ValueT>,
+{
+    type Output = CheckedMemoryWrite<<Memory as MemoryWriteI64<Addr, ValueT>>::Output>;
+}
+
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI64Checked<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U7>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U7>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U7>>>::Output:
+        MemoryWriteI64CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr, ValueT>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U7>>>::Output as MemoryWriteI64CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+        ValueT,
     >>::Output;
 }
 
@@ -561,6 +788,136 @@ where
         Or<Or<Or<B0V, Shleft<B1V, U8>>, Shleft<B2V, U16>>, Shleft<B3V, U24>>,
         U18446744073709551615,
     >;
+}
+
+pub trait MemoryReadI32Low16Checked<Addr> {
+    type Output;
+}
+
+pub trait MemoryReadI32Low16CheckedHelper<Memory, Addr> {
+    type Output;
+}
+
+impl<Memory, Addr> MemoryReadI32Low16CheckedHelper<Memory, Addr> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr> MemoryReadI32Low16CheckedHelper<Memory, Addr> for B1
+where
+    Addr: Add<U1>,
+    Memory: MemoryReadByte<Addr>,
+    Memory: MemoryReadByte<Sum<Addr, U1>>,
+    <Memory as MemoryReadByte<Addr>>::Output:
+        DecodeI32From2<<Memory as MemoryReadByte<Sum<Addr, U1>>>::Output>,
+{
+    type Output = CheckedMemoryRead<
+        <<Memory as MemoryReadByte<Addr>>::Output as DecodeI32From2<
+            <Memory as MemoryReadByte<Sum<Addr, U1>>>::Output,
+        >>::Output,
+    >;
+}
+
+impl<Pages, MaxPages, Cells, Addr> MemoryReadI32Low16Checked<Addr>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U1>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U1>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U1>>>::Output:
+        MemoryReadI32Low16CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U1>>>::Output as MemoryReadI32Low16CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+    >>::Output;
+}
+
+pub trait MemoryReadI64Low16Checked<Addr> {
+    type Output;
+}
+
+pub trait MemoryReadI64Low16CheckedHelper<Memory, Addr> {
+    type Output;
+}
+
+impl<Memory, Addr> MemoryReadI64Low16CheckedHelper<Memory, Addr> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr> MemoryReadI64Low16CheckedHelper<Memory, Addr> for B1
+where
+    Addr: Add<U1>,
+    Memory: MemoryReadByte<Addr>,
+    Memory: MemoryReadByte<Sum<Addr, U1>>,
+    <Memory as MemoryReadByte<Addr>>::Output:
+        DecodeI64From2<<Memory as MemoryReadByte<Sum<Addr, U1>>>::Output>,
+{
+    type Output = CheckedMemoryRead<
+        <<Memory as MemoryReadByte<Addr>>::Output as DecodeI64From2<
+            <Memory as MemoryReadByte<Sum<Addr, U1>>>::Output,
+        >>::Output,
+    >;
+}
+
+impl<Pages, MaxPages, Cells, Addr> MemoryReadI64Low16Checked<Addr>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U1>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U1>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U1>>>::Output:
+        MemoryReadI64Low16CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U1>>>::Output as MemoryReadI64Low16CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+    >>::Output;
+}
+
+pub trait MemoryReadI64Low32Checked<Addr> {
+    type Output;
+}
+
+pub trait MemoryReadI64Low32CheckedHelper<Memory, Addr> {
+    type Output;
+}
+
+impl<Memory, Addr> MemoryReadI64Low32CheckedHelper<Memory, Addr> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr> MemoryReadI64Low32CheckedHelper<Memory, Addr> for B1
+where
+    Addr: Add<U1> + Add<U2> + Add<U3>,
+    Memory: MemoryReadByte<Addr>,
+    Memory: MemoryReadByte<Sum<Addr, U1>>,
+    Memory: MemoryReadByte<Sum<Addr, U2>>,
+    Memory: MemoryReadByte<Sum<Addr, U3>>,
+    <Memory as MemoryReadByte<Addr>>::Output: DecodeI64From4<
+            <Memory as MemoryReadByte<Sum<Addr, U1>>>::Output,
+            <Memory as MemoryReadByte<Sum<Addr, U2>>>::Output,
+            <Memory as MemoryReadByte<Sum<Addr, U3>>>::Output,
+        >,
+{
+    type Output = CheckedMemoryRead<
+        <<Memory as MemoryReadByte<Addr>>::Output as DecodeI64From4<
+            <Memory as MemoryReadByte<Sum<Addr, U1>>>::Output,
+            <Memory as MemoryReadByte<Sum<Addr, U2>>>::Output,
+            <Memory as MemoryReadByte<Sum<Addr, U3>>>::Output,
+        >>::Output,
+    >;
+}
+
+impl<Pages, MaxPages, Cells, Addr> MemoryReadI64Low32Checked<Addr>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U3>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U3>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U3>>>::Output:
+        MemoryReadI64Low32CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U3>>>::Output as MemoryReadI64Low32CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+    >>::Output;
 }
 
 pub trait SignExtend8ToI32 {
@@ -737,6 +1094,40 @@ where
     >>::Output;
 }
 
+pub trait MemoryWriteI32Low16Checked<Addr, ValueT> {
+    type Output;
+}
+
+pub trait MemoryWriteI32Low16CheckedHelper<Memory, Addr, ValueT> {
+    type Output;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI32Low16CheckedHelper<Memory, Addr, ValueT> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI32Low16CheckedHelper<Memory, Addr, ValueT> for B1
+where
+    Memory: MemoryWriteI32Low16<Addr, ValueT>,
+{
+    type Output = CheckedMemoryWrite<<Memory as MemoryWriteI32Low16<Addr, ValueT>>::Output>;
+}
+
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI32Low16Checked<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U1>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U1>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U1>>>::Output:
+        MemoryWriteI32Low16CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr, ValueT>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U1>>>::Output as MemoryWriteI32Low16CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+        ValueT,
+    >>::Output;
+}
+
 pub trait MemoryWriteI64Low8<Addr, ValueT> {
     type Output;
 }
@@ -779,6 +1170,40 @@ where
     >>::Output as MemoryWriteByte<
         Sum<Addr, U1>,
         <<ValueT as EncodeI64>::Output as SecondByte>::Output,
+    >>::Output;
+}
+
+pub trait MemoryWriteI64Low16Checked<Addr, ValueT> {
+    type Output;
+}
+
+pub trait MemoryWriteI64Low16CheckedHelper<Memory, Addr, ValueT> {
+    type Output;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI64Low16CheckedHelper<Memory, Addr, ValueT> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI64Low16CheckedHelper<Memory, Addr, ValueT> for B1
+where
+    Memory: MemoryWriteI64Low16<Addr, ValueT>,
+{
+    type Output = CheckedMemoryWrite<<Memory as MemoryWriteI64Low16<Addr, ValueT>>::Output>;
+}
+
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI64Low16Checked<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U1>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U1>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U1>>>::Output:
+        MemoryWriteI64Low16CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr, ValueT>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U1>>>::Output as MemoryWriteI64Low16CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+        ValueT,
     >>::Output;
 }
 
@@ -831,5 +1256,39 @@ where
     >>::Output as MemoryWriteByte<
         Sum<Addr, U3>,
         <<ValueT as EncodeI64>::Output as FourthByte>::Output,
+    >>::Output;
+}
+
+pub trait MemoryWriteI64Low32Checked<Addr, ValueT> {
+    type Output;
+}
+
+pub trait MemoryWriteI64Low32CheckedHelper<Memory, Addr, ValueT> {
+    type Output;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI64Low32CheckedHelper<Memory, Addr, ValueT> for B0 {
+    type Output = MemoryAccessOutOfBounds;
+}
+
+impl<Memory, Addr, ValueT> MemoryWriteI64Low32CheckedHelper<Memory, Addr, ValueT> for B1
+where
+    Memory: MemoryWriteI64Low32<Addr, ValueT>,
+{
+    type Output = CheckedMemoryWrite<<Memory as MemoryWriteI64Low32<Addr, ValueT>>::Output>;
+}
+
+impl<Pages, MaxPages, Cells, Addr, ValueT> MemoryWriteI64Low32Checked<Addr, ValueT>
+    for WasmMemory<Pages, MaxPages, Cells>
+where
+    Addr: Add<U3>,
+    WasmMemory<Pages, MaxPages, Cells>: MemoryAccessWithin<Sum<Addr, U3>>,
+    <WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U3>>>::Output:
+        MemoryWriteI64Low32CheckedHelper<WasmMemory<Pages, MaxPages, Cells>, Addr, ValueT>,
+{
+    type Output = <<WasmMemory<Pages, MaxPages, Cells> as MemoryAccessWithin<Sum<Addr, U3>>>::Output as MemoryWriteI64Low32CheckedHelper<
+        WasmMemory<Pages, MaxPages, Cells>,
+        Addr,
+        ValueT,
     >>::Output;
 }

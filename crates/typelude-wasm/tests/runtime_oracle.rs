@@ -16,11 +16,11 @@ use typelude_wasm::{
     WasmHostEnv, WasmI32, WasmI32Type, WasmI64, WasmMemory, WasmTable,
 };
 pub use typenum;
-use typenum::{operator_aliases::Sum, Const, ToUInt, U0, U1, U2, U3, U5, U7, U8};
+use typenum::{Const, ToUInt, U0, U1, U2, U3, U5, U7, U8, operator_aliases::Sum};
 
 use crate::support::runtime::{
-    run_wat_i64_result, run_wat_snapshot, run_wat_snapshot_with_env, RuntimeEnv,
-    RuntimeGlobalImport, RuntimeMemoryImport, RuntimeSnapshot, RuntimeTableImport,
+    RuntimeEnv, RuntimeGlobalImport, RuntimeMemoryImport, RuntimeSnapshot, RuntimeTableImport,
+    run_wat_i64_result, run_wat_snapshot, run_wat_snapshot_with_env,
 };
 
 type NoArgs = TTerm;
@@ -33,10 +33,11 @@ type U40 = <Const<40> as ToUInt>::Output;
 type U42 = <Const<42> as ToUInt>::Output;
 type U247 = <Const<247> as ToUInt>::Output;
 type U255 = <Const<255> as ToUInt>::Output;
-type U4660 = <Const<4660> as ToUInt>::Output;
-type U1065353216 = <Const<1065353216usize> as ToUInt>::Output;
-type U4607182418800017408 = <Const<4607182418800017408usize> as ToUInt>::Output;
-type U18446744073709551614 = <Const<18446744073709551614usize> as ToUInt>::Output;
+type U4660 = typelude_wasm::wasm_u32_bits_le!(0x34, 0x12, 0x00, 0x00);
+type F32OneBits = typelude_wasm::wasm_u32_bits_le!(0x00, 0x00, 0x80, 0x3F);
+type F64OneBits = typelude_wasm::wasm_u64_bits_le!(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F);
+type I64NegTwoBits =
+    typelude_wasm::wasm_u64_bits_le!(0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
 
 struct HostAdd;
 
@@ -548,28 +549,23 @@ fn wasmi_oracle_matches_core_execution_paths() {
     let add = run_wat_snapshot(CORE_WAT, "add", &[2, 3]).expect("wasmi should execute add");
     assert_eq!(add.result_i32, 5);
 
-    let internal =
-        run_wat_snapshot(CORE_WAT, "internal_call", &[3]).expect("wasmi should execute internal call");
+    let internal = run_wat_snapshot(CORE_WAT, "internal_call", &[3])
+        .expect("wasmi should execute internal call");
     assert_eq!(internal.result_i32, 5);
 
-    let countdown =
-        run_wat_snapshot(CORE_WAT, "loop_countdown", &[3]).expect("wasmi should execute countdown");
+    let countdown = run_wat_snapshot(CORE_WAT, "loop_countdown", &[3])
+        .expect("wasmi should execute countdown");
     assert_eq!(countdown.result_i32, 0);
 
     let fib = run_wat_snapshot(CORE_WAT, "fib", &[6]).expect("wasmi should execute fibonacci");
     assert_eq!(fib.result_i32, 8);
 
-    type Add = InvokeExport<CoreModule, typelude_wasm::typelude_str::tstr!("add"), TwoArgs<U2, U3>>;
-    type Internal = InvokeExport<
-        CoreModule,
-        typelude_wasm::typelude_str::tstr!("internal_call"),
-        OneArg<U3>,
-    >;
-    type Countdown = InvokeExport<
-        CoreModule,
-        typelude_wasm::typelude_str::tstr!("loop_countdown"),
-        OneArg<U3>,
-    >;
+    type Add =
+        InvokeExport<CoreModule, typelude_wasm::typelude_str::tstr!("add"), TwoArgs<U2, U3>>;
+    type Internal =
+        InvokeExport<CoreModule, typelude_wasm::typelude_str::tstr!("internal_call"), OneArg<U3>>;
+    type Countdown =
+        InvokeExport<CoreModule, typelude_wasm::typelude_str::tstr!("loop_countdown"), OneArg<U3>>;
     type Fib = InvokeExport<
         CoreModule,
         typelude_wasm::typelude_str::tstr!("fib"),
@@ -584,36 +580,23 @@ fn wasmi_oracle_matches_core_execution_paths() {
 
 #[test]
 fn wasmi_oracle_matches_memory_globals_and_start() {
-    let memory = run_wat_snapshot_with_env(
-        STATE_WAT,
-        "memory_byte",
-        &[],
-        &RuntimeEnv {
-            observed_memory_export: Some("memory"),
-            observed_global_export: Some("g"),
-            ..RuntimeEnv::default()
-        },
-    )
+    let memory = run_wat_snapshot_with_env(STATE_WAT, "memory_byte", &[], &RuntimeEnv {
+        observed_memory_export: Some("memory"),
+        observed_global_export: Some("g"),
+        ..RuntimeEnv::default()
+    })
     .expect("wasmi should execute memory program");
-    assert_eq!(
-        memory,
-        RuntimeSnapshot {
-            result_i32: 255,
-            memory_pages: Some(1),
-            memory_prefix: vec![255, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            exported_global_i32: Some(2),
-        }
-    );
+    assert_eq!(memory, RuntimeSnapshot {
+        result_i32: 255,
+        memory_pages: Some(1),
+        memory_prefix: vec![255, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        exported_global_i32: Some(2),
+    });
 
-    let offset_grow = run_wat_snapshot_with_env(
-        STATE_WAT,
-        "offset_grow",
-        &[],
-        &RuntimeEnv {
-            observed_memory_export: Some("memory"),
-            ..RuntimeEnv::default()
-        },
-    )
+    let offset_grow = run_wat_snapshot_with_env(STATE_WAT, "offset_grow", &[], &RuntimeEnv {
+        observed_memory_export: Some("memory"),
+        ..RuntimeEnv::default()
+    })
     .expect("wasmi should execute offset/grow");
     assert_eq!(offset_grow.result_i32, 1);
     assert_eq!(offset_grow.memory_pages, Some(2));
@@ -628,13 +611,15 @@ fn wasmi_oracle_matches_memory_globals_and_start() {
     let started = run_wat_snapshot(STATE_WAT, "started", &[]).expect("wasmi should execute start");
     assert_eq!(started.result_i32, 7);
 
-    type Memory = InvokeExport<StateModule, typelude_wasm::typelude_str::tstr!("memory_byte"), NoArgs>;
+    type Memory =
+        InvokeExport<StateModule, typelude_wasm::typelude_str::tstr!("memory_byte"), NoArgs>;
     type OffsetGrow =
         InvokeExport<StateModule, typelude_wasm::typelude_str::tstr!("offset_grow"), NoArgs>;
     type Data = InvokeExport<StateModule, typelude_wasm::typelude_str::tstr!("data_read"), NoArgs>;
     type GlobalUpdate =
         InvokeExport<StateModule, typelude_wasm::typelude_str::tstr!("global_update"), NoArgs>;
-    type Started = InvokeExport<StateModule, typelude_wasm::typelude_str::tstr!("started"), NoArgs>;
+    type Started =
+        InvokeExport<StateModule, typelude_wasm::typelude_str::tstr!("started"), NoArgs>;
 
     assert_type_eq_all!(<Memory as StateStack>::Output, TArr<WasmI32<U255>, TTerm>);
     assert_type_eq_all!(<OffsetGrow as StateStack>::Output, TArr<WasmI32<U1>, TTerm>);
@@ -663,11 +648,8 @@ fn wasmi_oracle_matches_imports_and_exported_state() {
     .expect("wasmi should execute imported function");
     assert_eq!(imported_function.result_i32, 5);
 
-    let imported_global = run_wat_snapshot_with_env(
-        IMPORT_FUNCS_GLOBALS_WAT,
-        "imported_global",
-        &[],
-        &RuntimeEnv {
+    let imported_global =
+        run_wat_snapshot_with_env(IMPORT_FUNCS_GLOBALS_WAT, "imported_global", &[], &RuntimeEnv {
             global: Some(RuntimeGlobalImport {
                 module: "host",
                 field: "g",
@@ -676,17 +658,13 @@ fn wasmi_oracle_matches_imports_and_exported_state() {
             }),
             observed_global_export: Some("copy"),
             ..RuntimeEnv::default()
-        },
-    )
-    .expect("wasmi should execute imported global");
+        })
+        .expect("wasmi should execute imported global");
     assert_eq!(imported_global.result_i32, 5);
     assert_eq!(imported_global.exported_global_i32, Some(3));
 
-    let imported_memory = run_wat_snapshot_with_env(
-        IMPORT_MEMORY_TABLE_WAT,
-        "imported_memory",
-        &[],
-        &RuntimeEnv {
+    let imported_memory =
+        run_wat_snapshot_with_env(IMPORT_MEMORY_TABLE_WAT, "imported_memory", &[], &RuntimeEnv {
             memory: Some(RuntimeMemoryImport {
                 module: "host",
                 field: "memory",
@@ -695,16 +673,12 @@ fn wasmi_oracle_matches_imports_and_exported_state() {
             }),
             observed_memory_export: Some("memory"),
             ..RuntimeEnv::default()
-        },
-    )
-    .expect("wasmi should execute imported memory");
+        })
+        .expect("wasmi should execute imported memory");
     assert_eq!(imported_memory.result_i32, 42);
 
-    let imported_table = run_wat_snapshot_with_env(
-        IMPORT_MEMORY_TABLE_WAT,
-        "imported_table",
-        &[],
-        &RuntimeEnv {
+    let imported_table =
+        run_wat_snapshot_with_env(IMPORT_MEMORY_TABLE_WAT, "imported_table", &[], &RuntimeEnv {
             table: Some(RuntimeTableImport {
                 module: "host",
                 field: "table",
@@ -712,9 +686,8 @@ fn wasmi_oracle_matches_imports_and_exported_state() {
                 max: Some(1),
             }),
             ..RuntimeEnv::default()
-        },
-    )
-    .expect("wasmi should execute imported table");
+        })
+        .expect("wasmi should execute imported table");
     assert_eq!(imported_table.result_i32, 7);
 
     type ImportedAdd = InvokeExportWithEnv<
@@ -750,10 +723,12 @@ fn wasmi_oracle_matches_imports_and_exported_state() {
         <ImportedGlobal as StateExportGlobal<typelude_wasm::typelude_str::tstr!("copy")>>::Output,
         WasmGlobal<GlobalConst, WasmI32<U3>>
     );
-    type _ImportedMemoryExport =
-        <ImportedMemory as StateExportMemory<typelude_wasm::typelude_str::tstr!("memory")>>::Output;
-    type _ImportedTableExport =
-        <ImportedTable as StateExportTable<typelude_wasm::typelude_str::tstr!("table_export")>>::Output;
+    type _ImportedMemoryExport = <ImportedMemory as StateExportMemory<
+        typelude_wasm::typelude_str::tstr!("memory"),
+    >>::Output;
+    type _ImportedTableExport = <ImportedTable as StateExportTable<
+        typelude_wasm::typelude_str::tstr!("table_export"),
+    >>::Output;
 }
 
 #[test]
@@ -799,28 +774,49 @@ fn wasmi_oracle_matches_dispatch_and_runtime_parity_ops() {
         .expect("wasmi should execute reinterpret");
     assert_eq!(reinterpret_i64, 4607182418800017408i64);
 
-    type DefaultIndirect =
-        InvokeExport<DispatchModule, typelude_wasm::typelude_str::tstr!("default_indirect"), NoArgs>;
-    type ExplicitIndirect =
-        InvokeExport<DispatchModule, typelude_wasm::typelude_str::tstr!("explicit_indirect"), NoArgs>;
+    type DefaultIndirect = InvokeExport<
+        DispatchModule,
+        typelude_wasm::typelude_str::tstr!("default_indirect"),
+        NoArgs,
+    >;
+    type ExplicitIndirect = InvokeExport<
+        DispatchModule,
+        typelude_wasm::typelude_str::tstr!("explicit_indirect"),
+        NoArgs,
+    >;
     type BrTable0 =
         InvokeExport<DispatchModule, typelude_wasm::typelude_str::tstr!("br_table"), OneArg<U0>>;
     type BrTable1 =
         InvokeExport<DispatchModule, typelude_wasm::typelude_str::tstr!("br_table"), OneArg<U1>>;
     type BrTableDefault =
         InvokeExport<DispatchModule, typelude_wasm::typelude_str::tstr!("br_table"), OneArg<U9>>;
-    type I32Parity =
-        InvokeExport<RuntimeParityModule, typelude_wasm::typelude_str::tstr!("i32_parity"), NoArgs>;
+    type I32Parity = InvokeExport<
+        RuntimeParityModule,
+        typelude_wasm::typelude_str::tstr!("i32_parity"),
+        NoArgs,
+    >;
     type WrapI64 =
         InvokeExport<RuntimeParityModule, typelude_wasm::typelude_str::tstr!("wrap_i64"), NoArgs>;
-    type PartialWidthI32 =
-        InvokeExport<RuntimeParityModule, typelude_wasm::typelude_str::tstr!("partial_width_i32"), NoArgs>;
-    type PartialWidthI64 =
-        InvokeExport<RuntimeParityModule, typelude_wasm::typelude_str::tstr!("partial_width_i64"), NoArgs>;
-    type ReinterpretI64 =
-        InvokeExport<RuntimeParityModule, typelude_wasm::typelude_str::tstr!("reinterpret_i64"), NoArgs>;
-    type ReinterpretF32 =
-        InvokeExport<RuntimeParityModule, typelude_wasm::typelude_str::tstr!("reinterpret_f32"), NoArgs>;
+    type PartialWidthI32 = InvokeExport<
+        RuntimeParityModule,
+        typelude_wasm::typelude_str::tstr!("partial_width_i32"),
+        NoArgs,
+    >;
+    type PartialWidthI64 = InvokeExport<
+        RuntimeParityModule,
+        typelude_wasm::typelude_str::tstr!("partial_width_i64"),
+        NoArgs,
+    >;
+    type ReinterpretI64 = InvokeExport<
+        RuntimeParityModule,
+        typelude_wasm::typelude_str::tstr!("reinterpret_i64"),
+        NoArgs,
+    >;
+    type ReinterpretF32 = InvokeExport<
+        RuntimeParityModule,
+        typelude_wasm::typelude_str::tstr!("reinterpret_f32"),
+        NoArgs,
+    >;
 
     assert_type_eq_all!(<DefaultIndirect as StateStack>::Output, TArr<WasmI32<U2>, TTerm>);
     assert_type_eq_all!(<ExplicitIndirect as StateStack>::Output, TArr<WasmI32<U3>, TTerm>);
@@ -830,9 +826,12 @@ fn wasmi_oracle_matches_dispatch_and_runtime_parity_ops() {
     assert_type_eq_all!(<I32Parity as StateStack>::Output, TArr<WasmI32<U247>, TTerm>);
     assert_type_eq_all!(<WrapI64 as StateStack>::Output, TArr<WasmI32<U2>, TTerm>);
     assert_type_eq_all!(<PartialWidthI32 as StateStack>::Output, TArr<WasmI32<U4660>, TTerm>);
-    assert_type_eq_all!(<PartialWidthI64 as StateStack>::Output, TArr<WasmI64<U18446744073709551614>, TTerm>);
-    assert_type_eq_all!(<ReinterpretI64 as StateStack>::Output, TArr<WasmI64<U4607182418800017408>, TTerm>);
-    assert_type_eq_all!(<ReinterpretF32 as StateStack>::Output, TArr<WasmF32<U1065353216>, TTerm>);
+    assert_type_eq_all!(
+        <PartialWidthI64 as StateStack>::Output,
+        TArr<WasmI64<I64NegTwoBits>, TTerm>
+    );
+    assert_type_eq_all!(<ReinterpretI64 as StateStack>::Output, TArr<WasmI64<F64OneBits>, TTerm>);
+    assert_type_eq_all!(<ReinterpretF32 as StateStack>::Output, TArr<WasmF32<F32OneBits>, TTerm>);
     type _TableExport =
         <DefaultIndirect as StateExportTable<typelude_wasm::typelude_str::tstr!("table")>>::Output;
 }

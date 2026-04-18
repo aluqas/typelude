@@ -1,0 +1,14 @@
+error: opcode i32.load: memory index 1 is not supported
+  --> tests/ui/wasm_wat/memory_index_not_supported.rs:16:13
+   |
+16 |   type _Bad = twat! {
+   |  _____________^
+17 | |     module: r#"
+18 | |         (module
+19 | |           (memory 1)
+...  |
+23 | |     "#,
+24 | | };
+   | |_^
+   |
+   = note: this error originates in the macro `twat` (in Nightly builds, run with -Z macro-backtrace for more info)

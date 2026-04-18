@@ -10,7 +10,7 @@ error[E0433]: cannot find `typelude_str` in the crate root
 21 | | };
    | |_^ could not find `typelude_str` in the list of imported crates
    |
-   = note: this error originates in the macro `::typelude::wasm::typelude_str::tstr` (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `::typelude::wasm::twat_prelude::tstr` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: consider importing one of these crates
    |
 10 + use crate::wasm::typelude_str;

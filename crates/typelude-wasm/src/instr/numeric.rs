@@ -814,8 +814,10 @@ mod tests {
     #[test]
     fn i64_unary_intrinsics_rotation_and_extend_work() {
         type U2147483648T = <typenum::Const<2147483648usize> as typenum::ToUInt>::Output;
-        type U18446744071562067968 =
-            <typenum::Const<18446744071562067968usize> as typenum::ToUInt>::Output;
+        type U18446744071562067968 = typenum::operator_aliases::Diff<
+            crate::helpers::i64::U18446744073709551615,
+            typenum::operator_aliases::Diff<U2147483648T, typenum::U1>,
+        >;
         type ClzProgram = tarr![OpI64Const<U0>, OpI64Clz];
         type ClzFinal = ModuleProgramRun<EmptyModule, ClzProgram>;
         type CtzProgram = tarr![OpI64Const<U8>, OpI64Ctz];
@@ -850,10 +852,10 @@ mod tests {
 
     #[test]
     fn wrap_and_reinterpret_ops_preserve_expected_bitpatterns() {
-        type U1065353216 = <typenum::Const<1065353216> as typenum::ToUInt>::Output;
+        type F32OneBits = crate::wasm_u32_bits_le!(0x00, 0x00, 0x80, 0x3F);
         type WrapProgram = tarr![OpI64Const<U18446744073709551615>, OpI32WrapI64];
         type WrapFinal = ModuleProgramRun<EmptyModule, WrapProgram>;
-        type F32Program = tarr![OpI32Const<U1065353216>, OpF32ReinterpretI32];
+        type F32Program = tarr![OpI32Const<F32OneBits>, OpF32ReinterpretI32];
         type F32Final = ModuleProgramRun<EmptyModule, F32Program>;
         type F64Program = tarr![OpI64Const<U18446744073709551615>, OpF64ReinterpretI64];
         type F64Final = ModuleProgramRun<EmptyModule, F64Program>;
@@ -864,7 +866,7 @@ mod tests {
         assert_type_eq_all!(<WrapFinal as StateStack>::Output, tarr![
             WasmI32<typenum::U4294967295>
         ]);
-        assert_type_eq_all!(<F32Final as StateStack>::Output, tarr![WasmF32<U1065353216>]);
+        assert_type_eq_all!(<F32Final as StateStack>::Output, tarr![WasmF32<F32OneBits>]);
         assert_type_eq_all!(<F64Final as StateStack>::Output, tarr![
             WasmF64<U18446744073709551615>
         ]);

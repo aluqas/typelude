@@ -1,14 +1,17 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{Error, LitStr};
+use syn::LitStr;
 
-use super::ir::{
-    ConstExprDef, ConstInstrDef, DataSegmentDef, ElemSegmentDef, ExportDef, ExportKind, FuncSig,
-    FunctionDef, GlobalDef, ImportDef, ImportKindDef, Instr, MemArgDef, MemoryDef, ModuleDef,
-    TableDef, Val,
+use super::{
+    ir::{
+        ConstExprDef, ConstInstrDef, DataSegmentDef, ElemSegmentDef, ExportDef, ExportKind,
+        FuncSig, FunctionDef, GlobalDef, ImportDef, ImportKindDef, Instr, MemArgDef, MemoryDef,
+        TableDef, Val,
+    },
+    validate::ValidatedModuleDef,
 };
 
-pub fn lower_func_space(module: &ModuleDef) -> syn::Result<TokenStream> {
+pub fn lower_func_space(module: &ValidatedModuleDef) -> syn::Result<TokenStream> {
     let p = quote!(::typelude::wasm::twat_prelude);
     let types = lower_types(&module.types)?;
     let funcs = lower_functions(&module.functions)?;
@@ -547,17 +550,29 @@ pub fn lower_list(items: Vec<TokenStream>) -> TokenStream {
 }
 
 fn u64_type(value: u64) -> syn::Result<TokenStream> {
-    let value = usize::try_from(value).map_err(|_| {
-        Error::new(
-            Span::call_site(),
-            format!("value {value} exceeds usize-backed typenum::Const support"),
-        )
-    })?;
-    let literal = syn::LitInt::new(&value.to_string(), Span::call_site());
-    Ok(quote!(::typelude::wasm::twat_prelude::wasm_u64_uint!(#literal)))
+    let [b0, b1, b2, b3, b4, b5, b6, b7] = value.to_le_bytes();
+    let b0 = syn::LitInt::new(&b0.to_string(), Span::call_site());
+    let b1 = syn::LitInt::new(&b1.to_string(), Span::call_site());
+    let b2 = syn::LitInt::new(&b2.to_string(), Span::call_site());
+    let b3 = syn::LitInt::new(&b3.to_string(), Span::call_site());
+    let b4 = syn::LitInt::new(&b4.to_string(), Span::call_site());
+    let b5 = syn::LitInt::new(&b5.to_string(), Span::call_site());
+    let b6 = syn::LitInt::new(&b6.to_string(), Span::call_site());
+    let b7 = syn::LitInt::new(&b7.to_string(), Span::call_site());
+    Ok(quote!(
+        ::typelude::wasm::twat_prelude::wasm_u64_bits_le!(#b0, #b1, #b2, #b3, #b4, #b5, #b6, #b7)
+    ))
 }
 
 fn uint_type(value: usize) -> syn::Result<TokenStream> {
-    let lit = syn::LitInt::new(&value.to_string(), Span::call_site());
-    Ok(quote!(::typelude::wasm::twat_prelude::wasm_uint!(#lit)))
+    if u32::try_from(value).is_ok() {
+        let [b0, b1, b2, b3] = (value as u32).to_le_bytes();
+        let b0 = syn::LitInt::new(&b0.to_string(), Span::call_site());
+        let b1 = syn::LitInt::new(&b1.to_string(), Span::call_site());
+        let b2 = syn::LitInt::new(&b2.to_string(), Span::call_site());
+        let b3 = syn::LitInt::new(&b3.to_string(), Span::call_site());
+        Ok(quote!(::typelude::wasm::twat_prelude::wasm_u32_bits_le!(#b0, #b1, #b2, #b3)))
+    } else {
+        u64_type(value as u64)
+    }
 }

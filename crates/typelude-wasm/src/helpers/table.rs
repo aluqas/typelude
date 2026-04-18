@@ -9,6 +9,8 @@ use crate::{
     state::{NullFuncRef, TableEntry, WasmTable},
 };
 
+pub struct TableSlotOob;
+
 pub trait FindFuncRef<SlotIdx> {
     type Output;
 }
@@ -53,6 +55,34 @@ where
     Entries: FindFuncRef<SlotIdx>,
 {
     type Output = <Entries as FindFuncRef<SlotIdx>>::Output;
+}
+
+pub trait TableReadRefChecked<SlotIdx> {
+    type Output;
+}
+
+pub trait TableReadRefCheckedHelper<SlotIdx, Entries> {
+    type Output;
+}
+
+impl<SlotIdx, Entries> TableReadRefCheckedHelper<SlotIdx, Entries> for B0 {
+    type Output = TableSlotOob;
+}
+
+impl<SlotIdx, Entries> TableReadRefCheckedHelper<SlotIdx, Entries> for B1
+where
+    Entries: FindFuncRef<SlotIdx>,
+{
+    type Output = <Entries as FindFuncRef<SlotIdx>>::Output;
+}
+
+impl<Min, Max, Entries, SlotIdx> TableReadRefChecked<SlotIdx> for WasmTable<Min, Max, Entries>
+where
+    SlotIdx: Lt<Min>,
+    <SlotIdx as Lt<Min>>::Output: TableReadRefCheckedHelper<SlotIdx, Entries>,
+{
+    type Output =
+        <<SlotIdx as Lt<Min>>::Output as TableReadRefCheckedHelper<SlotIdx, Entries>>::Output;
 }
 
 pub trait TableWriteRef<SlotIdx, FuncRef> {
