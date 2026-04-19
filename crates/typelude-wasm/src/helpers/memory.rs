@@ -1,3 +1,14 @@
+//! 線形メモリ操作の helper 群。
+//!
+//! memory は `MemoryCell<Addr, Byte>` の疎なリストとして表現します。未書き込み
+//! byte は `0` です。 success-only helper は境界外アクセスを trait
+//! 制約で失敗させ、checked helper は `MemoryAccessOutOfBounds` を返して
+//! `instr::checked_memory` 側で trap outcome に変換します。
+//!
+//! multi-byte load/store は little-endian encode/decode helper を通じて byte
+//! 操作へ分解されます。 そのため `i32.load`, `i64.store16`
+//! などの意味論も最終的には byte read/write の組み合わせです。
+
 use core::{
     marker::PhantomData,
     ops::{Add, BitAnd, BitOr, Mul, Shl, Shr},
@@ -18,21 +29,25 @@ use crate::{
     state::{MemoryCell, WasmMemory},
 };
 
+/// checked memory access が範囲外だったことを表す型。
 #[derive(Debug, Default)]
 pub struct MemoryAccessOutOfBounds;
 
 impl Value for MemoryAccessOutOfBounds {}
 
+/// checked memory read の成功結果。
 #[derive(Debug, Default)]
 pub struct CheckedMemoryRead<ValueT>(pub PhantomData<ValueT>);
 
 impl<ValueT> Value for CheckedMemoryRead<ValueT> {}
 
+/// checked memory write の成功結果。
 #[derive(Debug, Default)]
 pub struct CheckedMemoryWrite<Memory>(pub PhantomData<Memory>);
 
 impl<Memory> Value for CheckedMemoryWrite<Memory> {}
 
+/// 疎な memory cell 列から 1 byte を探索する helper。
 pub trait FindByte<Addr> {
     type Output;
 }
@@ -41,6 +56,7 @@ impl<Addr> FindByte<Addr> for TTerm {
     type Output = typenum::U0;
 }
 
+/// `FindByte` の再帰処理用 helper。
 pub trait FindByteHelper<Addr, Byte, Tail> {
     type Output;
 }
@@ -66,6 +82,11 @@ where
         <<QueryAddr as Eq<CellAddr>>::Output as FindByteHelper<QueryAddr, Byte, Tail>>::Output;
 }
 
+/// 1 byte 読み出しの success-only helper。
+///
+/// `Addr` が memory 範囲外の場合は `TrueBit` 制約を満たせず trait
+/// 解決に失敗します。 未書き込みセルは `FindByte<TTerm>` により `0`
+/// として扱われます。
 pub trait MemoryReadByte<Addr> {
     type Output;
 }
@@ -80,6 +101,11 @@ where
     type Output = <Cells as FindByte<Addr>>::Output;
 }
 
+/// 1 byte 書き込みの success-only helper。
+///
+/// 書き込みは既存 cell の更新ではなく、新しい `MemoryCell<Addr, Byte>`
+/// を先頭へ積む疎表現です。 読み出し時は先頭から探索するため、同じ address
+/// への後続書き込みが優先されます。
 pub trait MemoryWriteByte<Addr, Byte> {
     type Output;
 }
@@ -94,6 +120,7 @@ where
     type Output = WasmMemory<Pages, MaxPages, TArr<MemoryCell<Addr, Byte>, Cells>>;
 }
 
+/// 連続する byte 列を書き込む success-only helper。
 pub trait MemoryWriteBytes<Addr, Bytes> {
     type Output;
 }
@@ -114,6 +141,11 @@ where
     >>::Output;
 }
 
+/// 指定最終アドレスまでが現在 memory 範囲内かを判定する helper。
+///
+/// multi-byte load/store は最後にアクセスする byte address を渡します。
+/// checked helper はこの結果を `CheckedMemory*` または
+/// `MemoryAccessOutOfBounds` に分岐します。
 pub trait MemoryAccessWithin<LastAddr> {
     type Output;
 }
@@ -127,10 +159,16 @@ where
     type Output = <LastAddr as Lt<Prod<Pages, U65536>>>::Output;
 }
 
+/// 1 byte 読み出しの checked helper。
+///
+/// success-only 版と異なり、範囲外でも trait 解決を失敗させず
+/// `MemoryAccessOutOfBounds` を返します。`CheckedStep` 側で `TrapMemoryOob`
+/// に変換されます。
 pub trait MemoryReadByteChecked<Addr> {
     type Output;
 }
 
+/// `MemoryReadByteChecked` の境界判定 helper。
 pub trait MemoryReadByteCheckedHelper<Memory, Addr> {
     type Output;
 }
@@ -159,10 +197,12 @@ where
     >>::Output;
 }
 
+/// 1 byte 書き込みの checked helper。
 pub trait MemoryWriteByteChecked<Addr, Byte> {
     type Output;
 }
 
+/// `MemoryWriteByteChecked` の境界判定 helper。
 pub trait MemoryWriteByteCheckedHelper<Memory, Addr, Byte> {
     type Output;
 }
@@ -193,10 +233,15 @@ where
 }
 
 #[doc(hidden)]
+/// `i32` の little-endian byte 列。
 pub struct EncodedI32<B0V, B1V, B2V, B3V>(pub PhantomData<(B0V, B1V, B2V, B3V)>);
 
 impl<B0V, B1V, B2V, B3V> Value for EncodedI32<B0V, B1V, B2V, B3V> {}
 
+/// `WasmI32<T>` を little-endian byte 列へ encode する helper。
+///
+/// store 命令は値を byte 列に分解して、低アドレスから順に memory
+/// へ書き込みます。
 pub trait EncodeI32 {
     type Output;
 }
@@ -216,6 +261,7 @@ where
     >;
 }
 
+/// encoded 値の最下位 byte を取り出す helper。
 pub trait LowByte {
     type Output;
 }
@@ -224,6 +270,7 @@ impl<B0V, B1V, B2V, B3V> LowByte for EncodedI32<B0V, B1V, B2V, B3V> {
     type Output = B0V;
 }
 
+/// encoded 値の 2 byte 目を取り出す helper。
 pub trait SecondByte {
     type Output;
 }
@@ -232,6 +279,7 @@ impl<B0V, B1V, B2V, B3V> SecondByte for EncodedI32<B0V, B1V, B2V, B3V> {
     type Output = B1V;
 }
 
+/// encoded 値の 3 byte 目を取り出す helper。
 pub trait ThirdByte {
     type Output;
 }
@@ -240,6 +288,7 @@ impl<B0V, B1V, B2V, B3V> ThirdByte for EncodedI32<B0V, B1V, B2V, B3V> {
     type Output = B2V;
 }
 
+/// encoded 値の 4 byte 目を取り出す helper。
 pub trait FourthByte {
     type Output;
 }
@@ -248,6 +297,7 @@ impl<B0V, B1V, B2V, B3V> FourthByte for EncodedI32<B0V, B1V, B2V, B3V> {
     type Output = B3V;
 }
 
+/// little-endian byte 列から `i32` を decode する helper。
 pub trait DecodeI32 {
     type Output;
 }
@@ -266,6 +316,7 @@ where
         And<Or<Or<B0V, Shleft<B1V, U8>>, Or<Shleft<B2V, U16>, Shleft<B3V, U24>>>, U4294967295>;
 }
 
+/// 4 byte を読み出して `i32` bit-pattern に decode する success-only helper。
 pub trait MemoryReadI32<Addr> {
     type Output;
 }
@@ -292,10 +343,12 @@ where
     > as DecodeI32>::Output;
 }
 
+/// 4 byte を読み出して `i32` bit-pattern に decode する checked helper。
 pub trait MemoryReadI32Checked<Addr> {
     type Output;
 }
 
+/// `MemoryReadI32Checked` の境界判定 helper。
 pub trait MemoryReadI32CheckedHelper<Memory, Addr> {
     type Output;
 }
@@ -400,6 +453,7 @@ where
 }
 
 #[doc(hidden)]
+/// `i64` の little-endian byte 列。
 pub struct EncodedI64<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V>(
     pub PhantomData<(B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V)>,
 );
@@ -433,6 +487,7 @@ impl<B0V, B1V, B2V, B3V, B4V, B5V, B6V, B7V> FourthByte
     type Output = B3V;
 }
 
+/// `WasmI64<T>` を little-endian byte 列へ encode する helper。
 pub trait EncodeI64 {
     type Output;
 }
@@ -687,11 +742,16 @@ where
     >>::Output;
 }
 
+/// `memory.grow` の実行 helper。
+///
+/// `OutputMemory` は grow 後 memory、`Result` は WASM 仕様通り旧 page count か
+/// `-1` です。
 pub trait MemoryGrow<Delta> {
     type OutputMemory;
     type Result;
 }
 
+/// `memory.grow` の上限判定 helper。
 pub trait MemoryGrowWithinMax<Pages, MaxPages, Cells, NewPages> {
     type OutputMemory;
     type Result;

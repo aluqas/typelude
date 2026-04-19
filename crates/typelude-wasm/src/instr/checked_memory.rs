@@ -1,3 +1,11 @@
+//! memory opcode の checked 意味論。
+//!
+//! checked memory helper は成功時に `CheckedMemoryRead` /
+//! `CheckedMemoryWrite`、 範囲外時に `MemoryAccessOutOfBounds`
+//! を返します。このファイルはそれらを `WasmDone<State>` または
+//! `WasmTrap<TrapMemoryOob>` へ写像します。 `memory.grow` は WASM 仕様通り trap
+//! ではなく値で失敗を表すため、infallible 側で扱います。
+
 use core::ops::Add;
 
 use typelude_col::TArr;
@@ -25,6 +33,7 @@ use crate::{
     value::{WasmI32, WasmI64},
 };
 
+/// checked `i32.load` 系の読出し結果を outcome へ変換する bridge trait。
 pub trait CheckedLoadI32Outcome<
     Module,
     Memory,
@@ -64,6 +73,7 @@ impl<ValueT, Module, Memory, Tables, Globals, Tail, Locals, Frames, Branches, Re
     >;
 }
 
+/// checked `i64.load` 系の読出し結果を outcome へ変換する bridge trait。
 pub trait CheckedLoadI64Outcome<
     Module,
     Memory,
@@ -103,6 +113,7 @@ impl<ValueT, Module, Memory, Tables, Globals, Tail, Locals, Frames, Branches, Re
     >;
 }
 
+/// checked `i32.load8_s` の読出し結果を outcome へ変換する bridge trait。
 pub trait CheckedLoadI32SignExtend8Outcome<
     Module,
     Memory,
@@ -162,6 +173,7 @@ where
     >;
 }
 
+/// checked `i32.load16_s` の読出し結果を outcome へ変換する bridge trait。
 pub trait CheckedLoadI32SignExtend16Outcome<
     Module,
     Memory,
@@ -221,6 +233,7 @@ where
     >;
 }
 
+/// checked `i64.load8_s` の読出し結果を outcome へ変換する bridge trait。
 pub trait CheckedLoadI64SignExtend8Outcome<
     Module,
     Memory,
@@ -280,6 +293,7 @@ where
     >;
 }
 
+/// checked `i64.load8_u` の読出し結果を outcome へ変換する bridge trait。
 pub trait CheckedLoadI64ZeroExtend8Outcome<
     Module,
     Memory,
@@ -339,6 +353,7 @@ where
     >;
 }
 
+/// checked `i64.load16_s` の読出し結果を outcome へ変換する bridge trait。
 pub trait CheckedLoadI64SignExtend16Outcome<
     Module,
     Memory,
@@ -398,6 +413,7 @@ where
     >;
 }
 
+/// checked `i64.load32_s` の読出し結果を outcome へ変換する bridge trait。
 pub trait CheckedLoadI64SignExtend32Outcome<
     Module,
     Memory,
@@ -457,6 +473,7 @@ where
     >;
 }
 
+/// checked store 系の書込み結果を outcome へ変換する bridge trait。
 pub trait CheckedStoreOutcome<Module, Tables, Globals, Stack, Locals, Frames, Branches, Rest> {
     type Output;
 }

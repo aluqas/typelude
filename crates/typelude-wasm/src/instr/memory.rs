@@ -1,3 +1,11 @@
+//! memory opcode の success-only 意味論。
+//!
+//! load/store は stack 上の base address と memarg offset から実効 address
+//! を作り、 `helpers::memory` の byte-level read/write helper
+//! へ委譲します。範囲外アクセスは trait 制約を満たせず compile-time failure
+//! として表面化します。 checked runtime 用の OOB trap 変換は
+//! `checked_memory.rs` 側に分離されています。
+
 use core::ops::Add;
 
 use typelude_col::TArr;
@@ -24,6 +32,10 @@ use crate::{
     value::{WasmI32, WasmI64},
 };
 
+/// load/store 系 opcode から実効 offset を取り出す helper。
+///
+/// 現状は plain integer offset か `WasmMemArg<U0, Align, Offset>`
+/// のみを受理します。
 pub trait ResolveMemArg {
     type Offset;
 }

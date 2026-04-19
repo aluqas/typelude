@@ -36,6 +36,7 @@ use crate::{
 };
 
 #[doc(hidden)]
+/// `B0` / `B1` を Wasm の真偽値表現 `WasmI32<0|1>` へ変換する helper。
 pub trait BoolResult {
     type Output;
 }

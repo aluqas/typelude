@@ -14,30 +14,39 @@ use crate::{
     value::{WasmI32, WasmI32Type, WasmI64, WasmI64Type},
 };
 
+/// 関数 import binding が見つからなかったことを表す型。
 pub struct MissingHostFuncBinding<ModuleName, FieldName>(pub PhantomData<(ModuleName, FieldName)>);
+/// グローバル import binding が見つからなかったことを表す型。
 pub struct MissingHostGlobalBinding<ModuleName, FieldName>(
     pub PhantomData<(ModuleName, FieldName)>,
 );
+/// メモリ import binding が見つからなかったことを表す型。
 pub struct MissingHostMemoryBinding<ModuleName, FieldName>(
     pub PhantomData<(ModuleName, FieldName)>,
 );
+/// テーブル import binding が見つからなかったことを表す型。
 pub struct MissingHostTableBinding<ModuleName, FieldName>(
     pub PhantomData<(ModuleName, FieldName)>,
 );
+/// 関数 import binding の解決結果。
 pub struct ResolvedHostFunc<Host>(pub PhantomData<Host>);
 
+/// host environment から関数 import binding を解決する helper family。
 pub trait ResolveHostFuncBinding<ModuleName, FieldName> {
     type Output;
 }
 
+/// host environment からグローバル import binding を解決する helper family。
 pub trait ResolveHostGlobalBinding<ModuleName, FieldName> {
     type Output;
 }
 
+/// host environment からメモリ import binding を解決する helper family。
 pub trait ResolveHostMemoryBinding<ModuleName, FieldName> {
     type Output;
 }
 
+/// host environment からテーブル import binding を解決する helper family。
 pub trait ResolveHostTableBinding<ModuleName, FieldName> {
     type Output;
 }
@@ -226,6 +235,7 @@ impl<ModuleName, FieldName> ResolveHostTableBinding<ModuleName, FieldName> for T
     type Output = MissingHostTableBinding<ModuleName, FieldName>;
 }
 
+/// 解決済み host 関数が import 要求と互換であることを確認する helper。
 pub trait ImportedFuncCompat<ImportKind> {
     type Output;
 }
@@ -236,6 +246,7 @@ impl<FuncType, Host> ImportedFuncCompat<crate::module::ImportFunc<FuncType>>
     type Output = WasmHostFunc<FuncType, Host>;
 }
 
+/// host global が import 要求と互換であることを確認する helper。
 pub trait ImportedGlobalCompat<ImportKind> {
     type Output;
 }
@@ -252,6 +263,7 @@ impl<Mutability, ValueT> ImportedGlobalCompat<ImportGlobal<Mutability, WasmI64Ty
     type Output = WasmGlobal<Mutability, WasmI64<ValueT>>;
 }
 
+/// import 上限と実体上限の互換性を確認する helper。
 pub trait ImportMaxCompat<ActualMax> {}
 
 impl<ActualMax> ImportMaxCompat<ActualMax> for NoLimit {}
@@ -264,6 +276,7 @@ where
 {
 }
 
+/// host memory が import 要求と互換であることを確認する helper。
 pub trait ImportedMemoryCompat<ImportKind> {
     type Output;
 }
@@ -278,6 +291,7 @@ where
     type Output = WasmMemory<Pages, ActualMax, Cells>;
 }
 
+/// host table が import 要求と互換であることを確認する helper。
 pub trait ImportedTableCompat<ImportKind> {
     type Output;
 }

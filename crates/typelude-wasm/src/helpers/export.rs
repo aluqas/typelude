@@ -10,13 +10,18 @@ use crate::{
     },
 };
 
+/// export 名が見つからなかったことを表す型。
 pub struct MissingExport<Name>(pub PhantomData<Name>);
 
+/// export 名から export kind を解決する helper family。
 pub trait ResolveExportKind<Name> {
+    /// 解決された export kind。
     type Output;
 }
 
+/// `ResolveExportKind` の再帰処理用 helper。
 pub trait ResolveExportKindHelper<Name, Kind, Tail> {
+    /// 途中一致か再帰継続かを反映した export kind。
     type Output;
 }
 
@@ -50,7 +55,9 @@ impl<Name> ResolveExportKind<Name> for TTerm {
     type Output = MissingExport<Name>;
 }
 
+/// export kind を関数 index に変換する helper。
 pub trait ExportKindToFunc {
+    /// 解決された関数 index。
     type Output;
 }
 
@@ -58,7 +65,9 @@ impl<FuncIdx> ExportKindToFunc for ExportFunc<FuncIdx> {
     type Output = FuncIdx;
 }
 
+/// export kind を global index に変換する helper。
 pub trait ExportKindToGlobal {
+    /// 解決された global index。
     type Output;
 }
 
@@ -66,7 +75,9 @@ impl<GlobalIdx> ExportKindToGlobal for ExportGlobal<GlobalIdx> {
     type Output = GlobalIdx;
 }
 
+/// export kind を table index に変換する helper。
 pub trait ExportKindToTable {
+    /// 解決された table index。
     type Output;
 }
 
@@ -74,11 +85,14 @@ impl<TableIdx> ExportKindToTable for ExportTable<TableIdx> {
     type Output = TableIdx;
 }
 
+/// export kind が memory であることを確認する helper。
 pub trait ExportKindToMemory {}
 
 impl ExportKindToMemory for ExportMemory {}
 
+/// export 名から関数 index を解決する helper。
 pub trait ResolveExportFunc<Name> {
+    /// 解決された関数 index。
     type Output;
 }
 
@@ -98,7 +112,9 @@ where
     type Output = <Module as ResolveExportFunc<Name>>::Output;
 }
 
+/// export 名から global index を解決する helper。
 pub trait ResolveExportGlobal<Name> {
+    /// 解決された global index。
     type Output;
 }
 
@@ -118,7 +134,9 @@ where
     type Output = <Module as ResolveExportGlobal<Name>>::Output;
 }
 
+/// export 名から table index を解決する helper。
 pub trait ResolveExportTable<Name> {
+    /// 解決された table index。
     type Output;
 }
 
@@ -138,6 +156,7 @@ where
     type Output = <Module as ResolveExportTable<Name>>::Output;
 }
 
+/// export 名が memory を指すことを確認する helper。
 pub trait ResolveExportMemory<Name> {}
 
 impl<Funcs, Types, Exports, Name> ResolveExportMemory<Name>

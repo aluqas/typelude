@@ -7,10 +7,12 @@ use crate::{
     state::WasmState,
 };
 
+/// branch stack から深さ `Depth` の分岐先を解決する helper。
 pub trait ResolveBranch<Depth> {
     type Output;
 }
 
+/// `br_table` の index から実際の分岐深さを選ぶ helper。
 pub trait SelectBrTableTarget<Default, Index> {
     type Output;
 }
@@ -47,6 +49,7 @@ where
     type Output = <Tail as ResolveBranch<<UInt<N, B> as Sub<U1>>::Output>>::Output;
 }
 
+/// 解決済み branch target を新しい `WasmState` へ反映する helper。
 pub trait BranchJump<Module, Store, Stack, Locals, Frames> {
     type Output;
 }

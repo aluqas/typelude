@@ -1,16 +1,71 @@
-//! WebAssembly 型レベル実装。
+//! WebAssembly の型レベル実行系。
 //!
-//! WASM 仮想機械の型レベルモデル化。命令セット（opcode）、
-//! フレーム、メモリ、グローバル変数、テーブル等の状態管理と、
-//! インスタンス化・関数呼び出し・実行の型安全な表現。
+//! この crate は WebAssembly モジュール、インスタンス化、operand stack、
+//! 線形メモリ、テーブル、グローバル、制御フローを Rust の型として表現し、
+//! `Eval` を通じて small-step に評価します。`twat!` は WAT 文字列を
+//! `WasmModule<...>` に lower し、この crate の runtime surface
+//! がそれを実行します。
 //!
-//! ## 主要概念
+//! ## レイヤ構成
 //!
-//! - **opcode**: 命令型（numeric、control、memory、local、host等）
-//! - **module**: WASM モジュール定義（関数、メモリ、グローバル等）
-//! - **instance**: モジュールインスタンス（実行時の状態）
-//! - **state**: スタック、メモリ、グローバル変数の型レベル状態
-//! - **frame/instr**: 制御フロー・命令実行ステップ
+//! - `module`: import / function / memory / table / global / export
+//!   を持つモジュール定義
+//! - `state`: 実行中の store, operand stack, locals, frames, branches, program
+//! - `opcode`: WASM 命令そのものを表すマーカー型
+//! - `helpers`: index 解決、import/export 解決、call/memory/table
+//!   操作などの型レベル補助
+//! - `instr`: `Step` / `CheckedStep` に対する opcode の意味論
+//! - `run`: インスタンス化と実行の入口、および結果取り出し用 alias / trait
+//!
+//! ## Runtime Surface
+//!
+//! - `Run` / `Invoke*`: 従来の success-only runtime
+//! - `RunChecked` / `Invoke*Checked`: trap-aware runtime
+//!
+//! success-only runtime では、一部の失敗は trait 未解決や compile-fail
+//! として表面化します。 checked runtime では `WasmDone<State>` または
+//! `WasmTrap<Reason>` を返し、 `unreachable`, `call_indirect`, memory OOB
+//! などの失敗を型レベル outcome として扱います。
+//!
+//! ## `twat!` との関係
+//!
+//! `typelude-macros::twat!` は WAT を parse / validate / lower し、
+//! この crate の `WasmModule`, `WasmFunc`, `WasmMemArg`, opcode
+//! 群へ変換します。 frontend 側の validation で single-memory や memarg
+//! 制約を締め、 runtime 側ではその前提のもとで命令意味論を評価します。
+//!
+//! ## 評価フロー
+//!
+//! 典型的な実行は次の順序で進みます。
+//!
+//! 1. `WasmModule<...>` を `InstantiateModule<Module, Env>` で `WasmInstance`
+//!    にする
+//! 2. `BuildInvokeState` または `BuildProgramState` で初期 `WasmState` を作る
+//! 3. `RunWasm` または `RunCheckedWasm` が `Program` の先頭 opcode を 1
+//!    つずつ評価する
+//! 4. 各 opcode の意味論は `instr::*` の `Step<WasmState<...>>` /
+//!    `CheckedStep<...>` に委譲される
+//! 5. `Program = TTerm` になった時点で、legacy runtime は final `WasmState`、
+//!    checked runtime は `WasmDone<WasmState<...>>` を返す
+//!
+//! `helpers::*` はこの流れの補助層です。例えば `helpers::instance` は
+//! import 解決・data segment 適用・elem segment 適用を担当し、
+//! `helpers::call` は引数 pop と locals 構築、`helpers::memory` は byte-level
+//! memory access、`helpers::table` は `call_indirect` 用の table lookup
+//! を担当します。
+//!
+//! ## 失敗モードの考え方
+//!
+//! この実験実装には 2 種類の失敗表現があります。
+//!
+//! - 型レベル前提を満たさないものは trait 未解決として compile-time に失敗する
+//! - WASM runtime trap として扱いたいものは checked runtime で
+//!   `WasmTrap<Reason>` になる
+//!
+//! `Run` / `Invoke*` は前者を多く含む success-only surface です。
+//! `RunChecked` / `Invoke*Checked` は `unreachable`, `call_indirect` の
+//! null/OOB/type mismatch, memory load/store の OOB を明示的な outcome
+//! として返します。
 
 #![recursion_limit = "65536"]
 

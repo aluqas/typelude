@@ -1,3 +1,9 @@
+//! control opcode の checked 意味論。
+//!
+//! success-only runtime で trait 未解決になりやすい selected failure を
+//! `WasmTrap<Reason>` に変換します。現在は `unreachable` と `call_indirect`
+//! の null table slot / table OOB / function type mismatch を扱います。
+
 use typelude_col::TArr;
 use typelude_std::core::{Eval, Get};
 
@@ -25,6 +31,8 @@ impl<Module, Store, Stack, Locals, Frames, Branches, Rest> Eval
     type Output = WasmTrap<TrapUnreachable>;
 }
 
+/// checked `call_indirect` の table 参照結果を最終 outcome へ変換する bridge
+/// trait。
 pub trait CheckedCallIndirectResolved<
     TypeIdx,
     Module,
@@ -73,6 +81,7 @@ where
     >>::Output;
 }
 
+/// checked `call_indirect` の関数型一致結果を outcome へ変換する bridge trait。
 pub trait CheckedCallIndirectTypeMatch<Func, Module, Store, Stack, Locals, Frames, Branches, Rest>
 {
     type Output;
@@ -96,6 +105,10 @@ where
     >;
 }
 
+/// checked `call_indirect` の最終 target 解決 trait。
+///
+/// 関数型が一致すれば `WasmDone<State>`、不一致なら
+/// `WasmTrap<TrapCallIndirectTypeMismatch>` を返します。
 pub trait CheckedCallIndirectTarget<TypeIdx, FuncIdx, Store, Stack, Locals, Frames, Branches, Rest>
 {
     type Output;

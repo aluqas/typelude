@@ -1,3 +1,11 @@
+//! control opcode の success-only 意味論。
+//!
+//! `OpCall`, `OpBlock`, `OpLoop`, `br`, `return`, `select`, `call_indirect`
+//! など、 program counter や frame stack / branch stack
+//! を大きく動かす命令を扱います。 checked runtime で trap-aware にしたい
+//! `unreachable` と一部 `call_indirect` failure は `checked_control.rs`
+//! 側で追加実装されます。
+
 use typelude_col::{Concat, TArr, TTerm};
 use typelude_std::core::{Eq, Eval, Get};
 use typenum::{B0, B1, U0};
@@ -30,6 +38,7 @@ impl<Module, Store, Stack, Locals, Frames, Branches, Rest> Eval
 }
 
 #[doc(hidden)]
+/// `if` の条件値から then / else program を選ぶ内部 helper。
 pub trait IfProgram<Then, Else, Rest> {
     type Output;
 }
@@ -49,6 +58,7 @@ where
 }
 
 #[doc(hidden)]
+/// `select` の条件値から true/false 値を選ぶ内部 helper。
 pub trait SelectResult<TrueValue, FalseValue> {
     type Output;
 }
@@ -62,6 +72,10 @@ impl<TrueValue, FalseValue> SelectResult<TrueValue, FalseValue> for B1 {
 }
 
 #[doc(hidden)]
+/// 関数実体を呼び出し可能な `WasmState` へ変換する bridge trait。
+///
+/// 通常関数では frame を積んで本体へ遷移し、host 関数では `HostCall` 結果を
+/// そのまま `WasmState` へ戻します。
 pub trait InvokeCall<Module, Store, Stack, Locals, Frames, Branches, Rest> {
     type Output;
 }
@@ -125,6 +139,7 @@ where
     >>::Output;
 }
 
+/// `HostCallResult` を `WasmState` へ戻す bridge trait。
 pub trait HostCallOutput<Module, Stack, Locals, Frames, Branches, Rest> {
     type Output;
 }
@@ -166,6 +181,7 @@ where
     >>::Output;
 }
 
+/// 関数型が完全一致していることを表す success-only helper。
 pub trait SameFuncType<Expected> {}
 
 impl<Params, Results> SameFuncType<WasmFuncType<Params, Results>>
@@ -173,6 +189,9 @@ impl<Params, Results> SameFuncType<WasmFuncType<Params, Results>>
 {
 }
 
+/// success-only `call_indirect` の target 解決 trait。
+///
+/// 型不一致や table 失敗は trait 未解決として表面化します。
 pub trait CallIndirectTarget<TypeIdx, FuncIdx, Store, Stack, Locals, Frames, Branches, Rest> {
     type Output;
 }

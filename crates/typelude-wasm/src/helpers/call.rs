@@ -1,3 +1,14 @@
+//! 関数呼び出しの helper 群。
+//!
+//! `OpCall` / `OpCallIndirect` の意味論は、関数 index lookup、parameter pop、
+//! local 初期化、host call 結果の state
+//! 化に分解されています。このファイルはその分解点を trait family
+//! として提供します。
+//!
+//! 型不一致は基本的に trait 未解決として失敗します。checked `call_indirect`
+//! では `FuncTypeEq` の結果を使い、型不一致を `TrapCallIndirectTypeMismatch`
+//! に変換します。
+
 use core::marker::PhantomData;
 
 use typelude_col::{TArr, TTerm};
@@ -12,6 +23,9 @@ use crate::{
     },
 };
 
+/// 型リストを反転する helper trait。
+///
+/// 関数引数は stack から逆順に取り出すため、parameter list の整形に使います。
 pub trait ReverseList {
     type Output;
 }
@@ -28,6 +42,9 @@ where
     type Output = <<Tail as ReverseList>::Output as Append<Head>>::Output;
 }
 
+/// stack のトップから期待値型に一致する 1 引数を取り出す helper。
+///
+/// 不一致時は trait 未解決として失敗します。
 pub trait PopArg<ExpectedType> {
     type RemainingStack;
     type Value;
@@ -53,6 +70,7 @@ impl<ValueT, Tail> PopArg<WasmF64Type> for TArr<WasmF64<ValueT>, Tail> {
     type Value = WasmF64<ValueT>;
 }
 
+/// stack から複数引数を関数シグネチャに従って取り出す helper。
 pub trait PopArgs<ParamTypes> {
     type RemainingStack;
     type Params;
@@ -78,6 +96,7 @@ where
         >>::Output;
 }
 
+/// 関数型から parameter list を抽出する helper。
 pub trait ParamTypes {
     type Output;
 }
@@ -86,10 +105,16 @@ impl<Params, Results> ParamTypes for WasmFuncType<Params, Results> {
     type Output = Params;
 }
 
+/// stack 上の引数と local 宣言から実行時 locals 配列を構築する helper。
+///
+/// WASM の operand stack は top-first なので、parameter list を反転してから pop
+/// します。 pop した params と zero-initialized local 宣言列を連結したものが
+/// current locals になります。
 pub trait BindLocals<FuncType, LocalInits> {
     type Output;
 }
 
+/// 値型に対応する zero 値を与える helper。
 pub trait ZeroValueForType {
     type Output;
 }
@@ -110,6 +135,7 @@ impl ZeroValueForType for WasmF64Type {
     type Output = WasmF64<U0>;
 }
 
+/// local 宣言列を zero-initialized な local 値列へ materialize する helper。
 pub trait MaterializeLocals {
     type Output;
 }
@@ -140,6 +166,7 @@ where
     >>::Output;
 }
 
+/// module の function space から関数 index を引く helper。
 pub trait ModuleFuncLookup<FuncIdx> {
     type Output;
 }
@@ -152,6 +179,7 @@ where
     type Output = <Funcs as Get<FuncIdx>>::Output;
 }
 
+/// 関数定義から `WasmFuncType` を取り出す helper。
 pub trait FuncSignature {
     type Output;
 }
@@ -164,6 +192,9 @@ impl<FuncType, Host> FuncSignature for WasmHostFunc<FuncType, Host> {
     type Output = FuncType;
 }
 
+/// 値型どうしの等価性判定。
+///
+/// `B1` が一致、`B0` が不一致です。
 pub trait ValTypeEq<Rhs> {
     type Output;
 }
@@ -193,6 +224,7 @@ impl_val_type_eq!(WasmF64Type, WasmI64Type => B0);
 impl_val_type_eq!(WasmF64Type, WasmF32Type => B0);
 impl_val_type_eq!(WasmF64Type, WasmF64Type => B1);
 
+/// 値型リストどうしの等価性判定。
 pub trait ValListEq<Rhs> {
     type Output;
 }
@@ -220,6 +252,9 @@ where
     >>::Output;
 }
 
+/// 関数型どうしの等価性判定。
+///
+/// checked `call_indirect` の型一致判定に使います。
 pub trait FuncTypeEq<Rhs> {
     type Output;
 }
@@ -236,9 +271,17 @@ where
     >>::Output;
 }
 
+/// ホスト関数呼び出し結果。
+///
+/// `Store` は更新後 store、`Results` は戻り値列です。
 #[derive(Debug, Default)]
 pub struct HostCallResult<Store, Results>(pub PhantomData<(Store, Results)>);
 
+/// ホスト関数の型レベル実装インターフェース。
+///
+/// `FuncType` と `Args` に従って呼び出され、`HostCallResult<Store, Results>`
+/// を返すことを期待します。
 pub trait HostCall<FuncType, Store, Args> {
+    /// 呼び出し結果。通常は `HostCallResult<Store, Results>`。
     type Output;
 }

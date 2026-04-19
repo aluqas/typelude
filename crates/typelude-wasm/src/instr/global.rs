@@ -8,6 +8,7 @@ use crate::{
     state::{WasmGlobal, WasmState, WasmStore},
 };
 
+/// global 実体から stack に積む値型を取り出す helper。
 pub trait GlobalGetValue {
     type Output;
 }
@@ -16,6 +17,7 @@ impl<Mutability, ValueT> GlobalGetValue for WasmGlobal<Mutability, ValueT> {
     type Output = ValueT;
 }
 
+/// mutable global に新しい値を書き込んだ後の型を作る helper。
 pub trait MutableGlobalWith<ValueT> {
     type Output;
 }

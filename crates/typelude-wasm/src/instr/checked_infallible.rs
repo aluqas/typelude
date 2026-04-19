@@ -1,3 +1,9 @@
+//! checked runtime で既存 `Step` をそのまま再利用できる opcode 群。
+//!
+//! checked runtime は trap-aware な opcode だけを個別実装し、それ以外は
+//! success-only `Step` の結果を `WasmDone` で包みます。このファイルの
+//! `InfallibleOpcode` 実装一覧がその fallback 対象を定義します。
+
 use typelude_col::TArr;
 use typelude_std::core::{Eval, Evaluate};
 use typenum::U0;

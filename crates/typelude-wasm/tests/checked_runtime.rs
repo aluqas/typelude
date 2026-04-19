@@ -93,16 +93,23 @@ type MemoryGrowModule = typelude_macros::twat! {
 
 #[test]
 fn checked_runtime_traps_unreachable() {
-    type Result = InvokeExportChecked<UnreachableModule, typelude_wasm::typelude_str::tstr!("main"), TTerm>;
+    type Result =
+        InvokeExportChecked<UnreachableModule, typelude_wasm::typelude_str::tstr!("main"), TTerm>;
     assert_type_eq_all!(Result, WasmTrap<TrapUnreachable>);
 }
 
 #[test]
 fn checked_runtime_traps_call_indirect_failures() {
-    type NullResult =
-        InvokeExportChecked<CallIndirectNullModule, typelude_wasm::typelude_str::tstr!("main"), TTerm>;
-    type OobResult =
-        InvokeExportChecked<CallIndirectOobModule, typelude_wasm::typelude_str::tstr!("main"), TTerm>;
+    type NullResult = InvokeExportChecked<
+        CallIndirectNullModule,
+        typelude_wasm::typelude_str::tstr!("main"),
+        TTerm,
+    >;
+    type OobResult = InvokeExportChecked<
+        CallIndirectOobModule,
+        typelude_wasm::typelude_str::tstr!("main"),
+        TTerm,
+    >;
     type MismatchResult = InvokeExportChecked<
         CallIndirectTypeMismatchModule,
         typelude_wasm::typelude_str::tstr!("main"),
@@ -116,10 +123,16 @@ fn checked_runtime_traps_call_indirect_failures() {
 
 #[test]
 fn checked_runtime_traps_memory_oob() {
-    type LoadResult =
-        InvokeExportChecked<MemoryOobLoadModule, typelude_wasm::typelude_str::tstr!("main"), TTerm>;
-    type StoreResult =
-        InvokeExportChecked<MemoryOobStoreModule, typelude_wasm::typelude_str::tstr!("main"), TTerm>;
+    type LoadResult = InvokeExportChecked<
+        MemoryOobLoadModule,
+        typelude_wasm::typelude_str::tstr!("main"),
+        TTerm,
+    >;
+    type StoreResult = InvokeExportChecked<
+        MemoryOobStoreModule,
+        typelude_wasm::typelude_str::tstr!("main"),
+        TTerm,
+    >;
 
     assert_type_eq_all!(LoadResult, WasmTrap<TrapMemoryOob>);
     assert_type_eq_all!(StoreResult, WasmTrap<TrapMemoryOob>);
@@ -127,7 +140,8 @@ fn checked_runtime_traps_memory_oob() {
 
 #[test]
 fn checked_runtime_keeps_memory_grow_as_value_result() {
-    type Result = InvokeExportChecked<MemoryGrowModule, typelude_wasm::typelude_str::tstr!("main"), TTerm>;
+    type Result =
+        InvokeExportChecked<MemoryGrowModule, typelude_wasm::typelude_str::tstr!("main"), TTerm>;
 
     assert_type_eq_all!(<Result as StateStack>::Output, TArr<WasmI32<U1>, TTerm>);
 }

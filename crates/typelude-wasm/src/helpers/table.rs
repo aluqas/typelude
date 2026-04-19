@@ -1,3 +1,11 @@
+//! table 操作の helper 群。
+//!
+//! table は `TableEntry<SlotIdx, FuncIdx>` の疎なリストとして表現します。
+//! 未書き込み slot は `NullFuncRef` として扱われ、checked `call_indirect` では
+//! `TrapCallIndirectNull` へ変換されます。slot index が table limit 外の場合は
+//! success-only lookup では trait 未解決、checked lookup では `TableSlotOob`
+//! になります。
+
 use core::ops::Add;
 
 use typelude_col::{TArr, TTerm};
@@ -9,8 +17,10 @@ use crate::{
     state::{NullFuncRef, TableEntry, WasmTable},
 };
 
+/// table 読み出しが範囲外だったことを表す型。
 pub struct TableSlotOob;
 
+/// table entry 列から slot を探索する helper family。
 pub trait FindFuncRef<SlotIdx> {
     type Output;
 }
@@ -19,6 +29,7 @@ impl<SlotIdx> FindFuncRef<SlotIdx> for TTerm {
     type Output = NullFuncRef;
 }
 
+/// `FindFuncRef` の再帰処理用 helper。
 pub trait FindFuncRefHelper<SlotIdx, FuncRef, Tail> {
     type Output;
 }
@@ -44,6 +55,7 @@ where
         <<QueryIdx as Eq<EntryIdx>>::Output as FindFuncRefHelper<QueryIdx, FuncRef, Tail>>::Output;
 }
 
+/// table から funcref を読み出す success-only helper。
 pub trait TableReadRef<SlotIdx> {
     type Output;
 }
@@ -57,10 +69,12 @@ where
     type Output = <Entries as FindFuncRef<SlotIdx>>::Output;
 }
 
+/// table から funcref を読み出す checked helper。
 pub trait TableReadRefChecked<SlotIdx> {
     type Output;
 }
 
+/// `TableReadRefChecked` の境界判定 helper。
 pub trait TableReadRefCheckedHelper<SlotIdx, Entries> {
     type Output;
 }
@@ -85,6 +99,7 @@ where
         <<SlotIdx as Lt<Min>>::Output as TableReadRefCheckedHelper<SlotIdx, Entries>>::Output;
 }
 
+/// table の 1 slot に funcref を書き込む helper。
 pub trait TableWriteRef<SlotIdx, FuncRef> {
     type Output;
 }
@@ -98,6 +113,7 @@ where
     type Output = WasmTable<Min, Max, TArr<TableEntry<SlotIdx, FuncRef>, Entries>>;
 }
 
+/// 連続する table slot 群へ funcref 列を書き込む helper。
 pub trait TableWriteRefs<SlotIdx, FuncRefs> {
     type Output;
 }

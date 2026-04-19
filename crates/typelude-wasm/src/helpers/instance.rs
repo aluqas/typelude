@@ -1,3 +1,15 @@
+//! モジュールインスタンス化の helper 群。
+//!
+//! このファイルは `WasmModule<...>` を `WasmInstance<...>` に変換するための
+//! 型レベル pass をまとめています。処理順は概ね import 関数の構築、import
+//! global の構築、 定義済み global の初期化、memory の materialize と data
+//! segment 適用、 table の materialize と elem segment 適用、resolved module
+//! の組み立てです。
+//!
+//! 失敗の多くは trait 未解決として表面化します。例えば host binding
+//! がない場合は `MissingHost*Binding` 型に到達し、その後の compat trait
+//! を満たせず compile-time に失敗します。
+
 use typelude_col::{TArr, TTerm};
 use typelude_std::core::{Append, Concat, Get, Set};
 
@@ -24,13 +36,20 @@ use crate::{
     value::{WasmI32, WasmI64},
 };
 
+/// `WasmModule` を `WasmInstance` へインスタンス化する helper family。
+///
+/// `Env` は `WasmHostEnv` です。出力は `WasmInstance<WasmResolvedModule<...>,
+/// WasmStore<...>, Start>` になり、`run.rs` の build helper がこの instance
+/// から初期 `WasmState` を作ります。
 pub trait Instantiate<Env> {
     type Output;
 }
 
 #[doc(hidden)]
+/// import された memory が存在しないことを表す内部マーカー。
 pub struct NoImportedMemory;
 
+/// module 宣言上の max pages を store 表現へ正規化する helper。
 pub trait ToStoreMax {
     type Output;
 }
@@ -46,6 +65,7 @@ where
     type Output = MaxPages;
 }
 
+/// const expr を runtime 値へ解決する helper family。
 pub trait ResolveInitExprRuntime<Expr, Globals> {
     type Output;
 }
@@ -70,6 +90,7 @@ impl<ValueT, Globals> ResolveInitExprRuntime<InitI64Const<ValueT>, Globals> for 
     type Output = WasmI64<ValueT>;
 }
 
+/// immutable global を初期化式中で読み出す helper。
 pub trait GlobalInitGet<Idx> {
     type Output;
 }
@@ -96,6 +117,7 @@ where
     type Output = <Globals as GlobalInitGet<Idx>>::Output;
 }
 
+/// 初期化式結果から offset 整数値を取り出す helper。
 pub trait InitExprOffsetValue {
     type Output;
 }
@@ -104,6 +126,7 @@ impl<ValueT> InitExprOffsetValue for WasmI32<ValueT> {
     type Output = ValueT;
 }
 
+/// const expr を offset 値として解決する helper。
 pub trait ResolveInitExprValue<Expr, Globals> {
     type Output;
 }
@@ -117,6 +140,7 @@ where
         <<() as ResolveInitExprRuntime<Expr, Globals>>::Output as InitExprOffsetValue>::Output;
 }
 
+/// 定義済み global 宣言を既存 global 列へ 1 つ追加する helper。
 pub trait AppendDefinedGlobal<Existing, Mutability, InitExpr> {
     type Output;
 }
@@ -132,6 +156,7 @@ where
     >>::Output;
 }
 
+/// global 宣言列を既存 global 列へ畳み込む helper。
 pub trait AppendDefinedGlobals<Existing, Decls> {
     type Output;
 }
@@ -155,6 +180,7 @@ where
     >>::Output;
 }
 
+/// data segment 群を memory へ適用する helper。
 pub trait ApplyDataSegments<Memory, Segments, Globals> {
     type Output;
 }
@@ -163,6 +189,7 @@ impl<Memory, Globals> ApplyDataSegments<Memory, TTerm, Globals> for () {
     type Output = Memory;
 }
 
+/// data / elem segment の offset 式を解決する helper。
 pub trait ResolveDataOffset<Expr, Globals> {
     type Output;
 }
@@ -198,6 +225,7 @@ where
     >>::Output;
 }
 
+/// module memory 宣言から store 上の memory 実体を構築する helper。
 pub trait InstantiateMemoryStore<MemoryDecl, Globals> {
     type Output;
 }
@@ -214,6 +242,7 @@ where
     type Output = WasmMemory<MinPages, <MaxPages as ToStoreMax>::Output, TTerm>;
 }
 
+/// elem segment 群を table へ適用する helper。
 pub trait ApplyElemSegments<Table, Segments, Globals> {
     type Output;
 }
@@ -250,6 +279,7 @@ where
     >>::Output;
 }
 
+/// table 宣言列を既存 table 列へ追加する helper。
 pub trait AppendDefinedTables<Existing, Decls> {
     type Output;
 }
@@ -274,10 +304,12 @@ where
     >>::Output;
 }
 
+/// function space から型一覧を取り出す helper。
 pub trait FuncSpaceTypes {
     type Output;
 }
 
+/// function space から関数一覧を取り出す helper。
 pub trait FuncSpaceFuncs {
     type Output;
 }
@@ -290,6 +322,7 @@ impl<Types, Funcs> FuncSpaceFuncs for WasmFuncSpace<Types, Funcs> {
     type Output = Funcs;
 }
 
+/// import 宣言列と host bindings から import 関数列を構築する helper。
 pub trait BuildImportedFuncs<Imports, Bindings> {
     type Output;
 }
@@ -350,6 +383,7 @@ where
     type Output = <() as BuildImportedFuncs<Tail, Bindings>>::Output;
 }
 
+/// import 宣言列と host bindings から import global 列を構築する helper。
 pub trait BuildImportedGlobals<Imports, Bindings> {
     type Output;
 }
@@ -410,6 +444,7 @@ where
     type Output = <() as BuildImportedGlobals<Tail, Bindings>>::Output;
 }
 
+/// import 宣言列と host bindings から import memory を解決する helper。
 pub trait ResolveImportedMemory<Imports, Bindings> {
     type Output;
 }
@@ -467,6 +502,12 @@ where
     type Output = <() as ResolveImportedMemory<Tail, Bindings>>::Output;
 }
 
+/// import memory と memory section から store memory を materialize する
+/// helper。
+///
+/// memory import がある場合は import された memory を使い、ない場合は module
+/// 側の `WasmMemoryDecl` から空 memory を作ります。その後、data segment
+/// を順に書き込みます。
 pub trait MaterializeMemoryStore<ImportedMemory, MemorySection, Globals> {
     type Output;
 }
@@ -505,6 +546,7 @@ where
     >>::Output;
 }
 
+/// import 宣言列と host bindings から import table 列を構築する helper。
 pub trait BuildImportedTables<Imports, Bindings> {
     type Output;
 }
@@ -565,6 +607,7 @@ where
     >;
 }
 
+/// 1 つの elem segment を table 群へ書き込む helper。
 pub trait WriteElemSegment<Tables, Segment, Globals> {
     type Output;
 }
@@ -593,6 +636,7 @@ where
     >>::Output;
 }
 
+/// elem segment 群を table 群へ適用する helper。
 pub trait ApplyElemSegmentsToTables<Tables, Segments, Globals> {
     type Output;
 }
@@ -618,6 +662,11 @@ where
     >>::Output;
 }
 
+/// import tables と table section から最終的な table 群を materialize する
+/// helper。
+///
+/// import table と定義済み table を連結した後、elem segment を適用します。
+/// `call_indirect` はここで書き込まれた `TableEntry` を runtime lookup します。
 pub trait MaterializeTables<Imports, TablesSection, Bindings, Globals> {
     type Output;
 }

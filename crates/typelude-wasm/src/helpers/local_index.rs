@@ -1,5 +1,6 @@
 use typelude_std::core::{Get, Set};
 
+/// local index から値を取得する helper。
 pub trait LocalGet<Idx> {
     type Output;
 }
@@ -11,6 +12,7 @@ where
     type Output = <Locals as Get<Idx>>::Output;
 }
 
+/// local index に値を書き込む helper。
 pub trait LocalSet<Idx, Value> {
     type Output;
 }
