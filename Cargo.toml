@@ -7,7 +7,6 @@ members = [
     "crates/typelude-str",
     # "crates/typelude-core",
     "crates/typelude-std",
-    "crates/typelude-vm",
     "crates/typelude-macros",
     "tooling/typelude-tooling-core",
     "tooling/typelude-tooling-cargo-profile",
