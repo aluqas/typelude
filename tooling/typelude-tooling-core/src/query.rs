@@ -81,6 +81,29 @@ impl OwnerQuerySpec {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DefinitionTreeQuerySpec {
+    pub owner: String,
+    pub match_kind: QueryMatchKind,
+    pub max_depth: usize,
+}
+
+impl DefinitionTreeQuerySpec {
+    #[must_use]
+    pub fn from_env() -> Option<Self> {
+        Some(Self {
+            owner: std::env::var("TYPELUDE_TOOLING_DEF_TREE_OWNER").ok()?,
+            match_kind: QueryMatchKind::from_label(
+                std::env::var("TYPELUDE_TOOLING_DEF_TREE_MATCH").ok().as_deref(),
+            ),
+            max_depth: std::env::var("TYPELUDE_TOOLING_DEF_TREE_MAX_DEPTH")
+                .ok()
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(32),
+        })
+    }
+}
+
 #[must_use]
 pub fn owner_path_matches(owner_path: &str, query: &str, match_kind: QueryMatchKind) -> bool {
     match match_kind {

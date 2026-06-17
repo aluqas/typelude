@@ -26,7 +26,9 @@ pub fn ensure_driver(toolchain: &str, rebuild: bool) -> ToolingResult<PathBuf> {
         return Ok(path);
     }
 
+    let root = workspace_root();
     let status = Command::new("cargo")
+        .current_dir(&root)
         .arg(format!("+{toolchain}"))
         .args(["build", "-p", "typelude-tooling-rustc-private", "--bin", "typelude-rustc-driver"])
         .status()?;

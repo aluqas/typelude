@@ -7,7 +7,10 @@ use crate::{
     emit::{CollectStats, EventEmitter},
     error::AnalysisResult,
     hooks::HookRegistry,
-    queries::{Query, QueryContext, QueryMatchKind, QueryTargetKind, ResolveOwnerQuery},
+    queries::{
+        DefinitionTreeQuery, Query, QueryContext, QueryMatchKind, QueryTargetKind,
+        ResolveOwnerQuery,
+    },
     session::AnalysisSession,
 };
 
@@ -37,6 +40,26 @@ pub fn run_owner_query_frontend(
             owner: owner.to_owned(),
             target_kind,
             match_kind,
+        };
+        let mut context = QueryContext::new(session);
+        query.run(&mut context)
+    })
+}
+
+pub fn run_definition_tree_frontend(
+    tcx: TyCtxt<'_>,
+    config: &CollectConfig,
+    owner: &str,
+    match_kind: QueryMatchKind,
+    max_depth: usize,
+) -> AnalysisResult<CollectStats> {
+    let mut config = config.clone();
+    config.max_depth = max_depth;
+    run_with_session(tcx, &config, |session| {
+        let query = DefinitionTreeQuery {
+            owner: owner.to_owned(),
+            match_kind,
+            max_depth,
         };
         let mut context = QueryContext::new(session);
         query.run(&mut context)

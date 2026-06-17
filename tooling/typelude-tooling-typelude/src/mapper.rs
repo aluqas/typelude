@@ -47,6 +47,7 @@ impl SemanticMapper {
             .filter_map(|event| match &event.payload {
                 TracePayload::RunStarted(..)
                 | TracePayload::RunFinished(..)
+                | TracePayload::DefinitionGraphEmitted(..)
                 | TracePayload::Info(..) => None,
                 TracePayload::SubjectDiscovered(data) => Some(SemanticNode {
                     id: NodeId::new(event.id.value()),

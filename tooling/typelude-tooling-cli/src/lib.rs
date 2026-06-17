@@ -38,6 +38,21 @@ pub enum OwnerMatchArg {
     DefId,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum DefTreeFormatArg {
+    Tree,
+    Dot,
+    Mermaid,
+    Json,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum DefTreeCompactArg {
+    Off,
+    Basic,
+    Aggressive,
+}
+
 impl HookArg {
     pub(crate) fn as_env(self) -> &'static str {
         match self {
@@ -108,6 +123,28 @@ pub enum Commands {
         max_depth: Option<usize>,
         #[arg(long)]
         subject: Option<String>,
+        #[arg(long, default_value_t = false)]
+        with_def: bool,
+        #[arg(long)]
+        def_owner: Option<String>,
+        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Exact)]
+        def_owner_match: OwnerMatchArg,
+        #[arg(long)]
+        def_input: Option<std::path::PathBuf>,
+        #[arg(long, default_value = "2021")]
+        def_edition: String,
+        #[arg(long)]
+        package: Option<String>,
+        #[arg(long)]
+        manifest_path: Option<std::path::PathBuf>,
+        #[arg(long, default_value = "nightly")]
+        toolchain: String,
+        #[arg(long, default_value_t = 32)]
+        def_max_depth: usize,
+        #[arg(long, default_value_t = true)]
+        rebuild_driver: bool,
+        #[arg(long, default_value_t = false)]
+        analysis: bool,
     },
     SolveSummary {
         #[arg(long)]
@@ -241,6 +278,50 @@ pub enum Commands {
         #[arg(long)]
         subject: Option<String>,
     },
+    DefTree {
+        #[arg(long)]
+        owner: String,
+        #[arg(long, value_enum, default_value_t = OwnerMatchArg::Exact)]
+        owner_match: OwnerMatchArg,
+        #[arg(long)]
+        input: Option<std::path::PathBuf>,
+        #[arg(long, default_value = "2021")]
+        edition: String,
+        #[arg(long)]
+        package: Option<String>,
+        #[arg(long)]
+        manifest_path: Option<std::path::PathBuf>,
+        #[arg(long, default_value = "nightly")]
+        toolchain: String,
+        #[arg(long, value_enum, default_value_t = DefTreeFormatArg::Tree)]
+        format: DefTreeFormatArg,
+        #[arg(long, value_enum, default_value_t = OutputModeArg::Text)]
+        output: OutputModeArg,
+        #[arg(long, default_value_t = 32)]
+        max_depth: usize,
+        #[arg(long, default_value = "local")]
+        scope: String,
+        #[arg(long, default_value_t = true)]
+        rebuild_driver: bool,
+        #[arg(long, value_enum, default_value_t = DefTreeCompactArg::Off)]
+        compact: DefTreeCompactArg,
+        #[arg(long)]
+        focus: Vec<String>,
+        #[arg(long)]
+        node: Option<u64>,
+        #[arg(long, default_value_t = false, conflicts_with = "hide_sources")]
+        show_sources: bool,
+        #[arg(long, default_value_t = false)]
+        hide_sources: bool,
+        #[arg(long, default_value_t = false)]
+        with_solve: bool,
+        #[arg(long)]
+        solve_owner: Option<String>,
+        #[arg(long, value_enum)]
+        solve_owner_match: Option<OwnerMatchArg>,
+        #[arg(long, default_value_t = false)]
+        analysis: bool,
+    },
     SolveDiff {
         #[arg(long)]
         left: std::path::PathBuf,
@@ -348,7 +429,7 @@ mod tests {
         TraceEvent, TraceId, TracePayload,
     };
 
-    use super::{Cli, OutputModeArg, run};
+    use super::{Cli, DefTreeCompactArg, DefTreeFormatArg, OutputModeArg, OwnerMatchArg, run};
 
     const SAMPLE_CHROME_PROFILE: &str = r#"
 [
@@ -583,6 +664,152 @@ mod tests {
         let solve_assoc =
             Cli::parse_from(["typelude-tooling-cli", "solve-assoc-item", "--owner", "OpIf"]);
         assert!(matches!(solve_assoc.command, super::Commands::SolveAssocItem { .. }));
+    }
+
+    #[test]
+    fn parses_def_tree_command() {
+        let cli = Cli::parse_from([
+            "typelude-tooling-cli",
+            "def-tree",
+            "--input",
+            ".saqula/ty_fibonacci.rs",
+            "--owner",
+            "Fib",
+            "--owner-match",
+            "suffix",
+            "--format",
+            "mermaid",
+            "--output",
+            "text",
+            "--max-depth",
+            "16",
+        ]);
+
+        let super::Commands::DefTree {
+            owner,
+            owner_match,
+            input,
+            format,
+            output,
+            max_depth,
+            scope,
+            compact,
+            focus,
+            node,
+            hide_sources,
+            with_solve,
+            solve_owner,
+            analysis,
+            ..
+        } = cli.command
+        else {
+            panic!("expected def-tree command");
+        };
+        assert_eq!(owner, "Fib");
+        assert_eq!(owner_match, OwnerMatchArg::Suffix);
+        assert_eq!(
+            input.expect("input should parse"),
+            std::path::PathBuf::from(".saqula/ty_fibonacci.rs")
+        );
+        assert_eq!(format, DefTreeFormatArg::Mermaid);
+        assert_eq!(output, OutputModeArg::Text);
+        assert_eq!(max_depth, 16);
+        assert_eq!(scope, "local");
+        assert_eq!(compact, DefTreeCompactArg::Off);
+        assert!(focus.is_empty());
+        assert_eq!(node, None);
+        assert!(!hide_sources);
+        assert!(!with_solve);
+        assert_eq!(solve_owner, None);
+        assert!(!analysis);
+    }
+
+    #[test]
+    fn parses_def_tree_view_and_analysis_options() {
+        let cli = Cli::parse_from([
+            "typelude-tooling-cli",
+            "def-tree",
+            "--input",
+            ".saqula/ty_fibonacci.rs",
+            "--owner",
+            "Fib",
+            "--compact",
+            "basic",
+            "--focus",
+            "WhileHelper",
+            "--focus",
+            "FibStep",
+            "--node",
+            "7",
+            "--hide-sources",
+            "--with-solve",
+            "--solve-owner",
+            "Fib",
+            "--solve-owner-match",
+            "suffix",
+            "--analysis",
+        ]);
+
+        let super::Commands::DefTree {
+            compact,
+            focus,
+            node,
+            hide_sources,
+            with_solve,
+            solve_owner,
+            solve_owner_match,
+            analysis,
+            ..
+        } = cli.command
+        else {
+            panic!("expected def-tree command");
+        };
+        assert_eq!(compact, DefTreeCompactArg::Basic);
+        assert_eq!(focus, vec![String::from("WhileHelper"), String::from("FibStep")]);
+        assert_eq!(node, Some(7));
+        assert!(hide_sources);
+        assert!(with_solve);
+        assert_eq!(solve_owner, Some(String::from("Fib")));
+        assert_eq!(solve_owner_match, Some(OwnerMatchArg::Suffix));
+        assert!(analysis);
+    }
+
+    #[test]
+    fn parses_solve_tree_definition_overlay_options() {
+        let cli = Cli::parse_from([
+            "typelude-tooling-cli",
+            "solve-tree",
+            "--input",
+            "/tmp/trace.ndjson",
+            "--with-def",
+            "--def-owner",
+            "Fib",
+            "--def-owner-match",
+            "suffix",
+            "--def-input",
+            ".saqula/ty_fibonacci.rs",
+            "--analysis",
+        ]);
+
+        let super::Commands::SolveTree {
+            with_def,
+            def_owner,
+            def_owner_match,
+            def_input,
+            analysis,
+            ..
+        } = cli.command
+        else {
+            panic!("expected solve-tree command");
+        };
+        assert!(with_def);
+        assert_eq!(def_owner, Some(String::from("Fib")));
+        assert_eq!(def_owner_match, OwnerMatchArg::Suffix);
+        assert_eq!(
+            def_input.expect("def input should parse"),
+            std::path::PathBuf::from(".saqula/ty_fibonacci.rs")
+        );
+        assert!(analysis);
     }
 
     #[test]

@@ -1,13 +1,18 @@
 use std::path::PathBuf;
 
+use serde::Serialize;
 use typelude_tooling_core::{
-    GoalTree, QueryMatchKind, QueryTargetKind, SolveAnalysis, SolveCollectionBasis, SolveFilters,
-    SolveProvenance, SolveSummary, SolveTreeSemantics, SolveViewKind, ToolingResult, TraceId,
-    build_solve_analysis, diff_analysis, filter_goal_tree, unsupported_error_count,
+    DefinitionGraph, DefinitionSolveAnalysis, DefinitionSolveLinks, GoalTree, QueryMatchKind,
+    QueryTargetKind, SolveAnalysis, SolveCollectionBasis, SolveFilters, SolveProvenance,
+    SolveSummary, SolveTreeSemantics, SolveViewKind, ToolingError, ToolingResult, TraceId,
+    build_definition_solve_analysis, build_definition_solve_links, build_solve_analysis,
+    diff_analysis, filter_goal_tree, render_definition_solve_analysis_text,
+    unsupported_error_count,
 };
 
 use super::{
     collect::{QueryKindArg, collect_trace},
+    def_tree,
     trace_io::read_trace,
 };
 use crate::{
@@ -18,11 +23,27 @@ use crate::{
     },
 };
 
+#[derive(Debug, Clone)]
+pub(crate) struct SolveDefinitionOverlayOptions {
+    pub with_def: bool,
+    pub def_owner: Option<String>,
+    pub def_owner_match: OwnerMatchArg,
+    pub def_input: Option<PathBuf>,
+    pub def_edition: String,
+    pub package: Option<String>,
+    pub manifest_path: Option<PathBuf>,
+    pub toolchain: String,
+    pub def_max_depth: usize,
+    pub rebuild_driver: bool,
+    pub analysis: bool,
+}
+
 pub(crate) fn run_solve_tree(
     input: PathBuf,
     output: OutputModeArg,
     render: SolveRenderOptions,
     filters: SolveFilters,
+    overlay: SolveDefinitionOverlayOptions,
 ) -> ToolingResult<String> {
     let trace = read_trace(&input)?;
     let tree = filter_goal_tree(&GoalTree::from_trace(&trace)?, &filters);
@@ -35,9 +56,35 @@ pub(crate) fn run_solve_tree(
         filters: filters.clone(),
         ..SolveProvenance::default()
     };
+    let definition_overlay = if overlay.with_def || overlay.analysis {
+        Some(build_solve_definition_overlay(&trace, &tree, &overlay)?)
+    } else {
+        None
+    };
     match output {
-        OutputModeArg::Text => Ok(render_solve_tree_text(&tree, render, Some(&context))),
-        OutputModeArg::Json => Ok(serde_json::to_string_pretty(&tree)?),
+        OutputModeArg::Text => {
+            let tree_text = render_solve_tree_text(&tree, render, Some(&context));
+            if let Some(definition_overlay) = &definition_overlay {
+                Ok(format!(
+                    "{}\n\n{tree_text}",
+                    render_solve_definition_overlay_text(definition_overlay)
+                ))
+            } else {
+                Ok(tree_text)
+            }
+        },
+        OutputModeArg::Json => {
+            if let Some(definition_overlay) = definition_overlay {
+                Ok(serde_json::to_string_pretty(&SolveTreeWithDefinitionJson {
+                    tree,
+                    definition_graph: definition_overlay.graph,
+                    links: definition_overlay.links,
+                    analysis: definition_overlay.analysis,
+                })?)
+            } else {
+                Ok(serde_json::to_string_pretty(&tree)?)
+            }
+        },
     }
 }
 
@@ -74,6 +121,86 @@ pub(crate) fn run_solve_summary(
         (OutputModeArg::Json, false) => Ok(serde_json::to_string_pretty(&analysis.summary)?),
         (OutputModeArg::Json, true) => Ok(serde_json::to_string_pretty(&analysis)?),
     }
+}
+
+fn build_solve_definition_overlay(
+    trace: &typelude_tooling_core::Trace,
+    tree: &GoalTree,
+    options: &SolveDefinitionOverlayOptions,
+) -> ToolingResult<SolveDefinitionOverlay> {
+    let owner =
+        options.def_owner.clone().or_else(|| infer_definition_owner(tree)).ok_or_else(|| {
+            ToolingError::Unsupported(String::from(
+                "solve-tree --with-def requires --def-owner when the trace has no owner metadata",
+            ))
+        })?;
+    let graph = def_tree::collect_definition_graph(
+        &owner,
+        options.def_owner_match,
+        options.def_input.as_deref(),
+        &options.def_edition,
+        options.package.clone(),
+        options.manifest_path.clone(),
+        &options.toolchain,
+        options.def_max_depth,
+        options.rebuild_driver,
+    )?;
+    let links = build_definition_solve_links(&graph, tree);
+    let analysis = if options.analysis {
+        Some(build_definition_solve_analysis(
+            &graph,
+            tree,
+            &links,
+            unsupported_error_count(trace, tree),
+            10,
+        ))
+    } else {
+        None
+    };
+    Ok(SolveDefinitionOverlay {
+        owner,
+        graph,
+        links,
+        analysis,
+    })
+}
+
+fn infer_definition_owner(tree: &GoalTree) -> Option<String> {
+    for subject in &tree.subjects {
+        for key in ["owner_path", "path"] {
+            if let Some(value) = subject.metadata.get(key) {
+                return Some(value.clone());
+            }
+        }
+    }
+    tree.subjects.first().map(|subject| subject.label.clone())
+}
+
+fn render_solve_definition_overlay_text(overlay: &SolveDefinitionOverlay) -> String {
+    if let Some(analysis) = &overlay.analysis {
+        return render_definition_solve_analysis_text(analysis);
+    }
+    let linked_goal_count = overlay
+        .links
+        .links
+        .iter()
+        .flat_map(|link| link.goal_ids.iter())
+        .collect::<std::collections::BTreeSet<_>>()
+        .len();
+    let linked_candidate_count = overlay
+        .links
+        .links
+        .iter()
+        .flat_map(|link| link.candidate_ids.iter())
+        .collect::<std::collections::BTreeSet<_>>()
+        .len();
+    format!(
+        "definition_solve_links:\ndefinition_owner={}\nlinks={} linked_goals={} linked_candidates={}",
+        overlay.owner,
+        overlay.links.links.len(),
+        linked_goal_count,
+        linked_candidate_count
+    )
 }
 
 pub(crate) fn run_solve_query(
@@ -248,6 +375,22 @@ fn query_match_kind(value: OwnerMatchArg) -> QueryMatchKind {
         OwnerMatchArg::Exact => QueryMatchKind::Exact,
         OwnerMatchArg::DefId => QueryMatchKind::DefId,
     }
+}
+
+#[derive(Debug, Clone)]
+struct SolveDefinitionOverlay {
+    owner: String,
+    graph: DefinitionGraph,
+    links: DefinitionSolveLinks,
+    analysis: Option<DefinitionSolveAnalysis>,
+}
+
+#[derive(Debug, Serialize)]
+struct SolveTreeWithDefinitionJson {
+    tree: GoalTree,
+    definition_graph: DefinitionGraph,
+    links: DefinitionSolveLinks,
+    analysis: Option<DefinitionSolveAnalysis>,
 }
 
 #[cfg(test)]

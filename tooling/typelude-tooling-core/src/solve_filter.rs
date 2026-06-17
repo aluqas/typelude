@@ -167,20 +167,26 @@ mod tests {
 
     #[test]
     fn filters_tree_by_result() {
-        let filtered = filter_goal_tree(&sample_tree(), &SolveFilters {
-            result: Some(SolveResultFilter::NoSolution),
-            ..SolveFilters::default()
-        });
+        let filtered = filter_goal_tree(
+            &sample_tree(),
+            &SolveFilters {
+                result: Some(SolveResultFilter::NoSolution),
+                ..SolveFilters::default()
+            },
+        );
         assert_eq!(filtered.subjects.len(), 1);
         assert_eq!(filtered.subjects[0].roots.len(), 1);
     }
 
     #[test]
     fn filters_tree_by_subject_metadata() {
-        let filtered = filter_goal_tree(&sample_tree(), &SolveFilters {
-            subject: Some(String::from("writer_t")),
-            ..SolveFilters::default()
-        });
+        let filtered = filter_goal_tree(
+            &sample_tree(),
+            &SolveFilters {
+                subject: Some(String::from("writer_t")),
+                ..SolveFilters::default()
+            },
+        );
         assert_eq!(filtered.subjects.len(), 1);
     }
 }

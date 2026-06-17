@@ -68,6 +68,54 @@ where
     type Output = <Rhs as Add<<Lhs as Mul<Rhs>>::Output>>::Output;
 }
 
+/// Hyper Operatorトレイト。
+///
+/// hyper(a, n, b) =
+/// if n = 0 then b + 1
+/// if n = 1, b = 0 then a
+/// if n = 2, b = 0 then 0
+/// if n >= 3, b = 0 then 1
+/// otherwise hyper(hyper(a, n - 1, b), n, b - 1)
+trait Hyper<n: Nat, Rhs: Nat> {
+    type Output;
+}
+
+// hyper(a, 0, b) = b + 1
+impl<Lhs: Nat, Rhs: Nat> Hyper<Zero, Rhs> for Lhs {
+    type Output = Succ<Lhs>;
+}
+
+// hyper(a, 1, 0) = a
+impl<Lhs: Nat, Rhs: Nat> Hyper<Succ<Zero>, Zero> for Lhs {
+    type Output = Lhs;
+}
+
+// hyper(a, 2, 0) = 0
+impl<Lhs: Nat, Rhs: Nat> Hyper<Succ<Succ<Zero>>, Zero> for Lhs {
+    type Output = Zero;
+}
+
+// hyper(a, n, 0) = 1 (n > 1)
+impl<n: Nat, Lhs: Nat, Rhs: Nat> Hyper<Succ<Succ<n>>, Zero> for Lhs {
+    type Output = Succ<Zero>;
+}
+
+// hyper(a, n, b) = hyper(hyper(a, n - 1, b), n, b - 1) (n > 0, b > 0)
+impl<n: Nat, Lhs: Nat, Rhs: Nat> Hyper<Succ<Zero>, Succ<Rhs>> for Lhs
+where
+    Lhs: Hyper<Zero, Succ<Rhs>>,
+    <Lhs as Hyper<Zero, Succ<Rhs>>>::Output: Hyper<Succ<Zero>, Rhs>,
+{
+    type Output = <<Lhs as Hyper<Zero, Succ<Rhs>>>::Output as Hyper<Succ<Zero>, Rhs>>::Output;
+}
+
+type Tet<Lhs, Rhs> = <Lhs as Hyper<Succ<Succ<Succ<Succ<Zero>>>>, Rhs>>::Output;
+
+// struct HyperOp;
+// impl Apply<OpHyper, (Lhs, n, Rhs)> for HyperOp
+
+// TODO: Implementation Graham's number lol
+
 impl<Rhs: Nat> Sub<Rhs> for Zero {
     type Output = Zero;
 }

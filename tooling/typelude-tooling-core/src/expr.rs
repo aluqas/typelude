@@ -343,14 +343,17 @@ mod tests {
     #[test]
     fn parses_generic() {
         let expr = TypeExpr::parse("EIf<True, U1, U0>").expect("generic should parse");
-        assert_eq!(expr, TypeExpr::Generic {
-            name: String::from("EIf"),
-            args: vec![
-                TypeExpr::Name(String::from("True")),
-                TypeExpr::Name(String::from("U1")),
-                TypeExpr::Name(String::from("U0")),
-            ],
-        });
+        assert_eq!(
+            expr,
+            TypeExpr::Generic {
+                name: String::from("EIf"),
+                args: vec![
+                    TypeExpr::Name(String::from("True")),
+                    TypeExpr::Name(String::from("U1")),
+                    TypeExpr::Name(String::from("U0")),
+                ],
+            }
+        );
     }
 
     #[test]

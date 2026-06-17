@@ -213,6 +213,7 @@ impl GoalTree {
                 TracePayload::RunStarted(..)
                 | TracePayload::RunFinished(..)
                 | TracePayload::DiagnosticEmitted(..)
+                | TracePayload::DefinitionGraphEmitted(..)
                 | TracePayload::RelationDeclared(..)
                 | TracePayload::Info(..) => {},
             }

@@ -149,10 +149,13 @@ mod tests {
     #[test]
     fn lowers_alias_relate_predicate() {
         let predicate = lower_predicate_repr("AliasRelate(Foo, Bar)");
-        assert_eq!(predicate, PredicateRepr::AliasRelate {
-            lhs: String::from("Foo"),
-            rhs: String::from("Bar"),
-        });
+        assert_eq!(
+            predicate,
+            PredicateRepr::AliasRelate {
+                lhs: String::from("Foo"),
+                rhs: String::from("Bar"),
+            }
+        );
     }
 
     #[test]
@@ -171,8 +174,9 @@ mod tests {
     fn semantic_tags_detect_typelude_patterns() {
         let predicate = PredicateRepr::DebugText(String::from("EGet<Arr, Key>"));
         assert!(semantic_tags_for_predicate(&predicate).contains(&SemanticTag::LookupLike));
-        assert_eq!(semantic_tags_for_candidate(&CandidateKind::AliasRelate), vec![
-            SemanticTag::HelperDispatchLike
-        ]);
+        assert_eq!(
+            semantic_tags_for_candidate(&CandidateKind::AliasRelate),
+            vec![SemanticTag::HelperDispatchLike]
+        );
     }
 }

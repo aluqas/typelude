@@ -1,6 +1,8 @@
 //! Shared IR and support types for typelude tooling.
 
 pub mod analysis_config;
+pub mod definition;
+pub mod definition_solve;
 pub mod diagnostic;
 pub mod error;
 pub mod expr;
@@ -24,6 +26,15 @@ pub mod trace;
 pub mod trace_graph;
 
 pub use analysis_config::AnalysisConfig;
+pub use definition::{
+    DefinitionCompactMode, DefinitionEdge, DefinitionEdgeKind, DefinitionGraph, DefinitionNode,
+    DefinitionNodeKind, DefinitionRenderOptions, DefinitionStats,
+};
+pub use definition_solve::{
+    DefinitionSolveAnalysis, DefinitionSolveLink, DefinitionSolveLinkConfidence,
+    DefinitionSolveLinks, DefinitionSolveNodeAnalysis, build_definition_solve_analysis,
+    build_definition_solve_links, render_definition_solve_analysis_text,
+};
 pub use diagnostic::{
     CapabilityFailure, DiagnosticData, DiagnosticKind, DiagnosticLevel, DiagnosticRecord,
     RawCompilerDiagnostic,
@@ -43,7 +54,8 @@ pub use lowering::{
 };
 pub use metrics::{MetricKind, MetricRecord};
 pub use query::{
-    OwnerQuerySpec, QueryMatchKind, QueryTargetKind, def_index_matches, owner_path_matches,
+    DefinitionTreeQuerySpec, OwnerQuerySpec, QueryMatchKind, QueryTargetKind, def_index_matches,
+    owner_path_matches,
 };
 pub use render::{RenderMode, RenderedText};
 pub use semantic::SemanticTag;
@@ -62,9 +74,9 @@ pub use solve_provenance::{
 pub use span::{SourceLocation, SourceOrigin, SourceSpan};
 pub use subject::SubjectKind;
 pub use trace::{
-    CandidateDiscovered, CandidateKind, CandidateResult, CandidateTried, DiagnosticEmitted,
-    ErrorRaised, GoalDiscovered, GoalEntered, GoalExited, GoalResult, InfoEvent, PredicateRepr,
-    RelationDeclared, RunFinished, RunStarted, SubjectDiscovered, Trace, TraceEvent,
-    TraceEventKind, TracePayload,
+    CandidateDiscovered, CandidateKind, CandidateResult, CandidateTried, DefinitionGraphEmitted,
+    DiagnosticEmitted, ErrorRaised, GoalDiscovered, GoalEntered, GoalExited, GoalResult,
+    InfoEvent, PredicateRepr, RelationDeclared, RunFinished, RunStarted, SubjectDiscovered, Trace,
+    TraceEvent, TraceEventKind, TracePayload,
 };
 pub use trace_graph::TraceGraphBuilder;

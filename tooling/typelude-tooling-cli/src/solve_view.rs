@@ -426,10 +426,13 @@ mod tests {
     #[test]
     fn filters_tree_by_result() {
         let tree = sample_tree();
-        let filtered = filter_goal_tree(&tree, &SolveFilters {
-            result: Some(SolveResultFilter::NoSolution),
-            ..SolveFilters::default()
-        });
+        let filtered = filter_goal_tree(
+            &tree,
+            &SolveFilters {
+                result: Some(SolveResultFilter::NoSolution),
+                ..SolveFilters::default()
+            },
+        );
         assert_eq!(filtered.subjects.len(), 1);
         assert_eq!(filtered.subjects[0].roots.len(), 1);
     }

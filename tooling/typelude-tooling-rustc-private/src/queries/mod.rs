@@ -1,6 +1,8 @@
+mod definition_tree;
 mod explicit_predicate;
 mod owner;
 
+pub use definition_tree::DefinitionTreeQuery;
 pub(crate) use explicit_predicate::run_owner_predicates;
 pub use explicit_predicate::{SolveExplicitPredicateQuery, solve_explicit_predicate};
 pub use owner::ResolveOwnerQuery;

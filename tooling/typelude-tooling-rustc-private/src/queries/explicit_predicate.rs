@@ -56,6 +56,7 @@ pub(crate) fn run_owner_predicates<'tcx>(
             session.record_drop();
             break;
         }
+        let clause = clause.skip_normalization();
 
         let predicate_subject = ResolvedSubject::ExplicitPredicate {
             owner: owner_def_id,

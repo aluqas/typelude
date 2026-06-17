@@ -21,10 +21,14 @@ pub mod session;
 pub mod subjects;
 
 use emit::emit_raw;
-use frontends::{CollectConfig, run_collect_frontend, run_owner_query_frontend};
+use frontends::{
+    CollectConfig, run_collect_frontend, run_definition_tree_frontend, run_owner_query_frontend,
+};
 use rustc_driver::Callbacks;
 use rustc_interface::Config;
-use typelude_tooling_core::{ErrorRaised, GoalResult, OwnerQuerySpec, TraceEvent, TracePayload};
+use typelude_tooling_core::{
+    DefinitionTreeQuerySpec, ErrorRaised, GoalResult, OwnerQuerySpec, TraceEvent, TracePayload,
+};
 
 struct TypeludeCallbacks {
     collect_config: CollectConfig,
@@ -49,7 +53,15 @@ impl Callbacks for TypeludeCallbacks {
         _compiler: &rustc_interface::interface::Compiler,
         tcx: rustc_middle::ty::TyCtxt<'_>,
     ) -> rustc_driver::Compilation {
-        let result = if let Some(query) = OwnerQuerySpec::from_env() {
+        let result = if let Some(query) = DefinitionTreeQuerySpec::from_env() {
+            run_definition_tree_frontend(
+                tcx,
+                &self.collect_config,
+                &query.owner,
+                query.match_kind,
+                query.max_depth,
+            )
+        } else if let Some(query) = OwnerQuerySpec::from_env() {
             run_owner_query_frontend(
                 tcx,
                 &self.collect_config,
@@ -80,7 +92,9 @@ impl Callbacks for TypeludeCallbacks {
 pub fn main_entry() -> std::process::ExitCode {
     let mut args: Vec<String> = std::env::args().collect();
 
-    if args.len() > 1 && !args[1].starts_with('-') {
+    let driver_mode =
+        std::env::var("TYPELUDE_TOOLING_DRIVER_MODE").unwrap_or_else(|_| String::from("wrapper"));
+    if driver_mode != "direct" && args.len() > 1 && !args[1].starts_with('-') {
         args.remove(1);
     }
 

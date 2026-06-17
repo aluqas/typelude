@@ -5,6 +5,7 @@ use serde_json::Value;
 
 use crate::{
     ToolingResult,
+    definition::DefinitionGraph,
     diagnostic::DiagnosticRecord,
     ids::{CandidateId, DiagId, EventId, GoalId, HookId, RunId, SpanId, SubjectId, TraceId},
     semantic::SemanticTag,
@@ -24,6 +25,7 @@ pub enum TraceEventKind {
     CandidateTried,
     CandidateResult,
     DiagnosticEmitted,
+    DefinitionGraphEmitted,
     RelationDeclared,
     Info,
     ErrorRaised,
@@ -258,6 +260,12 @@ pub struct DiagnosticEmitted {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DefinitionGraphEmitted {
+    pub owner: String,
+    pub graph: DefinitionGraph,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RelationDeclared {
     pub from: String,
     pub to: String,
@@ -293,6 +301,7 @@ pub enum TracePayload {
     CandidateTried(CandidateTried),
     CandidateResult(CandidateResult),
     DiagnosticEmitted(DiagnosticEmitted),
+    DefinitionGraphEmitted(DefinitionGraphEmitted),
     RelationDeclared(RelationDeclared),
     Info(InfoEvent),
     ErrorRaised(ErrorRaised),
@@ -312,6 +321,7 @@ impl TracePayload {
             Self::CandidateTried(..) => TraceEventKind::CandidateTried,
             Self::CandidateResult(..) => TraceEventKind::CandidateResult,
             Self::DiagnosticEmitted(..) => TraceEventKind::DiagnosticEmitted,
+            Self::DefinitionGraphEmitted(..) => TraceEventKind::DefinitionGraphEmitted,
             Self::RelationDeclared(..) => TraceEventKind::RelationDeclared,
             Self::Info(..) => TraceEventKind::Info,
             Self::ErrorRaised(..) => TraceEventKind::ErrorRaised,
@@ -405,6 +415,7 @@ impl TraceEvent {
             TracePayload::ErrorRaised(data) => data.subject_id,
             TracePayload::RunStarted(..)
             | TracePayload::RunFinished(..)
+            | TracePayload::DefinitionGraphEmitted(..)
             | TracePayload::RelationDeclared(..)
             | TracePayload::Info(..) => None,
         }
@@ -424,6 +435,7 @@ impl TraceEvent {
             TracePayload::RunStarted(..)
             | TracePayload::RunFinished(..)
             | TracePayload::SubjectDiscovered(..)
+            | TracePayload::DefinitionGraphEmitted(..)
             | TracePayload::RelationDeclared(..)
             | TracePayload::Info(..) => None,
         }
@@ -480,6 +492,7 @@ impl TraceEvent {
             TracePayload::ErrorRaised(data) => data.hook_id,
             TracePayload::RunStarted(..)
             | TracePayload::RunFinished(..)
+            | TracePayload::DefinitionGraphEmitted(..)
             | TracePayload::RelationDeclared(..) => None,
         }
     }
@@ -497,6 +510,7 @@ impl TraceEvent {
             TracePayload::CandidateTried(data) => data.candidate_kind.label(),
             TracePayload::CandidateResult(data) => data.candidate_kind.label(),
             TracePayload::DiagnosticEmitted(data) => data.record.message(),
+            TracePayload::DefinitionGraphEmitted(data) => data.owner.clone(),
             TracePayload::RelationDeclared(data) => data.relation.clone(),
             TracePayload::Info(data) => data.message.clone(),
             TracePayload::ErrorRaised(data) => data.message.clone(),
@@ -565,6 +579,23 @@ impl TraceEvent {
             TracePayload::CandidateTried(data) => data.metadata.clone(),
             TracePayload::CandidateResult(data) => data.metadata.clone(),
             TracePayload::DiagnosticEmitted(data) => data.record.metadata().clone(),
+            TracePayload::DefinitionGraphEmitted(data) => {
+                let stats = data.graph.stats();
+                BTreeMap::from([
+                    (String::from("owner"), data.owner.clone()),
+                    (String::from("node_count"), stats.node_count.to_string()),
+                    (String::from("edge_count"), stats.edge_count.to_string()),
+                    (String::from("projection_count"), stats.projection_count.to_string()),
+                    (String::from("impl_branch_count"), stats.impl_branch_count.to_string()),
+                    (
+                        String::from("where_predicate_count"),
+                        stats.where_predicate_count.to_string(),
+                    ),
+                    (String::from("cycle_count"), stats.cycle_count.to_string()),
+                    (String::from("external_leaf_count"), stats.external_leaf_count.to_string()),
+                    (String::from("max_depth"), stats.max_depth.to_string()),
+                ])
+            },
             TracePayload::RelationDeclared(..) => BTreeMap::new(),
             TracePayload::Info(data) => data.metadata.clone(),
             TracePayload::ErrorRaised(data) => {
